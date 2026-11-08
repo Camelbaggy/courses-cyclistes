@@ -1,0 +1,456 @@
+{
+ "_fixture": true,
+ "id": "uci-fixture-2",
+ "name": "Classique des Essais",
+ "country": "FRA",
+ "flag": "fr",
+ "uci_class": "1.1",
+ "category": ".1",
+ "race_type": "one_day",
+ "start_date": "2026-11-07",
+ "end_date": "2026-11-07",
+ "status": "finished",
+ "stages_done": 1,
+ "stages_total": 1,
+ "selection_reason": "france",
+ "winner": null,
+ "leader": null,
+ "best_french": null,
+ "sources": [
+  "uci"
+ ],
+ "stages": [
+  {
+   "number": null,
+   "date": "2026-11-07",
+   "name": "Course",
+   "start": "Cité-Test",
+   "finish": "Cité-Test",
+   "type": "road",
+   "route": {
+    "distance_km": 201.5,
+    "elevation_m": 2600,
+    "profile": "accidenté",
+    "climbs": [],
+    "cobbles": [],
+    "source": "aso"
+   },
+   "results": {
+    "stage": [
+     {
+      "rank": 1,
+      "status": null,
+      "bib": 10,
+      "rider_id": "aksel-brandt-19940218",
+      "time_s": 19800,
+      "gap_s": 0,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 2,
+      "status": null,
+      "bib": 11,
+      "rider_id": "jonas-lindqvist-19970505",
+      "time_s": 19800,
+      "gap_s": 0,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 3,
+      "status": null,
+      "bib": 12,
+      "rider_id": "luca-ferrante-19991212",
+      "time_s": 19800,
+      "gap_s": 0,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 4,
+      "status": null,
+      "bib": 13,
+      "rider_id": "maxime-roche-19961123",
+      "time_s": 19806,
+      "gap_s": 6,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 5,
+      "status": null,
+      "bib": 14,
+      "rider_id": "sam-whitfield-19980404",
+      "time_s": 19806,
+      "gap_s": 6,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 6,
+      "status": null,
+      "bib": 15,
+      "rider_id": "mateo-ricci-19950909",
+      "time_s": 19822,
+      "gap_s": 22,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 7,
+      "status": null,
+      "bib": 16,
+      "rider_id": "niels-verhoeven-19970817",
+      "time_s": 19822,
+      "gap_s": 22,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 8,
+      "status": null,
+      "bib": 17,
+      "rider_id": "theo-bastide-19990702",
+      "time_s": 19848,
+      "gap_s": 48,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 9,
+      "status": null,
+      "bib": 18,
+      "rider_id": "tomas-aguirre-19960621",
+      "time_s": 19848,
+      "gap_s": 48,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": 10,
+      "status": null,
+      "bib": 19,
+      "rider_id": "jan-kowal-20011001",
+      "time_s": 19920,
+      "gap_s": 120,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": null,
+      "status": "DNF",
+      "bib": null,
+      "rider_id": "hugo-delmas-20000314",
+      "time_s": null,
+      "gap_s": null,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     },
+     {
+      "rank": null,
+      "status": "DNF",
+      "bib": null,
+      "rider_id": "paul-vernier-19980130",
+      "time_s": null,
+      "gap_s": null,
+      "points": null,
+      "bonus_s": null,
+      "penalty_s": null,
+      "uci_points": null
+     }
+    ],
+    "gc": [],
+    "points": [],
+    "mountain": [],
+    "youth": [],
+    "teams": [],
+    "combativity": []
+   },
+   "ai_summary": null,
+   "summary_source": null,
+   "french_highlights": []
+  }
+ ],
+ "final": {
+  "stage": [
+   {
+    "rank": 1,
+    "status": null,
+    "bib": 10,
+    "rider_id": "aksel-brandt-19940218",
+    "time_s": 19800,
+    "gap_s": 0,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 2,
+    "status": null,
+    "bib": 11,
+    "rider_id": "jonas-lindqvist-19970505",
+    "time_s": 19800,
+    "gap_s": 0,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 3,
+    "status": null,
+    "bib": 12,
+    "rider_id": "luca-ferrante-19991212",
+    "time_s": 19800,
+    "gap_s": 0,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 4,
+    "status": null,
+    "bib": 13,
+    "rider_id": "maxime-roche-19961123",
+    "time_s": 19806,
+    "gap_s": 6,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 5,
+    "status": null,
+    "bib": 14,
+    "rider_id": "sam-whitfield-19980404",
+    "time_s": 19806,
+    "gap_s": 6,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 6,
+    "status": null,
+    "bib": 15,
+    "rider_id": "mateo-ricci-19950909",
+    "time_s": 19822,
+    "gap_s": 22,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 7,
+    "status": null,
+    "bib": 16,
+    "rider_id": "niels-verhoeven-19970817",
+    "time_s": 19822,
+    "gap_s": 22,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 8,
+    "status": null,
+    "bib": 17,
+    "rider_id": "theo-bastide-19990702",
+    "time_s": 19848,
+    "gap_s": 48,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 9,
+    "status": null,
+    "bib": 18,
+    "rider_id": "tomas-aguirre-19960621",
+    "time_s": 19848,
+    "gap_s": 48,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": 10,
+    "status": null,
+    "bib": 19,
+    "rider_id": "jan-kowal-20011001",
+    "time_s": 19920,
+    "gap_s": 120,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": null,
+    "status": "DNF",
+    "bib": null,
+    "rider_id": "hugo-delmas-20000314",
+    "time_s": null,
+    "gap_s": null,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   },
+   {
+    "rank": null,
+    "status": "DNF",
+    "bib": null,
+    "rider_id": "paul-vernier-19980130",
+    "time_s": null,
+    "gap_s": null,
+    "points": null,
+    "bonus_s": null,
+    "penalty_s": null,
+    "uci_points": null
+   }
+  ]
+ },
+ "riders": {
+  "hugo-delmas-20000314": {
+   "id": "hugo-delmas-20000314",
+   "name": "Hugo Delmas",
+   "nationality": "FRA",
+   "flag": "fr",
+   "is_french": true,
+   "team": "Équipe Vélo Test",
+   "birth_date": "2000-03-14"
+  },
+  "theo-bastide-19990702": {
+   "id": "theo-bastide-19990702",
+   "name": "Théo Bastide",
+   "nationality": "FRA",
+   "flag": "fr",
+   "is_french": true,
+   "team": "Équipe Vélo Test",
+   "birth_date": "1999-07-02"
+  },
+  "maxime-roche-19961123": {
+   "id": "maxime-roche-19961123",
+   "name": "Maxime Roche",
+   "nationality": "FRA",
+   "flag": "fr",
+   "is_french": true,
+   "team": "Maillot Fictif",
+   "birth_date": "1996-11-23"
+  },
+  "paul-vernier-19980130": {
+   "id": "paul-vernier-19980130",
+   "name": "Paul Vernier",
+   "nationality": "FRA",
+   "flag": "fr",
+   "is_french": true,
+   "team": "Maillot Fictif",
+   "birth_date": "1998-01-30"
+  },
+  "jonas-lindqvist-19970505": {
+   "id": "jonas-lindqvist-19970505",
+   "name": "Jonas Lindqvist",
+   "nationality": "SWE",
+   "flag": "se",
+   "is_french": false,
+   "team": "Nordic Essai",
+   "birth_date": "1997-05-05"
+  },
+  "mateo-ricci-19950909": {
+   "id": "mateo-ricci-19950909",
+   "name": "Mateo Ricci",
+   "nationality": "ITA",
+   "flag": "it",
+   "is_french": false,
+   "team": "Squadra Prova",
+   "birth_date": "1995-09-09"
+  },
+  "aksel-brandt-19940218": {
+   "id": "aksel-brandt-19940218",
+   "name": "Aksel Brandt",
+   "nationality": "DEN",
+   "flag": "dk",
+   "is_french": false,
+   "team": "Nordic Essai",
+   "birth_date": "1994-02-18"
+  },
+  "luca-ferrante-19991212": {
+   "id": "luca-ferrante-19991212",
+   "name": "Luca Ferrante",
+   "nationality": "ITA",
+   "flag": "it",
+   "is_french": false,
+   "team": "Squadra Prova",
+   "birth_date": "1999-12-12"
+  },
+  "tomas-aguirre-19960621": {
+   "id": "tomas-aguirre-19960621",
+   "name": "Tomás Aguirre",
+   "nationality": "ESP",
+   "flag": "es",
+   "is_french": false,
+   "team": "Equipo Ensayo",
+   "birth_date": "1996-06-21"
+  },
+  "sam-whitfield-19980404": {
+   "id": "sam-whitfield-19980404",
+   "name": "Sam Whitfield",
+   "nationality": "GBR",
+   "flag": "gb",
+   "is_french": false,
+   "team": "Test Cycling GB",
+   "birth_date": "1998-04-04"
+  },
+  "niels-verhoeven-19970817": {
+   "id": "niels-verhoeven-19970817",
+   "name": "Niels Verhoeven",
+   "nationality": "NED",
+   "flag": "nl",
+   "is_french": false,
+   "team": "Team Proef",
+   "birth_date": "1997-08-17"
+  },
+  "jan-kowal-20011001": {
+   "id": "jan-kowal-20011001",
+   "name": "Jan Kowal",
+   "nationality": "POL",
+   "flag": "pl",
+   "is_french": false,
+   "team": "Test Cycling GB",
+   "birth_date": "2001-10-01"
+  }
+ },
+ "updated_at": "2026-11-07T17:00:00Z"
+}
