@@ -18,6 +18,7 @@ MSG = os.environ.get("MSG", "")
 SEULEMENT_CAL = "[cal]" in MSG
 SEULEMENT_COURSES = "[courses]" in MSG
 DEBUT = time.time()
+uci.GARDER_BRUT = True  # diagnostic : valeurs ResultValue brutes dans les Row
 
 
 def titre(txt):
@@ -95,6 +96,12 @@ def course_complete(comp):
                 tps = [r["time_s"] for r in rows if r["time_s"] is not None]
                 if tps != sorted(tps):
                     print(f"  [CHECK] temps non croissants : étape {s['number']} {cle}")
+                    for i in range(1, len(rows)):
+                        a, b = rows[i - 1], rows[i]
+                        if a["time_s"] is not None and b["time_s"] is not None and b["time_s"] < a["time_s"]:
+                            for r in rows[max(0, i - 3):i + 3]:
+                                print("      ", r["rank"], r["status"], r["time_s"], r["gap_s"], repr(r.get("_rv")))
+                            break
                 rangs = [r["rank"] for r in rows if r["rank"] is not None]
                 if rangs != sorted(rangs):
                     print(f"  [CHECK] rangs non croissants : étape {s['number']} {cle}")
@@ -146,6 +153,18 @@ def partie_courses():
     for c in (pr, pn, fr1):
         if c:
             course_complete(c)
+    if pn:
+        titre("Diagnostic brut Paris-Nice : events de l'étape 3 (CLM par équipes) et 1res lignes")
+        races = uci._liste_paginee("/iframe/Races/", taille=100, competitionId=pn["competition_id"], disciplineId=10) or []
+        for r in races:
+            if r.get("RaceName") == "Stage 3":
+                evs = uci._post("/iframe/Events/", {"disciplineId": 10, "raceId": r["Id"]})
+                print("Race:", json.dumps(r, ensure_ascii=False))
+                for ev in evs:
+                    print("EVENT:", json.dumps(ev, ensure_ascii=False)[:500])
+                    rep = uci._post("/iframe/Results/", uci._kendo(3, 0, disciplineId=10, eventId=ev["EventId"]))
+                    for l in (rep or {}).get("data", [])[:2]:
+                        print("   ROW:", json.dumps(l, ensure_ascii=False)[:600])
     titre("Libellés d'events rencontrés (EventName, portée, clé) -> occurrences")
     for (nom, portee, cle), n in sorted(uci.EVENTS_VUS.items(), key=lambda x: -x[1]):
         print(f"  {nom!r:55} portée={portee:8} clé={cle}  x{n}")
@@ -179,7 +198,8 @@ def cgu(url):
         print(f"  (rien reçu de {url})")
         return
     t = texte(html)
-    print(f"  {url} : {len(t)} caractères de texte")
+    print(f"  {url} : {len(t)} caractères de texte ; fin du texte : {t[-700:]}")
+    print("   liens documents :", [l for l in liens(html) if re.search(r"\.pdf|document|assets\.ctfassets|legal|terms", l, re.I)][:15])
     phrases = re.split(r"(?<=[.;:])\s+", t)
     n = 0
     for p in phrases:
@@ -220,6 +240,33 @@ def partie_calendrier():
             print("   JSON intégré :", m.group(1)[:500].replace("\n", " "))
         for m in list(re.finditer(r"(?i)(calendar[^\"'<>\s]{0,80}|/api/[^\"'<>\s]{0,100}|GetCalendar[^\"'<>\s]{0,60})", html))[:25]:
             print("   motif :", m.group(1)[:140])
+    titre("Scripts de la page calendrier et motifs d'API")
+    html = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
+    scripts = [absolu("https://www.uci.org/road/calendar", s) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)', html, re.I)]
+    for s in scripts:
+        print("  script:", s)
+    for m in re.finditer(r"(?is)<script(?![^>]+src)[^>]*>(.*?)</script>", html):
+        corps = m.group(1)
+        if re.search(r"calendar|api|fetch|endpoint|baseUrl", corps, re.I):
+            print(f"  script inline ({len(corps)} o) :", re.sub(r"\s+", " ", corps)[:700])
+    motifs = re.compile(r"""["'`]((?:https?:)?//[A-Za-z0-9./_-]*(?:api|search|calendar|graphql|contentful|algolia|azure)[A-Za-z0-9./_?=&%{}$-]*|/api/[A-Za-z0-9./_?=&%{}$-]*|/[A-Za-z0-9/_-]*[Cc]alendar[A-Za-z0-9/_?=&%{}$-]*)["'`]""")
+    vus = set()
+    for s in [x for x in scripts if "uci.org" in x][:8]:
+        js = netutil.fetch_text(s, headers={"Accept": "*/*"}, retries=2, raw_name="js_" + s[-30:])
+        if not js:
+            continue
+        trouves = sorted({m.group(1) for m in motifs.finditer(js)} - vus)
+        vus |= set(trouves)
+        print(f"  {s} : {len(js)} o ; {len(trouves)} motifs")
+        for t in trouves[:40]:
+            print("     ", t[:160])
+    titre("dataride.uci.ch/iframe (pages iframe disponibles ?)")
+    for u in ("https://dataride.uci.ch/iframe", "https://dataride.uci.org/iframe/Results/10/"):
+        h = netutil.fetch_text(u, headers={"Accept": "text/html"}, retries=2)
+        if h:
+            print(f"  {u} : {len(h)} o ; liens iframe :", [l for l in liens(h) if "iframe" in l.lower()][:30])
+            for m in re.finditer(r"(?i)(calendar[A-Za-z/_?=&.]*|GetCompetitions[A-Za-z]*|Upcoming[A-Za-z]*)", h):
+                print("     motif:", m.group(1)[:100])
     titre("Pages calendrier candidates trouvées")
     for a in sorted(trouves_cal)[:12]:
         print(" -", a)

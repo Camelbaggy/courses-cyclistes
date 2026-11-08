@@ -26,6 +26,7 @@ _HEADERS = {"X-Requested-With": "XMLHttpRequest", "Referer": BASE + "/iframe/Res
 # Journal des libellés d'events rencontrés : (EventName, portée, clé) -> nombre (lu par l'essai et le rapport)
 EVENTS_VUS: Counter = Counter()
 IRM_VUS: Counter = Counter()
+GARDER_BRUT = False  # diagnostic (essais) : ajoute `_rv` (ResultValue brut) à chaque Row ; jamais activé en production
 
 # Code Irm UCI -> statut du schéma (SPEC §4.2). None = pas de statut (le coureur garde son rang).
 IRM_STATUTS = {"DNF": "DNF", "ABD": "DNF", "DNS": "DNS", "OTL": "OTL", "OVL": "OTL", "LAP": "OTL",
@@ -271,6 +272,8 @@ def normalize_rows(lignes: List[Dict[str, Any]], cle: str, riders: Dict[str, Dic
                 row["points"] = _nombre_propre(_nombre(valeur))
             else:
                 row["time_s"], row["gap_s"] = temps.convertir(valeur)
+        if GARDER_BRUT:
+            row["_rv"] = valeur
         sortie.append(row)
     return sortie
 
@@ -430,7 +433,8 @@ def _classements_event(ev: Dict[str, Any], cle: str, riders: Dict[str, Dict[str,
                             disciplineId=DISCIPLINE_ROUTE, eventId=eid)
     if lignes is None:
         return None
-    if ev.get("IsTeamEvent") or cle == "teams":
+    # Un event « par équipes » (contre-la-montre par équipes) liste quand même des coureurs : on regarde les lignes.
+    if cle == "teams" or not any(str(l.get("DisplayName") or "").strip() for l in lignes):
         return normalize_team_rows(lignes)
     return normalize_rows(lignes, cle, riders)
 
@@ -446,8 +450,6 @@ def _event_vers_classements(race_label: str, events: Any, one_day_final: bool, r
         cle, portee = event_key(nom)
         if cle == "gc" and one_day_final:
             cle = "stage"
-        if cle and ev.get("IsTeamEvent") and cle in ("stage", "gc"):
-            cle = "teams"  # contre-la-montre par équipes : classement d'équipes
         EVENTS_VUS[(nom, portee, cle)] += 1
         if cle is None:
             print(f"[INFO] UCI : EventName non reconnu {nom!r} ({race_label}), ignoré")
@@ -529,6 +531,16 @@ def get_race(competition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         else:
             complet[0] = False
             print(f"[WARN] UCI : events du classement final de {nom_course} indisponibles")
+
+    # Dernière étape : l'UCI ne publie souvent que « Stage Classification » ; les classements cumulés de cette étape
+    # sont par définition le classement final -> copiés depuis `final` uniquement pour les clés absentes.
+    if final and not un_jour and stages:
+        derniere = stages[-1]["results"]
+        manquantes = [k for k in ("gc", "points", "mountain", "youth", "teams") if final.get(k) and not derniere.get(k)]
+        for k in manquantes:
+            derniere[k] = final[k]
+        if manquantes:
+            print(f"[INFO] UCI : {nom_course} / dernière étape : {manquantes} repris du classement final")
 
     return {"stages": stages, "final": final, "riders": riders, "race_type": "one_day" if un_jour else "stage_race",
             "stages_total": None, "complete": complet[0]}
