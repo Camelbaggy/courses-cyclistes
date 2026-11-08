@@ -121,6 +121,14 @@ def main():
         for c in inc[:40]:
             print("    manque", [k for k in CHAMPS if c.get(k) is None], c)
 
+    print("\n#### Lignes FR dont la date est illisible (page FR 2027, tableaux de calendrier)")
+    for t, wt in wc.fetch_pages_fr(TODAY.year + 1).items():
+        for tab in wc.parse_tables(wt):
+            if not any("date" in h for h in tab["headers"]):
+                continue
+            for cells in tab["rows"]:
+                if wc.ligne_vers_course(cells, tab["headers"], TODAY.year + 1, None, tab["headings"][-1] if tab["headings"] else "", "fr") is None:
+                    print("  ", t, [c[:60] for c in cells[:4]])
     print("\n#### LNC FDJ United Series")
     for a in annees:
         f = lnc.get_fdj_calendar(a)

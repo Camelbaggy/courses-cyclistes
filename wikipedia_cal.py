@@ -378,9 +378,14 @@ def parse_dates(texte: str, annee: int, fr: bool = False) -> Optional[Tuple[str,
             debut = datetime.date(a1, MONTHS[m1[:3].lower()], int(d1))
             fin = datetime.date(a2, MONTHS[m2[:3].lower()], int(d2))
             if fin < debut and not (y1 or y2):
-                fin = fin.replace(year=fin.year + 1)
+                if kind == "d-dm" and fin.month > 1:         # « 30-2 mars » : le premier jour est dans le mois précédent
+                    debut = debut.replace(month=fin.month - 1)
+                elif kind == "d-dm":                          # « 30-2 janvier » -> 30 décembre de l'année précédente
+                    debut = debut.replace(year=debut.year - 1, month=12)
+                elif debut.month == 12 and fin.month == 1:    # chevauchement d'année (« 28 décembre – 3 janvier »)
+                    fin = fin.replace(year=fin.year + 1)
             if fin < debut:
-                continue
+                return None
             return debut.isoformat(), fin.isoformat()
         except (ValueError, KeyError):
             continue
@@ -770,6 +775,9 @@ def _tests() -> None:
     assert parse_dates("31 Jan – 2 Feb", 2027) == ("2027-01-31", "2027-02-02")
     assert parse_dates("March 5–10, 2027", 2027) == ("2027-03-05", "2027-03-10")
     assert parse_dates("30 March", 2027) == ("2027-03-30", "2027-03-30")
+    assert parse_dates("25-1er mai", 2027, True) == ("2027-04-25", "2027-05-01")
+    assert parse_dates("28 décembre au 3 janvier", 2027, True) == ("2027-12-28", "2028-01-03")
+    assert parse_dates("25 avril au 1er avril", 2027, True) is None          # intervalle incohérent : pas de date
     assert parse_dates("Paris–Roubaix", 2027) is None
     assert country_code("France") == "FRA" and country_code("FRA") == "FRA" and country_code("fr") == "FRA"
     assert _norm_classe("2.uwt") == "2.UWT" and _norm_classe("[[UCI World Tour|1.UWT]]") == "1.UWT"
