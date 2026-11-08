@@ -765,6 +765,6 @@ def build_notification(new_items: List[Tuple[Dict[str, Any], int]]) -> Dict[str,
     lines = []
     for e in entries:
         extra = " ; ".join(x for x in (e["french"], e["lead"]) if x)
-        lines.append(f"{e['head']} : {e['winner']}" + (" (Français)" if e["french_win"] else "")
-                     + (f" ({extra})" if extra else ""))
+        flag = "🇫🇷 " if e["french_win"] else ""
+        lines.append(f"{e['head']} : {flag}{e['winner']}" + (f" — {extra}" if extra else ""))
     return {"send": True, "title": f"Cyclisme : {len(entries)} nouveaux résultats", "message": "\n".join(lines)}
