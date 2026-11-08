@@ -300,7 +300,7 @@ def build_index(races: List[Dict], season: int, upcoming: List[Dict], fdj: Optio
 
 # --------------------------------------------------------------------------- point d'entrée
 
-def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races: int = 0,
+def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", max_races: int = 0,
         budget_min: float = 0) -> Dict:
     """budget_min > 0 : au-delà de ce temps, plus aucune nouvelle course n'est collectée ; l'index et l'état sont
     écrits avec ce qui a été fait, le passage suivant reprend (fichiers de course et décisions mémorisés)."""
@@ -314,14 +314,25 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
     notified = set(state.get("notified") or [])
     top10_cache = state.get("top10_checked") or {}   # competition_id -> bool (courses terminées seulement)
 
-    season_id = uci.get_season_id(season)
-    if season_id is None:
-        raise SystemExit(f"[ERREUR] Saison UCI {season} introuvable")
-    comps = uci.list_competitions(season_id)
-    print(f"[UCI] {len(comps)} courses hommes élite courues ou en cours en {season}")
     fdj = lnc.get_fdj_united_series()
     fdj_races = (fdj or {}).get("races") or []
-    picked = selection.select(comps, fdj_races)
+    auto = not season
+    if auto:
+        season = uci.season_for(today) or today.year
+    while True:
+        season_id = uci.get_season_id(season)
+        if season_id is None:
+            raise SystemExit(f"[ERREUR] Saison UCI {season} introuvable")
+        comps = uci.list_competitions(season_id)
+        print(f"[UCI] {len(comps)} courses hommes élite courues ou en cours en {season}")
+        picked = selection.select(comps, fdj_races)
+        # Début de saison UCI (fin octobre) : tant qu'aucune course suivie de la nouvelle saison n'a de résultat,
+        # le dashboard reste sur la saison précédente.
+        if auto and not picked:
+            print(f"[SAISON] aucune course suivie courue en {season} : affichage de la saison {season - 1}")
+            season, auto = season - 1, False
+            continue
+        break
     # Une manche FDJ United Series est rangée en « FDJ » même si sa classe (1.Pro) la retenait déjà,
     # et l'index relie chaque manche à sa fiche.
     for i, (comp, category, reason) in enumerate(picked):

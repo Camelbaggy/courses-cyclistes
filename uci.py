@@ -345,6 +345,19 @@ def _liste_paginee(chemin: str, filtres: Optional[List[Tuple[str, Any]]] = None,
     return sortie
 
 
+def season_for(day: Any) -> Optional[int]:
+    """Année de la saison UCI route contenant la date `day` (la saison N court de mi-octobre N-1 à mi-octobre N)."""
+    saisons = netutil.fetch_json(f"{BASE}/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId={DISCIPLINE_ROUTE}",
+                                 raw_name="uci_saisons")
+    if not isinstance(saisons, list):
+        return None
+    iso = day.isoformat()
+    for s in saisons:
+        if isinstance(s, dict) and (_date_iso(s.get("StartDate")) or "9999") <= iso <= (_date_iso(s.get("EndDate")) or ""):
+            return s.get("Year")
+    return None
+
+
 def get_season_id(year: int) -> Optional[int]:
     saisons = netutil.fetch_json(f"{BASE}/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId={DISCIPLINE_ROUTE}",
                                  raw_name="uci_saisons")
