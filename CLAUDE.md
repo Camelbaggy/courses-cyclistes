@@ -49,6 +49,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ aso.py        enrichissement ASO (bonifs, équipes, parcours, récits)
                                  ├ directvelo.py récits des courses françaises (Crawl-delay 10 s)
                                  ├ cyclingnews.py récits (RSS, ~3 jours de profondeur)
+                                 ├ wikipedia_cal.py calendrier à venir (pages « {année} UCI World Tour/ProSeries/Europe Tour ») + LNC
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
@@ -78,6 +79,9 @@ index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/
   coureur : `rider_id` = slug du nom + date de naissance. Pas de classement par équipes ni de villes d'étape.
   La dernière étape n'a souvent que « Stage Classification » : gc/points/… recopiés du classement final.
 - Le calendrier prévisionnel d'uci.org passe par une API privée (jeton Bearer dans la page) : **ne pas l'utiliser**.
+  cyclingflash.com : challenge Cloudflare sur tout le site (même robots.txt) : écarté. Calendrier à venir =
+  Wikipédia (crédit CC BY-SA en pied de page) ; les pages ProSeries / Europe Tour de la saison suivante n'existent
+  souvent qu'à partir de l'hiver : le calendrier se remplit tout seul quand elles paraissent.
 - Sites ASO : seule l'édition courante est servie (le Tour passe à l'année suivante dès l'automne) ;
   `aso.match_race` vérifie l'année.
 - Cyclingnews RSS : texte intégral donné à l'IA uniquement, jamais republié.

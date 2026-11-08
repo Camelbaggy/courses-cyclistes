@@ -20,6 +20,7 @@ import directvelo
 import lnc
 import selection
 import uci
+import wikipedia_cal
 
 DATA_DIR = "data"
 RACES_DIR = os.path.join(DATA_DIR, "races")
@@ -414,7 +415,14 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
                 cat = "." + comp["uci_class"].split(".")[1][0]
                 handle(comp, cat, "francais_top10", fetched=data)
 
-    upcoming = uci.list_upcoming(season + 1 if today.month >= 11 else season)
+    # Calendrier prévisionnel : Wikipédia (pages « {année} UCI World Tour / ProSeries / Europe Tour »), complété
+    # par les manches FDJ United Series publiées par la LNC. Vide tant que ces pages n'existent pas.
+    try:
+        upcoming = wikipedia_cal.list_upcoming(today)
+    except Exception as e:  # une source secondaire ne doit jamais faire échouer le passage
+        print(f"[WARN] calendrier Wikipédia indisponible : {e}")
+        upcoming = []
+    print(f"[CALENDRIER] {len(upcoming)} course(s) suivie(s) à venir")
     # Garde les fichiers de courses non revues ce passage (index complet de la saison)
     for fname in os.listdir(RACES_DIR):
         rid = fname[:-5]
