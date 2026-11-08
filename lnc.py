@@ -12,7 +12,7 @@ robots.txt : seuls /core/, /profiles/ et les README sont interdits.
 import html
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
 
@@ -95,3 +95,52 @@ def get_races(page: str = "") -> List[Dict[str, Any]]:
             seen.add((r["name"], r["date"]))
             out.append(r)
     return out
+
+
+_MOIS = {"janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "aout": 8,
+         "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12}
+CALENDAR_PATHS = ["/fdj-united-series/calendrier", "/calendrier", "/fdj-united-series"]
+_pages_cal: Dict[str, Optional[str]] = {}
+
+
+def _lignes(page: str) -> List[str]:
+    txt = re.sub(r"<(script|style|noscript|svg)[^>]*>.*?</\1>", " ", page, flags=re.S | re.I)
+    txt = re.sub(r"<[^>]+>", "\n", txt)
+    return [x for x in (" ".join(html.unescape(l).split()) for l in txt.splitlines()) if x]
+
+
+def _date_ligne(ln: str, annee: int) -> Optional[str]:
+    """« 22/03/2027 », « dimanche 22 mars 2027 » ou « 22 mars » (année de la page) -> ISO ; None sinon."""
+    m = re.fullmatch(r"(\d\d)/(\d\d)/(\d{4})", ln)
+    if m:
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    m = re.fullmatch(r"(?:\w+\.? )?(\d{1,2})(?:er)? ([a-zéèêûô]+)\.?(?: (\d{4}))?", ln.lower())
+    if m:
+        mois = _MOIS.get(netutil.normalize(m.group(2)))
+        if mois:
+            return f"{int(m.group(3) or annee):04d}-{mois:02d}-{int(m.group(1)):02d}"
+    return None
+
+
+def get_fdj_calendar(year: int) -> List[Dict[str, Any]]:
+    """Manches FDJ United Series de l'année `year` [{"name", "date", "race_id": None}], triées par date : liste des
+    résultats LNC (`get_races`, manches déjà courues) complétée, si la LNC publie un calendrier de la saison, par
+    les dates annoncées sur ses pages de calendrier. [] si rien n'est publié pour cette année."""
+    manches: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    for r in get_races():
+        if r["date"].startswith(f"{year}-"):
+            manches[(netutil.normalize(r["name"]), r["date"])] = r
+    for chemin in CALENDAR_PATHS:
+        if chemin not in _pages_cal:
+            _pages_cal[chemin] = netutil.fetch_text(BASE + chemin, raw_name="lnc_cal_" + chemin.strip("/").replace("/", "_"))
+        page = _pages_cal[chemin]
+        if not page:
+            continue
+        lignes = _lignes(page)
+        for i, ln in enumerate(lignes):
+            d = _date_ligne(ln, year)
+            if d and d.startswith(f"{year}-") and i > 0 and not _date_ligne(lignes[i - 1], year):
+                nom = lignes[i - 1]
+                if len(nom) > 3 and not nom.lower().startswith(("classe", "vainqueur", "date")):
+                    manches.setdefault((netutil.normalize(nom), d), {"name": nom, "date": d, "race_id": None})
+    return sorted(manches.values(), key=lambda r: (r["date"], r["name"]))
