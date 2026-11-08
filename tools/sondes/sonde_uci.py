@@ -104,95 +104,66 @@ def kendo(page=1, taille=40, filtres=None, tri=None, **extra):
 
 
 def montrer(j, n=2, maxc=900):
-    if not isinstance(j, dict):
+    if isinstance(j, dict):
+        data = j.get("data") or []
+        total = j.get("total")
+    elif isinstance(j, list):
+        data, total = j, len(j)
+    else:
         print("  (pas du JSON)")
         return []
-    data = j.get("data") or []
-    print(f"  total={j.get('total')} len(data)={len(data)} cles={sorted(data[0].keys()) if data else None}")
+    print(f"  total={total} len={len(data)} cles={sorted(data[0].keys()) if data and isinstance(data[0], dict) else None}")
     for r in data[:n]:
         print("  ex:", json.dumps(r, ensure_ascii=False)[:maxc])
     return data
 
 
-def passe9():
+def calendrier(sid, cat, pages=6):
+    flt3 = [("RaceTypeId", 0), ("CategoryId", cat), ("SeasonId", sid)]
+    out = []
+    for pg in range(1, pages + 1):
+        j = post_json("/iframe/Competitions/", kendo(page=pg, taille=100, filtres=flt3, tri=("StartDate", "asc"), disciplineId=10))
+        data = (j or {}).get("data") or []
+        out += data
+        if not data or len(out) >= (j or {}).get("total", 0):
+            break
+    return out
+
+
+def chaine(nom, cid, max_events_final=8):
+    print(f"\n######## {nom} -> {cid}")
+    races = post_json("/iframe/Races/", kendo(taille=60, competitionId=cid, disciplineId=10))
+    races = montrer(races, n=0)
+    if not races:
+        return
+    print("  courses/etapes:", [(r["Index"], r["Id"], r["RaceName"], r.get("Date")) for r in races][:30])
+    cibles = [races[0]] + ([races[1]] if len(races) > 2 else []) + ([races[-1]] if len(races) > 1 else [])
+    for r in cibles:
+        print(f"\n  >>> race {r['Id']} {r['RaceName']} ({r.get('Date')})")
+        evs = montrer(post_json("/iframe/Events/", {"disciplineId": 10, "raceId": r["Id"]}), n=0)
+        for e in evs:
+            print("   event:", json.dumps(e, ensure_ascii=False)[:420])
+        for e in evs[:max_events_final]:
+            eid = e.get("Id") or e.get("EventId")
+            print(f"  -- Results eventId={eid} ({e.get('EventName') or e.get('Name')})")
+            montrer(post_json("/iframe/Results/", kendo(taille=3, disciplineId=10, eventId=eid)), n=2, maxc=1100)
+
+
+def passe10():
     from collections import Counter
     base = "https://dataride.uci.org"
-    code, t = get(base + "/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId=10", accept="application/json", maxprint=1200)
-    try:
-        saisons = json.loads(t)
-    except Exception:
-        return
-    cible = {}
-    for x in saisons:
-        for an in ("2025", "2026", "2027"):
-            if an in str(x.get("Name")):
-                cible[an] = x["Id"]
-    print("  saisons retenues:", cible)
-    sid = cible.get("2026")
-    if sid is None:
-        return
-    code, t = get(f"{base}/iframe/GetRestrictedResultsCategories/?disciplineId=10&disciplineSeasonId={sid}", accept="application/json", maxprint=1500)
-    get(f"{base}/iframe/GetRestrictedResultsRaceTypes/?disciplineId=10&disciplineSeasonId={sid}", accept="application/json", maxprint=1500)
-    try:
-        cat = next(c["Id"] for c in json.loads(t) if c.get("Name") == "Men Elite")
-    except Exception:
-        cat = None
-    print("  categorie Men Elite:", cat)
-    flt = [("SeasonId", sid)] + ([("CategoryId", cat)] if cat is not None else [])
-    comps = []
-    flt3 = [("RaceTypeId", 0), ("CategoryId", cat), ("SeasonId", sid)]
-    essais = {
-        "A replique de la page (3 filtres, disciplineId, tri StartDate desc)":
-            lambda pg: kendo(page=pg, taille=100, filtres=flt3, tri=("StartDate", "desc"), disciplineId=10),
-        "B 3 filtres, sans disciplineId": lambda pg: kendo(page=pg, taille=100, filtres=flt3, tri=("StartDate", "desc")),
-        "C 3 filtres, disciplineId, sans tri": lambda pg: kendo(page=pg, taille=100, filtres=flt3, disciplineId=10),
-    }
-    choisi = None
-    for nom, f in essais.items():
-        print("\n  ### essai", nom)
-        code, t = post("/iframe/Competitions/", f(1), maxprint=0)
-        try:
-            j = json.loads(t)
-        except Exception:
-            print("  non JSON :", re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))[:500])
-            continue
-        print("  JSON total =", j.get("total"))
-        if j.get("total"):
-            choisi = f
-            break
-    if choisi:
-        for pg in (1, 2, 3, 4):
-            j = post_json("/iframe/Competitions/", choisi(pg))
-            data = montrer(j, n=2 if pg == 1 else 0)
-            comps += data
-            if not data or len(comps) >= (j or {}).get("total", 0):
-                break
-    print("  total recupere:", len(comps))
-    print("  par ClassCode:", Counter(c.get("ClassCode") for c in comps).most_common())
-    print("  par CategoryCode:", Counter(c.get("CategoryCode") for c in comps).most_common(6))
-    cles = {}
-    for mot in ("paris-roubaix", "tour de france", "paris-nice", "paris - nice"):
-        for c in comps:
-            nom = str(c.get("CompetitionName")).lower()
-            if mot in nom and "women" not in nom and "femmes" not in nom:
-                print("  >>", json.dumps(c, ensure_ascii=False)[:500])
-                cles.setdefault(mot, c)
-    for mot, c in cles.items():
-        cid = c.get("CompetitionId")
-        print(f"\n######## {mot} -> {cid}")
-        j = post_json("/iframe/Races/", kendo(taille=60, competitionId=cid, disciplineId=10))
-        races = montrer(j, n=1, maxc=700)
-        if not races:
-            continue
-        for r in ((races[0], races[-1]) if len(races) > 1 else (races[0],)):
-            j = post_json("/iframe/Events/", {"disciplineId": 10, "raceId": r["Id"]})
-            evs = montrer(j, n=3, maxc=500)
-            for e in evs[:2]:
-                eid = e.get("Id") or e.get("EventId")
-                jr = post_json("/iframe/Results/", kendo(taille=5, disciplineId=10, eventId=eid))
-                print(f"  -- Results eventId={eid}")
-                montrer(jr, n=2, maxc=900)
+    c26 = calendrier(464, 22)
+    print("  2026 Men Elite:", len(c26), Counter(c["ClassCode"] for c in c26).most_common())
+    print("  IsDone:", Counter((c["IsDone"], c["IsInProgress"]) for c in c26))
+    print("  derniers 2026:", [(c["CompetitionName"], c["Date"], c["ClassCode"], c["IsDone"]) for c in c26[-3:]])
+    print("  francais 2026 (UWT/Pro/1.1/2.1):", [(c["CompetitionName"], c["ClassCode"], c["Date"]) for c in c26 if c["CountryIsoCode3"] == "FRA" and c["ClassCode"] in ("1.UWT", "2.UWT", "1.Pro", "2.Pro", "1.1", "2.1")][:40])
+    c27 = calendrier(477, 22)
+    print("  2027 Men Elite:", len(c27), Counter(c["ClassCode"] for c in c27).most_common())
+    print("  premiers 2027:", [(c["CompetitionName"], c["Date"], c["ClassCode"], c["IsDone"], c["IsInProgress"]) for c in c27[:8]])
+    chaine("Paris-Roubaix 2026", 76380)
+    chaine("Tour de France 2026", 76399, max_events_final=8)
+    chaine("Paris-Nice 2026", 76363, max_events_final=6)
 
 
 if __name__ == "__main__":
-    passe9()
+    passe10()
