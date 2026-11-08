@@ -329,8 +329,8 @@ function renderRecents() {
       <div class="card-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>
         ${c ? catBadge(c.category, c.uci_class) : ""}</div>
       <div class="card-label">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
-      ${ligneCoureur(it.winner, it.stage_number == null ? "Vainqueur" : "Vainqueur")}
-      ${bf ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
+      ${ligneCoureur(it.winner, "Vainqueur")}
+      ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
       ${it.ai_summary ? `<div class="summary">${esc(it.ai_summary)}</div>` : ""}
     </button>`;
   }).join("")}</div>`;

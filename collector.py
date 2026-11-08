@@ -195,13 +195,17 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
     if not data or not data.get("stages"):
         print(f"[WARN] {comp['name']} : aucun résultat UCI exploitable")
         return previous
+    race_type = data.get("race_type") or ("one_day" if len(data["stages"]) == 1 else "stage_race")
     race = {
         "id": f"uci-{comp['competition_id']}", "name": comp["name"], "country": comp.get("country"),
         "flag": comp.get("flag"), "uci_class": comp.get("uci_class"), "category": category,
-        "race_type": data.get("race_type") or ("one_day" if len(data["stages"]) == 1 else "stage_race"),
+        "race_type": race_type,
         "start_date": comp.get("start_date"), "end_date": comp.get("end_date"),
         "stages_total": data.get("stages_total"), "selection_reason": reason, "sources": ["uci"],
-        "stages": data["stages"], "final": data.get("final"), "riders": data.get("riders") or {},
+        "stages": data["stages"],
+        # course d'un jour : uci.py fait pointer `final` vers stages[0].results -> inutile de le dupliquer
+        "final": None if race_type == "one_day" else data.get("final"),
+        "riders": data.get("riders") or {}, "_complete": data.get("complete", True),
     }
     aso_ref = aso.match_race(race["name"], race["start_date"])
     prev_stages = {s.get("number"): s for s in (previous or {}).get("stages") or []}
@@ -246,7 +250,8 @@ def _needs_refresh(comp: Dict, previous: Optional[Dict], today: dt.date) -> bool
     if previous is None:
         return True
     end = _date(comp.get("end_date"))
-    return end is None or (today - end).days <= REFRESH_DAYS or previous.get("status") != "finished"
+    return (end is None or (today - end).days <= REFRESH_DAYS or previous.get("status") != "finished"
+            or previous.get("_complete") is False)
 
 
 # --------------------------------------------------------------------------- index
@@ -363,7 +368,7 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
                      "race_type": data.get("race_type")}
             ok = selection.french_top10(probe)
             end = _date(comp.get("end_date"))
-            if end and (today - end).days > REFRESH_DAYS:
+            if end and (today - end).days > REFRESH_DAYS and data.get("complete", True):
                 top10_cache[cid] = ok
             if ok:
                 cat = "." + comp["uci_class"].split(".")[1][0]

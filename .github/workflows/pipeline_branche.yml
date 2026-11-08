@@ -1,0 +1,45 @@
+name: Pipeline complet sur la branche (données committées sur la branche)
+
+# Déclenché par un commit poussé sur une branche ccr-* dont le message contient [pipeline].
+# Options dans le message : [avec-ia] (Gemini actif), [saison:2026], [max:N] (limite de courses).
+on:
+  push:
+    branches: ['ccr-*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pipeline-branche
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    if: contains(github.event.head_commit.message, '[pipeline]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Pipeline (sans notification)
+        env:
+          PYTHONUNBUFFERED: "1"
+          MSG: ${{ github.event.head_commit.message }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_BUDGET_SECONDS: ${{ contains(github.event.head_commit.message, '[avec-ia]') && '900' || '0' }}
+        run: |
+          SAISON=$(printf '%s' "$MSG" | grep -o '\[saison:[0-9]*\]' | grep -o '[0-9]*' | head -1)
+          MAX=$(printf '%s' "$MSG" | grep -o '\[max:[0-9]*\]' | grep -o '[0-9]*' | head -1)
+          python run_pipeline.py --no-notify --season "${SAISON:-2026}" --max-races "${MAX:-0}"
+          python tools/inspect_data.py data
+      - name: Commit des données sur la branche
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "test: données du pipeline sur la branche"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
