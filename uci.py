@@ -383,7 +383,10 @@ def list_competitions(season_id: int) -> List[Dict[str, Any]]:
 
 
 def list_upcoming(year: int) -> List[Dict[str, Any]]:
-    """Calendrier prévisionnel : voir docs/recherche/calendrier_uci.md. [] tant qu'aucune source exploitable."""
+    """Calendrier prévisionnel des courses à venir. Renvoie toujours [] : la liste du calendrier uci.org est chargée par
+    le navigateur avec un jeton Bearer embarqué dans la page (non utilisé : ce ne serait pas un accès public documenté),
+    DataRide n'expose que les courses déjà courues, et les conditions d'utilisation d'uci.org interdisent toute
+    reproduction ou utilisation du site sans autorisation. Voir docs/recherche/calendrier_uci.md."""
     return []
 
 
