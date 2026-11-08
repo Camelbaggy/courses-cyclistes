@@ -58,6 +58,8 @@ index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
+- Budget de temps (`--budget-min`, 40 min par défaut) : au-delà, la collecte s'arrête proprement (courses les plus
+  récentes traitées d'abord) et reprend au passage suivant. Le premier rattrapage d'une saison prend ~3 passages.
 - Gemini seulement pour les étapes des 3 derniers jours ; repli déterministe pour l'historique. Pas de push pour
   un rattrapage (nouveautés de plus de 2 jours).
 

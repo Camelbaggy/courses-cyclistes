@@ -17,11 +17,14 @@ def main() -> None:
     p.add_argument("--only", default="", help="ne traiter que les courses dont le nom contient ce texte")
     p.add_argument("--max-races", type=int, default=0, help="limite le nombre de courses traitées (tests)")
     p.add_argument("--save-raw", default="", help="dossier où sauvegarder les réponses brutes")
+    p.add_argument("--budget-min", type=float, default=40,
+                   help="durée max de collecte en minutes (0 = illimitée) ; la suite au passage suivant")
     p.add_argument("--no-notify", action="store_true", help="ne pas envoyer de push ntfy")
     a = p.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
     netutil.set_raw_dir(a.save_raw or None)
-    collector.run(a.season or today.year, today=today, only=a.only, max_races=a.max_races)
+    collector.run(a.season or today.year, today=today, only=a.only, max_races=a.max_races,
+                  budget_min=a.budget_min)
     if not a.no_notify:
         notify.send("data/index.json")
 

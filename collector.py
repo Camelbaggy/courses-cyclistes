@@ -10,6 +10,7 @@ terminées depuis moins de REFRESH_DAYS jours sont recollectées."""
 import datetime as dt
 import json
 import os
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import agents_flash
@@ -299,8 +300,15 @@ def build_index(races: List[Dict], season: int, upcoming: List[Dict], fdj: Optio
 
 # --------------------------------------------------------------------------- point d'entrée
 
-def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races: int = 0) -> Dict:
+def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races: int = 0,
+        budget_min: float = 0) -> Dict:
+    """budget_min > 0 : au-delà de ce temps, plus aucune nouvelle course n'est collectée ; l'index et l'état sont
+    écrits avec ce qui a été fait, le passage suivant reprend (fichiers de course et décisions mémorisés)."""
     today = today or dt.date.today()
+    t0 = time.monotonic()
+
+    def over_budget() -> bool:
+        return bool(budget_min) and (time.monotonic() - t0) / 60 > budget_min
     os.makedirs(RACES_DIR, exist_ok=True)
     state = _load(os.path.join(DATA_DIR, "state.json"), {})
     notified = set(state.get("notified") or [])
@@ -343,7 +351,13 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
                     new_items.append((race, idx))
 
     count = 0
+    # les plus récentes d'abord : ce sont elles qui comptent si le budget de temps est atteint
+    picked.sort(key=lambda p: p[0].get("start_date") or "", reverse=True)
+    stopped = False
     for comp, category, reason in picked:
+        if over_budget():
+            stopped = True
+            break
         handle(comp, category, reason)
         count += 1
         if max_races and count >= max_races:
@@ -351,7 +365,10 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
 
     # .1 / .2 hors de France : retenues si un Français termine dans les 10 premiers.
     if not only and not (max_races and count >= max_races):
-        for comp in comps:
+        for comp in sorted(comps, key=lambda c: c.get("start_date") or "", reverse=True):
+            if over_budget():
+                stopped = True
+                break
             if comp["competition_id"] in picked_ids or comp.get("uci_class") not in TOP10_CLASSES:
                 continue
             cid = str(comp["competition_id"])
@@ -390,5 +407,7 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
     state.update({"notified": sorted(notified), "top10_checked": top10_cache,
                   "last_run": index["generated_at"]})
     _dump(os.path.join(DATA_DIR, "state.json"), state)
+    if stopped:
+        print(f"[BUDGET] budget de {budget_min:.0f} min atteint : collecte interrompue, reprise au prochain passage")
     print(f"[FIN] {len(races)} courses dans l'index, {len(new_items)} nouveauté(s) à notifier")
     return index
