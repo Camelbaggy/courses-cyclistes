@@ -88,18 +88,16 @@ def post_json(path, champs, base="https://dataride.uci.org"):
         return None
 
 
-def passe5():
+def passe6():
     base = "https://dataride.uci.org"
-    code, t = get(f"{base}/iframe/Results/10/", accept="text/html", show=False)
+    code, t = get(base + "/iframe/Results/10/", accept="text/html", show=False)
     if t:
-        contexte(t, ["iframeCompetitionsSource(", "competitionsSource(", "filter", "Season"], avant=200, apres=700, maxn=3)
-        corps = re.sub(r"<script.*?</script>", "", t, flags=re.S)
-        print("  HTML visible:", re.sub(r"\s+", " ", corps)[1500:4500])
-    for d in range(1, 13):
-        j = post_json("/iframe/Competitions/", {"disciplineId": d, "page": 1, "pageSize": 2, "take": 2, "skip": 0})
-        if j:
-            print(f"  >>> disciplineId={d}: total={j.get('total')} ex={json.dumps(j.get('data', [])[:1], ensure_ascii=False)[:700]}")
+        k0 = t.find("var categoriesDropdown")
+        print(t[k0:k0 + 9500])
+    for chemin in ("/iframe/GetRestrictedResultsRaceTypes/?disciplineId=10&disciplineSeasonId=",
+                   "/iframe/GetRestrictedResultsCategories/?disciplineId=10&disciplineSeasonId="):
+        get(base + chemin, accept="application/json", maxprint=1500)
 
 
 if __name__ == "__main__":
-    passe5()
+    passe6()
