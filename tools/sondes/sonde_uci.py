@@ -114,7 +114,7 @@ def montrer(j, n=2, maxc=900):
     return data
 
 
-def passe7():
+def passe8():
     from collections import Counter
     base = "https://dataride.uci.org"
     code, t = get(base + "/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId=10", accept="application/json", maxprint=1200)
@@ -140,12 +140,35 @@ def passe7():
     print("  categorie Men Elite:", cat)
     flt = [("SeasonId", sid)] + ([("CategoryId", cat)] if cat is not None else [])
     comps = []
-    for pg in (1, 2, 3):
-        j = post_json("/iframe/Competitions/", kendo(page=pg, taille=100, filtres=flt, tri=("StartDate", "asc")))
-        data = montrer(j, n=2 if pg == 1 else 0)
-        comps += data
-        if not data or len(comps) >= (j or {}).get("total", 0):
+    essais = {
+        "A kendo filtres sans tri": lambda pg: kendo(page=pg, taille=100, filtres=flt),
+        "B kendo filtres + tri": lambda pg: kendo(page=pg, taille=100, filtres=flt, tri=("StartDate", "asc")),
+        "C compact DataSourceRequest": lambda pg: {"page": pg, "pageSize": 100, "sort": "StartDate-asc",
+                                                    "filter": "~and~".join(f"{c}~eq~{v}" for c, v in flt)},
+        "D champs a plat": lambda pg: {"page": pg, "pageSize": 100, "take": 100, "skip": (pg - 1) * 100,
+                                        **{c: v for c, v in flt}, "disciplineId": 10},
+        "E kendo filtres, operateur contains-free (sans logic)": lambda pg: {k: v for k, v in kendo(page=pg, taille=100, filtres=flt).items() if k != "filter[logic]"},
+    }
+    choisi = None
+    for nom, f in essais.items():
+        print("\n  ### essai", nom)
+        code, t = post("/iframe/Competitions/", f(1), maxprint=0)
+        try:
+            j = json.loads(t)
+        except Exception:
+            print("  non JSON :", re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", t))[:500])
+            continue
+        print("  JSON total =", j.get("total"))
+        if j.get("total"):
+            choisi = f
             break
+    if choisi:
+        for pg in (1, 2, 3, 4):
+            j = post_json("/iframe/Competitions/", choisi(pg))
+            data = montrer(j, n=2 if pg == 1 else 0)
+            comps += data
+            if not data or len(comps) >= (j or {}).get("total", 0):
+                break
     print("  total recupere:", len(comps))
     print("  par ClassCode:", Counter(c.get("ClassCode") for c in comps).most_common())
     print("  par CategoryCode:", Counter(c.get("CategoryCode") for c in comps).most_common(6))
@@ -174,4 +197,4 @@ def passe7():
 
 
 if __name__ == "__main__":
-    passe7()
+    passe8()
