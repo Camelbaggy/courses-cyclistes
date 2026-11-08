@@ -62,14 +62,15 @@ def explorer(url, n=60):
     return txt
 
 
-def passe1():
-    get("https://dataride.uci.ch/robots.txt", maxprint=1500)
-    get("https://www.uci.org/robots.txt", maxprint=500)
-    for u in ("https://www.uci.org/", "https://www.uci.org/discipline/road",
-              "https://www.uci.org/calendar", "https://www.uci.org/results",
-              "https://www.uci.org/discipline/road/calendar"):
+def passe2():
+    get("https://dataride.uci.ch/robots.txt", maxprint=4000)
+    t = explorer("https://dataride.uci.org/iframe/CompetitionResults/77319?disciplineId=8")
+    if t:
+        print(t[:3000])
+    for u in ("https://www.uci.org/competition-hub/2026-uci-road-world-championships/14QBdFX8GqbCHUPE234D0Q?tab=races-results",
+              "https://wwwnew.uci.org/road/calendar", "https://www.uci.org/road/calendar"):
         explorer(u)
 
 
 if __name__ == "__main__":
-    passe1()
+    passe2()
