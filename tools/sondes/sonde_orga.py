@@ -83,7 +83,7 @@ def raw_get(url, check=True):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,application/xml,*/*;q=0.8",
                                                "Accept-Encoding": "gzip", "Accept-Language": "fr,en;q=0.7"})
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with urllib.request.urlopen(req, timeout=12) as r:
             data, status, ctype, hdr = r.read(MAX_BYTES), r.status, r.headers.get("Content-Type", ""), r.headers
     except urllib.error.HTTPError as e:
         data, status, ctype, hdr = e.read(MAX_BYTES), e.code, e.headers.get("Content-Type", ""), e.headers
