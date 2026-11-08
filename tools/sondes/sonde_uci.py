@@ -149,21 +149,89 @@ def chaine(nom, cid, max_events_final=8):
             montrer(post_json("/iframe/Results/", kendo(taille=3, disciplineId=10, eventId=eid)), n=2, maxc=1100)
 
 
-def passe10():
+def maintenant_ms():
+    return int(time.time() * 1000)
+
+
+def ms(x):
+    m = re.search(r"-?\d+", str(x or ""))
+    return int(m.group()) if m else 0
+
+
+def resume_competition(c, detail=False):
+    """Races -> premier Race -> Events -> Results(take 1) : renvoie une ligne compacte."""
+    races = (post_json("/iframe/Races/", kendo(taille=60, competitionId=c["CompetitionId"], disciplineId=10)) or {}).get("data") or []
+    if not races:
+        return f"{c['CompetitionName']} [{c['ClassCode']}] {c['Date']} : aucune race"
+    r = races[0]
+    evs = post_json("/iframe/Events/", {"disciplineId": 10, "raceId": r["Id"]})
+    if not isinstance(evs, list) or not evs:
+        return f"{c['CompetitionName']} [{c['ClassCode']}] {c['Date']} : {len(races)} race(s), AUCUN event ({r['RaceName']})"
+    e = evs[0]
+    res = post_json("/iframe/Results/", kendo(taille=1, disciplineId=10, eventId=e["EventId"])) or {}
+    d = (res.get("data") or [{}])[0]
+    return (f"{c['CompetitionName']} [{c['ClassCode']}] {c['Date']} done={c['IsDone']}/prog={c['IsInProgress']} : {len(races)} race(s), "
+            f"{len(evs)} event(s) {[x['EventName'] for x in evs][:4]}, {e['EventName']} total={res.get('total')} "
+            f"1er={d.get('DisplayName')} {d.get('ResultValue')} ({d.get('TeamName')}, {d.get('IndividualCountryNameText')})")
+
+
+def passe11():
     from collections import Counter
-    base = "https://dataride.uci.org"
-    c26 = calendrier(464, 22)
-    print("  2026 Men Elite:", len(c26), Counter(c["ClassCode"] for c in c26).most_common())
-    print("  IsDone:", Counter((c["IsDone"], c["IsInProgress"]) for c in c26))
-    print("  derniers 2026:", [(c["CompetitionName"], c["Date"], c["ClassCode"], c["IsDone"]) for c in c26[-3:]])
-    print("  francais 2026 (UWT/Pro/1.1/2.1):", [(c["CompetitionName"], c["ClassCode"], c["Date"]) for c in c26 if c["CountryIsoCode3"] == "FRA" and c["ClassCode"] in ("1.UWT", "2.UWT", "1.Pro", "2.Pro", "1.1", "2.1")][:40])
-    c27 = calendrier(477, 22)
-    print("  2027 Men Elite:", len(c27), Counter(c["ClassCode"] for c in c27).most_common())
-    print("  premiers 2027:", [(c["CompetitionName"], c["Date"], c["ClassCode"], c["IsDone"], c["IsInProgress"]) for c in c27[:8]])
-    chaine("Paris-Roubaix 2026", 76380)
-    chaine("Tour de France 2026", 76399, max_events_final=8)
-    chaine("Paris-Nice 2026", 76363, max_events_final=6)
+    c26 = calendrier(464, 22, pages=6)
+    c27 = calendrier(477, 22, pages=6)
+    now = maintenant_ms()
+    print(f"  2026: {len(c26)} courses ; 2027: {len(c27)} courses")
+    print("  2026 par classe:", Counter(c["ClassCode"] for c in c26).most_common())
+    print("  2027 par classe:", Counter(c["ClassCode"] for c in c27).most_common())
+    passes = [c for c in c26 + c27 if ms(c["EndDate"]) < now]
+    print("  passees:", len(passes), "IsDone parmi passees:", Counter(c["IsDone"] for c in passes))
+    print("  futures IsDone:", Counter(c["IsDone"] for c in c26 + c27 if ms(c["EndDate"]) >= now))
+    print("  2027 premieres:", [(c["CompetitionName"], c["Date"], c["ClassCode"]) for c in c27[:6]])
+    print("  2027 UWT/Pro:", [(c["CompetitionName"], c["Date"], c["ClassCode"]) for c in c27 if c["ClassCode"] in ("1.UWT", "2.UWT", "1.Pro", "2.Pro")][:12])
+    # 1) derniers evenements passes (delai de publication)
+    passes.sort(key=lambda c: ms(c["EndDate"]), reverse=True)
+    print("\n  ==== 8 dernieres courses passees (aujourd'hui = %s) ====" % time.strftime("%Y-%m-%d", time.gmtime()))
+    for c in passes[:8]:
+        print("  *", resume_competition(c))
+    # 2) couverture par classe (une course passee 2026 par classe, de preference francaise)
+    print("\n  ==== couverture par classe ====")
+    vus = set()
+    for cl in ("1.UWT", "2.UWT", "1.Pro", "2.Pro", "1.1", "2.1", "1.2", "2.2", "CN", "CC", "CRTP"):
+        cands = [c for c in c26 if c["ClassCode"] == cl and ms(c["EndDate"]) < now]
+        cands.sort(key=lambda c: (c["CountryIsoCode3"] != "FRA", -ms(c["EndDate"])))
+        if cands:
+            print("  *", resume_competition(cands[0]))
+    # 3) Paris-Roubaix + abandons + startlist
+    print("\n  ==== Paris-Roubaix 2026 ====")
+    races = (post_json("/iframe/Races/", kendo(taille=10, competitionId=76380, disciplineId=10)) or {}).get("data") or []
+    rid = races[0]["Id"]
+    evs = post_json("/iframe/Events/", {"disciplineId": 10, "raceId": rid})
+    for e in evs:
+        print("   event:", json.dumps({k: e[k] for k in ("EventId", "EventName", "WinnerName", "IsTeamEvent")}, ensure_ascii=False))
+    eid = evs[0]["EventId"]
+    j = post_json("/iframe/Results/", kendo(taille=3, disciplineId=10, eventId=eid))
+    print("   total", j.get("total"))
+    for r in j["data"]:
+        print("   ", r["Rank"], r["DisplayName"], r["TeamName"], r["NationName"], r["ResultValue"], r["Irm"], r["Bib"])
+    tot = j["total"]
+    j2 = post_json("/iframe/Results/", kendo(page=max(1, tot // 40 + 1), taille=40, disciplineId=10, eventId=eid))
+    print("   dernieres lignes :", [(r["Rank"], r["DisplayName"], r["ResultValue"], r["Irm"]) for r in j2["data"][-6:]])
+    print("   Irm distincts page:", Counter(r["Irm"] for r in j2["data"]))
+    for lt in (1, 2):
+        c, t = post("/iframe/GetRiderList/", {"listTypeId": lt, "raceId": rid, "eventId": eid, "take": 3, "skip": 0, "page": 1, "pageSize": 3}, maxprint=700)
+    # 4) abandons sur une etape du Tour
+    print("\n  ==== TdF 2026 etape 8 (256552) : abandons / Irm ====")
+    evs = post_json("/iframe/Events/", {"disciplineId": 10, "raceId": 256552})
+    e0 = evs[0]
+    j = post_json("/iframe/Results/", kendo(taille=1, disciplineId=10, eventId=e0["EventId"]))
+    tot = j["total"]
+    print("   ", e0["EventName"], "total", tot)
+    j2 = post_json("/iframe/Results/", kendo(page=tot // 40 + 1, taille=40, disciplineId=10, eventId=e0["EventId"]))
+    print("   dernieres lignes :", [(r["Rank"], r["DisplayName"], r["ResultValue"], r["Irm"]) for r in j2["data"][-6:]])
+    print("   Irm distincts:", Counter(r["Irm"] for r in j2["data"]))
+    # 5) Irm connus
+    c, t = get("https://dataride.uci.org/iframe/GetIrms/", accept="application/json", maxprint=900)
 
 
 if __name__ == "__main__":
-    passe10()
+    passe11()
