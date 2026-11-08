@@ -1,0 +1,33 @@
+name: Essais réseau (branches ccr-*, sans commit)
+
+# Lance tools/essais/essai_<nom>.py pour chaque balise [essai:<nom>] du message du dernier commit poussé.
+on:
+  push:
+    branches: ['ccr-*']
+
+permissions:
+  contents: read
+
+jobs:
+  essais:
+    if: contains(github.event.head_commit.message, '[essai:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Essais demandés
+        env:
+          PYTHONUNBUFFERED: "1"
+          MSG: ${{ github.event.head_commit.message }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AI_BUDGET_SECONDS: ${{ contains(github.event.head_commit.message, '[avec-ia]') && '600' || '0' }}
+        run: |
+          python -m py_compile *.py tools/*/*.py
+          for nom in $(printf '%s' "$MSG" | grep -o '\[essai:[a-z0-9_]*\]' | sed 's/\[essai:\(.*\)\]/\1/' | sort -u); do
+            echo "::group::essai_$nom"
+            python "tools/essais/essai_$nom.py" || echo "[ECHEC] essai_$nom"
+            echo "::endgroup::"
+          done
