@@ -106,6 +106,8 @@ COUNTRY_NAMES_FR = {
     "costa rica": "CRC", "cuba": "CUB", "erythree": "ERI", "ethiopie": "ETH", "malaisie": "MAS",
     "turkmenistan": "TKM", "ouzbekistan": "UZB", "iran": "IRN", "inde": "IND", "kenya": "KEN",
 }
+# Codes des modèles français qui diffèrent du code CIO/UCI.
+CODES_FR_ALIAS = {"MAL": "MAS", "DAN": "DEN", "ALL": "GER", "PBA": "NED", "SUS": "SWE", "GRB": "GBR"}
 _ISO2_TO_CODE: Dict[str, str] = {}
 for _c, _f in netutil.FLAG_CODES.items():
     _ISO2_TO_CODE.setdefault(_f, _c)
@@ -276,6 +278,8 @@ def country_code(valeur: str) -> Optional[str]:
         return None
     if re.fullmatch(r"[A-Za-z]{3}", v) and v.upper() in netutil.FLAG_CODES:
         return v.upper()
+    if v.upper() in CODES_FR_ALIAS:
+        return CODES_FR_ALIAS[v.upper()]
     if v.lower() in COUNTRY_NAMES:
         return COUNTRY_NAMES[v.lower()]
     if re.fullmatch(r"[A-Z]{3}", v):
@@ -297,7 +301,7 @@ def pays_dans(raw: str) -> Optional[str]:
             return code
     m = re.search(r"\{\{\s*([A-Z]{3})\s*\}\}", raw or "")
     if m:
-        return m.group(1)
+        return CODES_FR_ALIAS.get(m.group(1), m.group(1))
     for m in re.finditer(r"\{\{\s*([^{}|]+?)\s*\}\}", raw or ""):          # {{France}}, {{Belgique}}
         code = country_code(m.group(1))
         if code:
@@ -495,6 +499,8 @@ def ligne_vers_course(cells: List[str], headers: List[str], annee: int, classe_d
     hd = headers if len(headers) == n else []
     i_date = _index_colonne(hd, "date")
     dates = parse_dates(cells[i_date], annee, fr) if i_date is not None else None
+    if dates is None and fr and i_date is not None and indice_section:      # « 14-17 » sous le titre « Janvier »
+        dates = parse_dates(f"{cells[i_date]} {indice_section}", annee, True)
     if dates is None:
         i_date = None
         for i, c in enumerate(cells):
@@ -682,12 +688,13 @@ def _jours_proches(a: Optional[str], b: Optional[str]) -> bool:
         return False
 
 
-def _cle_exacte(c: Dict[str, Any]) -> Optional[Tuple[str, str, str, str]]:
-    """Dates + pays + classe : identifie une course quand les noms diffèrent d'une langue à l'autre
-    (« Tour of Flanders » / « Tour des Flandres »). None si un des éléments manque."""
-    if c.get("country") and c.get("uci_class") and c.get("start_date") and c.get("end_date"):
-        return c["start_date"], c["end_date"], c["country"], c["uci_class"]
-    return None
+def _meme_cle(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+    """Débuts et fins à ± 1 jour, même pays, même classe (champs tous renseignés) : noms différents d'une langue à
+    l'autre (« Tour of Flanders » / « Tour des Flandres »)."""
+    if not all(x.get(k) for x in (a, b) for k in ("country", "uci_class", "start_date", "end_date")):
+        return False
+    return (a["country"] == b["country"] and a["uci_class"] == b["uci_class"]
+            and _jours_proches(a["start_date"], b["start_date"]) and _jours_proches(a["end_date"], b["end_date"]))
 
 
 def _dedoublonner(courses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -701,17 +708,12 @@ def _dedoublonner(courses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     def cle(c: Dict[str, Any]) -> Tuple[int, int, int]:
         return _RANG.get(c.get("category") or "", 9), -remplis(c), 1 if c.get("source") == "wikipedia-fr" else 0
 
-    par_cle: Dict[Tuple[Any, ...], int] = {}
-    for c in courses:
-        k = _cle_exacte(c)
-        if k:
-            par_cle[(c.get("source"),) + k] = par_cle.get((c.get("source"),) + k, 0) + 1
-
     def meme_cle_unique(g: Dict[str, Any], c: Dict[str, Any]) -> bool:
-        k = _cle_exacte(g)
-        if not k or k != _cle_exacte(c) or g.get("source") == c.get("source"):
+        """Source différente, clé relâchée commune, et une seule candidate de chaque côté (sinon on ne fusionne pas)."""
+        if g.get("source") == c.get("source") or not _meme_cle(g, c):
             return False
-        return par_cle.get((g.get("source"),) + k) == 1 and par_cle.get((c.get("source"),) + k) == 1
+        return (sum(1 for x in courses if x.get("source") == c.get("source") and _meme_cle(g, x)) == 1
+                and sum(1 for x in courses if x.get("source") == g.get("source") and _meme_cle(x, c)) == 1)
 
     gardees: List[Dict[str, Any]] = []
     for c in sorted(courses, key=cle):
@@ -877,6 +879,11 @@ def _tests() -> None:
     assert [(c["name"], c["source"]) for c in u] == [("Tour Down Under", "wikipedia"), ("Tour of Flanders", "wikipedia"),
                                                      ("Nouvelle Course", "wikipedia-fr")], u
     assert u[0]["country"] == "AUS"
+    eu = "== Janvier ==\n{|\n|-\n! Date !! Course !! Pays !! Classe\n|-\n| 14-17 || [[Vuelta Ciclista a Canarias]] || {{ESP}} || 2.1\n|-\n| 23 || [[Grand Prix Castellón]] || {{ESP}} || 1.1\n|}"
+    cs = parse_calendar_page("UCI Europe Tour 2027", eu, 2027, "fr")
+    assert [(c["name"], c["start_date"], c["end_date"]) for c in cs] == [
+        ("Vuelta Ciclista a Canarias", "2027-01-14", "2027-01-17"), ("Grand Prix Castellón", "2027-01-23", "2027-01-23")], cs
+    assert pays_dans("{{MAL}}") == "MAS"
     print("[OK] wikipedia_cal.py : tests locaux réussis")
 
 
