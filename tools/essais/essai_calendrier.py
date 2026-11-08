@@ -121,7 +121,13 @@ def diag_lnc():
     """Où la LNC publie-t-elle son calendrier ? robots.txt, liens du site, lignes de la page FDJ United Series."""
     rob = netutil.fetch_text(lnc.BASE + "/robots.txt") or ""
     print("  robots.txt Disallow :", re.findall(r"(?im)^disallow:\s*(\S+)", rob)[:40])
-    for chemin in ["/fdj-united-series"] + [p for p in lnc.CALENDAR_PATHS if p != "/fdj-united-series"]:
+    for chemin in ["/calendrier?french_cup=1&date=2026&show_passed_races=1", "/calendrier?french_cup=1&date=2027"]:
+        page = netutil.fetch_text(lnc.BASE + chemin)
+        if page:
+            lg = lnc._lignes(page)
+            deb = lg.index("Année") if "Année" in lg else 0
+            print(f"  {chemin} : lignes après « Année » ->", lg[deb:deb + 45])
+    for chemin in ["/calendrier?french_cup=1"]:
         page = netutil.fetch_text(lnc.BASE + chemin)
         print(f"  {chemin} : {'absent' if not page else str(len(page)) + ' car.'}")
         if not page:

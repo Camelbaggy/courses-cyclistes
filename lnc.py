@@ -99,7 +99,7 @@ def get_races(page: str = "") -> List[Dict[str, Any]]:
 
 _MOIS = {"janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "aout": 8,
          "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12}
-CALENDAR_PATHS = ["/calendrier?french_cup=1", "/fdj-united-series"]   # « Calendrier FDJ UNITED SERIES », filtre année
+CALENDAR_PATHS = ["/calendrier?french_cup=1&date={y}"]   # « Calendrier des prochaines courses », filtres FDJ United Series + année
 _pages_cal: Dict[str, Optional[str]] = {}
 
 
@@ -130,9 +130,10 @@ def get_fdj_calendar(year: int) -> List[Dict[str, Any]]:
     for r in get_races():
         if r["date"].startswith(f"{year}-"):
             manches[(netutil.normalize(r["name"]), r["date"])] = r
-    for chemin in CALENDAR_PATHS:
+    for modele in CALENDAR_PATHS:
+        chemin = modele.format(y=year)
         if chemin not in _pages_cal:
-            _pages_cal[chemin] = netutil.fetch_text(BASE + chemin, raw_name="lnc_cal_" + chemin.strip("/").replace("/", "_"))
+            _pages_cal[chemin] = netutil.fetch_text(BASE + chemin, raw_name="lnc_cal_%d.html" % year)
         page = _pages_cal[chemin]
         if not page:
             continue
