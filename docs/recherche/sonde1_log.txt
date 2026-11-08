@@ -1,0 +1,700 @@
+hint: Disable this message with "git config set advice.defaultBranchName false"
+Initialized empty Git repository in /home/runner/work/coupes-europe/coupes-europe/.git/
+[command]/usr/bin/git remote add origin https://github.com/Camelbaggy/coupes-europe
+##[endgroup]
+##[group]Disabling automatic garbage collection
+[command]/usr/bin/git config --local gc.auto 0
+##[endgroup]
+##[group]Setting up auth
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+[command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+##[endgroup]
+##[group]Fetching the repository
+[command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +d91024635f6fdcb3b9dccd3f25e83688699a47cf:refs/remotes/origin/ccr-6eb51b68-vzkhg2
+From https://github.com/Camelbaggy/coupes-europe
+ * [new ref]         d91024635f6fdcb3b9dccd3f25e83688699a47cf -> origin/ccr-6eb51b68-vzkhg2
+##[endgroup]
+##[group]Determining the checkout info
+##[endgroup]
+[command]/usr/bin/git sparse-checkout disable
+[command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+##[group]Checking out the ref
+[command]/usr/bin/git checkout --progress --force -B ccr-6eb51b68-vzkhg2 refs/remotes/origin/ccr-6eb51b68-vzkhg2
+Switched to a new branch 'ccr-6eb51b68-vzkhg2'
+branch 'ccr-6eb51b68-vzkhg2' set up to track 'origin/ccr-6eb51b68-vzkhg2'.
+##[endgroup]
+[command]/usr/bin/git log -1 --format=%H
+d91024635f6fdcb3b9dccd3f25e83688699a47cf
+##[group]Run actions/setup-python@v5
+with:
+  python-version: 3.11
+  check-latest: false
+  token: ***
+  update-environment: true
+  allow-prereleases: false
+  freethreaded: false
+##[endgroup]
+##[group]Installed versions
+(node:2170) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Successfully set up CPython (3.11.18)
+##[endgroup]
+##[group]Run python tools/sonde_velo.py
+[36;1mpython tools/sonde_velo.py[0m
+shell: /usr/bin/bash -e {0}
+env:
+  pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+  PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+  Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+  Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+  Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+  LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+##[endgroup]
+
+=== https://www.procyclingstats.com/robots.txt
+  HTTP 200 | text/plain; charset=utf-8 | 3305 o | cloudflare=True | server=cloudflare
+# As a condition of accessing this website, you agree to abide by the following
+# content signals:
+
+# (a)  If a Content-Signal = yes, you may collect content for the corresponding
+#      use.
+# (b)  If a Content-Signal = no, you may not collect content for the
+#      corresponding use.
+# (c)  If the website operator does not include a Content-Signal for a
+#      corresponding use, the website operator neither grants nor restricts
+#      permission via Content-Signal with respect to the corresponding use.
+
+# The content signals and their meanings are:
+
+# search:   building a search index and providing search results (e.g., returning
+#           hyperlinks and short excerpts from your website's contents). Search does not
+#           include providing AI-generated search summaries.
+# ai-input: inputting content into one or more AI models (e.g., retrieval
+#           augmented generation, grounding, or other real-time taking of content for
+#           generative AI search answers).
+# ai-train: training or fine-tuning AI models.
+# use:      how AI systems may consume the content (immediate, reference, or full).
+
+# ANY RESTRICTIONS EXPRESSED VIA CONTENT SIGNALS ARE EXPRESS RESERVATIONS OF
+# RIGHTS UNDER ARTICLE 4 OF THE EUROPEAN UNION DIRECTIVE 2019/790 ON COPYRIGHT
+# AND RELATED RIGHTS IN THE DIGITAL SINGLE MARKET.
+
+# BEGIN Cloudflare Managed content
+
+
+User-agent: *
+Content-Signal: search=yes,ai-train=no,use=reference
+Allow: /
+
+# Training crawlers
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: omgili
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: MistralAI-Training
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: GoogleOther
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: AwarioSmartBot
+User-agent: AwarioRssBot
+Disallow: /
+
+User-agent: Google-CloudVertexBot
+Disallow: /
+
+User-agent: QualifiedBot
+Disallow: /
+
+User-agent: Cotoyogi
+Disallow: /
+
+User-agent: ICC-Crawler
+Disallow: /
+
+User-agent: atlassian-bot
+Disallow: /
+
+User-agent: FishBot
+Disallow: /
+
+User-agent: BorderxBot
+Disallow: /
+
+User-agent: NavuBot
+Disallow: /
+
+User-agent: SemrushBot-SWA
+Disallow: /
+
+User-agent: WARDBot
+Disallow: /
+
+User-agent: magpie-crawler
+Disallow: /
+
+User-agent: KimiBot
+Disallow: /
+
+User-agent: CitibotSiteCrawler
+Disallow: /
+
+# AI Agents
+User-agent: Perplexity-User
+Disallow: /
+
+User-agent: FireCrawl
+Disallow: /
+
+User-agent: FirecrawlAgent
+Disallow: /
+
+User-agent: Claude-User
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: Google-Agent
+Disallow: /
+
+User-agent: Google-GeminiNotebook
+User-agent: Google-NotebookLM
+Disallow: /
+
+User-agent: MistralAI-User
+Disallow: /
+
+User-agent: Kimi-User
+Disallow: /
+
+User-agent: Amzn-User
+Disallow: /
+
+User-agent: meta-externalfetcher
+Disallow: /
+
+User-agent: Retool
+Disallow: /
+
+User-agent: Instapaper
+Disallow: /
+
+User-agent: ChathiveCrawler
+Disallow: /
+
+# END Cloudflare Managed Content
+
+User-agent: Googlebot
+Disallow: /nogooglebot/
+
+=== https://firstcycling.com/robots.txt
+  HTTP 200 | text/plain | 218 o | cloudflare=True | server=cloudflare
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: *
+Disallow: /
+
+=== https://www.letour.fr/robots.txt
+  HTTP 200 | text/plain | 590 o | cloudflare=False | server=Apache
+# www.robotstxt.org/
+# www.google.com/support/webmasters/bin/answer.py?hl=en&answer=156449
+
+Sitemap: https://www.letour.fr/sitemap.xml
+
+User-agent: *
+Disallow: /admin
+Disallow: /sonatadmin
+Disallow: /api
+Disallow: /graphql
+Disallow: /login
+Disallow: /*/ajax
+Disallow: /*/block
+Disallow: /*/login
+Disallow: /*/sitemap
+
+User-agent: meta-webindexer
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: bingbot
+Disallow: /*/search
+Disallow: /*/suche
+Disallow: /*/busqueda
+Disallow: /*/rechercher
+Disallow: /*/recerca
+Disallow: /*/sok
+Disallow: /*/%D8%A7%D9%84%D8%A8%D8%AD%D8%AB
+
+
+=== https://www.uci.org/robots.txt
+  HTTP 200 | text/plain | 23 o | cloudflare=True | server=cloudflare
+User-agent: *
+Allow: /
+
+
+=== https://dataride.uci.org/robots.txt
+  HTTP 404 | text/html | 1245 o | cloudflare=True | server=cloudflare
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+<title>404 - File or directory not found.</title>
+<style type="text/css">
+<!--
+body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}
+fieldset{padding:0 15px 10px 15px;} 
+h1{font-size:2.4em;margin:0;color:#FFF;}
+h2{font-size:1.7em;margin:0;color:#CC0000;} 
+h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} 
+#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:"trebuchet MS", Verdana, sans-serif;color:#FFF;
+background-color:#555555;}
+#content{margin:0 0 0 2%;position:relative;}
+.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}
+-->
+</style>
+</head>
+<body>
+<div id="header"><h1>Server Error</h1></div>
+<div id="content">
+ <div class="content-container"><fieldset>
+  <h2>404 - File or directory not found.</h2>
+  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>
+ </fieldset></div>
+</div>
+</body>
+</html>
+
+
+=== https://www.giroditalia.it/robots.txt
+  HTTP 200 | text/plain; charset=UTF-8 | 272 o | cloudflare=False | server=None
+# XML Sitemap & Google News version 5.2.7 - https://status301.net/wordpress-plugins/xml-sitemap-feed/
+Sitemap: https://www.giroditalia.it/sitemap.xml
+Sitemap: https://www.giroditalia.it//sitemap-news.xml
+
+User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+
+
+=== https://www.lavuelta.es/robots.txt
+  HTTP 200 | text/plain | 592 o | cloudflare=False | server=Apache
+# www.robotstxt.org/
+# www.google.com/support/webmasters/bin/answer.py?hl=en&answer=156449
+
+Sitemap: https://www.lavuelta.es/sitemap.xml
+
+User-agent: *
+Disallow: /admin
+Disallow: /sonatadmin
+Disallow: /api
+Disallow: /graphql
+Disallow: /login
+Disallow: /*/ajax
+Disallow: /*/block
+Disallow: /*/login
+Disallow: /*/sitemap
+
+User-agent: meta-webindexer
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: bingbot
+Disallow: /*/search
+Disallow: /*/suche
+Disallow: /*/busqueda
+Disallow: /*/rechercher
+Disallow: /*/recerca
+Disallow: /*/sok
+Disallow: /*/%D8%A7%D9%84%D8%A8%D8%AD%D8%AB
+
+
+=== https://www.paris-roubaix.fr/robots.txt
+  HTTP 200 | text/plain | 546 o | cloudflare=False | server=Apache
+# www.robotstxt.org/
+# www.google.com/support/webmasters/bin/answer.py?hl=en&answer=156449
+
+User-agent: *
+Disallow: /admin
+Disallow: /sonatadmin
+Disallow: /api
+Disallow: /graphql
+Disallow: /login
+Disallow: /*/ajax
+Disallow: /*/block
+Disallow: /*/login
+Disallow: /*/sitemap
+
+User-agent: meta-webindexer
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: bingbot
+Disallow: /*/search
+Disallow: /*/suche
+Disallow: /*/busqueda
+Disallow: /*/rechercher
+Disallow: /*/recerca
+Disallow: /*/sok
+Disallow: /*/%D8%A7%D9%84%D8%A8%D8%AD%D8%AB
+
+
+=== https://www.lncpro.fr/robots.txt
+  HTTP 200 | text/plain | 2005 o | cloudflare=False | server=None
+#
+# robots.txt
+#
+# This file is to prevent the crawling and indexing of certain parts
+# of your site by web crawlers and spiders run by sites like Yahoo!
+# and Google. By telling these "robots" where not to go on your site,
+# you save bandwidth and server resources.
+#
+# This file will be ignored unless it is at the root of your host:
+# Used:    http://example.com/robots.txt
+# Ignored: http://example.com/site/robots.txt
+#
+# For more information about the robots.txt standard, see:
+# http://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+# CSS, JS, Images
+Allow: /core/*.css$
+Allow: /core/*.css?
+Allow: /core/*.js$
+Allow: /core/*.js?
+Allow: /core/*.gif
+Allow: /core/*.jpg
+Allow: /core/*.jpeg
+Allow: /core/*.png
+Allow: /core/*.svg
+Allow: /profiles/*.css$
+Allow: /profiles/*.css?
+Allow: /profiles/*.js$
+Allow: /profiles/*.js?
+Allow: /profiles/*.gif
+Allow: /profiles/*.jpg
+Allow: /profiles/*.jpeg
+Allow: /profiles/*.png
+Allow: /profiles/*.svg
+# Directories
+Disallow: /core/
+Disallow: /profiles/
+# Files
+Disallow: /README.md
+Disallow: /composer/Metapackage/README.txt
+Disallow: /composer/Plugin/ProjectMessage/README.md
+Disallow: /composer/Plugin/Scaffold/README.md
+Disallow: /composer/Plugin/VendorHardening/README.txt
+Disallow: /composer/Template/README.txt
+Disallow: /modules/README.txt
+Disallow: /sites/README.txt
+Disallow: /themes/README.txt
+# Paths (clean URLs)
+Disallow: /admin/
+Disallow: /comment/reply/
+Disallow: /filter/tips
+Disallow: /node/add/
+Disallow: /search/
+Disallow: /user/register
+Disallow: /user/password
+Disallow: /user/login
+Disallow: /user/logout
+Disallow: /media/oembed
+Disallow: /*/media/oembed
+# Paths (no clean URLs)
+Disallow: /index.php/admin/
+Disallow: /index.php/comment/reply/
+Disallow: /index.php/filter/tips
+Disallow: /index.php/node/add/
+Disallow: /index.php/search/
+Disallow: /index.php/user/password
+Disallow: /index.php/user/register
+Disallow: /index.php/user/login
+Disallow: /index.php/user/logout
+Disallow: /index.php/media/oembed
+Disallow: /index.php/*/media/oembed
+
+
+=== https://www.directvelo.com/robots.txt
+  HTTP 200 | text/plain | 653 o | cloudflare=False | server=nginx
+# robots.txt – https://www.directvelo.com/
+# Documentation: https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt
+
+# Sitemaps
+Sitemap: https://www.directvelo.com/google-news.xml
+Sitemap: https://www.directvelo.com/sitemap.news.xml
+
+# Fully blocked
+User-agent: weborama-fetcher
+Disallow: /
+
+# Major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /casino/
+Disallow: /jeu/
+Disallow: /recherche/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /casino/
+Disallow: /jeu/
+Disallow: /recherche/
+
+# All other crawlers
+User-agent: *
+Disallow: /casino/
+Disallow: /jeu/
+Disallow: /recherche/
+Crawl-delay: 10
+
+
+=== https://www.cyclingnews.com/robots.txt
+  HTTP 200 | text/plain; charset=utf-8 | 1694 o | cloudflare=False | server=None
+##################################################
+# Vanilla-wide rules                             #
+##################################################
+User-agent: *
+
+# Common path patterns (* prefix to handle localisation)
+Disallow: */deals/compare
+Disallow: */html/
+Disallow: */p/*/embed/captioned
+Disallow: */outlink*
+Disallow: *.freyr.*
+Disallow: */comments/*
+Disallow: */.events-handler*
+Disallow: *CoreWebVitalsThresholdEvent*
+Disallow: */partials/*
+Disallow: */future.adtech.freyr.v1.PageViewEvent
+
+# Common query string patterns
+Disallow: *searchTerm=*
+Disallow: *sortBy=*
+Disallow: *productBrand=*
+Disallow: *%7B*%7D*
+Disallow: *seenMatchId=*
+Disallow: *q=*
+
+# Infinite scroll paths
+Disallow: /infinite-scroll-article/*
+Disallow: /infinite-scroll-review/*
+Disallow: /infinite-scroll-recipe/*
+
+# Amazon AdBot
+User-agent: AmazonAdBot
+Disallow:
+
+# AI crawlers
+User-agent: bytespider
+User-agent: mistralai
+User-agent: cohere
+User-agent: ai2bot
+User-agent: youbot
+User-agent: omgili
+User-agent: diffbot
+User-agent: kangaroo
+User-agent: img2dataset
+User-agent: amazonbot
+User-agent: amazon-qbusiness
+User-Agent: meta-externalagent
+User-Agent: meta-webindexer
+User-Agent: Applebot
+User-Agent: Applebot-Extended
+Disallow: /
+
+##################################################
+# Site-specific rules                            #
+##################################################
+User-Agent: *
+Disallow: /flexi/lazy-data/*
+
+##################################################
+# Sitemaps                                       #
+##################################################
+User-agent: *
+Sitemap: https://www.cyclingnews.com/sitemap.xml
+Sitemap: https://www.cyclingnews.com/sitemap-news.xml
+
+
+=== https://www.letour.fr/fr/classement-general
+  HTTP 404 | text/html; charset=UTF-8 | 20000 o | cloudflare=False | server=Apache
+<!DOCTYPE html> <html lang="fr"> <head>     <meta charset="utf-8" />     <title>404</title>     <meta name="description" content="Tour de France - Site officiel de la c&eacute;l&egrave;bre course cycliste Le Tour de France. Contient les itin&eacute;raires, coureurs, &eacute;quipes et les infos des Tours pass&eacute;s." /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <meta name="image" content="https://www.letour.fr/img/global/logo.png" /> <meta name="lang" content="fr" /> <meta name="race" content="tdf" /> <meta name="year" content="2027" /> <meta name="pageKey" content="404" /> <meta property="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" /> <meta property="og:image" content="https://www.letour.fr/img/global/logo-og.png" /> <meta property="og:type" content="website" /> <meta property="og:site-name" c
+
+=== https://www.letour.fr/en/rankings
+  HTTP 200 | text/html; charset=UTF-8 | 400000 o | cloudflare=False | server=Apache
+<!DOCTYPE html> <html lang="en"> <head>     <meta charset="utf-8" />     <title>Official classifications of Tour de France 2027 - Stage 21</title>     <meta name="description" content="Classifications of Tour de France 2027" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <meta name="image" content="https://www.letour.fr/img/global/logo.png" /> <meta name="lang" content="en" /> <meta name="race" content="tdf" /> <meta name="year" content="2027" /> <meta name="pageKey" content="classements" /> <meta property="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" /> <meta property="og:image" content="https://www.letour.fr/img/global/logo-og.png" /> <meta property="og:type" content="website" /> <meta property="og:site-name" content="Tour de France 2027" /> <meta property="og:url" content="https://www.letour.fr/e
+
+=== https://www.letour.fr/en/ajax/ranking/1/itg/
+  HTTP 404 | text/html; charset=UTF-8 | 20000 o | cloudflare=False | server=Apache
+<!DOCTYPE html> <html lang="en"> <head>     <meta charset="utf-8" />     <title>404</title>     <meta name="description" content="Tour de France - Official website" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <meta name="image" content="https://www.letour.fr/img/global/logo.png" /> <meta name="lang" content="en" /> <meta name="race" content="tdf" /> <meta name="year" content="2027" /> <meta name="pageKey" content="404" /> <meta property="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" /> <meta property="og:image" content="https://www.letour.fr/img/global/logo-og.png" /> <meta property="og:type" content="website" /> <meta property="og:site-name" content="Tour de France 2027" /> <meta property="og:url" content="https://www.letour.fr/en/ajax/ranking/1/itg/" /> <meta property="og:title" content="404" />
+
+=== https://firstcycling.com/race.php?r=17&y=2026
+  HTTP 403 | text/html; charset=UTF-8 | 5678 o | cloudflare=True | server=cloudflare
+<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=Edge"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="content-security-policy" content="default-src &#39;none&#39;; script-src &#39;nonce-wyZvcBIhg8ftDvzC3FYZ3U&#39; &#39;unsafe-eval&#39; https://challenges.cloudflare.com; script-src-attr &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src &#39;self&#39; https://challenges.cloudflare.com; connect-src &#39;self&#39; https://challenges.cloudflare.com; frame-src &#39;self&#39; https://challenges.cloudflare.com blob:; child-src &#39;self&#39; https://challenges.cloudflare.com blob:; worker-src blob:; form-action http: https:; base-uri &#39;self&#39;"><style>*{box-sizing:
+
+=== https://firstcycling.com/race.php?r=17&y=2026&k=startlist
+  HTTP 403 | text/html; charset=UTF-8 | 5729 o | cloudflare=True | server=cloudflare
+<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=Edge"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="content-security-policy" content="default-src &#39;none&#39;; script-src &#39;nonce-mNOKUJ20fXwzQcKinJ6zFf&#39; &#39;unsafe-eval&#39; https://challenges.cloudflare.com; script-src-attr &#39;none&#39;; style-src &#39;unsafe-inline&#39;; img-src &#39;self&#39; https://challenges.cloudflare.com; connect-src &#39;self&#39; https://challenges.cloudflare.com; frame-src &#39;self&#39; https://challenges.cloudflare.com blob:; child-src &#39;self&#39; https://challenges.cloudflare.com blob:; worker-src blob:; form-action http: https:; base-uri &#39;self&#39;"><style>*{box-sizing:
+
+=== https://dataride.uci.org/
+  HTTP 200 | text/html; charset=utf-8 | 3579 o | cloudflare=True | server=cloudflare
+ <!DOCTYPE html> <html lang="en"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <title>
+ 	Login
+ </title> <link href="/ResourcePackages/Bootstrap4/assets/dist/css/main.min.css?package=Bootstrap4" rel="stylesheet" type="text/css" /> <meta property="og:title" content="Login" /><meta property="og:url" content="https://dataride.uci.ch/login" /><meta property="og:type" content="website" /><meta property="og:site_name" content="DataRide" /><meta name="Generator" content="Sitefinity 13.3.7647.0 DX" /><link rel="canonical" href="https://dataride.uci.ch/login" /></head> <body> <script src="/ScriptResource.axd?d=okuX3IVIBwfJlfEQK32K3sb-IWBngOjx9y8Wq9P1B8UViWeRPF6qa-vs_do3uwFxKb7VU_FxmL7_tAnDprqv7ANIhqE4BuHIOH3n3vEq57yrKYo1WVM3CcKTjYj7RDmOJ-GK9WWgUkBIR9cx4MuCeBZf3R6nMqt0tSSuCI6Cg-0mLhwQzTclvmoSFDUrZdso0&amp;t=ffffffffa5fd1145"
+
+=== https://www.uci.org/calendar/road/1g4Jt3Q8lxWb6HJpZQ4lLu
+  HTTP 404 | text/html; charset=utf-8 | 20000 o | cloudflare=True | server=cloudflare
+
+ <!DOCTYPE html>
+ <html lang="en-gb">
+ <head>
+     <meta charset="utf-8" />
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <meta name="facebook-domain-verification" content="3x4wvt2xpktto1vu0gd1buq3lrqax1" />
+     <link rel="manifest" href="https://www.uci.org/site.webmanifest">
+     <meta name="theme-color" content="#0033a0">
+ 
+     <link rel="stylesheet" href="/assets/1.0.44488/main.css" />
+     <!-- Hotjar Tracking Code for https://www.uci.org/ TEMP PLACEMENT. Tied to stephen+1@stadion.io account -->
+     <script>
+         (function(h,o,t,j,a,r){
+             h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+             h._hjSettings={hjid:2881608,hjsv:6};
+             a=o.getElementsByTagName('head')[0];
+             r=o.createElement('script');r.async=1;
+             r
+
+=== https://www.wikidata.org/w/api.php?action=wbsearchentities&search=Tour%20de%20France%202026&language=fr&format=json
+  HTTP 200 | application/json; charset=utf-8 | 578 o | cloudflare=False | server=mw-api-ext.codfw.main-7fd78f9fc6-s5h6w
+{"searchinfo":{"search":"Tour de France 2026"},"search":[{"id":"Q126721429","title":"Q126721429","pageid":120736640,"concepturi":"http://www.wikidata.org/entity/Q126721429","repository":"wikidata","url":"//www.wikidata.org/wiki/Q126721429","display":{"label":{"value":"2026 Tour de France","language":"en"},"description":{"value":"113th edition of Tour de France","language":"en"}},"label":"2026 Tour de France","description":"113th edition of Tour de France","match":{"type":"label","language":"fr","text":"Tour de France 2026"},"aliases":["Tour de France 2026"]}],"success":1}
+
+=== https://query.wikidata.org/sparql?format=json&query=SELECT%20%3Fs%20WHERE%20%7B%3Fs%20wdt%3AP31%20wd%3AQ1318941%7D%20LIMIT%203
+  HTTP 200 | application/sparql-results+json;charset=utf-8 | 422 o | cloudflare=False | server=nginx/1.22.1
+{   "head" : {     "vars" : [ "s" ]   },   "results" : {     "bindings" : [ {       "s" : {         "type" : "uri",         "value" : "http://www.wikidata.org/entity/Q72437"       }     }, {       "s" : {         "type" : "uri",         "value" : "http://www.wikidata.org/entity/Q83261"       }     }, {       "s" : {         "type" : "uri",         "value" : "http://www.wikidata.org/entity/Q115667"       }     } ]   } }
+
+=== https://fr.wikipedia.org/api/rest_v1/page/summary/Tour_de_France_2026
+  HTTP 200 | application/json; charset=utf-8; profile="https://www.mediawiki.org/wiki/Specs/Summary/1.5.0" | 2550 o | cloudflare=False | server=production-tls
+{"type":"standard","title":"Tour de France 2026","displaytitle":"<span lang=\"fr\" dir=\"ltr\"><span class=\"mw-page-title-main\">Tour de France 2026</span></span>","namespace":{"id":0,"text":""},"wikibase_item":"Q126721429","titles":{"canonical":"Tour_de_France_2026","normalized":"Tour de France 2026","display":"<span lang=\"fr\" dir=\"ltr\"><span class=\"mw-page-title-main\">Tour de France 2026</span></span>"},"pageid":16344522,"thumbnail":{"source":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/17e_%C3%A9tape_Tour_de_France_2026_-_Maillots_blanc_et_jaune_au_d%C3%A9part.JPG/330px-17e_%C3%A9tape_Tour_de_France_2026_-_Maillots_blanc_et_jaune_au_d%C3%A9part.JPG?utm_source=fr.wikipedia.org&utm_campaign=api&utm_content=thumbnail","width":330,"height":270},"originalimage":{"source":"https://upload.wikimedia.org/wikipedia/commons/6/63/17e_%C3%A9tape_Tour_de_France_2026_-_Maillots_b
+
+=== https://fr.wikipedia.org/w/api.php?action=parse&page=Tour_de_France_2026&prop=sections&format=json
+  HTTP 200 | application/json; charset=utf-8 | 13609 o | cloudflare=False | server=mw-api-ext.codfw.main-7fd78f9fc6-lcvvc
+{"warnings":{"main":{"*":"Subscribe to the mediawiki-api-announce mailing list at <https://lists.wikimedia.org/postorius/lists/mediawiki-api-announce.lists.wikimedia.org/> for notice of API deprecations and breaking changes. Use [[Special:ApiFeatureUsage]] to see usage of deprecated features by your application."},"parse":{"*":"\"prop=sections\" has been deprecated. Please use \"prop=tocdata\" instead."}},"parse":{"title":"Tour de France 2026","pageid":16344522,"sections":[{"toclevel":1,"level":"2","line":"Parcours","number":"1","index":"1","fromtitle":"Tour_de_France_2026","byteoffset":1394,"anchor":"Parcours","linkAnchor":"Parcours"},{"toclevel":2,"level":"3","line":"R\u00e9v\u00e9lations anticip\u00e9es","number":"1.1","index":"2","fromtitle":"Tour_de_France_2026","byteoffset":1409,"anchor":"R\u00e9v\u00e9lations_anticip\u00e9es","linkAnchor":"R\u00e9v\u00e9lations_anticip\u00e9es"},{
+
+=== https://site.api.espn.com/apis/site/v2/sports/cycling/scoreboard
+  HTTP 404 | None | 12 o | cloudflare=False | server=None
+{"code":404}
+
+=== https://api.open-meteo.com/v1/forecast?latitude=48.85&longitude=2.35&hourly=wind_speed_10m,wind_direction_10m,temperature_2m&forecast_days=1
+  HTTP 200 | application/json; charset=utf-8 | 1098 o | cloudflare=False | server=None
+{"latitude":48.853382,"longitude":2.355208,"generationtime_ms":0.06866455078125,"utc_offset_seconds":0,"timezone":"GMT","timezone_abbreviation":"GMT","elevation":46.0,"hourly_units":{"time":"iso8601","wind_speed_10m":"km/h","wind_direction_10m":"°","temperature_2m":"°C"},"hourly":{"time":["2026-11-08T00:00","2026-11-08T01:00","2026-11-08T02:00","2026-11-08T03:00","2026-11-08T04:00","2026-11-08T05:00","2026-11-08T06:00","2026-11-08T07:00","2026-11-08T08:00","2026-11-08T09:00","2026-11-08T10:00","2026-11-08T11:00","2026-11-08T12:00","2026-11-08T13:00","2026-11-08T14:00","2026-11-08T15:00","2026-11-08T16:00","2026-11-08T17:00","2026-11-08T18:00","2026-11-08T19:00","2026-11-08T20:00","2026-11-08T21:00","2026-11-08T22:00","2026-11-08T23:00"],"wind_speed_10m":[2.9,4.2,4.6,5.1,5.1,4.0,4.6,5.6,5.9,6.8,6.3,6.2,6.7,6.4,6.6,7.0,7.3,7.2,7.6,4.7,3.6,3.4,3.3,3.4],"wind_direction_10m":[150,149,162,172,
+
+=== https://archive-api.open-meteo.com/v1/archive?latitude=48.85&longitude=2.35&start_date=2026-07-26&end_date=2026-07-26&hourly=wind_speed_10m,temperature_2m
+  HTTP 200 | application/json; charset=utf-8 | 1002 o | cloudflare=False | server=None
+{"latitude":48.822495,"longitude":2.2881355,"generationtime_ms":0.10836124420166016,"utc_offset_seconds":0,"timezone":"GMT","timezone_abbreviation":"GMT","elevation":46.0,"hourly_units":{"time":"iso8601","wind_speed_10m":"km/h","temperature_2m":"°C"},"hourly":{"time":["2026-07-26T00:00","2026-07-26T01:00","2026-07-26T02:00","2026-07-26T03:00","2026-07-26T04:00","2026-07-26T05:00","2026-07-26T06:00","2026-07-26T07:00","2026-07-26T08:00","2026-07-26T09:00","2026-07-26T10:00","2026-07-26T11:00","2026-07-26T12:00","2026-07-26T13:00","2026-07-26T14:00","2026-07-26T15:00","2026-07-26T16:00","2026-07-26T17:00","2026-07-26T18:00","2026-07-26T19:00","2026-07-26T20:00","2026-07-26T21:00","2026-07-26T22:00","2026-07-26T23:00"],"wind_speed_10m":[10.7,9.4,10.3,9.9,9.4,9.6,13.6,16.2,16.3,17.4,19.0,18.9,20.4,20.9,23.0,21.6,22.2,22.3,17.8,16.2,19.3,16.5,15.1,12.6],"temperature_2m":[19.5,18.8,17.8,17.0,1
+
+=== https://www.directvelo.com/
+  HTTP 200 | text/html; charset=UTF-8 | 159564 o | cloudflare=False | server=nginx
+<!DOCTYPE html> <html lang="fr-FR" prefix="og:http://ogp.m/ns#">     <head>                     <meta charset="utf-8">             <meta http-equiv="X-UA-Compatible" content="IE=edge">             <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">             <title>DirectVelo : courses de vélo en direct, actualité du cyclisme (amateur, féminin et professionnel)</title>              			<meta name="description" content="DirectVelo est le site de référence du cyclisme amateur et professionnel. Suivez en direct les courses, consultez les résultats, classements, interviews et reportages sur le terrain."> 		<meta name="keywords" content="direct,vélo,directvelo,directvelo.com,direct velo,live course,live épreuve,live,épreuve cycliste,épreuve,cyclisme,course cycliste,course cyclisme,vélos,coureur,compétition,france,belgique,bretagne,radio tour,radio peloton
+
+=== https://www.cyclingnews.com/feeds.xml
+  HTTP 200 | application/xml | 400000 o | cloudflare=False | server=None
+<?xml version="1.0" encoding="UTF-8"?> <rss version="2.0"      xmlns:content="http://purl.org/rss/1.0/modules/content/"      xmlns:dc="http://purl.org/dc/elements/1.1/"      xmlns:dcterms="http://purl.org/dc/terms/"      xmlns:media="http://search.yahoo.com/mrss/"      xmlns:atom="http://www.w3.org/2005/Atom"      xmlns:cf="https://www.futureplc.com/rss/content-flags" >     <channel>                     <atom:link href="https://www.cyclingnews.com/feeds.xml" rel="self" type="application/rss+xml" />                             <title><![CDATA[ Latest from Cyclingnews ]]></title>                 <link>https://www.cyclingnews.com/feeds.xml</link>         <description><![CDATA[ All the latest content from the Cyclingnews team ]]></description>                                     <lastBuildDate>Sat, 07 Nov 2026 23:15:35 +0000</lastBuildDate>                             <language>en</language>
+
+=== https://www.cyclingnews.com/rss
+  HTTP 200 | application/xml | 400000 o | cloudflare=False | server=None
+<?xml version="1.0" encoding="UTF-8"?> <rss version="2.0"      xmlns:content="http://purl.org/rss/1.0/modules/content/"      xmlns:dc="http://purl.org/dc/elements/1.1/"      xmlns:dcterms="http://purl.org/dc/terms/"      xmlns:media="http://search.yahoo.com/mrss/"      xmlns:atom="http://www.w3.org/2005/Atom"      xmlns:cf="https://www.futureplc.com/rss/content-flags" >     <channel>                     <atom:link href="https://www.cyclingnews.com/feeds.xml" rel="self" type="application/rss+xml" />                             <title><![CDATA[ Latest from Cyclingnews ]]></title>                 <link>https://www.cyclingnews.com/feeds.xml</link>         <description><![CDATA[ All the latest content from the Cyclingnews team ]]></description>                                     <lastBuildDate>Sat, 07 Nov 2026 23:15:35 +0000</lastBuildDate>                             <language>en</language>
+
+=== https://www.lequipe.fr/rss/actu_rss_Cyclisme.xml
+  HTTP 403 | text/html | 409 o | cloudflare=False | server=AkamaiGHost
+<HTML><HEAD> <TITLE>Access Denied</TITLE> </HEAD><BODY> <H1>Access Denied</H1>   You don't have permission to access "http&#58;&#47;&#47;www&#46;lequipe&#46;fr&#47;rss&#47;actu&#95;rss&#95;Cyclisme&#46;xml" on this server.<P> Reference&#32;&#35;18&#46;67f7d517&#46;1794118225&#46;2f5bfafc <P>https&#58;&#47;&#47;errors&#46;edgesuite&#46;net&#47;18&#46;67f7d517&#46;1794118225&#46;2f5bfafc</P> </BODY> </HTML> 
+
+=== https://www.lncpro.fr/
+  HTTP 200 | text/html; charset=utf-8 | 113233 o | cloudflare=False | server=None
+<!DOCTYPE html> <html lang="fr" dir="ltr" prefix="og: https://ogp.me/ns#">   <head>     <meta charset="utf-8" /> <meta name="description" content="Découvrez la LNC et toutes les infos du cyclisme professionnel : calendriers, résultats, classements, épreuves pros, équipes, critériums et les FDJ United Series." /> <link rel="shortlink" href="https://www.lncpro.fr/" /> <link rel="canonical" href="https://www.lncpro.fr/" /> <link rel="image_src" href="https://www.lncpro.fr/themes/custom/lnc/assets/img/Logo_LNCPro_social.png" /> <meta property="og:image" content="https://www.lncpro.fr/themes/custom/lnc/assets/img/Logo_LNCPro_social.png" /> <meta name="MobileOptimized" content="width" /> <meta name="HandheldFriendly" content="true" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <link rel="icon" href="/themes/custom/lnc/favicon.ico" type="image/vnd.microsoft.icon" /
+Post job cleanup.
+(node:2190) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Post job cleanup.
+[command]/usr/bin/git version
+git version 2.56.0
+Temporarily overriding HOME='/home/runner/work/_temp/d1b24aa7-ad10-44f9-a6b5-a30c2197a426' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+[command]/usr/bin/git config --global --add safe.directory /home/runner/work/coupes-europe/coupes-europe
+[command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+[command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+[command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+[command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+[command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+Cleaning up orphan processes
+##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
