@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Essai réseau : découverte des endpoints de classement DataRide (phase de sonde 2)."""
+"""Essai réseau : découverte des endpoints de classement DataRide (phase de sonde 3)."""
 import json
 import re
 import sys
@@ -12,42 +12,29 @@ import uci  # noqa: E402
 BASE = "https://dataride.uci.org"
 H = {"X-Requested-With": "XMLHttpRequest", "Referer": BASE + "/iframe/Rankings/10/"}
 
+f = [("RaceTypeId", 0), ("CategoryId", 22), ("SeasonId", 477)]
+rep = uci._post("/iframe/RankingsDiscipline/", uci._kendo(100, 0, f, None, disciplineId=10), "rd")
+print("type", type(rep).__name__, "clés", list(rep.keys()) if isinstance(rep, dict) else len(rep))
+groupes = rep if isinstance(rep, list) else rep.get("data", [])
+for g in groupes:
+    print("GROUPE", g.get("GroupId"), g.get("GroupName"))
+    for r in g.get("Rankings", []):
+        print("   ranking Id", r.get("Id"), r.get("RankingName"), "typeId", r.get("RankingTypeId"), "moment", r.get("MomentId"),
+              "cat", r.get("CategoryId"), "nb aperçu", len(r.get("ObjectRankings") or []), "total", r.get("TotalObjectRanking"),
+              "active", r.get("Active"), "calendar", r.get("Calendar"), "continent", r.get("Continent"))
+        o = (r.get("ObjectRankings") or [])
+        if o:
+            print("      dernier aperçu rang", o[-1].get("Rank"), o[-1].get("DisplayName"), o[-1].get("Points"))
 
-def j(x, n=1500):
-    s = json.dumps(x, ensure_ascii=False)
-    return s[:n] + (f"...(+{len(s) - n})" if len(s) > n else "")
-
-
-saisons = netutil.fetch_json(BASE + "/iframe/GetDisciplineSeasons/?disciplineId=10", headers=None) if False else \
-    netutil.fetch_json(BASE + "/iframe/GetDisciplineSeasons/?disciplineId=10")
-print("SAISONS", j(saisons, 800))
-sid = 464
-cats = netutil.fetch_json(f"{BASE}/iframe/GetRankingsCategories/?disciplineId=10&disciplineSeasonId={sid}")
-print("CATS", j(cats))
-rts = netutil.fetch_json(f"{BASE}/iframe/GetRankingsRaceTypes/?disciplineId=10&disciplineSeasonId={sid}")
-print("RACETYPES", j(rts))
-
-# liste des classements disponibles (même grille Kendo que la page)
-for sai in (464, 477):
-    f = [("RaceTypeId", 0), ("CategoryId", 22), ("SeasonId", sai)]
-    rep = uci._post("/iframe/RankingsDiscipline/", uci._kendo(100, 0, f, None, disciplineId=10), f"rd_{sai}")
-    print(f"RANKINGSDISCIPLINE saison {sai}:", j(rep, 3500))
-
-# page de détail du premier classement + JS
-rep = uci._post("/iframe/RankingsDiscipline/", uci._kendo(100, 0, [("RaceTypeId", 0), ("CategoryId", 22), ("SeasonId", 464)], None, disciplineId=10), "rd")
-lignes = rep.get("data") if isinstance(rep, dict) else (rep if isinstance(rep, list) else [])
-if lignes:
-    d = lignes[0]
-    url = (f"/iframe/RankingDetails/{d.get('Id')}?disciplineId={d.get('DisciplineId')}&groupId={d.get('GroupId')}"
-           f"&momentId={d.get('MomentId')}&disciplineSeasonId={d.get('DisciplineSeasonId')}&rankingTypeId={d.get('RankingTypeId')}"
-           f"&categoryId={d.get('CategoryId')}&raceTypeId={d.get('RaceTypeId')}")
-    print("DETAIL URL", url)
-    t = netutil.fetch_text(BASE + url, headers=H, retries=1)
-    if t:
-        print("taille", len(t))
-        sc = "\n".join(re.findall(r"<script(?![^>]*src)[^>]*>(.*?)</script>", t, re.S))
-        sc = re.sub(r"[ \t]+", " ", sc)
-        sc = re.sub(r"\n\s*\n+", "\n", sc)
-        i = sc.find("ObjectRankings")
-        print("JS ObjectRankings:", sc[max(0, i - 1500):i + 2500] if i >= 0 else "absent")
-        print("JS début:", sc[:1500])
+url = ("/iframe/RankingDetails/1?disciplineId=10&groupId=1&momentId=206851&disciplineSeasonId=477&rankingTypeId=1"
+       "&categoryId=22&raceTypeId=0")
+t = netutil.fetch_text(BASE + url, headers=H, retries=1)
+print("DETAIL taille", len(t or ""))
+if t:
+    sc = "\n".join(re.findall(r"<script(?![^>]*src)[^>]*>(.*?)</script>", t, re.S))
+    sc = re.sub(r"[ \t]+", " ", sc)
+    sc = re.sub(r"\n\s*\n+", "\n", sc)
+    for mot in ("ObjectRankings", "TypeOfRankings"):
+        i = sc.find(mot)
+        print(f"== JS {mot}:", sc[max(0, i - 1200):i + 2500] if i >= 0 else "absent")
+    print("ids:", re.findall(r'id="([^"]+)"', t)[:40])
