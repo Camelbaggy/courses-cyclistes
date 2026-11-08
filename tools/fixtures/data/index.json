@@ -279,53 +279,7 @@
    ]
   }
  ],
- "upcoming": [
-  {
-   "name": "Classique d'Août (fictive)",
-   "country": "ESP",
-   "flag": "es",
-   "uci_class": "1.Pro",
-   "category": "Pro",
-   "start_date": "2026-07-29",
-   "end_date": "2026-07-29"
-  },
-  {
-   "name": "Tour du Bout du Monde (fictif)",
-   "country": "FRA",
-   "flag": "fr",
-   "uci_class": "2.1",
-   "category": ".1",
-   "start_date": "2026-08-04",
-   "end_date": "2026-08-08"
-  },
-  {
-   "name": "Nocturne de Simulation",
-   "country": "FRA",
-   "flag": "fr",
-   "uci_class": "1.1",
-   "category": "FDJ",
-   "start_date": "2026-08-15",
-   "end_date": "2026-08-15"
-  },
-  {
-   "name": "Vuelta de Prueba",
-   "country": "ESP",
-   "flag": "es",
-   "uci_class": "2.UWT",
-   "category": "WT",
-   "start_date": "2026-08-22",
-   "end_date": "2026-09-13"
-  },
-  {
-   "name": "Championnats d'Europe (fictifs)",
-   "country": "BEL",
-   "flag": "be",
-   "uci_class": "CC",
-   "category": "Champ.",
-   "start_date": "2026-09-20",
-   "end_date": "2026-09-20"
-  }
- ],
+ "upcoming": [],
  "latest": [
   {
    "race_id": "fx-tour-test",
