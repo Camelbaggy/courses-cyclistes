@@ -1,5 +1,11 @@
-"""Sonde UCI (bibliothèque standard uniquement) : découvre les endpoints publics de uci.org / dataride.uci.ch.
-User-Agent honnête, pause >= 1 s entre requêtes, aucun contournement (challenge / 403 : on note et on s'arrête)."""
+"""Sonde UCI (bibliothèque standard uniquement) : endpoints publics « iframe » de DataRide (dataride.uci.org).
+
+Validée depuis GitHub Actions (voir docs/recherche/sonde_uci.md). Chaîne de données :
+  GetRestrictedResultsDisciplineSeasons / Categories  ->  POST Competitions  ->  POST Races
+  ->  POST Events  ->  POST Results      (disciplineId=10 = route ; catégorie 22 = Men Elite)
+User-Agent honnête, pause >= 1 s entre requêtes, budget de temps, AUCUN contournement : en cas de
+challenge / 403 / 429 / 503, on note et on s'arrête. Sert de base au futur collecteur.
+"""
 import re, sys, time, json, urllib.request, urllib.error
 
 UA = "courses-cyclistes-sonde/0.1 (projet personnel non commercial)"
