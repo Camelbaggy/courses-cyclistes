@@ -144,6 +144,8 @@ MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août
 STATUS_FR = {"DNF": "abandon", "DNS": "non-partant", "OTL": "hors délais", "DSQ": "disqualifié", "DNQ": "non qualifié"}
 STATUS_VERB = {"DNF": "a abandonné", "DNS": "n'a pas pris le départ", "OTL": "a terminé hors délais",
                "DSQ": "a été disqualifié", "DNQ": "n'est pas qualifié"}
+STATUS_VERB_PLURIEL = {"DNF": "ont abandonné", "DNS": "n'ont pas pris le départ", "OTL": "ont terminé hors délais",
+                       "DSQ": "ont été disqualifiés", "DNQ": "ne sont pas qualifiés"}
 STAGE_TYPE_FR = {"itt": "contre-la-montre individuel", "ttt": "contre-la-montre par équipes", "road": "course en ligne"}
 CLASS_LABELS = {"gc": "général", "points": "points", "mountain": "montagne", "youth": "jeunes"}
 
@@ -639,7 +641,12 @@ def build_fallback_summary(race: Dict[str, Any], stage_index: int) -> str:
         elif f["leader_changed"]:
             pl = f["prev_leader"]
             pos = next((r for r in f["gc"] if r.get("rider_id") == pl.get("id")), None)
-            tail = f", détrônant {pl['name']} ({_ord(pos['rank'])}, {_at(pos.get('gap_s'))})" if pos else f", détrônant {pl['name']}"
+            if pos and pos.get("rank") == 2:
+                tail, ahead = "", f", avec {margin} d'avance sur le leader sortant, {second}" if margin and \
+                    f["gc"][1].get("gap_s") else f", à égalité de temps avec le leader sortant, {second}"
+            else:
+                tail = f", détrônant {pl['name']} ({_ord(pos['rank'])}, {_at(pos.get('gap_s'))})" if pos else \
+                    f", détrônant {pl['name']}"
             sentences.append(f"Au général, {ld['name']} prend la tête de la course{ahead}{tail}.")
         elif f["first_gc"]:
             sentences.append(f"Au général, {ld['name']} prend la tête de la course{ahead}.")
@@ -649,7 +656,12 @@ def build_fallback_summary(race: Dict[str, Any], stage_index: int) -> str:
     # 4. Français
     fs, fg = f["best_fr_stage"], f["best_fr_gc"]
     fr_bits: List[str] = []
-    if fs and fg and fs[1].get("id") == fg[1].get("id"):
+    if fs and fg and fs[1].get("id") == fg[1].get("id") and fs[0]["rank"] == 1 and fg[0]["rank"] == 1:
+        pass  # vainqueur et leader français : déjà dit plus haut, pas de redite
+    elif fs and fg and fs[1].get("id") == fg[1].get("id") and fs[0]["rank"] == 1:
+        rg, r = fg
+        fr_bits.append(f"Au général, {r['name']} est {_ord(rg['rank'])} ({_at(rg.get('gap_s'))})")
+    elif fs and fg and fs[1].get("id") == fg[1].get("id"):
         (rs, r), (rg, _) = fs, fg
         fr_bits.append(f"Meilleur Français, {r['name']} termine {_ord(rs['rank'])}"
                        f"{'' if rs['rank'] == 1 else ' (' + _at(rs.get('gap_s')) + ')'} et pointe au {_ord(rg['rank'])} rang "
@@ -671,11 +683,21 @@ def build_fallback_summary(race: Dict[str, Any], stage_index: int) -> str:
 
     # 5. abandons
     out_bits = []
+    simples: Dict[str, List[str]] = {}
     for row, r in f["french_out"]:
         fav = f["favorites"].get(row.get("rider_id"))
-        out_bits.append(f"le Français {r['name']} {STATUS_VERB[row['status']]}")
         if fav:
-            out_bits[-1] += f" alors qu'il était {_ord(fav)} du général avant l'étape"
+            out_bits.append(f"le Français {r['name']} {STATUS_VERB[row['status']]} alors qu'il était "
+                            f"{_ord(fav)} du général avant l'étape")
+        else:
+            simples.setdefault(row["status"], []).append(r["name"])
+    for status, noms in simples.items():
+        if len(noms) == 1:
+            out_bits.append(f"le Français {noms[0]} {STATUS_VERB[status]}")
+        else:
+            liste = ", ".join(noms[:-1]) + " et " + noms[-1]
+            verbe = STATUS_VERB_PLURIEL.get(status, STATUS_VERB[status])
+            out_bits.append(f"les Français {liste} {verbe}")
     for row, r in f["fav_out"]:
         out_bits.append(f"{r['name']}, {_ord(f['favorites'][row['rider_id']])} du général avant l'étape, "
                         f"{STATUS_VERB[row['status']]}")
