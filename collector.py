@@ -320,7 +320,15 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
     comps = uci.list_competitions(season_id)
     print(f"[UCI] {len(comps)} courses hommes élite courues ou en cours en {season}")
     fdj = lnc.get_fdj_united_series()
-    picked = selection.select(comps, (fdj or {}).get("races") or [])
+    fdj_races = (fdj or {}).get("races") or []
+    picked = selection.select(comps, fdj_races)
+    # Une manche FDJ United Series est rangée en « FDJ » même si sa classe (1.Pro) la retenait déjà,
+    # et l'index relie chaque manche à sa fiche.
+    for i, (comp, category, reason) in enumerate(picked):
+        manche = selection.match_fdj(comp, fdj_races)
+        if manche is not None:
+            picked[i] = (comp, "FDJ", "fdj")
+            manche["race_id"] = f"uci-{comp['competition_id']}"
     picked_ids = {c["competition_id"] for c, _, _ in picked}
     if only:
         picked = [p for p in picked if only.lower() in p[0]["name"].lower()]
@@ -334,6 +342,9 @@ def run(season: int, today: Optional[dt.date] = None, only: str = "", max_races:
         rid = f"uci-{comp['competition_id']}"
         previous = _load(race_path(rid), None)
         if fetched is None and not _needs_refresh(comp, previous, today):
+            if previous.get("category") != category or previous.get("selection_reason") != reason:
+                previous["category"], previous["selection_reason"] = category, reason
+                _dump(race_path(rid), previous)
             races[rid] = previous
             return
         print(f"[COURSE] {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')})")
