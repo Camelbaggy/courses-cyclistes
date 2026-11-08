@@ -229,10 +229,10 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
             continue
         if _is_recent(st, today, AI_DAYS):
             stories = _stories(race, idx, aso_ref, cn_items)
-            st["ai_summary"], st["summary_source"] = agents_flash.summarize_stage(race, idx, stories)
+            txt, src = agents_flash.summarize_stage(race, idx, stories)
         else:
-            st["ai_summary"] = agents_flash.build_fallback_summary(race, idx)
-            st["summary_source"] = "fallback"
+            txt, src = agents_flash.build_fallback_summary(race, idx), "fallback"
+        st["ai_summary"], st["summary_source"] = (txt, src) if txt else (None, None)
     race["updated_at"] = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return race
 
