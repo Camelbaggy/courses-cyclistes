@@ -89,7 +89,7 @@ def verifie_doublons(liste, etiquette):
         for b in liste[i + 1:]:
             if wc._jours_proches(a["start_date"], b["start_date"]) and (
                     selection._noms_proches(a["name"], b["name"])
-                    or (wc.wc._meme_cle(a, b) and a["source"] != b["source"])):
+                    or (wc._meme_cle(a, b) and a["source"] != b["source"])):
                 bad.append((a["name"], b["name"], a["start_date"]))
     print(f"  {etiquette} : {len(bad)} doublons restants" + (f" -> {bad[:15]}" if bad else " OK"))
 
