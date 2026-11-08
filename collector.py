@@ -425,10 +425,18 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
     index = build_index(list(races.values()), season, upcoming, fdj)
     if new_items:
         index["notification"] = agents_flash.build_notification(new_items)
-    _dump(os.path.join(DATA_DIR, "index.json"), index)
-    state.update({"notified": sorted(notified), "top10_checked": top10_cache,
-                  "last_run": index["generated_at"]})
-    _dump(os.path.join(DATA_DIR, "state.json"), state)
+    # Rien de neuf (hors horodatage) : fichiers inchangés, donc pas de commit inutile à chaque passage horaire.
+    old_index = _load(os.path.join(DATA_DIR, "index.json"), {})
+    unchanged = {k: v for k, v in old_index.items() if k != "generated_at"} == \
+                {k: v for k, v in index.items() if k != "generated_at"}
+    new_state = dict(state, notified=sorted(notified), top10_checked=top10_cache)
+    if unchanged and {k: v for k, v in new_state.items() if k != "last_run"} == \
+            {k: v for k, v in state.items() if k != "last_run"}:
+        print("[INFO] aucune donnée nouvelle : index et état inchangés")
+    else:
+        _dump(os.path.join(DATA_DIR, "index.json"), index)
+        new_state["last_run"] = index["generated_at"]
+        _dump(os.path.join(DATA_DIR, "state.json"), new_state)
     if stopped:
         print(f"[BUDGET] budget de {budget_min:.0f} min atteint : collecte interrompue, reprise au prochain passage")
     print(f"[FIN] {len(races)} courses dans l'index, {len(new_items)} nouveauté(s) à notifier")
