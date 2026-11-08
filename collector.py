@@ -329,8 +329,10 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
         picked = selection.select(comps, fdj_races)
         # Début de saison UCI (fin octobre) : tant qu'aucune course suivie de la nouvelle saison n'a de résultat,
         # le dashboard reste sur la saison précédente.
-        if auto and not picked:
-            print(f"[SAISON] aucune course suivie courue en {season} : affichage de la saison {season - 1}")
+        # La nouvelle saison ne s'affiche qu'à sa première course WT / Pro / FDJ courue : un championnat continental
+        # ou une course mineure de fin octobre ne suffit pas.
+        if auto and not any(cat in ("WT", "Pro", "FDJ") for _, cat, _ in picked):
+            print(f"[SAISON] aucune course WT/Pro/FDJ courue en {season} : affichage de la saison {season - 1}")
             season, auto = season - 1, False
             continue
         break

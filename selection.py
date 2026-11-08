@@ -84,6 +84,10 @@ def classer(comp: Dict[str, Any], fdj_races: Optional[Iterable[Dict[str, Any]]] 
         return "FDJ", "fdj"
     if cat in (".1", ".2") and comp.get("country") == "FRA":
         return cat, "france"
+    # Championnats continentaux : seulement ceux d'Europe (SPEC §3) ; Monde / JO : toujours.
+    nom = (comp.get("name") or "").lower()
+    if classe == "CC" and "europ" not in nom:
+        return None
     if classe in CHAMPIONNATS_LIBRES or (classe == CHAMPIONNAT_NATIONAL and comp.get("country") == "FRA"):
         return "Champ.", "championnat"
     return None
@@ -153,8 +157,10 @@ def _tests() -> None:
     assert select([C("1.1", "BEL")]) == [] and select([C("2.2", "ESP")]) == []   # sondés par le collecteur
     assert select([C("CN", "FRA")])[0][1:] == ("Champ.", "championnat")
     assert select([C("CN", "ESP")]) == []
-    for cl in ("CC", "CM", "WC"):
+    for cl in ("CM", "WC"):
         assert select([C(cl, "ITA")])[0][1:] == ("Champ.", "championnat")
+    assert select([C("CC", "ITA", nom="European Continental Championships")])[0][1:] == ("Champ.", "championnat")
+    assert select([C("CC", "KEN", nom="CAC Road Cycling African Championships")]) == []
     assert select([C("CRTP", "JPN")]) == []
     fdj = [{"name": "Tour de Vendée", "date": "2026-10-11"}, {"name": "Cholet-Pays de la Loire", "date": "2026-03-22"}]
     assert select([C("1.Pro", "FRA", "Tour de Vendée", "2026-10-11")], fdj)[0][1:] == ("Pro", "classe")
