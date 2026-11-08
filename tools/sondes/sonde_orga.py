@@ -170,7 +170,7 @@ def links(body, base, pattern, limit=40):
     return seen[:limit]
 
 
-def probe(url, link_pat=None, raw_re=None, text=0, ctx=(), maxlinks=40, **kw):
+def probe(url, link_pat=None, raw_re=None, text=0, ctx=(), maxlinks=40, ctxw=600, vctx=(), vw=700, **kw):
     print(f"\n=== {url}")
     st, ct, body = raw_get(url)
     if st <= 0:
@@ -198,7 +198,13 @@ def probe(url, link_pat=None, raw_re=None, text=0, ctx=(), maxlinks=40, **kw):
     for c in ctx:
         for m in list(re.finditer(c, body, re.S | re.I))[:3]:
             a = max(0, m.start() - 150)
-            print(f"  CTX[{c}]:", " ".join(body[a:m.end() + 350].split())[:600])
+            print(f"  CTX[{c}]:", " ".join(body[a:m.end() + 350].split())[:ctxw])
+    if vctx:
+        v = visible(body)
+        for c in vctx:
+            for m in list(re.finditer(c, v, re.I))[:3]:
+                a = max(0, m.start() - 200)
+                print(f"  VCTX[{c}]:", v[a:m.end() + vw])
     return body
 
 
@@ -227,60 +233,65 @@ def groupe(f):
 @groupe
 def aso_tour():
     L = "https://www.letour.fr"
-    b = probe(L + "/en/rankings/stage-10", link_pat=r"rankings/(stage-10|.*(itg|ipg|img|ijg|etg|ite|ice))", maxlinks=15,
-              ctx=(r"ranking__stageSelect", r"data-(type|ranking|classification)[^>]*", r"<option[^>]*value", r"<select"), nrows=3)
-    if b:
-        print("  lignes <tr> table 0 :", b.count("<tr"))
-    for k in ("itg", "ipg", "img", "ijg", "etg", "ite", "ice"):
-        probe(f"{L}/fr/classements/etape-10/{k}", nrows=3, ntables=1)
-    probe(L + "/en/stage-10", text=2500, ctx=(r"altitude|elevation|climb|col ", r"profile"))
-    probe(L + "/en/news/2027/stage-10/annecy-sallanches-2/1356730", text=1500)
-    probe(L + "/en/heritage/stage-10/on-the-road", text=800)
-    probe(L + "/fr/", link_pat=r"(live|direct|suivi|commentaire)", maxlinks=15, ctx=(r"live",))
+    probe(L + "/fr/classements/etape-10/ite", nrows=1, ntables=1, ctx=(r"<tbody",), ctxw=1800)
+    probe(L + "/en/stage-10", nrows=1, ntables=1, ctx=(r"mountain__infos", r"Km \d+"), ctxw=500,
+          vctx=(r"Length 171 km", r"Presentation"), vw=1200)
+    probe(L + "/en/news/2027/stage-10/annecy-sallanches-2/1356730", vctx=(r"Annecy > Sallanches[^.]{0,40}\.",), vw=1800)
+    probe(L + "/fr/", maxlinks=60, link_pat=r"letour\.fr/(fr|en)/[a-z0-9-]+/?$")
+    # robots : /fr/ajax interdit -> on ne touche pas
 
 
 @groupe
 def aso_autres():
-    for base in ("https://www.paris-nice.fr", "https://www.criterium-du-dauphine.fr", "https://www.lavuelta.es"):
-        n = "21" if "vuelta" in base else "8"
-        for k in ("itg", "ipg", "ice", "etg"):
-            probe(f"{base}/fr/classements/etape-{n}/{k}", nrows=3, ntables=1)
-        probe(f"{base}/fr/classements", maxlinks=12, link_pat=r"classements/", nrows=2, ntables=1)
-    probe("https://www.paris-nice.fr/fr/parcours-general", text=1500, nrows=3)
-    probe("https://www.paris-nice.fr/fr/etape-8", text=1500, nrows=3, ctx=(r"altitude|d\u00e9nivel|denivel|col de",))
-    probe("https://www.paris-nice.fr/fr/actus/2026/etape-8/vingegaard-la-grande-razzia/25347", text=1200)
-    for h in ("https://www.paris-roubaix.fr", "https://www.liege-bastogne-liege.be"):
-        probe(h + "/fr/classements", nrows=3, ntables=2, maxlinks=10, link_pat=r"classements/")
-        probe(h + "/fr/etape-1", text=800, nrows=3)
+    P = "https://www.paris-nice.fr"
+    probe(P + "/fr/etape-8", nrows=1, ntables=1, vctx=(r"Film de l.étape", r"Enjeux|Col de la Porte"), vw=1500)
+    probe(P + "/fr/actus/2026/etape-8/vingegaard-la-grande-razzia/25347", vctx=(r"Vingegaard, la grande razzia (?!--)[A-Z]",), vw=2200)
+    probe(P + "/fr/classements/etape-1/ite", nrows=3, ntables=1)
+    probe(P + "/fr/classements/etape-8/ijg", nrows=3, ntables=1)
+    probe(P + "/fr/classements/etape-8/img", nrows=3, ntables=1)
+    probe(P + "/fr/classements/etape-8/ite", nrows=3, ntables=1)
+    probe("https://www.paris-roubaix.fr/fr/etape-1", nrows=1, ntables=1, vctx=(r"Film de l.étape", r"Secteurs? pav", r"Mons-en-Pévèle"), vw=1000)
+    for h in ("https://www.letour.fr", "https://www.paris-nice.fr"):
+        probe(h + "/fr/mentions-legales", vctx=(r"extraction|reproduction|robot|donn\u00e9es|propri\u00e9t\u00e9 intellectuelle",), vw=500)
+        probe(h + "/fr/conditions-generales-d-utilisation", vctx=(r"extraction|reproduction|robot|propri\u00e9t\u00e9 intellectuelle",), vw=500)
+    probe("https://www.letour.fr/fr/", maxlinks=30, link_pat=r"(cgu|mentions|conditions|legal|cookies|donnees)")
 
 
 @groupe
 def rcs():
-    for u in ("https://www.giroditalia.it/classifiche/", "https://www.giroditalia.it/il-percorso/",
-              "https://www.milanosanremo.it/classifiche/", "https://www.milanosanremo.it/percorso-milano-sanremo-2026/",
-              "https://www.ilombardia.it/archivio-classifiche/2026/", "https://www.ilombardia.it/classifiche/",
-              "https://www.tirrenoadriatico.it/classifiche/?classifica=CLGEN",
-              "https://www.tirrenoadriatico.it/classifiche/?classifica=CLPUNGEN"):
-        probe(u, nrows=4, ntables=2, text=600, maxlinks=10, link_pat=r"classifica|archivio|tappa")
-    probe("https://www.tirrenoadriatico.it/news/tirreno-adriatico-2026-tappa-7-percorso-favoriti-e-diretta-tv/", text=1200)
-    for h in ("https://www.strade-bianche.it", "https://www.stradebianche.it", "https://www.strade-bianche.com"):
-        probe(h + "/", link_pat=r"(classific|result|ranking)")
+    T = "https://www.tirrenoadriatico.it"
+    probe(T + "/classifiche/?classifica=CLGEN", nrows=1, ntables=1, ctxw=500, maxlinks=15,
+          link_pat=r"\.(pdf|json|xml)(\?|$)|wp-json|admin-ajax|/live|api\.",
+          ctx=(r"admin-ajax", r"wp-json", r"fetch\(", r"\.json", r"Milan\b", r"JONATHAN", r"classifica-"))
+    probe(T + "/classifiche/di-tappa/7", nrows=3, ntables=2, ctxw=500, ctx=(r"admin-ajax", r"MILAN"), vctx=(r"MILAN",), vw=600)
+    probe(T + "/archivio-2026/", nrows=3, ntables=2, maxlinks=20, link_pat=r"\.(pdf|json)|archivio|classifica", vctx=(r"MILAN|Milan",), vw=500)
+    probe("https://www.milanosanremo.it/live/tappa/1", nrows=3, ntables=2, ctxw=500, ctx=(r"admin-ajax", r"\.json", r"fetch\("), vctx=(r"Km|km",), vw=400)
+    probe("https://www.milanosanremo.it/archivio-men-2026/", nrows=3, ntables=2, maxlinks=15, link_pat=r"\.(pdf|json)|classifica", vctx=(r"Pogacar|POGACAR|Pogačar",), vw=400)
+    probe("https://www.strade-bianche.it/archivio-classifiche/u/2026/", nrows=3, ntables=2, maxlinks=15, link_pat=r"\.(pdf|json)|classifica", vctx=(r"Pogacar|POGACAR|Pogačar|Pidcock",), vw=400)
 
 
 @groupe
 def directvelo():
     D = "https://www.directvelo.com"
-    probe(D + "/mentions-legales", text=200, ctx=(r"robot|extraction|automatis|scrap|reproduction|donn\u00e9es|propri\u00e9t\u00e9 intellectuelle|droits",))
-    probe(D + "/coupe-de-france/2026/dn1", nrows=6, ntables=3, text=500, maxlinks=60, link_pat=r"directvelo\.com/(course|resultat|epreuve|coupe|actualite)")
-    probe(D + "/resultats/2026-11-08", nrows=4, ntables=2, text=500, maxlinks=30, link_pat=r"directvelo\.com/(course|resultat|epreuve)")
-    probe(D + "/calendrier/2026/11", text=300, maxlinks=20, link_pat=r"directvelo\.com/(course|epreuve|calendrier/)")
+    probe(D + "/mentions-legales", vctx=(r"Conditions d.utilisation|propri\u00e9t\u00e9|reproduction|utilisation du site",), vw=1200)
+    b = probe(D + "/resultats/2026-10-11", nrows=3, ntables=1, maxlinks=15, link_pat=r"directvelo\.com/(epreuve|actualite)")
+    if b:
+        for u in links(b, D, r"/epreuve/\d+/paris-tours"):
+            probe(u, nrows=8, ntables=3, maxlinks=15, link_pat=r"directvelo\.com/(actualite|epreuve|course)", vctx=(r"Classement",), vw=500)
+            break
+    b = probe(D + "/calendrier/2026/08", maxlinks=5, link_pat=r"polynormande")
+    if b:
+        for u in links(b, D, r"/epreuve/\d+/[^/]*polynormande"):
+            probe(u, nrows=8, ntables=3, maxlinks=15, link_pat=r"directvelo\.com/(actualite|epreuve|course)", vctx=(r"Classement",), vw=500)
+            break
 
 
 @groupe
 def lnc():
     L = "https://www.lncpro.fr"
-    probe(L + "/resultats", nrows=5, ntables=2, text=700, maxlinks=30, link_pat=r"lncpro\.fr/(resultat|course|epreuve|calendrier)")
-    probe(L + "/fdj-united-series", nrows=5, ntables=2, text=700, maxlinks=30, link_pat=r"lncpro\.fr/(resultat|course|epreuve|classement)")
+    probe(L + "/resultats/la-polynormande", nrows=8, ntables=3, text=1500, maxlinks=15, link_pat=r"lncpro\.fr/(resultats|actualites)")
+    probe(L + "/resultats/paris-tours-elite", nrows=8, ntables=3, text=1000)
+    probe(L + "/", maxlinks=15, link_pat=r"(mention|cgu|conditions|legal|cookies|donnees)")
 
 
 @groupe
@@ -296,12 +307,27 @@ def cyclingnews():
             c = " ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", c).split())
             cats[c] = cats.get(c, 0) + 1
     print("  catégories:", sorted(cats.items(), key=lambda x: -x[1])[:25])
-    for u in ("https://www.cyclingnews.com/racing/feeds.xml", "https://www.cyclingnews.com/pro-cycling/feeds.xml"):
-        st2, _, b2 = raw_get(u)
-        print("  flux", u, st2, len(b2), "items", len(re.findall("<item>", b2)))
-    for u in ("https://www.cyclingnews.com/terms-and-conditions/", "https://www.futureplc.com/terms-conditions/"):
-        robots_dump(u.split("/")[0] + "//" + u.split("/")[2])
-        probe(u, ctx=(r"scrap|crawl|robot|automated|text and data mining|data mining|machine learning|artificial intelligence|reproduce|syndicat",), text=0)
+    for it in items[:12]:
+        t = re.search(r"<title>(.*?)</title>", it, re.S)
+        cs = [" ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", c).split()) for c in re.findall(r"<category[^>]*>(.*?)</category>", it, re.S)]
+        print("  ITEM", " ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", t.group(1) if t else "").split())[:70], "|", cs)
+    probe("https://www.futureplc.com/terms-conditions/", vctx=(r"scrap|crawl|automat|data mining|machine learning|artificial intelligence|extract|commercial purposes?|permission",), vw=500)
+    ds = re.findall(r"<pubDate>(.*?)</pubDate>", body)
+    print("  pubDate premier/dernier:", ds[:1], ds[-1:])
+    pick = None
+    for it in items:
+        if "<category><![CDATA[ Racing ]]>" in it.replace("\n", "") or "Racing" in it[:3000]:
+            m = re.search(r"<link>(.*?)</link>", it, re.S)
+            d = re.search(r"<dc:content[^>]*>(.*?)</dc:content>", it, re.S)
+            if m and d and "cyclo-cross" not in m.group(1):
+                pick = (m.group(1).strip(), len(visible(d.group(1))))
+                break
+    print("  article témoin:", pick)
+    if pick:
+        b2 = probe(pick[0].replace("<![CDATA[", "").replace("]]>", "").strip(), vctx=(r"Subscribe to the Cyclingnews",), vw=100)
+        if b2:
+            print("  longueur texte visible page:", len(visible(b2)), "| dc:content (texte):", pick[1])
+    probe("https://www.cyclingnews.com/", maxlinks=15, link_pat=r"(terms|conditions|privacy|legal)")
     for it in items[:3]:
         print("  --- item (balises présentes):", sorted(set(re.findall(r"<([a-zA-Z:]+)[ >/]", it))))
         print("  ", " ".join(it.split())[:900])
