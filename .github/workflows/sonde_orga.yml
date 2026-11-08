@@ -1,0 +1,19 @@
+name: Sonde organisateurs
+on:
+  push:
+    branches: ['ccr-*']
+    paths:
+      - 'tools/sondes/sonde_orga.py'
+      - '.github/workflows/sonde_orga.yml'
+permissions:
+  contents: read
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python tools/sondes/sonde_orga.py
