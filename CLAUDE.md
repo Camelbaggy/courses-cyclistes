@@ -49,7 +49,8 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ aso.py        enrichissement ASO (bonifs, équipes, parcours, récits)
                                  ├ directvelo.py récits des courses françaises (Crawl-delay 10 s)
                                  ├ cyclingnews.py récits (RSS, ~3 jours de profondeur)
-                                 ├ wikipedia_cal.py calendrier à venir (pages « {année} UCI World Tour/ProSeries/Europe Tour ») + LNC
+                                 ├ wikipedia_cal.py calendrier à venir (Wikipédia EN + FR « UCI ProSeries {année} »…, fusionnés) + LNC
+                                 ├ riders.py     fiches coureurs (palmarès de la saison, classement UCI)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
