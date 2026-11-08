@@ -1,0 +1,52 @@
+name: Mise à jour des résultats
+
+on:
+  schedule:
+    - cron: '17 13-22 * * *'   # toutes les heures en fin de journée (UTC), après les arrivées
+    - cron: '41 6 * * *'       # rattrapage matinal (courses lointaines, corrections UCI)
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Saison UCI (vide = année en cours)"
+        required: false
+      no_notify:
+        description: "Ne pas envoyer de push ntfy"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collecte, résumés, notification
+        env:
+          PYTHONUNBUFFERED: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DASHBOARD_URL: ${{ vars.DASHBOARD_URL }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.season }}" ]; then ARGS="$ARGS --season ${{ inputs.season }}"; fi
+          if [ "${{ inputs.no_notify }}" = "true" ]; then ARGS="$ARGS --no-notify"; fi
+          python run_pipeline.py $ARGS
+      - name: Commit des données
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
+          git commit -m "chore: mise à jour automatique des résultats"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

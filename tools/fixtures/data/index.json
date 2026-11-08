@@ -1,0 +1,919 @@
+{
+ "_fixture": true,
+ "generated_at": "2026-07-11T19:42:00Z",
+ "season": 2026,
+ "races": [
+  {
+   "id": "fx-omloop-fictif",
+   "name": "Omloop Fictif",
+   "country": "BEL",
+   "flag": "be",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "race_type": "one_day",
+   "start_date": "2026-02-28",
+   "end_date": "2026-02-28",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "classe",
+   "winner": {
+    "id": "modele-romain-19890406",
+    "name": "Romain Modèle",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Delta Pro Cycling"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "epure-paul-19970711",
+     "name": "Paul Épure",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Golf Team"
+    },
+    "rank": 5,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-trophee-fdj-1",
+   "name": "Trophée FDJ de Maquette",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "FDJ",
+   "race_type": "one_day",
+   "start_date": "2026-03-07",
+   "end_date": "2026-03-07",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "fdj",
+   "winner": {
+    "id": "temoin-mathis-19890308",
+    "name": "Mathis Témoin",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Sierra Team"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "calque-jean-20041204",
+     "name": "Jean Calque",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-classique-paves",
+   "name": "Classique des Pavés (fictive)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "race_type": "one_day",
+   "start_date": "2026-04-12",
+   "end_date": "2026-04-12",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "classe",
+   "winner": {
+    "id": "schema-luca-19980126",
+    "name": "Luca Schéma",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Zoulou Racing"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "schema-luca-19980126",
+     "name": "Luca Schéma",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Zoulou Racing"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci",
+    "aso"
+   ]
+  },
+  {
+   "id": "fx-gp-hors-france",
+   "name": "Grand Prix de l'Étranger (fictif)",
+   "country": "ITA",
+   "flag": "it",
+   "uci_class": "1.1",
+   "category": ".1",
+   "race_type": "one_day",
+   "start_date": "2026-05-17",
+   "end_date": "2026-05-17",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "francais_top10",
+   "winner": {
+    "id": "croquis-mathis-19960508",
+    "name": "Mathis Croquis",
+    "nationality": "GER",
+    "flag": "de",
+    "is_french": false,
+    "team": "Golf Team"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "modele-paul-19911021",
+     "name": "Paul Modèle",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Alpha Racing"
+    },
+    "rank": 10,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-gp-test-sur-mer",
+   "name": "Grand Prix de Test-sur-Mer (fictif)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.1",
+   "category": ".1",
+   "race_type": "one_day",
+   "start_date": "2026-06-21",
+   "end_date": "2026-06-21",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "france",
+   "winner": {
+    "id": "gabarit-marco-20010508",
+    "name": "Marco Gabarit",
+    "nationality": "ITA",
+    "flag": "it",
+    "is_french": false,
+    "team": "Hôtel Cycling"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "gabarit-remi-19941225",
+     "name": "Rémi Gabarit",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-champ-france",
+   "name": "Championnats de France (fictifs)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "CN",
+   "category": "Champ.",
+   "race_type": "one_day",
+   "start_date": "2026-06-28",
+   "end_date": "2026-06-28",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "championnat",
+   "winner": {
+    "id": "etalon-jens-19890727",
+    "name": "Jens Étalon",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Kilo Team"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "etalon-jens-19890727",
+     "name": "Jens Étalon",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Kilo Team"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-tour-test",
+   "name": "Tour de Test (fictif)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "2.UWT",
+   "category": "WT",
+   "race_type": "stage_race",
+   "start_date": "2026-07-04",
+   "end_date": "2026-07-26",
+   "status": "in_progress",
+   "stages_done": 8,
+   "stages_total": 9,
+   "selection_reason": "classe",
+   "winner": null,
+   "leader": {
+    "id": "bidon-lucas-20040202",
+    "name": "Lucas Bidon",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Écho Cycling"
+   },
+   "best_french": {
+    "rider": {
+     "id": "bidon-lucas-20040202",
+     "name": "Lucas Bidon",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Écho Cycling"
+    },
+    "rank": 1,
+    "classification": "gc"
+   },
+   "sources": [
+    "uci",
+    "aso"
+   ]
+  }
+ ],
+ "upcoming": [
+  {
+   "name": "Classique d'Août (fictive)",
+   "country": "ESP",
+   "flag": "es",
+   "uci_class": "1.Pro",
+   "category": "Pro",
+   "start_date": "2026-07-29",
+   "end_date": "2026-07-29"
+  },
+  {
+   "name": "Tour du Bout du Monde (fictif)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "2.1",
+   "category": ".1",
+   "start_date": "2026-08-04",
+   "end_date": "2026-08-08"
+  },
+  {
+   "name": "Nocturne de Simulation",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.1",
+   "category": "FDJ",
+   "start_date": "2026-08-15",
+   "end_date": "2026-08-15"
+  },
+  {
+   "name": "Vuelta de Prueba",
+   "country": "ESP",
+   "flag": "es",
+   "uci_class": "2.UWT",
+   "category": "WT",
+   "start_date": "2026-08-22",
+   "end_date": "2026-09-13"
+  },
+  {
+   "name": "Championnats d'Europe (fictifs)",
+   "country": "BEL",
+   "flag": "be",
+   "uci_class": "CC",
+   "category": "Champ.",
+   "start_date": "2026-09-20",
+   "end_date": "2026-09-20"
+  }
+ ],
+ "latest": [
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 7,
+   "date": "2026-07-11",
+   "label": "Étape 7 · Col-du-Témoin → Gabarit-le-Haut",
+   "winner": {
+    "id": "bidon-lucas-20040202",
+    "name": "Lucas Bidon",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Écho Cycling"
+   },
+   "best_french": {
+    "rider": {
+     "id": "bidon-lucas-20040202",
+     "name": "Lucas Bidon",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Écho Cycling"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "ai_summary": "Lucas Bidon gagne l'étape. Marco Ébauche est deuxième, Maxime Canevas troisième. Lucas Bidon est leader du classement général."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 6,
+   "date": "2026-07-10",
+   "label": "Étape 6 · Essai-les-Bains → Col-du-Témoin",
+   "winner": {
+    "id": "temoin-mathis-20040222",
+    "name": "Mathis Témoin",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Kilo Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "canevas-axel-20000123",
+     "name": "Axel Canevas",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Zoulou Racing"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Mathis Témoin (Kilo Team) s'impose à Col-du-Témoin en 4h35'18\", devant Axel Canevas et Julien Schéma. Meilleur Français du jour, Axel Canevas termine 2e. Julien Schéma occupe la tête du général avec 58 secondes d'avance."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 5,
+   "date": "2026-07-09",
+   "label": "Étape 5 · Essai-les-Bains → Essai-les-Bains",
+   "winner": {
+    "id": "jaugeur-hugo-19950824",
+    "name": "Hugo Jaugeur",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Alpha Racing"
+   },
+   "best_french": {
+    "rider": {
+     "id": "pilote-romain-19920712",
+     "name": "Romain Pilote",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Victor Team"
+    },
+    "rank": 6,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Hugo Jaugeur (Alpha Racing) s'impose à Essai-les-Bains en 0h40'09\", devant Étienne Van der Testeur et Diego Essayeur. Meilleur Français du jour, Romain Pilote termine 6e. Marco Fictif occupe la tête du général avec 49 secondes d'avance."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 4,
+   "date": "2026-07-08",
+   "label": "Étape 4 · Mont-Brouillon → Essai-les-Bains",
+   "winner": {
+    "id": "croquis-kevin-19941126",
+    "name": "Kévin Croquis",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Uniforme Racing"
+   },
+   "best_french": {
+    "rider": {
+     "id": "pilote-romain-19920712",
+     "name": "Romain Pilote",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Victor Team"
+    },
+    "rank": 3,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Kévin Croquis (Uniforme Racing) s'impose à Essai-les-Bains en 4h19'21\", devant Théo Trame et Romain Pilote. Meilleur Français du jour, Romain Pilote termine 3e. Marco Fictif occupe la tête du général avec 6 secondes d'avance."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 3,
+   "date": "2026-07-07",
+   "label": "Étape 3 · Saint-Fictif → Mont-Brouillon",
+   "winner": {
+    "id": "croquis-mathis-20050113",
+    "name": "Mathis Croquis",
+    "nationality": "SUI",
+    "flag": "ch",
+    "is_french": false,
+    "team": "Sierra Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "ebauche-marco-19891223",
+     "name": "Marco Ébauche",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Charlie Team"
+    },
+    "rank": 5,
+    "classification": "stage"
+   },
+   "ai_summary": null
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 2,
+   "date": "2026-07-06",
+   "label": "Étape 2 · Bourg-Maquette → Saint-Fictif",
+   "winner": {
+    "id": "gabarit-luca-19911006",
+    "name": "Luca Gabarit",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "India Pro Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "gabarit-luca-19911006",
+     "name": "Luca Gabarit",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "India Pro Team"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Luca Gabarit (India Pro Team) s'impose à Saint-Fictif en 3h56'20\", devant Mathis Simulé et Diego Modèle. Meilleur Français du jour, Luca Gabarit termine 1er. Luca Gabarit occupe la tête du général avec 78 secondes d'avance."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 1,
+   "date": "2026-07-05",
+   "label": "Étape 1 · Villetest → Bourg-Maquette",
+   "winner": {
+    "id": "sondeur-romain-19900718",
+    "name": "Romain Sondeur",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Juliet Racing"
+   },
+   "best_french": {
+    "rider": {
+     "id": "essayeur-luca-19940324",
+     "name": "Luca Essayeur",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Oscar Team"
+    },
+    "rank": 3,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Romain Sondeur (Juliet Racing) s'impose à Bourg-Maquette en 4h05'31\", devant Antoine Bidon et Luca Essayeur. Meilleur Français du jour, Luca Essayeur termine 3e. Diego Essayeur occupe la tête du général avec 3 secondes d'avance."
+  },
+  {
+   "race_id": "fx-tour-test",
+   "race_name": "Tour de Test (fictif)",
+   "stage_number": 0,
+   "date": "2026-07-04",
+   "label": "Prologue · Villetest",
+   "winner": {
+    "id": "essayeur-diego-20000701",
+    "name": "Diego Essayeur",
+    "nationality": "GER",
+    "flag": "de",
+    "is_french": false,
+    "team": "Golf Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "specimen-mathis-19940424",
+     "name": "Mathis Spécimen",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Papa Cycling"
+    },
+    "rank": 7,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Diego Essayeur (Golf Team) s'impose à Villetest en 0h06'13\", devant Diego Factice et Rémi Étalon. Meilleur Français du jour, Mathis Spécimen termine 7e. Diego Essayeur occupe la tête du général après le prologue."
+  },
+  {
+   "race_id": "fx-champ-france",
+   "race_name": "Championnats de France (fictifs)",
+   "stage_number": null,
+   "date": "2026-06-28",
+   "label": "Course",
+   "winner": {
+    "id": "etalon-jens-19890727",
+    "name": "Jens Étalon",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Kilo Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "etalon-jens-19890727",
+     "name": "Jens Étalon",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Kilo Team"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Jens Étalon remporte Championnats de France (fictifs) en 5h34'53\". Premier Français, Jens Étalon termine 1er."
+  },
+  {
+   "race_id": "fx-gp-test-sur-mer",
+   "race_name": "Grand Prix de Test-sur-Mer (fictif)",
+   "stage_number": null,
+   "date": "2026-06-21",
+   "label": "Course",
+   "winner": {
+    "id": "gabarit-marco-20010508",
+    "name": "Marco Gabarit",
+    "nationality": "ITA",
+    "flag": "it",
+    "is_french": false,
+    "team": "Hôtel Cycling"
+   },
+   "best_french": {
+    "rider": {
+     "id": "gabarit-remi-19941225",
+     "name": "Rémi Gabarit",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "ai_summary": null
+  },
+  {
+   "race_id": "fx-gp-hors-france",
+   "race_name": "Grand Prix de l'Étranger (fictif)",
+   "stage_number": null,
+   "date": "2026-05-17",
+   "label": "Course",
+   "winner": {
+    "id": "croquis-mathis-19960508",
+    "name": "Mathis Croquis",
+    "nationality": "GER",
+    "flag": "de",
+    "is_french": false,
+    "team": "Golf Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "modele-paul-19911021",
+     "name": "Paul Modèle",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Alpha Racing"
+    },
+    "rank": 10,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Mathis Croquis remporte Grand Prix de l'Étranger (fictif) en 4h25'06\". Premier Français, Paul Modèle termine 10e."
+  },
+  {
+   "race_id": "fx-classique-paves",
+   "race_name": "Classique des Pavés (fictive)",
+   "stage_number": null,
+   "date": "2026-04-12",
+   "label": "Course",
+   "winner": {
+    "id": "schema-luca-19980126",
+    "name": "Luca Schéma",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Zoulou Racing"
+   },
+   "best_french": {
+    "rider": {
+     "id": "schema-luca-19980126",
+     "name": "Luca Schéma",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Zoulou Racing"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Luca Schéma remporte Classique des Pavés (fictive) en 5h46'31\". Premier Français, Luca Schéma termine 1er."
+  },
+  {
+   "race_id": "fx-trophee-fdj-1",
+   "race_name": "Trophée FDJ de Maquette",
+   "stage_number": null,
+   "date": "2026-03-07",
+   "label": "Course",
+   "winner": {
+    "id": "temoin-mathis-19890308",
+    "name": "Mathis Témoin",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Sierra Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "calque-jean-20041204",
+     "name": "Jean Calque",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Mathis Témoin remporte Trophée FDJ de Maquette en 4h32'05\". Premier Français, Jean Calque termine 2e."
+  },
+  {
+   "race_id": "fx-omloop-fictif",
+   "race_name": "Omloop Fictif",
+   "stage_number": null,
+   "date": "2026-02-28",
+   "label": "Course",
+   "winner": {
+    "id": "modele-romain-19890406",
+    "name": "Romain Modèle",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Delta Pro Cycling"
+   },
+   "best_french": {
+    "rider": {
+     "id": "epure-paul-19970711",
+     "name": "Paul Épure",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Golf Team"
+    },
+    "rank": 5,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Romain Modèle remporte Omloop Fictif en 4h45'42\". Premier Français, Paul Épure termine 5e."
+  }
+ ],
+ "fdj_united_series": {
+  "source": "lnc",
+  "updated": "2026-07-11",
+  "individual": [
+   {
+    "rank": 1,
+    "rider": "Lucas Bidon",
+    "team": "Écho Cycling",
+    "points": 297
+   },
+   {
+    "rank": 2,
+    "rider": "Luca Gabarit",
+    "team": "India Pro Team",
+    "points": 287
+   },
+   {
+    "rank": 3,
+    "rider": "Pieter Échantillon",
+    "team": "India Pro Team",
+    "points": 274
+   },
+   {
+    "rank": 4,
+    "rider": "Mathis Van der Testeur",
+    "team": "Mike Racing",
+    "points": 264
+   },
+   {
+    "rank": 5,
+    "rider": "Diego Van der Testeur",
+    "team": "Foxtrot Racing",
+    "points": 245
+   },
+   {
+    "rank": 6,
+    "rider": "Tom Patron",
+    "team": "Foxtrot Racing",
+    "points": 224
+   },
+   {
+    "rank": 7,
+    "rider": "Rémi Témoin",
+    "team": "Foxtrot Racing",
+    "points": 215
+   },
+   {
+    "rank": 8,
+    "rider": "Jens Testeur",
+    "team": "X-Ray Cycling",
+    "points": 205
+   },
+   {
+    "rank": 9,
+    "rider": "Louis Croquis",
+    "team": "Papa Cycling",
+    "points": 184
+   },
+   {
+    "rank": 10,
+    "rider": "Mathis Spécimen",
+    "team": "Papa Cycling",
+    "points": 176
+   },
+   {
+    "rank": 11,
+    "rider": "Axel Ébauche",
+    "team": "Tango Cycling",
+    "points": 154
+   },
+   {
+    "rank": 12,
+    "rider": "Océan Ébauche",
+    "team": "Sierra Team",
+    "points": 134
+   },
+   {
+    "rank": 13,
+    "rider": "Hugo Brouillon",
+    "team": "Delta Pro Cycling",
+    "points": 119
+   },
+   {
+    "rank": 14,
+    "rider": "Hugo Banc",
+    "team": "Golf Team",
+    "points": 101
+   },
+   {
+    "rank": 15,
+    "rider": "Marco Ébauche",
+    "team": "Charlie Team",
+    "points": 88
+   },
+   {
+    "rank": 16,
+    "rider": "Marco Testeur",
+    "team": "Québec Racing",
+    "points": 66
+   },
+   {
+    "rank": 17,
+    "rider": "Louis Banc",
+    "team": "Québec Racing",
+    "points": 52
+   },
+   {
+    "rank": 18,
+    "rider": "Maxime Brouillon",
+    "team": "Juliet Racing",
+    "points": 44
+   },
+   {
+    "rank": 19,
+    "rider": "Antoine Trame",
+    "team": "Juliet Racing",
+    "points": 32
+   },
+   {
+    "rank": 20,
+    "rider": "Kévin Sondeur",
+    "team": "Zoulou Racing",
+    "points": 14
+   }
+  ],
+  "races": [
+   {
+    "name": "Trophée FDJ de Maquette",
+    "date": "2026-03-07",
+    "race_id": "fx-trophee-fdj-1"
+   },
+   {
+    "name": "Classique des Pavés (fictive)",
+    "date": "2026-04-12",
+    "race_id": "fx-classique-paves"
+   },
+   {
+    "name": "Grand Prix de Test-sur-Mer (fictif)",
+    "date": "2026-06-21",
+    "race_id": "fx-gp-test-sur-mer"
+   },
+   {
+    "name": "Tour de Test (fictif) — manche non suivie",
+    "date": "2026-07-04",
+    "race_id": null
+   },
+   {
+    "name": "Nocturne de Simulation",
+    "date": "2026-08-15",
+    "race_id": null
+   }
+  ]
+ },
+ "french_wins": [
+  {
+   "date": "2026-07-11",
+   "race_id": "fx-tour-test",
+   "stage_number": 7,
+   "rider": "Lucas Bidon",
+   "rider_id": "bidon-lucas-20040202",
+   "race_name": "Tour de Test (fictif)",
+   "label": "Étape 7"
+  },
+  {
+   "date": "2026-07-06",
+   "race_id": "fx-tour-test",
+   "stage_number": 2,
+   "rider": "Luca Gabarit",
+   "rider_id": "gabarit-luca-19911006",
+   "race_name": "Tour de Test (fictif)",
+   "label": "Étape 2"
+  },
+  {
+   "date": "2026-06-28",
+   "race_id": "fx-champ-france",
+   "stage_number": null,
+   "rider": "Jens Étalon",
+   "rider_id": "etalon-jens-19890727",
+   "race_name": "Championnats de France (fictifs)",
+   "label": "Course"
+  },
+  {
+   "date": "2026-04-12",
+   "race_id": "fx-classique-paves",
+   "stage_number": null,
+   "rider": "Luca Schéma",
+   "rider_id": "schema-luca-19980126",
+   "race_name": "Classique des Pavés (fictive)",
+   "label": "Course"
+  }
+ ],
+ "notification": {
+  "send": false,
+  "title": "Données fictives",
+  "message": "Jeu de test"
+ }
+}

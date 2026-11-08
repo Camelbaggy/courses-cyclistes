@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Courses cyclistes</title>
+<style>
+:root {
+  /* thème sombre unique, comme le dashboard des Coupes d'Europe */
+  --bg: #0b0f17;
+  --card: #151c28;
+  --elev: #1f2a3c;
+  --border: #28344a;
+  --text: #eef2f8;
+  --muted: #93a1b8;
+  --accent: #60a5fa;
+  --accent-soft: rgba(96, 165, 250, .16);
+  --fr: #60a5fa;
+  --fr-bg: rgba(96, 165, 250, .12);
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --shadow: none;
+  --jaune: #facc15;
+  --vert: #22c55e;
+  --blanc: #f8fafc;
+  --pois: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { color-scheme: dark; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.4; font-size: 15px;
+  overflow-x: hidden; padding-bottom: 40px;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+.muted { color: var(--muted); }
+.small { font-size: .78rem; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ---------- en-tête + onglets ---------- */
+header.top {
+  position: sticky; top: 0; z-index: 20; background: var(--bg);
+  border-bottom: 1px solid var(--border); padding: 10px 16px 0;
+}
+.top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.app-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.app-sub { font-size: .72rem; color: var(--muted); }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+.tab {
+  font-size: .82rem; font-weight: 600; color: var(--muted); padding: 10px 2px;
+  border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+
+/* ---------- cartes ---------- */
+.card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+.card.click { cursor: pointer; width: 100%; text-align: left; display: block; }
+.card.click:active { background: var(--elev); }
+.card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.race-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.card-label { color: var(--muted); font-size: .85rem; margin-bottom: 8px; }
+.winner-line { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.winner-line .who { min-width: 0; }
+.winner-line .nm { font-weight: 600; overflow-wrap: anywhere; }
+.pill-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); width: 88px; flex: none; white-space: nowrap; }
+.summary { margin-top: 10px; font-size: .9rem; line-height: 1.5; padding-top: 10px; border-top: 1px dashed var(--border); }
+.badge {
+  display: inline-block; font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 99px;
+  background: var(--elev); color: var(--muted); border: 1px solid var(--border); white-space: nowrap;
+}
+.badge.cat-WT { color: #fff; background: #1d4ed8; border-color: #1d4ed8; }
+.badge.cat-Pro { color: #fff; background: #7c3aed; border-color: #7c3aed; }
+.badge.cat-FDJ { color: #fff; background: #2563eb; border-color: #2563eb; }
+.badge.live { color: var(--ok); border-color: var(--ok); background: transparent; }
+.badge.fr { color: var(--fr); border-color: var(--fr); background: var(--fr-bg); }
+.flag { width: 20px; height: 14px; border-radius: 2px; object-fit: cover; flex: none; background: var(--elev); vertical-align: -2px; }
+.flag.noimg { visibility: hidden; }
+
+/* ---------- filtres / chips ---------- */
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; font-size: .8rem; font-weight: 600; padding: 6px 12px; border-radius: 99px;
+  background: var(--card); border: 1px solid var(--border); color: var(--muted);
+}
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stage-chip { border-radius: 10px; padding: 4px 11px; text-align: center; line-height: 1.2; min-width: 52px; }
+.stage-chip b { display: block; font-size: .85rem; }
+.stage-chip span { display: block; font-size: .65rem; opacity: .85; font-weight: 500; }
+
+/* ---------- calendrier ---------- */
+.month { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+.cal-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; }
+.cal-date { flex: none; width: 66px; font-size: .78rem; color: var(--muted); font-weight: 600; line-height: 1.25; }
+.cal-main { min-width: 0; flex: 1; }
+.cal-item.future { opacity: .55; }
+.cal-item.future .race-name { font-weight: 600; }
+
+/* ---------- tableaux ---------- */
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: grid; grid-template-columns: 30px 22px minmax(0, 1fr) auto; gap: 8px; align-items: center;
+  padding: 7px 8px; border-bottom: 1px solid var(--border); border-left: 3px solid transparent;
+}
+.row:last-child { border-bottom: none; }
+.row.fr { background: var(--fr-bg); border-left-color: var(--fr); }
+.row .rk { text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: .85rem; }
+.row .rk small { display: block; font-size: .62rem; font-weight: 700; line-height: 1; margin-top: 1px; }
+.up { color: var(--ok); } .down { color: var(--bad); }
+.row .nm { font-weight: 600; font-size: .88rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .tm { font-size: .72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .mid { min-width: 0; }
+.row .val { text-align: right; font-variant-numeric: tabular-nums; font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.row .val small { display: block; font-size: .65rem; font-weight: 500; color: var(--muted); }
+.row .val.first { color: var(--text); }
+.row .val.gap { color: var(--muted); }
+.table-card { padding: 0; overflow: hidden; }
+.table-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.switch { display: inline-flex; align-items: center; gap: 8px; font-size: .82rem; font-weight: 600; }
+.switch i { width: 34px; height: 20px; border-radius: 99px; background: var(--border); position: relative; transition: background .15s; }
+.switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch[aria-pressed="true"] i { background: var(--accent); }
+.switch[aria-pressed="true"] i::after { transform: translateX(14px); }
+.more { display: block; width: 100%; padding: 10px; font-weight: 600; font-size: .85rem; color: var(--accent); border-top: 1px solid var(--border); }
+.group-title { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 8px 12px 4px; background: var(--elev); }
+.empty { padding: 22px 16px; text-align: center; color: var(--muted); font-size: .9rem; }
+.errbox { border: 1px solid var(--bad); color: var(--bad); border-radius: 12px; padding: 14px; text-align: center; background: var(--card); }
+.errbox button { margin-top: 8px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--bad); font-weight: 600; color: var(--bad); }
+
+/* ---------- fiche course ---------- */
+#sheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
+#sheet.open { display: block; }
+.sheet-bar {
+  position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 6px;
+}
+.back { width: 40px; height: 40px; border-radius: 10px; font-size: 1.4rem; line-height: 1; flex: none; }
+.back:active { background: var(--elev); }
+.sheet-title { min-width: 0; flex: 1; }
+.sheet-title b { display: block; font-size: .98rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sheet-title span { font-size: .72rem; color: var(--muted); }
+.sheet-body { max-width: 680px; margin: 0 auto; padding: 10px 16px 24px; }
+.stage-head h2 { font-size: 1.05rem; line-height: 1.25; }
+.stage-head .sub { color: var(--muted); font-size: .82rem; margin-top: 2px; }
+.jerseys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jersey { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 7px 9px; min-width: 0; }
+.jersey .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 1px solid rgba(0, 0, 0, .25); }
+.dot.jaune { background: var(--jaune); } .dot.vert { background: var(--vert); }
+.dot.blanc { background: var(--blanc); }
+.dot.pois { background: radial-gradient(circle, var(--pois) 0 2.2px, transparent 2.6px) 0 0 / 7px 7px, #fff; }
+.jersey .t { min-width: 0; line-height: 1.2; }
+.jersey .t small { display: block; font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.jersey .t span { display: block; font-size: .8rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.sec-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.ai-tag { font-size: .65rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); padding: 1px 7px; border-radius: 99px; margin-left: 6px; text-transform: none; letter-spacing: 0; }
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.stat { background: var(--elev); border-radius: 8px; padding: 6px 10px; flex: 1 1 0; min-width: 78px; }
+.stat b { display: block; font-size: 1rem; }
+.stat span { font-size: .66rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.poi { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: .84rem; }
+.poi .a { font-weight: 600; overflow-wrap: anywhere; }
+.poi .b { color: var(--muted); font-size: .74rem; }
+.poi .r { text-align: right; font-size: .76rem; color: var(--muted); white-space: nowrap; }
+.cat { display: inline-block; font-size: .65rem; font-weight: 800; border-radius: 4px; padding: 0 5px; margin-right: 6px; background: var(--pois); color: #fff; }
+.cat.c4 { background: #64748b; } .cat.c3 { background: #0ea5e9; } .cat.c2 { background: #f59e0b; } .cat.c1 { background: #ea580c; }
+.cat.hc { background: #111827; }
+.hl { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: .85rem; border-top: 1px solid var(--border); }
+.hl:first-of-type { border-top: none; }
+.hl .l { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.hl .l span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl .r { color: var(--muted); font-size: .76rem; text-align: right; flex: none; }
+.subtabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border); }
+.subtabs::-webkit-scrollbar { display: none; }
+.subtab { flex: none; padding: 9px 10px; font-size: .82rem; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; }
+.subtab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.loading { padding: 40px 0; text-align: center; color: var(--muted); }
+.loading::before { content: ""; display: block; width: 24px; height: 24px; margin: 0 auto 10px; border-radius: 50%; border: 3px solid var(--border); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.fixture-banner { background: var(--warn); color: #000; font-size: .7rem; font-weight: 700; text-align: center; padding: 2px 8px; }
+a { color: var(--accent); }
+footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
+</style>
+</head>
+<body>
+<div id="banner"></div>
+<header class="top">
+  <div class="top-row">
+    <div class="app-title">Courses cyclistes</div>
+    <div class="app-sub" id="maj"></div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab active" role="tab" data-tab="recents">Récents</button>
+    <button class="tab" role="tab" data-tab="calendrier">Calendrier</button>
+    <button class="tab" role="tab" data-tab="fdj">FDJ Series</button>
+    <button class="tab" role="tab" data-tab="francais">Français</button>
+  </nav>
+</header>
+<main id="main"><div class="loading">Chargement…</div></main>
+<footer id="foot"></footer>
+
+<section id="sheet" aria-label="Fiche course" aria-hidden="true">
+  <div class="sheet-bar">
+    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
+    <div class="sheet-title"><b id="sheet-name"></b><span id="sheet-sub"></span></div>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</section>
+
+<script>
+"use strict";
+/* ================== configuration & utilitaires ================== */
+const PARAMS = new URLSearchParams(location.search);
+const BASE = (() => {
+  const d = PARAMS.get("data") || "data";
+  // dossier relatif uniquement : pas de schéma, pas de « .. », pas de chemin absolu
+  return /^[\w\-./]+$/.test(d) && !d.includes("..") && !d.startsWith("/") ? d.replace(/\/+$/, "") : "data";
+})();
+
+const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+function esc(v) { return v == null ? "" : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]); }
+
+function flag(code, nom) {
+  if (!code || !/^[a-z]{2}(-[a-z]{2,3})?$/i.test(code)) return '<span class="flag"></span>';
+  const c = code.toLowerCase();
+  return `<img class="flag" loading="lazy" src="https://flagcdn.com/w40/${esc(c)}.png" alt="${esc(nom || c)}" title="${esc(nom || "")}">`;
+}
+document.addEventListener("error", e => {
+  if (e.target && e.target.tagName === "IMG") e.target.classList.add("noimg");
+}, true);
+
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const MOIS_C = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+function pd(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ""); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; }
+function dateLongue(iso) { const p = pd(iso); return p ? `${p.d === 1 ? "1er" : p.d} ${MOIS[p.m - 1]} ${p.y}` : ""; }
+function dateCourte(iso) { const p = pd(iso); return p ? `${p.d} ${MOIS_C[p.m - 1]}` : ""; }
+function plage(a, b) {
+  const pa = pd(a), pb = pd(b);
+  if (!pa) return "";
+  if (!pb || a === b) return dateCourte(a);
+  if (pa.m === pb.m && pa.y === pb.y) return `${pa.d}–${pb.d} ${MOIS_C[pa.m - 1]}`;
+  return `${dateCourte(a)} – ${dateCourte(b)}`;
+}
+const nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 });
+function num(n) { return n == null ? "" : nf.format(n); }
+function p2(n) { return String(n).padStart(2, "0"); }
+/** h:mm:ss */
+function fmtTemps(s) {
+  if (s == null) return "";
+  s = Math.round(s);
+  return `${Math.floor(s / 3600)}:${p2(Math.floor(s % 3600 / 60))}:${p2(s % 60)}`;
+}
+/** +m:ss (ou +h:mm:ss au-delà d'une heure) ; « m.t. » pour un écart nul */
+function fmtEcart(s) {
+  if (s == null) return "";
+  s = Math.round(s);
+  if (s === 0) return "m.t.";
+  if (s >= 3600) return `+${fmtTemps(s)}`;
+  return `+${Math.floor(s / 60)}:${p2(s % 60)}`;
+}
+function rang(n) { return n == null ? "" : n === 1 ? "1er" : `${n}e`; }
+
+const CATS = ["WT", "Pro", "FDJ", ".1", ".2", "Champ."];
+const STATUTS = { DNF: "Abandons (DNF)", DNS: "Non-partants (DNS)", OTL: "Hors délai (OTL)", DSQ: "Disqualifiés (DSQ)", DNQ: "Non qualifiés (DNQ)" };
+const TYPES = { itt: "Contre-la-montre", ttt: "CLM par équipes", road: "En ligne" };
+
+/* ================== chargement des données ================== */
+const cache = new Map();
+async function charger(chemin) {
+  if (cache.has(chemin)) return cache.get(chemin);
+  const p = fetch(`${BASE}/${chemin}`, { cache: "no-cache" }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status} pour ${BASE}/${chemin}`);
+    return r.json();
+  });
+  cache.set(chemin, p);
+  p.catch(() => cache.delete(chemin));   // une erreur n'est pas mise en cache
+  return p;
+}
+
+const state = { index: null, tab: "recents", filtreCat: "all", course: null, sel: null, sub: null, frOnly: false, limit: 50, ouvertParApp: false };
+
+/* ================== éléments communs ================== */
+function catBadge(c, cl) {
+  return `<span class="badge cat-${esc((c || "").replace(/[^\w]/g, ""))}">${esc(cl || c)}</span>`;
+}
+function courseParId(id) { return (state.index?.races || []).find(r => r.id === id) || null; }
+function ligneCoureur(ref, label, extra) {
+  if (!ref) return "";
+  return `<div class="winner-line"><span class="pill-label">${esc(label)}</span>${flag(ref.flag, ref.nationality)}
+    <div class="who"><div class="nm">${esc(ref.name)}${ref.is_french ? ' <span class="badge fr">FR</span>' : ""}</div>
+    <div class="small muted">${esc(ref.team || "")}${extra ? " · " + esc(extra) : ""}</div></div></div>`;
+}
+function messageErreur(msg, action) {
+  return `<div class="errbox"><div>${esc(msg)}</div>${action ? `<button data-action="${esc(action)}">Réessayer</button>` : ""}</div>`;
+}
+
+/* ================== onglets principaux ================== */
+function renderRecents() {
+  const L = state.index.latest || [];
+  if (!L.length) return `<div class="empty card">Aucun résultat récent.</div>`;
+  return `<div class="stack">${L.map(it => {
+    const c = courseParId(it.race_id);
+    const sn = it.stage_number == null ? "" : it.stage_number;
+    const bf = it.best_french;
+    return `<button class="card click" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
+      <div class="card-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>
+        ${c ? catBadge(c.category, c.uci_class) : ""}</div>
+      <div class="card-label">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
+      ${ligneCoureur(it.winner, "Vainqueur")}
+      ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
+      ${it.ai_summary ? `<div class="summary">${esc(it.ai_summary)}</div>` : ""}
+    </button>`;
+  }).join("")}</div>`;
+}
+
+function renderCalendrier() {
+  const races = (state.index.races || []).map(r => ({ ...r, _futur: false }));
+  const up = (state.index.upcoming || []).map(u => ({ ...u, _futur: true }));
+  let tout = races.concat(up).sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+  const f = state.filtreCat;
+  if (f !== "all") tout = tout.filter(r => r.category === f);
+  const chips = ["all"].concat(CATS).map(c =>
+    `<button class="chip ${f === c ? "active" : ""}" data-cat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("");
+  let html = `<div class="chips">${chips}</div>`;
+  if (!tout.length) return html + `<div class="empty card">Aucune course dans cette catégorie.</div>`;
+  let mois = "";
+  tout.forEach(r => {
+    const p = pd(r.start_date);
+    const m = p ? `${MOIS[p.m - 1]} ${p.y}` : "Date inconnue";
+    if (m !== mois) { mois = m; html += `<div class="month">${esc(m)}</div>`; }
+    const inner = `<div class="cal-date">${esc(plage(r.start_date, r.end_date))}</div>
+      <div class="cal-main"><div class="card-head" style="margin:0">${flag(r.flag, r.country)}
+        <span class="race-name">${esc(r.name)}</span></div>
+        <div class="small muted" style="margin-top:3px">${catBadge(r.category, r.uci_class)}
+        ${r._futur ? ' <span class="badge">à venir</span>' : r.status === "in_progress" ? ` <span class="badge live">en cours · ${r.stages_done}${r.stages_total ? "/" + r.stages_total : ""} étapes</span>` : ""}
+        ${r.race_type === "stage_race" && !r._futur && r.status !== "in_progress" ? ` <span class="badge">${r.stages_done} étapes</span>` : ""}</div>
+        ${!r._futur && (r.winner || r.leader) ? `<div class="small" style="margin-top:4px">${r.winner ? "Vainqueur" : "Leader"} : <b>${esc((r.winner || r.leader).name)}</b>${(r.winner || r.leader).is_french ? ' <span class="badge fr">FR</span>' : ""}</div>` : ""}
+      </div>`;
+    html += r._futur
+      ? `<div class="card cal-item future" style="margin-bottom:6px">${inner}</div>`
+      : `<button class="card click cal-item" style="margin-bottom:6px" data-open="${esc(r.id)}" data-stage="">${inner}</button>`;
+  });
+  return html;
+}
+
+function renderFdj() {
+  const f = state.index.fdj_united_series;
+  if (!f) return `<div class="empty card">FDJ United Series : classement indisponible.</div>`;
+  const indiv = f.individual || [];
+  const lignes = indiv.map(r => `<div class="row">
+      <div class="rk">${esc(r.rank)}</div><span></span>
+      <div class="mid"><div class="nm">${esc(r.rider)}</div><div class="tm">${esc(r.team || "")}</div></div>
+      <div class="val">${esc(num(r.points))} pts</div></div>`).join("");
+  const manches = (f.races || []).map(m => {
+    const dispo = m.race_id && courseParId(m.race_id);
+    const inner = `<div class="cal-date">${esc(dateCourte(m.date))}</div><div class="cal-main"><span class="race-name">${esc(m.name)}</span></div>`;
+    return dispo ? `<button class="card click cal-item" style="margin-bottom:6px" data-open="${esc(m.race_id)}" data-stage="">${inner}</button>`
+      : `<div class="card cal-item ${m.date > (state.index.generated_at || "") .slice(0, 10) ? "future" : ""}" style="margin-bottom:6px">${inner}</div>`;
+  }).join("");
+  return `<div class="stack">
+    <div><div class="sec-title">Classement individuel${f.updated ? ` · mis à jour le ${esc(dateLongue(f.updated))}` : ""}</div>
+      <div class="card table-card">${indiv.length ? `<div class="rows">${lignes}</div>` : '<div class="empty">Classement non publié</div>'}</div></div>
+    <div><div class="sec-title">Manches</div>${manches || '<div class="empty card">Aucune manche listée.</div>'}</div></div>`;
+}
+
+function renderFrancais() {
+  const W = state.index.french_wins || [];
+  if (!W.length) return `<div class="empty card">Aucune victoire française pour l'instant.</div>`;
+  return `<div class="sec-title">${W.length} victoire${W.length > 1 ? "s" : ""} française${W.length > 1 ? "s" : ""} cette saison</div>
+  <div class="stack">${W.map(w => {
+    const c = courseParId(w.race_id);
+    return `<button class="card click" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
+      <div class="card-head">${flag("fr", "France")}<span class="race-name">${esc(w.rider)}</span></div>
+      <div class="small muted">${esc(w.race_name)} · ${esc(w.label)}${c ? " · " + esc(c.uci_class) : ""}</div>
+      <div class="small muted" style="margin-top:2px">${esc(dateLongue(w.date))}</div></button>`;
+  }).join("")}</div>`;
+}
+
+function renderMain() {
+  const el = document.getElementById("main");
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === state.tab));
+  if (!state.index) return;
+  const f = { recents: renderRecents, calendrier: renderCalendrier, fdj: renderFdj, francais: renderFrancais }[state.tab];
+  el.innerHTML = f();
+}
+
+/* ================== fiche course ================== */
+function etapes(c) { return (c.stages || []).slice().sort((a, b) => (a.number ?? -1) - (b.number ?? -1)); }
+function selectionDefaut(c) {
+  const E = etapes(c);
+  if (c.race_type !== "stage_race") return "";
+  if (c.final && c.status === "finished") return "F";
+  return E.length ? String(E[E.length - 1].number) : "";
+}
+function cls(c, sel) {
+  const E = etapes(c);
+  if (c.race_type !== "stage_race") {
+    const st = E[0], r = (st && st.results) || {}, fin = c.final || {};
+    const out = {};
+    ["stage", "gc", "points", "mountain", "youth", "teams", "combativity"].forEach(k => { out[k] = (r[k] && r[k].length ? r[k] : fin[k]) || []; });
+    return out;
+  }
+  if (sel === "F") return c.final || {};
+  const st = E.find(s => String(s.number) === String(sel));
+  return (st && st.results) || {};
+}
+function etapeCourante(c, sel) {
+  const E = etapes(c);
+  if (c.race_type !== "stage_race") return E[0] || null;
+  if (sel === "F") return null;
+  return E.find(s => String(s.number) === String(sel)) || null;
+}
+function libelleChip(s) {
+  if (s.number == null) return "Course";
+  return s.number === 0 ? "Prol." : `É${s.number}`;
+}
+
+function sousTitreCourse(c) {
+  const parts = [c.uci_class, plage(c.start_date, c.end_date)];
+  if (c.race_type === "stage_race") parts.push(`${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""} étapes`);
+  return parts.filter(Boolean).join(" · ");
+}
+
+function renderMaillots(c, sel) {
+  const k = cls(c, sel);
+  const defs = [["gc", "Général", "jaune"], ["points", "Points", "vert"], ["mountain", "Montagne", "pois"], ["youth", "Jeune", "blanc"]];
+  const items = defs.map(([cle, lab, cl]) => {
+    const r = (k[cle] || []).find(x => x.rank === 1);
+    const ref = r && c.riders[r.rider_id];
+    return ref ? `<div class="jersey"><span class="dot ${cl}"></span><div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${esc(ref.name)}</span></div></div>` : "";
+  }).join("");
+  return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div></div>` : "";
+}
+
+function renderParcours(st) {
+  const r = st && st.route;
+  if (!r) return "";
+  const stats = [];
+  if (r.distance_km != null) stats.push(`<div class="stat"><b>${num(r.distance_km)} km</b><span>Distance</span></div>`);
+  if (r.elevation_m != null) stats.push(`<div class="stat"><b>${num(r.elevation_m)} m</b><span>Dénivelé +</span></div>`);
+  if (r.profile) stats.push(`<div class="stat"><b>${esc(r.profile === "clm" ? "CLM" : r.profile[0].toUpperCase() + r.profile.slice(1))}</b><span>Profil</span></div>`);
+  const catc = k => ({ "4": "c4", "3": "c3", "2": "c2", "1": "c1", "HC": "hc" })[String(k).toUpperCase()] || "";
+  const cols = (r.climbs || []).map(x => `<div class="poi"><div><div class="a"><span class="cat ${catc(x.category)}">${esc(String(x.category).toUpperCase() === "HC" ? "HC" : "Cat. " + x.category)}</span>${esc(x.name)}</div>
+      <div class="b">${[x.length_km != null ? num(x.length_km) + " km" : "", x.gradient_pct != null ? num(x.gradient_pct) + " %" : "", x.altitude_m != null ? "sommet " + num(x.altitude_m) + " m" : ""].filter(Boolean).join(" · ")}</div></div>
+      <div class="r">${x.km != null ? "km " + num(x.km) : ""}</div></div>`).join("");
+  const pav = (r.cobbles || []).map(x => `<div class="poi"><div><div class="a">${esc(x.name)}</div>
+      <div class="b">${[x.length_km != null ? num(x.length_km) + " km" : "", x.difficulty != null ? "difficulté " + x.difficulty + "/5" : ""].filter(Boolean).join(" · ")}</div></div>
+      <div class="r">${x.km != null ? "km " + num(x.km) : ""}</div></div>`).join("");
+  return `<div class="card"><div class="sec-title">Parcours${r.source ? ` · source ${esc(r.source.toUpperCase())}` : ""}</div>
+    <div class="stats">${stats.join("")}</div>
+    ${cols ? `<div class="sec-title" style="margin-top:8px">Cols (${r.climbs.length})</div>${cols}` : ""}
+    ${pav ? `<div class="sec-title" style="margin-top:8px">Secteurs pavés (${r.cobbles.length})</div>${pav}` : ""}
+    ${!cols && !pav && r.profile !== "clm" ? '<div class="small muted">Aucun col ni secteur pavé renseigné.</div>' : ""}</div>`;
+}
+
+function renderResume(st) {
+  if (!st) return "";
+  if (!st.ai_summary) return `<div class="card"><div class="sec-title">Résumé</div><div class="small muted">Résumé non disponible pour cette étape.</div></div>`;
+  const tag = st.summary_source === "gemini" ? "IA" : st.summary_source === "fallback" ? "automatique" : "";
+  return `<div class="card"><div class="sec-title">Résumé${tag ? `<span class="ai-tag">${tag}</span>` : ""}</div>
+    <div style="font-size:.92rem;line-height:1.55">${esc(st.ai_summary)}</div></div>`;
+}
+
+function renderFrancaisEnVue(st) {
+  const H = (st && st.french_highlights) || [];
+  if (!H.length) return "";
+  return `<div class="card"><div class="sec-title">Les Français</div>${H.map(h => `<div class="hl"><div class="l">${flag(h.rider.flag, h.rider.nationality)}<span><b>${esc(h.rider.name)}</b></span></div>
+    <div class="r">${h.stage_rank != null ? rang(h.stage_rank) : ""}${h.gc_rank != null ? ` · ${rang(h.gc_rank)} au gén.${h.gc_gap_s ? " " + fmtEcart(h.gc_gap_s) : ""}` : ""}</div></div>`).join("")}</div>`;
+}
+
+function onglets(c, sel) {
+  const k = cls(c, sel);
+  const un = c.race_type !== "stage_race";
+  const defs = [["stage", un ? "Classement" : "Étape"], ["gc", "Général"], ["points", "Points"], ["mountain", "Montagne"], ["youth", "Jeunes"], ["teams", "Équipes"], ["combativity", "Combatif"]];
+  const out = defs.filter(([cle]) => (k[cle] || []).length).map(([cle, lab]) => ({ cle, lab }));
+  if (abandons(c, sel).length) out.push({ cle: "abandons", lab: "Abandons" });
+  return out;
+}
+
+function abandons(c, sel) {
+  const E = etapes(c), out = [];
+  if (c.race_type !== "stage_race") {
+    const k = cls(c, sel);
+    (k.stage || []).forEach(r => { if (r.status) out.push({ ...r, _etape: null }); });
+    return out;
+  }
+  const jusqua = sel === "F" ? Infinity : Number(sel);
+  E.forEach(s => {
+    if (s.number > jusqua) return;
+    ((s.results && s.results.stage) || []).forEach(r => { if (r.status) out.push({ ...r, _etape: s }); });
+  });
+  return out;
+}
+
+function ligneHTML(r, cle, c, mvt) {
+  const ref = c.riders[r.rider_id];
+  const nom = ref ? ref.name : (r.bib ? `Dossard ${r.bib}` : "Coureur inconnu");
+  const fr = ref && ref.is_french;
+  let val = "", sous = "", cls2 = "";
+  if (cle === "points" || cle === "mountain") {
+    val = r.points != null ? `${num(r.points)} pts` : "";
+  } else if (cle === "combativity") {
+    val = "";
+  } else {
+    const premier = r.rank === 1;
+    if (r.status && r.status !== "OTL") val = r.status;
+    else if (premier && r.time_s != null) { val = fmtTemps(r.time_s); cls2 = "first"; }
+    else if (r.gap_s != null) { val = fmtEcart(r.gap_s); cls2 = "gap"; }
+    else if (r.time_s != null) val = fmtTemps(r.time_s);
+    if (r.status === "OTL") val = "OTL";
+    const bits = [];
+    if (r.bonus_s) bits.push(`bonif. ${r.bonus_s}″`);
+    if (r.penalty_s) bits.push(`pén. ${r.penalty_s}″`);
+    if (r.uci_points) bits.push(`${r.uci_points} pts UCI`);
+    sous = bits.join(" · ");
+  }
+  let rk = r.rank != null ? String(r.rank) : "–";
+  if (mvt != null && mvt !== 0) rk += `<small class="${mvt > 0 ? "up" : "down"}">${mvt > 0 ? "▲" : "▼"}${Math.abs(mvt)}</small>`;
+  return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${rk}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
+    <div class="mid"><div class="nm">${esc(nom)}</div><div class="tm">${esc(ref ? ref.team || "" : "")}</div></div>
+    <div class="val ${cls2}">${esc(val)}${sous ? `<small>${esc(sous)}</small>` : ""}</div></div>`;
+}
+
+function ligneEquipe(r, c) {
+  const val = r.rank === 1 ? fmtTemps(r.time_s) : fmtEcart(r.gap_s);
+  return `<div class="row"><div class="rk">${esc(r.rank ?? "–")}</div><span></span>
+    <div class="mid"><div class="nm">${esc(r.team)}</div><div class="tm">${esc(r.nationality || "")}</div></div>
+    <div class="val ${r.rank === 1 ? "first" : "gap"}">${esc(val)}</div></div>`;
+}
+
+function renderTable(c, sel, sub) {
+  const k = cls(c, sel);
+  if (sub === "abandons") {
+    const A = abandons(c, sel);
+    const groupes = {};
+    A.forEach(r => { (groupes[r.status] = groupes[r.status] || []).push(r); });
+    const ordre = Object.keys(STATUTS).filter(s => groupes[s]).concat(Object.keys(groupes).filter(s => !STATUTS[s]));
+    const frOnly = state.frOnly;
+    let html = "";
+    ordre.forEach(s => {
+      const rows = groupes[s].filter(r => !frOnly || (c.riders[r.rider_id] || {}).is_french);
+      if (!rows.length) return;
+      html += `<div class="group-title">${esc(STATUTS[s] || s)} · ${rows.length}</div><div class="rows">${rows.map(r => {
+        const ref = c.riders[r.rider_id];
+        const lib = r._etape ? (r._etape.number === 0 ? "Prologue" : `Étape ${r._etape.number}`) : "";
+        return `<div class="row ${ref && ref.is_french ? "fr" : ""}"><div class="rk">–</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
+          <div class="mid"><div class="nm">${esc(ref ? ref.name : "Dossard " + r.bib)}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
+          <div class="val gap">${esc(lib)}</div></div>`;
+      }).join("")}</div>`;
+    });
+    return html || `<div class="empty">${frOnly ? "Aucun Français parmi les abandons." : "Aucun abandon."}</div>`;
+  }
+  let rows = k[sub] || [];
+  if (!rows.length) return `<div class="empty">Classement non publié</div>`;
+  // mouvements au général : comparaison avec l'étape précédente
+  let prev = null;
+  if (sub === "gc" && c.race_type === "stage_race" && sel !== "F") {
+    const E = etapes(c), i = E.findIndex(s => String(s.number) === String(sel));
+    if (i > 0) { prev = {}; ((E[i - 1].results || {}).gc || []).forEach(r => { prev[r.rider_id] = r.rank; }); }
+  }
+  const total = rows.length;
+  if (state.frOnly && sub !== "teams") {
+    rows = rows.filter(r => (c.riders[r.rider_id] || {}).is_french);
+    if (!rows.length) return `<div class="empty">Aucun Français dans ce classement.</div>`;
+  }
+  const limite = state.frOnly ? rows.length : state.limit;
+  const vis = rows.slice(0, limite);
+  const html = vis.map(r => sub === "teams" ? ligneEquipe(r, c)
+    : ligneHTML(r, sub, c, prev && prev[r.rider_id] != null && r.rank != null ? prev[r.rider_id] - r.rank : null)).join("");
+  const reste = rows.length - vis.length;
+  return `<div class="rows">${html}</div>` + (reste > 0 ? `<button class="more" data-action="more">Afficher ${Math.min(50, reste)} de plus (${reste} restants)</button>` : "");
+}
+
+function renderFiche() {
+  const c = state.course;
+  const body = document.getElementById("sheet-body");
+  if (!c) return;
+  document.getElementById("sheet-name").textContent = c.name;
+  document.getElementById("sheet-sub").textContent = sousTitreCourse(c);
+  const E = etapes(c);
+  const sel = state.sel;
+  const stage = etapeCourante(c, sel);
+  let chips = "";
+  if (c.race_type === "stage_race") {
+    chips = `<div class="chips" id="stage-chips">${E.map(s => {
+      const active = String(s.number) === String(sel);
+      const sous = s.type === "itt" ? "CLM" : s.type === "ttt" ? "CLE" : dateCourte(s.date).replace(/\.$/, "");
+      return `<button class="chip stage-chip ${active ? "active" : ""}" data-stage-sel="${esc(s.number)}"><b>${esc(libelleChip(s))}</b><span>${esc(sous)}</span></button>`;
+    }).join("")}${c.final ? `<button class="chip stage-chip ${sel === "F" ? "active" : ""}" data-stage-sel="F"><b>Final</b><span>général</span></button>` : ""}</div>`;
+  }
+  const tabs = onglets(c, sel);
+  if (!tabs.find(t => t.cle === state.sub)) state.sub = (tabs[0] || {}).cle || null;
+  const entete = stage
+    ? `<div class="stage-head">${stage.number == null ? "" : `<h2>${esc(stage.name)}${stage.start || stage.finish ? ` · ${esc(stage.start || "")}${stage.start && stage.finish && stage.start !== stage.finish ? " → " + esc(stage.finish) : ""}` : ""}</h2>`}
+        <div class="sub">${esc(dateLongue(stage.date))}${stage.type && c.race_type === "stage_race" ? " · " + esc(TYPES[stage.type] || "") : ""}</div></div>`
+    : sel === "F" ? `<div class="stage-head"><h2>Classements finaux</h2><div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div></div>` : "";
+  const tp = c.race_type === "stage_race" ? `<span class="badge ${c.status === "in_progress" ? "live" : ""}">${c.status === "in_progress" ? "en cours" : "terminée"}</span>` : "";
+  const subtabs = tabs.length ? `<div class="subtabs" id="subtabs">${tabs.map(t => `<button class="subtab ${t.cle === state.sub ? "active" : ""}" data-sub="${esc(t.cle)}">${esc(t.lab)}</button>`).join("")}</div>` : "";
+  const outils = tabs.length ? `<div class="table-tools"><button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>
+      <span class="small muted">${(cls(c, sel)[state.sub] || []).length || ""}</span></div>` : "";
+  body.innerHTML = `<div class="stack">
+    <div class="card-head" style="margin:0">${flag(c.flag, c.country)}${catBadge(c.category, c.uci_class)}${tp}
+      <span class="small muted">${esc(plage(c.start_date, c.end_date))}${c.country ? " · " + esc(c.country) : ""}</span></div>
+    ${chips}
+    ${entete}
+    ${c.race_type === "stage_race" ? renderMaillots(c, sel) : ""}
+    ${renderResume(stage)}
+    ${renderFrancaisEnVue(stage)}
+    ${renderParcours(stage)}
+    ${tabs.length ? `<div class="card table-card">${subtabs}${outils}<div id="table">${renderTable(c, sel, state.sub)}</div></div>`
+      : '<div class="card"><div class="empty">Classement non publié</div></div>'}
+  </div>`;
+  const ch = document.querySelector("#stage-chips .active");
+  if (ch && ch.scrollIntoView) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
+}
+
+/* ================== navigation ================== */
+function parseHash() {
+  const m = /^#course\/([\w-]+)(?:\/([\w]+))?$/.exec(location.hash);
+  return m ? { id: m[1], etape: m[2] ?? null } : null;
+}
+function setHashEtape(sel) {
+  const h = `#course/${state.course.id}${sel !== "" && sel != null && state.course.race_type === "stage_race" ? "/" + sel : ""}`;
+  history.replaceState(history.state, "", h);
+}
+
+async function ouvrirCourse(id, etape) {
+  const sheet = document.getElementById("sheet"), body = document.getElementById("sheet-body");
+  const r = courseParId(id);
+  sheet.classList.add("open"); sheet.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  sheet.scrollTop = 0;
+  document.getElementById("sheet-name").textContent = r ? r.name : "Course";
+  document.getElementById("sheet-sub").textContent = r ? sousTitreCourse(r) : "";
+  if (!state.course || state.course.id !== id) {
+    state.course = null;
+    body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
+    try {
+      const d = await charger(`races/${id}.json`);
+      if (parseHash()?.id !== id) return;   // l'utilisateur est parti entre-temps
+      state.course = d;
+    } catch (e) {
+      console.error("Chargement de la course échoué :", e);
+      body.innerHTML = messageErreur(`Impossible de charger cette course (${e.message}).`, "retry");
+      return;
+    }
+    state.frOnly = false; state.limit = 50; state.sub = null;
+  }
+  const c = state.course;
+  let sel = etape != null && etape !== "" ? etape : selectionDefaut(c);
+  if (c.race_type === "stage_race") {
+    const ok = sel === "F" ? !!c.final : etapes(c).some(s => String(s.number) === String(sel));
+    if (!ok) sel = selectionDefaut(c);
+  } else sel = "";
+  state.sel = sel;
+  renderFiche();
+}
+
+function fermerFiche() {
+  const sheet = document.getElementById("sheet");
+  sheet.classList.remove("open"); sheet.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+function routeur() {
+  const h = parseHash();
+  if (h) ouvrirCourse(h.id, h.etape); else fermerFiche();
+}
+window.addEventListener("hashchange", routeur);
+
+function ouvrir(id, etape) {
+  state.ouvertParApp = true;
+  location.hash = `#course/${id}${etape !== "" && etape != null ? "/" + etape : ""}`;
+}
+function retour() {
+  if (state.ouvertParApp && history.length > 1) history.back();
+  else { history.replaceState(null, "", location.pathname + location.search); fermerFiche(); }
+}
+
+/* ================== événements (délégation) ================== */
+document.addEventListener("click", e => {
+  const t = e.target.closest("button, [data-open]");
+  if (!t) return;
+  if (t.dataset.tab) { state.tab = t.dataset.tab; renderMain(); window.scrollTo(0, 0); return; }
+  if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
+  if (t.dataset.open) { ouvrir(t.dataset.open, t.dataset.stage); return; }
+  if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
+    state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
+  }
+  if (t.dataset.sub) { state.sub = t.dataset.sub; state.limit = 50; renderFiche(); return; }
+  const a = t.dataset.action;
+  if (a === "back") retour();
+  else if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
+  else if (a === "more") { state.limit += 50; document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
+  else if (a === "retry") { routeur(); }
+  else if (a === "retry-index") { init(); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && parseHash()) retour(); });
+
+/* ================== démarrage ================== */
+async function init() {
+  const main = document.getElementById("main");
+  main.innerHTML = `<div class="loading">Chargement…</div>`;
+  try {
+    state.index = await charger("index.json");
+  } catch (e) {
+    console.error("Chargement de l'index échoué :", e);
+    main.innerHTML = messageErreur(`Impossible de charger les données (${e.message}).`, "retry-index");
+    return;
+  }
+  const ix = state.index;
+  if (ix._fixture) document.getElementById("banner").innerHTML = '<div class="fixture-banner">DONNÉES FICTIVES DE TEST</div>';
+  const g = ix.generated_at ? new Date(ix.generated_at) : null;
+  if (g && !isNaN(g)) {
+    document.getElementById("maj").textContent = `MàJ ${g.getDate()} ${MOIS_C[g.getMonth()]} ${p2(g.getHours())}h${p2(g.getMinutes())}`;
+  }
+  document.getElementById("foot").textContent = `Saison ${ix.season ?? ""} · ${(ix.races || []).length} courses suivies · sources officielles UCI, ASO, LNC`;
+  renderMain();
+  routeur();
+}
+init();
+</script>
+</body>
+</html>
