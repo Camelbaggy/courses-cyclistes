@@ -233,116 +233,57 @@ def groupe(f):
 @groupe
 def aso_tour():
     L = "https://www.letour.fr"
-    probe(L + "/fr/classements/etape-10/ite", nrows=1, ntables=1, ctx=(r"<tbody",), ctxw=1800)
-    probe(L + "/en/stage-10", nrows=1, ntables=1, ctx=(r"mountain__infos", r"Km \d+"), ctxw=500,
-          vctx=(r"Length 171 km", r"Presentation"), vw=1200)
-    probe(L + "/en/news/2027/stage-10/annecy-sallanches-2/1356730", vctx=(r"Annecy > Sallanches[^.]{0,40}\.",), vw=1800)
-    probe(L + "/fr/", maxlinks=60, link_pat=r"letour\.fr/(fr|en)/[a-z0-9-]+/?$")
-    # robots : /fr/ajax interdit -> on ne touche pas
-
-
-@groupe
-def aso_autres():
-    P = "https://www.paris-nice.fr"
-    probe(P + "/fr/etape-8", nrows=1, ntables=1, vctx=(r"Film de l.étape", r"Enjeux|Col de la Porte"), vw=1500)
-    probe(P + "/fr/actus/2026/etape-8/vingegaard-la-grande-razzia/25347", vctx=(r"Vingegaard, la grande razzia (?!--)[A-Z]",), vw=2200)
-    probe(P + "/fr/classements/etape-1/ite", nrows=3, ntables=1)
-    probe(P + "/fr/classements/etape-8/ijg", nrows=3, ntables=1)
-    probe(P + "/fr/classements/etape-8/img", nrows=3, ntables=1)
-    probe(P + "/fr/classements/etape-8/ite", nrows=3, ntables=1)
-    probe("https://www.paris-roubaix.fr/fr/etape-1", nrows=1, ntables=1, vctx=(r"Film de l.étape", r"Secteurs? pav", r"Mons-en-Pévèle"), vw=1000)
-    for h in ("https://www.letour.fr", "https://www.paris-nice.fr"):
-        probe(h + "/fr/mentions-legales", vctx=(r"extraction|reproduction|robot|donn\u00e9es|propri\u00e9t\u00e9 intellectuelle",), vw=500)
-        probe(h + "/fr/conditions-generales-d-utilisation", vctx=(r"extraction|reproduction|robot|propri\u00e9t\u00e9 intellectuelle",), vw=500)
-    probe("https://www.letour.fr/fr/", maxlinks=30, link_pat=r"(cgu|mentions|conditions|legal|cookies|donnees)")
+    probe(L + "/fr/classements/etape-10/ite", nrows=1, ntables=1, ctx=(r"<tbody>.*?</tr>.*?</tr>",), ctxw=2500)
+    probe(L + "/fr/mentions-legales", vctx=(r"Propri\u00e9t\u00e9 intellectuelle", r"scrap|aspir|moissonn|extraction|robots?\b|bases? de donn\u00e9es|reproduire"), vw=900)
+    probe("https://www.paris-nice.fr/fr/actus/2026/etape-8/vingegaard-la-grande-razzia/25347", vctx=(r"Au matin de la derni\u00e8re",), vw=2500)
+    for u in ("https://www.fleche-wallonne.be", "https://www.flechewallonne.be", "https://www.paris-tours.fr",
+              "https://www.parisstours.com", "https://www.fleche-wallonne.com"):
+        st, ct, b = raw_get(u + "/")
+        print("\n===", u, "->", st, ct, len(b) if isinstance(b, str) else "", (b if st <= 0 else visible(b)[:150]))
 
 
 @groupe
 def rcs():
     T = "https://www.tirrenoadriatico.it"
-    probe(T + "/classifiche/?classifica=CLGEN", nrows=1, ntables=1, ctxw=500, maxlinks=15,
-          link_pat=r"\.(pdf|json|xml)(\?|$)|wp-json|admin-ajax|/live|api\.",
-          ctx=(r"admin-ajax", r"wp-json", r"fetch\(", r"\.json", r"Milan\b", r"JONATHAN", r"classifica-"))
-    probe(T + "/classifiche/di-tappa/7", nrows=3, ntables=2, ctxw=500, ctx=(r"admin-ajax", r"MILAN"), vctx=(r"MILAN",), vw=600)
-    probe(T + "/archivio-2026/", nrows=3, ntables=2, maxlinks=20, link_pat=r"\.(pdf|json)|archivio|classifica", vctx=(r"MILAN|Milan",), vw=500)
-    probe("https://www.milanosanremo.it/live/tappa/1", nrows=3, ntables=2, ctxw=500, ctx=(r"admin-ajax", r"\.json", r"fetch\("), vctx=(r"Km|km",), vw=400)
-    probe("https://www.milanosanremo.it/archivio-men-2026/", nrows=3, ntables=2, maxlinks=15, link_pat=r"\.(pdf|json)|classifica", vctx=(r"Pogacar|POGACAR|Pogačar",), vw=400)
-    probe("https://www.strade-bianche.it/archivio-classifiche/u/2026/", nrows=3, ntables=2, maxlinks=15, link_pat=r"\.(pdf|json)|classifica", vctx=(r"Pogacar|POGACAR|Pogačar|Pidcock",), vw=400)
+    b = probe(T + "/classifiche/?classifica=CLGEN", nrows=1, ntables=1, ctxw=1800, ctx=(r'<div class="surname p-3 is-bold">',))
+    if b:
+        print("  surname:", b.count('class="surname'), "| data-tab distincts:", sorted(set(re.findall(r'data-tab="(tab-[^"]+)"', b))))
+        v = visible(b)
+        k = v.find("Classifica generale")
+        print("  VISIBLE autour de 'Classifica generale':", v[k:k + 1200] if k >= 0 else "absent")
+    b = probe("https://www.strade-bianche.it/archivio-classifiche/u/2026/", nrows=1, ntables=1, ctx=(r"POGA",), ctxw=1600)
+    if b:
+        v = visible(b)
+        k = v.find("Classifiche Strade Bianche Uomini 2026")
+        seg = v[k:k + 30000]
+        print("  lignes type temps (approx):", len(re.findall(r"\d:\d\d:\d\d \d?\d?:?\d\d:\d\d", seg)), "| fin de liste:", seg[-600:] if len(seg) < 30000 else "(>30000)")
+    b = probe("https://www.giroditalia.it/classifiche/", nrows=1, ntables=1)
+    if b:
+        print("  surname:", b.count('class="surname'), "| data-tab:", sorted(set(re.findall(r'data-tab="(tab-[^"]+)"', b)))[:12])
+        v = visible(b)
+        k = v.find("Classifica")
+        print("  VISIBLE:", v[k + 1500:k + 2600])
 
 
 @groupe
 def directvelo():
     D = "https://www.directvelo.com"
-    probe(D + "/mentions-legales", vctx=(r"Conditions d.utilisation|propri\u00e9t\u00e9|reproduction|utilisation du site",), vw=1200)
-    b = probe(D + "/resultats/2026-10-11", nrows=3, ntables=1, maxlinks=15, link_pat=r"directvelo\.com/(epreuve|actualite)")
-    if b:
-        for u in links(b, D, r"/epreuve/\d+/paris-tours"):
-            probe(u, nrows=8, ntables=3, maxlinks=15, link_pat=r"directvelo\.com/(actualite|epreuve|course)", vctx=(r"Classement",), vw=500)
-            break
-    b = probe(D + "/calendrier/2026/08", maxlinks=5, link_pat=r"polynormande")
-    if b:
-        for u in links(b, D, r"/epreuve/\d+/[^/]*polynormande"):
-            probe(u, nrows=8, ntables=3, maxlinks=15, link_pat=r"directvelo\.com/(actualite|epreuve|course)", vctx=(r"Classement",), vw=500)
-            break
+    probe(D + "/direct/6313/la-polynormande-2026", nrows=3, ntables=2, vctx=(r"Direct",), vw=900, text=0)
 
 
 @groupe
 def lnc():
     L = "https://www.lncpro.fr"
-    probe(L + "/resultats/la-polynormande", nrows=8, ntables=3, text=1500, maxlinks=15, link_pat=r"lncpro\.fr/(resultats|actualites)")
-    probe(L + "/resultats/paris-tours-elite", nrows=8, ntables=3, text=1000)
-    probe(L + "/", maxlinks=15, link_pat=r"(mention|cgu|conditions|legal|cookies|donnees)")
+    probe(L + "/resultats/paris-tours-elite", nrows=1, ntables=1, ctxw=1600, ctx=(r'data-result-id="25185"',))
+    probe(L + "/index.php/mentions-legales", vctx=(r"scrap|aspir|moissonn|extraction|robots?\b|bases? de donn\u00e9es|reproduction|propri\u00e9t\u00e9 intellectuelle",), vw=700)
 
 
 @groupe
 def cyclingnews():
-    robots_dump("https://www.cyclingnews.com")
-    st, ct, body = raw_get("https://www.cyclingnews.com/feeds.xml")
-    print(f"\n=== feeds.xml HTTP {st} {len(body)} o")
-    items = re.findall(r"<item>(.*?)</item>", body, re.S)
-    print("  items:", len(items))
-    cats = {}
-    for it in items:
-        for c in re.findall(r"<category[^>]*>(.*?)</category>", it, re.S):
-            c = " ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", c).split())
-            cats[c] = cats.get(c, 0) + 1
-    print("  catégories:", sorted(cats.items(), key=lambda x: -x[1])[:25])
-    for it in items[:12]:
-        t = re.search(r"<title>(.*?)</title>", it, re.S)
-        cs = [" ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", c).split()) for c in re.findall(r"<category[^>]*>(.*?)</category>", it, re.S)]
-        print("  ITEM", " ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", t.group(1) if t else "").split())[:70], "|", cs)
-    probe("https://www.futureplc.com/terms-conditions/", vctx=(r"scrap|crawl|automat|data mining|machine learning|artificial intelligence|extract|commercial purposes?|permission",), vw=500)
-    ds = re.findall(r"<pubDate>(.*?)</pubDate>", body)
-    print("  pubDate premier/dernier:", ds[:1], ds[-1:])
-    pick = None
-    for it in items:
-        if "<category><![CDATA[ Racing ]]>" in it.replace("\n", "") or "Racing" in it[:3000]:
-            m = re.search(r"<link>(.*?)</link>", it, re.S)
-            d = re.search(r"<dc:content[^>]*>(.*?)</dc:content>", it, re.S)
-            if m and d and "cyclo-cross" not in m.group(1):
-                pick = (m.group(1).strip(), len(visible(d.group(1))))
-                break
-    print("  article témoin:", pick)
-    if pick:
-        b2 = probe(pick[0].replace("<![CDATA[", "").replace("]]>", "").strip(), vctx=(r"Subscribe to the Cyclingnews",), vw=100)
-        if b2:
-            print("  longueur texte visible page:", len(visible(b2)), "| dc:content (texte):", pick[1])
-    probe("https://www.cyclingnews.com/", maxlinks=15, link_pat=r"(terms|conditions|privacy|legal)")
-    for it in items[:3]:
-        print("  --- item (balises présentes):", sorted(set(re.findall(r"<([a-zA-Z:]+)[ >/]", it))))
-        print("  ", " ".join(it.split())[:900])
-    for it in items[:2]:
-        for tag in ("description", "dc:description", "dc:content", "content:encoded", "media:description", "media:text"):
-            m = re.search(rf"<{tag}[^>]*>(.*?)</{tag}>", it, re.S)
-            print(f"   [{tag}] {len(m.group(1)) if m else 0} car. |", visible(m.group(1))[:200] if m else "")
-    for it in items[:2]:
-        print("   [dc:source/link/guid]", re.findall(r"<(?:dc:source|link|guid)[^>]*>(.*?)</", it, re.S)[:3])
-    for it in items:
-        t = re.search(r"<title>(.*?)</title>", it, re.S)
-        c = re.search(r"<dc:content[^>]*>(.*?)</dc:content>", it, re.S)
-        d = re.search(r"<description>(.*?)</description>", it, re.S)
-        print("  *", " ".join(re.sub(r"<!\[CDATA\[|\]\]>", "", t.group(1) if t else "").split())[:90],
-              "| desc", len(d.group(1)) if d else 0, "| content", len(c.group(1)) if c else 0)
+    b = probe("https://futureplc.com/terms-conditions/", vctx=(r"Intellectual Property", r"licen[cs]e", r"copy|reproduc|redistribut|republish", r"commercial", r"automat|scrap|crawl|spider|bot\b|mining"), vw=700)
+    if b:
+        v = visible(b)
+        print("  longueur texte ToS:", len(v))
 
 
 if __name__ == "__main__":
