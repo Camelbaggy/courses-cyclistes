@@ -70,19 +70,29 @@ def contexte(txt, motifs, avant=300, apres=500, maxn=4):
             print("  " + txt[max(0, k - avant):k + apres].replace("\n", "\n  "))
 
 
-def passe3():
+def post(path, champs, base="https://dataride.uci.org", maxprint=1500):
+    import urllib.parse
+    corps = urllib.parse.urlencode(champs).encode()
+    return get(base + path, accept="application/json, text/javascript, */*; q=0.01", data=corps,
+               maxprint=maxprint, headers={"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                                           "X-Requested-With": "XMLHttpRequest",
+                                           "Referer": base + "/iframe/Results/10/"})
+
+
+def passe4():
     base = "https://dataride.uci.org"
-    code, t = get(base + "/iframe/CompetitionResults/77319?disciplineId=8", accept="text/html", show=False)
-    if t:
-        contexte(t, ["/iframe/Results/", "/iframe/EventResults/", "/iframe/Events/", "/iframe/Races/", "type: \"POST\"", "transport"], maxn=2)
-        print("  formulaires/inputs:", re.findall(r"<input[^>]*>", t)[:15])
-    code, t2 = get(base + "/iframe/Competitions/", accept="text/html", show=False)
-    if t2:
-        print("  <title>", re.findall(r"<title[^>]*>(.*?)</title>", t2, re.S)[:1], len(t2))
-        contexte(t2, ["/iframe/Competitions/", "read:", "url:"], maxn=3)
-        print("  selects:", re.findall(r"<select[^>]*>", t2)[:15])
-        print("  inputs:", re.findall(r"<input[^>]*>", t2)[:25])
+    for d in (10, 8):
+        code, t = get(f"{base}/iframe/Results/{d}/", accept="text/html", show=False)
+        if t:
+            print("  <title>", re.findall(r"<title[^>]*>(.*?)</title>", t, re.S)[:1], len(t))
+            contexte(t, ["/iframe/Competitions/"], avant=900, apres=900, maxn=2)
+            print("  selects:", re.findall(r"<select[^>]*>", t)[:10])
+            print("  discipline/season/class/etc:", sorted(set(re.findall(r"(?:disciplineId|seasonId|classId|categoryId|competitionClassId|momentId|countryId|DisciplineSeasonId)\w*", t)))[:40])
+            print("  extrait visible:", re.sub(r"\s+", " ", re.sub(r"<script.*?</script>", "", t, flags=re.S))[:1200])
+    for d in (10, 8):
+        post("/iframe/Competitions/", {"disciplineId": d, "page": 1, "pageSize": 3, "take": 3, "skip": 0})
+    post("/iframe/Races/", {"disciplineId": 8, "competitionId": 77319, "page": 1, "pageSize": 5, "take": 5, "skip": 0})
 
 
 if __name__ == "__main__":
-    passe3()
+    passe4()
