@@ -11,6 +11,7 @@ robots.txt : seuls /core/, /profiles/ et les README sont interdits.
 
 import html
 import re
+from datetime import date
 from typing import Any, Dict, List, Optional
 
 import netutil
@@ -61,13 +62,36 @@ def get_fdj_united_series() -> Optional[Dict[str, Any]]:
         if not individual:
             print("[WARN] LNC : classement FDJ United Series introuvable dans la page")
             return None
-        return {"source": "lnc", "updated": None, "individual": [
+        races = get_races()
+        today = date.today().isoformat()
+        past = [r["date"] for r in races if r["date"] <= today]
+        return {"source": "lnc", "updated": max(past) if past else None, "individual": [
             {"rank": r["rank"], "rider": r["rider"], "team": r["team"], "points": r["points"]} for r in individual],
-            "races": get_races(page)}
+            "races": races}
     except Exception as e:
         print(f"[WARN] LNC : page illisible : {e}")
         return None
 
 
-def get_races(page: str) -> List[Dict[str, Any]]:
-    return []
+def get_races(page: str = "") -> List[Dict[str, Any]]:
+    """Manches de la FDJ United Series : liste filtrée `/resultats?french_cup=1` (une entrée par course :
+    nom, date JJ/MM/AAAA, classe, vainqueur). Triées par date. `page` est ignoré (compatibilité)."""
+    lst = netutil.fetch_text(BASE + "/resultats?french_cup=1", raw_name="lnc_french_cup.html")
+    if not lst:
+        return []
+    txt = re.sub(r"<(script|style|noscript|svg)[^>]*>.*?</\1>", " ", lst, flags=re.S | re.I)
+    txt = re.sub(r"<[^>]+>", "\n", txt)
+    lines = [" ".join(html.unescape(x).split()) for x in txt.splitlines()]
+    lines = [x for x in lines if x]
+    races: List[Dict[str, Any]] = []
+    for i, ln in enumerate(lines):
+        m = re.fullmatch(r"(\d\d)/(\d\d)/(\d{4})", ln)
+        if m and i > 0 and not lines[i - 1].startswith(("Classe", "Vainqueur")):
+            races.append({"name": lines[i - 1], "date": f"{m.group(3)}-{m.group(2)}-{m.group(1)}", "race_id": None})
+    seen = set()
+    out = []
+    for r in sorted(races, key=lambda r: r["date"]):
+        if (r["name"], r["date"]) not in seen:
+            seen.add((r["name"], r["date"]))
+            out.append(r)
+    return out

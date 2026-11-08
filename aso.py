@@ -185,6 +185,7 @@ def parse_ranking_html(page: str) -> List[Dict[str, Any]]:
         if key and key not in idx:
             idx[key] = i
     out = []
+    leader_time = None
     for r in table["rows"]:
         c = r["cells"]
 
@@ -200,6 +201,10 @@ def parse_ranking_html(page: str) -> List[Dict[str, Any]]:
         if rank == 1 and time_s is not None and gap_s is None:
             gap_s = 0
         pts = re.search(r"(\d+)\s*PTS", cell("points"), re.I)
+        if gap_s is None and rank and rank > 1 and time_s is not None and leader_time is not None and idx.get("gap") is not None:
+            gap_s = time_s - leader_time  # écart « m.t. » / vide : recalculé depuis les temps du même classement
+        if rank == 1 and time_s is not None:
+            leader_time = time_s
         out.append({
             "rank": rank,
             "bib": int(bib_txt) if bib_txt.isdigit() else None,
@@ -279,7 +284,7 @@ def parse_stage_route(page: str, n: int) -> Optional[Dict[str, Any]]:
         mc = re.search(r"(\d)\s*$", cat_txt)
         climbs.append({
             "name": _text(nm.group(1)), "km": _num(km.group(1)),
-            "category": mc.group(1) if mc else ("HC" if "hors" in cat_txt.lower() else None),
+            "category": mc.group(1) if mc else ("HC" if re.search(r"hors|\bHC\b", cat_txt, re.I) else None),
             "altitude_m": int(km.group(2)),
             "length_km": _num(pc.group(1)) if pc else None,
             "gradient_pct": _num(pc.group(2)) if pc else None,
@@ -362,7 +367,11 @@ def _article_text(page: str) -> str:
     txt = html.unescape(re.sub(r"<[^>]+>", " ", txt)).replace("\xa0", " ")
     lines = [" ".join(l.split()) for l in txt.splitlines()]
     bad = ("cookie", "consent", "__CONSENT", "Partager", "Lire aussi")
-    return "\n".join(l for l in lines if len(l) >= 30 and not any(b in l for b in bad))
+    kept: List[str] = []
+    for l in lines:
+        if len(l) >= 30 and not any(b in l for b in bad) and (not kept or kept[-1] != l):
+            kept.append(l)
+    return "\n".join(kept)
 
 
 def get_story(aso_ref: Dict[str, Any], stage_number: Optional[int]) -> Optional[str]:

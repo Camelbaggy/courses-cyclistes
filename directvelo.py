@@ -68,7 +68,12 @@ def _article_text(page: str) -> str:
     txt = re.sub(r"</(p|div|h[1-6]|li|blockquote)>|<br\s*/?>", "\n", txt, flags=re.I)
     txt = html.unescape(re.sub(r"<[^>]+>", " ", txt)).replace("\xa0", " ")
     lines = [" ".join(l.split()) for l in txt.splitlines()]
-    return "\n".join(l for l in lines if len(l) >= 40)
+    junk = ("une course, un coureur, une actualit", "Button added", "Commentaires", "Lire aussi", "Partager")
+    kept: List[str] = []
+    for l in lines:
+        if len(l) >= 40 and not any(j in l for j in junk) and (not kept or kept[-1] != l):
+            kept.append(l)
+    return "\n".join(kept)
 
 
 def find_story(race_name: str, date: str) -> Optional[str]:

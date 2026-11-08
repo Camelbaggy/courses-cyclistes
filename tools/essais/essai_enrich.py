@@ -106,7 +106,7 @@ titre("LNC")
 res = lnc.get_fdj_united_series()
 if res:
     print("  individuel:", len(res["individual"]), res["individual"][:5])
-    print("  manches:", len(res["races"]), res["races"][:5])
+    print("  updated:", res["updated"], "| manches:", len(res["races"]), res["races"])
 else:
     print("  None")
 page = netutil.fetch_text(lnc.BASE + "/fdj-united-series")
@@ -129,6 +129,8 @@ if lst:
 titre("DirectVélo : Paris-Tours 2026-10-11")
 t = directvelo.find_story("Paris-Tours", "2026-10-11")
 show_text(t)
+if t:
+    print("  FIN:", t[-300:].replace("\n", " ⏎ "))
 for u, p in directvelo._PAGES.items():
     print("  page:", u, None if p is None else len(p))
 arts = [u for u in directvelo._PAGES if "/actualite/" in u]
@@ -151,9 +153,12 @@ for i in items[:5]:
     print("   ", i["date"], i["categories"][:3], i["title"][:80])
 tested = 0
 for i in items:
-    if "Racing" in i["categories"] and tested < 3:
-        name = " ".join(re.findall(r"[A-Za-zÀ-ÿ']+", i["title"])[:3])
+    if "Racing" in i["categories"] and ":" in i["title"] and tested < 3:
+        name = i["title"].split(":")[0]
         s = cyclingnews.find_story(items, name, i["date"], None)
         print(f"  find_story('{name}', {i['date']}) ->", None if s is None else (len(s), s[:80].replace("\n", " ")))
+        s2 = cyclingnews.find_story(items, name, i["date"], 3)
+        print(f"     avec étape 3 ->", None if s2 is None else len(s2))
         tested += 1
+print("  find_story Tour inexistant ->", cyclingnews.find_story(items, "Tour de Vendée", "2026-11-05", None))
 print("  find_story Paris-Roubaix 2026-04-12 ->", cyclingnews.find_story(items, "Paris-Roubaix", "2026-04-12", None))
