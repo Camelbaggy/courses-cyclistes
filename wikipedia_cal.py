@@ -11,6 +11,12 @@ Pages anglaises lues pour l'année Y : « Y UCI World Tour », « Y UCI ProSerie
 « Y UCI Road World Championships », « Y European Road Championships », « Y French National Road Race Championships »
 (championnats : dates seulement). Une page absente est ignorée sans erreur.
 
+Seconde source : Wikipédia FRANÇAISE (fr.wikipedia.org), pages « UCI World Tour Y », « UCI ProSeries Y », « UCI Europe Tour Y »,
+souvent créées bien avant les pages anglaises (en novembre, la ProSeries et l'Europe Tour de l'année suivante n'existent
+qu'en français). Même étiquette d'API, une requête groupée par année et par langue. Pour une année, `list_calendar`
+prend l'union EN + FR dédoublonnée (début à ± 1 jour + nom proche, ou même dates / pays / classe sans ambiguïté) ; les
+lignes issues de la page française portent `source` = « wikipedia-fr ».
+
 Hommes élite uniquement : on ne garde que les classes 1/2.UWT, 1/2.Pro, 1/2.1 et 1/2.2 ; sont exclues les classes
 U23 (2.2U, 1.2U), les Coupes des nations U23 (1.Ncup, 2.Ncup), les juniors (MJ) et tout ce qui évoque les femmes.
 Le parseur est heuristique (les tableaux Wikipédia n'ont pas de format imposé) : une ligne dont un champ manque
@@ -21,16 +27,19 @@ import datetime
 import html
 import re
 import time
+import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
 import selection
 
 API = "https://en.wikipedia.org/w/api.php"
+API_FR = "https://fr.wikipedia.org/w/api.php"
 MAXLAG = 5
 REQUESTS = 0                                   # nombre de requêtes API émises (essai de conformité)
 
 CALENDAR_PAGES = ["{y} UCI World Tour", "{y} UCI ProSeries", "{y} UCI Europe Tour"]
+CALENDAR_PAGES_FR = ["UCI World Tour {y}", "UCI ProSeries {y}", "UCI Europe Tour {y}"]
 CHAMP_PAGES = {
     "{y} UCI Road World Championships": ("CM", "Championnats du monde sur route", None),
     "{y} European Road Championships": ("CC", "Championnats d'Europe sur route", None),
@@ -41,6 +50,7 @@ CHAMP_PAGES = {
 PAGE_DEFAULT_CLASS = {"UCI World Tour": "UWT", "UCI ProSeries": "Pro"}
 
 _cache: Dict[int, Dict[str, str]] = {}
+_cache_fr: Dict[int, Dict[str, str]] = {}
 
 MONTHS = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7, "aug": 8, "sep": 9, "oct": 10,
           "nov": 11, "dec": 12}
@@ -76,20 +86,40 @@ COUNTRY_NAMES = {
     "uruguay": "URU", "costa rica": "CRC", "cuba": "CUB", "eritrea": "ERI", "ethiopia": "ETH", "malaysia": "MAS",
     "turkmenistan": "TKM", "uzbekistan": "UZB", "iran": "IRN", "india": "IND", "kenya": "KEN",
 }
+# Noms de pays français (clés normalisées : sans accent, minuscules, tirets -> espaces) -> code CIO/UCI.
+COUNTRY_NAMES_FR = {
+    "france": "FRA", "belgique": "BEL", "pays bas": "NED", "allemagne": "GER", "suisse": "SUI", "espagne": "ESP",
+    "italie": "ITA", "royaume uni": "GBR", "grande bretagne": "GBR", "angleterre": "GBR", "ecosse": "GBR",
+    "pays de galles": "GBR", "danemark": "DEN", "norvege": "NOR", "suede": "SWE", "finlande": "FIN",
+    "portugal": "POR", "autriche": "AUT", "pologne": "POL", "tchequie": "CZE", "republique tcheque": "CZE",
+    "slovaquie": "SVK", "slovenie": "SLO", "croatie": "CRO", "hongrie": "HUN", "roumanie": "ROU",
+    "bulgarie": "BUL", "serbie": "SRB", "turquie": "TUR", "grece": "GRE", "irlande": "IRL", "luxembourg": "LUX",
+    "lituanie": "LTU", "lettonie": "LVA", "estonie": "EST", "ukraine": "UKR", "bielorussie": "BLR", "russie": "RUS",
+    "israel": "ISR", "monaco": "MON", "andorre": "AND", "chypre": "CYP", "malte": "MLT", "georgie": "GEO",
+    "armenie": "ARM", "azerbaidjan": "AZE", "kazakhstan": "KAZ", "bosnie herzegovine": "BIH",
+    "macedoine du nord": "MKD", "albanie": "ALB", "montenegro": "MNE", "kosovo": "KOS", "islande": "ISL",
+    "maroc": "MAR", "algerie": "ALG", "tunisie": "TUN", "egypte": "EGY", "rwanda": "RWA", "afrique du sud": "RSA",
+    "emirats arabes unis": "UAE", "oman": "OMA", "arabie saoudite": "KSA", "qatar": "QAT", "australie": "AUS",
+    "nouvelle zelande": "NZL", "chine": "CHN", "japon": "JPN", "coree du sud": "KOR", "taiwan": "TPE",
+    "thailande": "THA", "indonesie": "INA", "etats unis": "USA", "canada": "CAN", "mexique": "MEX",
+    "argentine": "ARG", "bresil": "BRA", "colombie": "COL", "chili": "CHI", "equateur": "ECU", "uruguay": "URU",
+    "costa rica": "CRC", "cuba": "CUB", "erythree": "ERI", "ethiopie": "ETH", "malaisie": "MAS",
+    "turkmenistan": "TKM", "ouzbekistan": "UZB", "iran": "IRN", "inde": "IND", "kenya": "KEN",
+}
 _ISO2_TO_CODE: Dict[str, str] = {}
 for _c, _f in netutil.FLAG_CODES.items():
     _ISO2_TO_CODE.setdefault(_f, _c)
 
 
 # ---------------------------------------------------------------------------------------------- API MediaWiki
-def _api(params: Dict[str, str]) -> Optional[Dict[str, Any]]:
+def _api(params: Dict[str, str], api: str = API) -> Optional[Dict[str, Any]]:
     """Une requête API (séquentielle, maxlag=5). Reprend après pause si le serveur répond « maxlag »."""
     global REQUESTS
     import urllib.parse
     qs = urllib.parse.urlencode(dict(params, format="json", formatversion="2", maxlag=str(MAXLAG)))
     for essai in range(3):
         REQUESTS += 1
-        data = netutil.fetch_json(f"{API}?{qs}", retries=2)
+        data = netutil.fetch_json(f"{api}?{qs}", retries=2)
         if not isinstance(data, dict):
             return None
         err = data.get("error")
@@ -104,11 +134,11 @@ def _api(params: Dict[str, str]) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _wikitexts(titles: List[str]) -> Dict[str, str]:
+def _wikitexts(titles: List[str], api: str = API) -> Dict[str, str]:
     """Wikitexte des pages existantes (clé = titre demandé), en UNE requête ; repli page par page si elle échoue."""
     def une_requete(lot: List[str]) -> Optional[Dict[str, str]]:
         data = _api({"action": "query", "prop": "revisions", "rvprop": "content", "rvslots": "main",
-                     "redirects": "1", "titles": "|".join(lot)})
+                     "redirects": "1", "titles": "|".join(lot)}, api)
         if data is None:
             return None
         q = data.get("query") or {}
@@ -140,6 +170,13 @@ def fetch_pages(year: int) -> Dict[str, str]:
         titres = [p.format(y=year) for p in CALENDAR_PAGES] + [p.format(y=year) for p in CHAMP_PAGES]
         _cache[year] = _wikitexts(titres)
     return _cache[year]
+
+
+def fetch_pages_fr(year: int) -> Dict[str, str]:
+    """Wikitexte des trois pages de calendrier françaises de l'année (une requête), mémorisés pour le passage."""
+    if year not in _cache_fr:
+        _cache_fr[year] = _wikitexts([p.format(y=year) for p in CALENDAR_PAGES_FR], API_FR)
+    return _cache_fr[year]
 
 
 # ---------------------------------------------------------------------------------------------- texte / wikitexte
@@ -188,7 +225,7 @@ def _strip_attrs(cell: str) -> str:
     return cell.strip()
 
 
-_FLAG_TPL = re.compile(r"\{\{\s*(?:flag\w*|ioc\w*|fis)\s*\|[^{}]*\}\}", re.I)
+_FLAG_TPL = re.compile(r"\{\{\s*(?:flag\w*|ioc\w*|fis|drapeau\w*|pays)\s*\|[^{}]*\}\}", re.I)
 
 
 def _plain(s: str) -> str:
@@ -198,6 +235,12 @@ def _plain(s: str) -> str:
     s = re.sub(r"<br\s*/?>", " ", s, flags=re.I)
     s = _FLAG_TPL.sub(" ", s)
     s = re.sub(r"\{\{\s*[A-Z]{3}\s*\}\}", " ", s)
+    # modèles français : {{1er}}, {{er}}, {{Date|19|janvier|2027}}, <sup>er</sup>, {{France}} (drapeau seul)
+    s = re.sub(r"\{\{\s*date-?\s*\|\s*(\d{1,2})(?:er)?\s*\|\s*([^|{}]+?)\s*(?:\|\s*(\d{4}))?\s*\}\}",
+               lambda m: " ".join(x for x in m.groups() if x), s, flags=re.I)
+    s = re.sub(r"\{\{\s*1(?:er|re)\s*\}\}", "1", s, flags=re.I)
+    s = re.sub(r"\{\{\s*(?:er|re|e|ère)\s*\}\}|<sup>\s*(?:er|re|e|ère|ème)\s*</sup>", "", s, flags=re.I)
+    s = re.sub(r"\{\{\s*([^{}|]+?)\s*\}\}", lambda m: " " if country_code(m.group(1)) else m.group(0), s)
     s = re.sub(r"\[\[\s*(?:File|Image|Fichier):[^\]]*\]\]", " ", s, flags=re.I)
     for _ in range(3):
         s = re.sub(r"\{\{\s*[^{}|]*\|([^{}]*)\}\}", lambda m: m.group(1).split("|")[-1].split("=")[-1], s)
@@ -213,14 +256,17 @@ def _nom_course(raw: str) -> Optional[str]:
     """Nom de la course : libellé du premier lien non-fichier, sinon texte brut ; sans année en tête ni suffixe."""
     sans = re.sub(r"\[\[\s*(?:File|Image|Fichier):[^\]]*\]\]", " ", raw, flags=re.I)
     sans = _FLAG_TPL.sub(" ", sans)
-    m = re.search(r"\[\[([^\]|]*)(?:\|([^\]]*))?\]\]", sans)
     nom = None
-    if m:
-        nom = (m.group(2) or m.group(1)).strip()
-        nom = re.sub(r"\s*\((?:race|cycling race|cycle race)\)$", "", nom, flags=re.I)
+    for m in re.finditer(r"\[\[([^\]|]*)(?:\|([^\]]*))?\]\]", sans):
+        cand = _plain((m.group(2) or m.group(1)).strip())
+        if country_code(cand):                      # lien vers un pays (drapeau en wikitexte) : pas le nom
+            continue
+        nom = re.sub(r"\s*\((?:race|cycling race|cycle race|course cycliste|compétition cycliste|épreuve cycliste)\)$",
+                     "", cand, flags=re.I)
+        break
     if not nom:
         nom = _plain(sans)
-    nom = re.sub(r"^20\d\d\s+", "", _plain(nom)).strip(" -–,;")
+    nom = re.sub(r"^20\d\d\s+|\s+20\d\d$", "", _plain(nom)).strip(" -–,;")
     return nom or None
 
 
@@ -236,10 +282,11 @@ def country_code(valeur: str) -> Optional[str]:
         return v
     if v.lower() in _ISO2_TO_CODE:
         return _ISO2_TO_CODE[v.lower()]
-    return None
+    n = re.sub(r"^(?:la|le|les|l|du|des|de la|de l|d|de)\s+", "", netutil.normalize(v))   # « la France », « l'Italie »
+    return COUNTRY_NAMES_FR.get(n)
 
 
-_FLAG_VALUE = re.compile(r"\{\{\s*(?:flag\w*|ioc\w*|fis)\s*\|\s*([^|{}]+)", re.I)
+_FLAG_VALUE = re.compile(r"\{\{\s*(?:flag\w*|ioc\w*|fis|drapeau\w*|pays)\s*\|\s*([^|{}]+)", re.I)
 
 
 def pays_dans(raw: str) -> Optional[str]:
@@ -251,6 +298,13 @@ def pays_dans(raw: str) -> Optional[str]:
     m = re.search(r"\{\{\s*([A-Z]{3})\s*\}\}", raw or "")
     if m:
         return m.group(1)
+    for m in re.finditer(r"\{\{\s*([^{}|]+?)\s*\}\}", raw or ""):          # {{France}}, {{Belgique}}
+        code = country_code(m.group(1))
+        if code:
+            return code
+    m = re.search(r"Drapeau (?:de |du |des |d')\s*(?:la |l')?([^.\]|]+?)\.(?:svg|png)", raw or "")
+    if m:
+        return country_code(m.group(1))
     m = re.search(r"Flag of ([A-Za-z .'ü-]+?)\.(?:svg|png)", raw or "")
     if m:
         return country_code(m.group(1).replace("the ", "") if m.group(1).startswith("the ") else m.group(1))
@@ -271,9 +325,27 @@ def _pays_texte(raw: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------------------------- dates
-def parse_dates(texte: str, annee: int) -> Optional[Tuple[str, str]]:
-    """« 19–24 January », « 31 Jan – 2 Feb », « January 19–24, 2027 », « 30 March » -> (début, fin) ISO, ou None."""
+_MOIS_FR = {"janvier": "jan", "janv": "jan", "fevrier": "feb", "fevr": "feb", "mars": "mar", "avril": "apr",
+            "avr": "apr", "mai": "may", "juin": "jun", "juillet": "jul", "juil": "jul", "aout": "aug",
+            "septembre": "sep", "sept": "sep", "octobre": "oct", "novembre": "nov", "decembre": "dec"}
+_MOIS_FR_RX = re.compile(r"\b(" + "|".join(sorted(_MOIS_FR, key=len, reverse=True)) + r")\b\.?")
+
+
+def _dates_fr_vers_en(t: str) -> str:
+    """« du 19 au 24 janvier », « 1er mars », « 22 et 23 mars » -> « 19-24 jan », « 1 mar », « 22-23 mar »."""
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower()
+    t = re.sub(r"\b(\d{1,2})\s*(?:er|ere|re)\b", r"\1", t)
+    t = _MOIS_FR_RX.sub(lambda m: _MOIS_FR[m.group(1)], t)
+    t = re.sub(r"\bdu\s+(?=\d)", "", t)
+    return re.sub(r"\s+(?:au|et)\s+(?=\d)", "-", t)
+
+
+def parse_dates(texte: str, annee: int, fr: bool = False) -> Optional[Tuple[str, str]]:
+    """« 19–24 January », « 31 Jan – 2 Feb », « January 19–24, 2027 », « 30 March » -> (début, fin) ISO, ou None.
+    `fr=True` : dates françaises (« 19 au 24 janvier », « 1er mars », « 31 janvier au 2 février »)."""
     t = _plain(texte)
+    if fr:
+        t = _dates_fr_vers_en(t)
     t = re.sub(r"\s*(?:[–—−‒-]|&ndash;|\bto\b)\s*", "-", t, flags=re.I)
     for kind, rx in _DATE_PATTERNS:
         m = rx.search(t)
@@ -404,28 +476,35 @@ def _index_colonne(headers: List[str], *mots: str) -> Optional[int]:
     return None
 
 
+_EXCLU_LIGNE = re.compile(r"women|cancel|postponed|\bfemmes?\b|f[ée]minin|\bdames?\b|annul|report[ée]|supprim[ée]"
+                          r"|<\s*(?:s|del|strike)\s*>", re.I)
+_EXCLU_SECTION = re.compile(r"women|junior|under.?23|\bu23\b|youth|mixed|femmes?|f[ée]minin|espoirs?|moins de 23"
+                            r"|mixte|jeunes|annul|report[ée]", re.I)
+
+
 def ligne_vers_course(cells: List[str], headers: List[str], annee: int, classe_defaut: Optional[str],
-                      indice_section: str = "") -> Optional[Dict[str, Any]]:
+                      indice_section: str = "", lang: str = "en") -> Optional[Dict[str, Any]]:
     """Une ligne de tableau -> UpcomingRace (sans category/flag), ou None si ce n'est pas une ligne de course
     (pas de date ou pas de nom). Champs introuvables : None."""
     brut = " ".join(cells)
-    bas = brut.lower()
-    if "women" in bas or "cancel" in bas or "postponed" in bas:
+    fr = lang == "fr"
+    source = "wikipedia-fr" if fr else "wikipedia"
+    if _EXCLU_LIGNE.search(brut):
         return None
     n = len(cells)
     hd = headers if len(headers) == n else []
     i_date = _index_colonne(hd, "date")
-    dates = parse_dates(cells[i_date], annee) if i_date is not None else None
+    dates = parse_dates(cells[i_date], annee, fr) if i_date is not None else None
     if dates is None:
         i_date = None
         for i, c in enumerate(cells):
-            dates = parse_dates(c, annee)
+            dates = parse_dates(c, annee, fr)
             if dates:
                 i_date = i
                 break
     if dates is None:
         return None
-    i_course = _index_colonne(hd, "race", "name", "event", "competition")
+    i_course = _index_colonne(hd, "race", "name", "event", "competition", "course", "épreuve", "epreuve", "compétition", "nom")
     if i_course is None or i_course == i_date:
         i_course = None
         for i, c in enumerate(cells):
@@ -441,7 +520,7 @@ def ligne_vers_course(cells: List[str], headers: List[str], annee: int, classe_d
         return None
     # classe : colonne dédiée, sinon cellule qui est une classe, sinon titre de section, sinon défaut de la page
     classe = None
-    i_cl = _index_colonne(hd, "class", "category", "rank", "type")
+    i_cl = _index_colonne(hd, "class", "category", "rank", "type", "classe", "catégorie", "categorie", "cat.")
     if i_cl is not None:
         classe = _norm_classe(cells[i_cl])
     if classe is None:
@@ -459,32 +538,65 @@ def ligne_vers_course(cells: List[str], headers: List[str], annee: int, classe_d
     # pays : drapeau dans la cellule du nom, puis colonne pays/lieu, puis premier drapeau de la ligne
     pays = pays_dans(cells[i_course])
     if pays is None:
-        i_p = _index_colonne(hd, "country", "location", "venue", "nation", "host")
+        i_p = _index_colonne(hd, "country", "location", "venue", "nation", "host", "pays", "lieu", "localisation")
         if i_p is not None:
             pays = pays_dans(cells[i_p]) or _pays_texte(cells[i_p])
     if pays is None:
         pays = pays_dans(" ".join(c for i, c in enumerate(cells) if i != i_date))
     return {"name": nom, "country": pays, "flag": netutil.flag_code(pays), "uci_class": classe,
             "category": selection.categorie_classe(classe or "") if classe and "." in classe else None,
-            "start_date": dates[0], "end_date": dates[1], "source": "wikipedia"}
+            "start_date": dates[0], "end_date": dates[1], "source": source}
 
 
-def parse_calendar_page(titre: str, wikitexte: str, annee: int) -> List[Dict[str, Any]]:
-    """Courses hommes élite d'une page de calendrier (World Tour / ProSeries / Europe Tour)."""
-    base = re.sub(r"^\d{4}\s+", "", titre)
+def _lignes_liste(wikitexte: str) -> List[Tuple[str, List[str]]]:
+    """Repli pour une page sans tableau de calendrier : lignes à puces « * 19 au 24 janvier : {{Drapeau|AUS}} [[Course]] (2.UWT) »
+    -> (titre de section, [cellule date, cellule course]). Une ligne sans « : » ni tiret long est ignorée."""
+    wt = re.sub(r"<!--.*?-->", "", wikitexte, flags=re.S)
+    wt = re.sub(r"<ref[^>]*/>|<ref[^>]*>.*?</ref>", "", wt, flags=re.S | re.I)
+    titres: List[Tuple[int, str]] = []
+    sortie: List[Tuple[str, List[str]]] = []
+    for line in wt.splitlines():
+        s = line.strip()
+        m = re.match(r"^(={2,6})\s*(.*?)\s*\1\s*$", s)
+        if m:
+            niv = len(m.group(1))
+            titres = [t for t in titres if t[0] < niv] + [(niv, _plain(m.group(2)))]
+        elif s[:1] in ("*", "#"):
+            corps = s.lstrip("*# ").strip()
+            morceaux = _split_top(corps, (" :", " –", " —"))
+            if len(morceaux) >= 2:
+                reste = " ".join(morceaux[1:]).lstrip(": ")
+                classe = re.search(r"\(\s*([12]\.[A-Za-z0-9]+)\s*\)", reste)       # « (2.UWT) » : cellule à part
+                cellules = [morceaux[0], re.sub(r"\(\s*[12]\.[A-Za-z0-9]+\s*\)", "", reste)]
+                sortie.append((" / ".join(t[1] for t in titres), cellules + ([classe.group(1)] if classe else [])))
+    return sortie
+
+
+def parse_calendar_page(titre: str, wikitexte: str, annee: int, lang: str = "en") -> List[Dict[str, Any]]:
+    """Courses hommes élite d'une page de calendrier (World Tour / ProSeries / Europe Tour), anglaise ou française
+    (`lang="fr"` : dates et pays français, `source` = « wikipedia-fr »)."""
+    base = re.sub(r"\s*\d{4}\s*$|^\d{4}\s+", "", titre)
     defaut = PAGE_DEFAULT_CLASS.get(base)
     courses: List[Dict[str, Any]] = []
     for tab in parse_tables(wikitexte):
         sections = " / ".join(tab["headings"])
-        if re.search(r"women|junior|under.?23|\bu23\b|youth|mixed", sections, re.I):
+        if _EXCLU_SECTION.search(sections):
             continue
         for cells in tab["rows"]:
-            c = ligne_vers_course(cells, tab["headers"], annee, defaut, tab["headings"][-1] if tab["headings"] else "")
+            c = ligne_vers_course(cells, tab["headers"], annee, defaut, tab["headings"][-1] if tab["headings"] else "",
+                                  lang)
             if not c:
                 continue
             if c["uci_class"] and not classe_hommes_elite(c["uci_class"]):
                 continue
             courses.append(c)
+    if not courses and lang == "fr":                 # page française sans tableau exploitable : lignes à puces
+        for section, cells in _lignes_liste(wikitexte):
+            if _EXCLU_SECTION.search(section):
+                continue
+            c = ligne_vers_course(cells, [], annee, defaut, section.split(" / ")[-1], lang)
+            if c and (not c["uci_class"] or classe_hommes_elite(c["uci_class"])):
+                courses.append(c)
     return courses
 
 
@@ -528,17 +640,31 @@ def parse_pages(annee: int, pages: Dict[str, str]) -> Dict[str, List[Dict[str, A
     return out
 
 
+def parse_pages_fr(annee: int, pages: Dict[str, str]) -> Dict[str, List[Dict[str, Any]]]:
+    """titre français -> courses, pour les pages de calendrier françaises obtenues."""
+    out: Dict[str, List[Dict[str, Any]]] = {}
+    for modele in CALENDAR_PAGES_FR:
+        t = modele.format(y=annee)
+        if t in pages:
+            out[t] = parse_calendar_page(t, pages[t], annee, "fr")
+    return out
+
+
 def list_calendar(year: int) -> List[Dict[str, Any]]:
-    """Calendrier hommes élite de l'année (UpcomingRace, `source` = « wikipedia »), toutes catégories confondues ;
-    liste vide si Wikipédia est injoignable ou n'a pas encore la page."""
-    try:
-        pages = fetch_pages(year)
-    except Exception as e:  # le calendrier n'est jamais bloquant
-        print(f"[WARN] Wikipédia : calendrier {year} illisible : {e}")
-        return []
+    """Calendrier hommes élite de l'année : union des pages anglaises (`source` = « wikipedia ») et françaises
+    (« wikipedia-fr »), dédoublonnée, toutes catégories confondues ; liste vide si Wikipédia est injoignable ou
+    n'a encore aucune des pages. Une langue en échec n'empêche pas l'autre."""
     tout: List[Dict[str, Any]] = []
-    for courses in parse_pages(year, pages).values():
-        tout.extend(courses)
+    try:
+        for courses in parse_pages(year, fetch_pages(year)).values():
+            tout.extend(courses)
+    except Exception as e:  # le calendrier n'est jamais bloquant
+        print(f"[WARN] Wikipédia (en) : calendrier {year} illisible : {e}")
+    try:
+        for courses in parse_pages_fr(year, fetch_pages_fr(year)).values():
+            tout.extend(courses)
+    except Exception as e:
+        print(f"[WARN] Wikipédia (fr) : calendrier {year} illisible : {e}")
     return _dedoublonner(tout)
 
 
@@ -546,19 +672,54 @@ def list_calendar(year: int) -> List[Dict[str, Any]]:
 _RANG = {"WT": 0, "Pro": 1, ".1": 2, ".2": 3, "Champ.": 4}
 
 
+_CHAMPS_FUSION = ("country", "flag", "uci_class", "category")
+
+
+def _jours_proches(a: Optional[str], b: Optional[str]) -> bool:
+    try:
+        return abs((datetime.date.fromisoformat(a or "") - datetime.date.fromisoformat(b or "")).days) <= 1
+    except ValueError:
+        return False
+
+
+def _cle_exacte(c: Dict[str, Any]) -> Optional[Tuple[str, str, str, str]]:
+    """Dates + pays + classe : identifie une course quand les noms diffèrent d'une langue à l'autre
+    (« Tour of Flanders » / « Tour des Flandres »). None si un des éléments manque."""
+    if c.get("country") and c.get("uci_class") and c.get("start_date") and c.get("end_date"):
+        return c["start_date"], c["end_date"], c["country"], c["uci_class"]
+    return None
+
+
 def _dedoublonner(courses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Même course (nom normalisé identique ou très proche, même date de début) : on garde la mieux renseignée
-    (classe la plus haute, puis celle qui a un pays)."""
-    def cle(c: Dict[str, Any]) -> Tuple[int, int]:
-        return _RANG.get(c.get("category") or "", 9), 0 if c.get("country") else 1
+    """Même course : début à ± 1 jour et nom normalisé identique ou très proche ; ou, entre deux sources différentes
+    (EN / FR), mêmes dates, pays et classe s'il n'y a qu'une seule candidate de chaque côté. On garde la mieux
+    renseignée (classe la plus haute, puis le plus de champs renseignés, puis la source anglaise) et on lui
+    complète seulement les champs vides par ceux de l'autre ; rien n'est inventé."""
+    def remplis(c: Dict[str, Any]) -> int:
+        return sum(1 for k in ("name", "country", "flag", "uci_class", "category", "start_date", "end_date") if c.get(k))
+
+    def cle(c: Dict[str, Any]) -> Tuple[int, int, int]:
+        return _RANG.get(c.get("category") or "", 9), -remplis(c), 1 if c.get("source") == "wikipedia-fr" else 0
+
+    par_cle: Dict[Tuple[Any, ...], int] = {}
+    for c in courses:
+        k = _cle_exacte(c)
+        if k:
+            par_cle[(c.get("source"),) + k] = par_cle.get((c.get("source"),) + k, 0) + 1
+
+    def meme_cle_unique(g: Dict[str, Any], c: Dict[str, Any]) -> bool:
+        k = _cle_exacte(g)
+        if not k or k != _cle_exacte(c) or g.get("source") == c.get("source"):
+            return False
+        return par_cle.get((g.get("source"),) + k) == 1 and par_cle.get((c.get("source"),) + k) == 1
 
     gardees: List[Dict[str, Any]] = []
     for c in sorted(courses, key=cle):
         for g in gardees:
-            if g["start_date"] == c["start_date"] and (
+            if (_jours_proches(g["start_date"], c["start_date"]) and (
                     netutil.normalize(g["name"]) == netutil.normalize(c["name"])
-                    or selection._noms_proches(g["name"], c["name"])):
-                for champ in ("country", "flag", "uci_class", "category"):
+                    or selection._noms_proches(g["name"], c["name"]))) or meme_cle_unique(g, c):
+                for champ in _CHAMPS_FUSION:
                     if g.get(champ) is None and c.get(champ) is not None:
                         g[champ] = c[champ]
                 break
@@ -653,6 +814,69 @@ def _tests() -> None:
     d = _dedoublonner([{"name": "Tour de Foo", "start_date": "2027-03-01", "end_date": "2027-03-01", "category": ".1", "country": None},
                        {"name": "Tour de Foo", "start_date": "2027-03-01", "end_date": "2027-03-01", "category": "Pro", "country": "FRA"}])
     assert len(d) == 1 and d[0]["category"] == "Pro"
+    # --- pages françaises
+    assert parse_dates("19 au 24 janvier", 2027, True) == ("2027-01-19", "2027-01-24")
+    assert parse_dates("1er mars", 2027, True) == ("2027-03-01", "2027-03-01")
+    assert parse_dates("{{1er}} mars", 2027, True) == ("2027-03-01", "2027-03-01")
+    assert parse_dates("31 janvier au 2 février", 2027, True) == ("2027-01-31", "2027-02-02")
+    assert parse_dates("du 3 au 8 août 2027", 2027, True) == ("2027-08-03", "2027-08-08")
+    assert parse_dates("22 et 23 mars", 2027, True) == ("2027-03-22", "2027-03-23")
+    assert parse_dates("{{Date|5|décembre|2027}}", 2027, True) == ("2027-12-05", "2027-12-05")
+    assert parse_dates("{{nobr|19 au 24 juin}}", 2027, True) == ("2027-06-19", "2027-06-24")
+    assert country_code("Pays-Bas") == "NED" and country_code("la Belgique") == "BEL" and country_code("Suisse") == "SUI"
+    assert pays_dans("{{Drapeau|France}} x") == "FRA" and pays_dans("{{Drapeau|FRA}}") == "FRA"
+    assert pays_dans("{{France}} [[Tour]]") == "FRA" and pays_dans("{{Belgique}}") == "BEL" and pays_dans("{{ITA}}") == "ITA"
+    assert pays_dans("[[Fichier:Drapeau de la Belgique.svg|20px]]") == "BEL"
+    fr = """== Calendrier ==
+{| class="wikitable sortable"
+|-
+! Dates !! Course !! Pays !! Catégorie
+|-
+| 19 au 24 janvier || {{Drapeau|AUS}} [[Tour Down Under 2027|Tour Down Under]] || [[Australie]] || 2.UWT
+|-
+| {{1er}} mars || {{nobr|{{Drapeau|BEL}} [[Omloop Het Nieuwsblad]]}} || {{Belgique}} || 1.Pro
+|-
+| 14 février || {{France}} [[Grand Prix de la Marseillaise]] || France || 1.1
+|-
+| 20 mars || {{Drapeau|ITA}} [[Milan-San Remo]] || Italie || 1.UWT
+|-
+| 3 avril || {{Drapeau|FRA}} [[Course annulée]] || France || 1.1
+|-
+| 5 avril || {{Drapeau|NED}} [[Tour des Flandres]] || Pays-Bas || 1.Pro
+|}
+== Femmes ==
+{| class="wikitable"
+|-
+! Date !! Course !! Pays !! Catégorie
+|-
+| 7 mars || [[Strade Bianche Donne]] || Italie || 1.WWT
+|}
+"""
+    cs = parse_calendar_page("UCI ProSeries 2027", fr, 2027, "fr")
+    d = {c["name"]: c for c in cs}
+    assert set(d) == {"Tour Down Under", "Omloop Het Nieuwsblad", "Grand Prix de la Marseillaise", "Milan-San Remo",
+                      "Tour des Flandres"}, d.keys()
+    assert d["Tour Down Under"]["source"] == "wikipedia-fr" and d["Tour Down Under"]["country"] == "AUS"
+    assert d["Omloop Het Nieuwsblad"]["start_date"] == "2027-03-01" and d["Omloop Het Nieuwsblad"]["country"] == "BEL"
+    assert d["Grand Prix de la Marseillaise"]["country"] == "FRA" and d["Grand Prix de la Marseillaise"]["uci_class"] == "1.1"
+    liste = "== Janvier ==\n* 19 au 24 janvier : {{Drapeau|AUS}} [[Tour Down Under]] (2.UWT)\n* texte sans date\n"
+    cs = parse_calendar_page("UCI World Tour 2027", liste, 2027, "fr")
+    assert [(c["name"], c["uci_class"], c["country"]) for c in cs] == [("Tour Down Under", "2.UWT", "AUS")], cs
+    # fusion EN + FR : même course (nom proche, début à ± 1 jour), noms différents mais même clé unique, ligne la plus complète
+    en = [{"name": "Tour Down Under", "start_date": "2027-01-19", "end_date": "2027-01-24", "country": "AUS", "flag": "au",
+           "uci_class": "2.UWT", "category": "WT", "source": "wikipedia"},
+          {"name": "Tour of Flanders", "start_date": "2027-04-04", "end_date": "2027-04-04", "country": "BEL", "flag": "be",
+           "uci_class": "1.UWT", "category": "WT", "source": "wikipedia"}]
+    frl = [{"name": "Tour Down Under", "start_date": "2027-01-20", "end_date": "2027-01-24", "country": None, "flag": None,
+            "uci_class": "2.UWT", "category": "WT", "source": "wikipedia-fr"},
+           {"name": "Tour des Flandres", "start_date": "2027-04-04", "end_date": "2027-04-04", "country": "BEL", "flag": "be",
+            "uci_class": "1.UWT", "category": "WT", "source": "wikipedia-fr"},
+           {"name": "Nouvelle Course", "start_date": "2027-05-01", "end_date": "2027-05-01", "country": None, "flag": None,
+            "uci_class": "1.1", "category": ".1", "source": "wikipedia-fr"}]
+    u = _dedoublonner(en + frl)
+    assert [(c["name"], c["source"]) for c in u] == [("Tour Down Under", "wikipedia"), ("Tour of Flanders", "wikipedia"),
+                                                     ("Nouvelle Course", "wikipedia-fr")], u
+    assert u[0]["country"] == "AUS"
     print("[OK] wikipedia_cal.py : tests locaux réussis")
 
 
