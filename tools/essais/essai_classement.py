@@ -34,7 +34,7 @@ if t:
     sc = "\n".join(re.findall(r"<script(?![^>]*src)[^>]*>(.*?)</script>", t, re.S))
     sc = re.sub(r"[ \t]+", " ", sc)
     sc = re.sub(r"\n\s*\n+", "\n", sc)
-    for mot in ("ObjectRankings", "TypeOfRankings"):
-        i = sc.find(mot)
-        print(f"== JS {mot}:", sc[max(0, i - 1200):i + 2500] if i >= 0 else "absent")
-    print("ids:", re.findall(r'id="([^"]+)"', t)[:40])
+    sc = re.sub(r"\s+", " ", sc)
+    for mot in ("/iframe/ObjectRankings/", "/iframe/TypeOfRankings/"):
+        for m in re.finditer(re.escape(mot), sc):
+            print(f"== JS {mot} @{m.start()}:", sc[max(0, m.start() - 900):m.start() + 700])
