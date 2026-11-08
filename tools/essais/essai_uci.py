@@ -262,6 +262,17 @@ def partie_calendrier():
         pos = [m.start() for m in re.finditer(re.escape(motif), mainjs)][:4]
         for k in pos:
             print(f"   [{motif}] @{k}: {mainjs[max(0, k - 100):k + 220]!r}")
+    titre("HTML brut de <main> (calendrier et CGU) et chunks JS")
+    for u in ("https://www.uci.org/road/calendar", "https://www.uci.org/terms-and-conditions/5TXuZIQvtkSJH1nYwf94FY"):
+        h = netutil.fetch_text(u, headers={"Accept": "text/html"}, retries=2) or ""
+        m = re.search(r"(?is)<main\b.*?</main>", h)
+        print(f"-- {u} : <main> brut ({len(m.group(0)) if m else 0} o) :", (m.group(0)[:3000] if m else "(absent)"))
+        print("   attributs data-* distincts :", sorted(set(re.findall(r"\s(data-[a-z0-9-]+)=", h)))[:60])
+        print("   div id :", sorted(set(re.findall(r'<div[^>]+id="([^"]+)"', h)))[:40])
+        for mm in re.finditer(r"(?is)<[^>]+(?:data-component|data-props|data-react|data-module)[^>]*>", h):
+            print("   composant :", mm.group(0)[:400])
+    print("chunks/scripts référencés dans main.js :", sorted(set(re.findall(r"[\w./-]*assets/[\w./-]+\.js", mainjs)))[:30])
+    print("URLs https dans main.js :", sorted(set(re.findall(r"https?://[\w./-]+", mainjs)))[:30])
     titre("Scripts de la page calendrier et motifs d'API")
     html = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
     scripts = [absolu("https://www.uci.org/road/calendar", s) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)', html, re.I)]
