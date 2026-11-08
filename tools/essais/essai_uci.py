@@ -218,7 +218,25 @@ def cgu(url):
         print("   (aucune phrase avec mots-clés ; début du texte :)", t[:600])
 
 
+def htmllib_unescape(s):
+    import html
+    return html.unescape(s)
+
+
 def partie_calendrier():
+    titre("CGU DataRide (pages iframe) et exports du calendrier")
+    for u in ("https://dataride.uci.ch/iframe", "https://dataride.uci.org/", "https://dataride.uci.org/iframe/Results/10/"):
+        h = netutil.fetch_text(u, headers={"Accept": "text/html"}, retries=2) or ""
+        t = texte(h)
+        print(f"-- {u} : {len(t)} car. de texte")
+        print("   texte (début) :", t[:1200])
+        for p in re.split(r"(?<=[.;:])\s+", t):
+            if re.search(r"terms|conditions of use|disclaimer|copyright|licen[cs]e|reproduc|authori[sz]ation|prohibit", p, re.I) and len(p) < 700:
+                print("   >", p.strip())
+        print("   liens légaux :", [l for l in liens(h) if re.search(r"terms|legal|disclaimer|privacy|licen", l, re.I)][:10])
+    h = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
+    for m in list(re.finditer(r"(?i)[^<>\"']{0,80}(?:download|export|\.ics|\.xlsx?|\.csv)[^<>\"']{0,120}", h))[:15]:
+        print("   download/export :", htmllib_unescape(m.group(0))[:240])
     titre("Exploration du calendrier à venir")
     pages = ["https://www.uci.org/road/calendar", "https://www.uci.org/", "https://dataride.uci.org/iframe/Results/10/",
              "https://dataride.uci.org/"]
