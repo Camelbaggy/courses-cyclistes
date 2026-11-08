@@ -262,10 +262,40 @@ def partie_calendrier():
         pos = [m.start() for m in re.finditer(re.escape(motif), mainjs)][:4]
         for k in pos:
             print(f"   [{motif}] @{k}: {mainjs[max(0, k - 100):k + 220]!r}")
+    titre("data-props décodés : CalendarModule et CGU")
+    import html as htmllib
+    def props(h, composant):
+        sortie = []
+        for m in re.finditer(r'data-component="%s"\s+data-props="([^"]*)"' % composant, h):
+            try:
+                sortie.append(json.loads(htmllib.unescape(m.group(1))))
+            except ValueError as ex:
+                print("   JSON illisible", ex)
+        return sortie
+    def arbre(o, chemin="", prof=0):
+        if prof > 4:
+            return
+        if isinstance(o, dict):
+            for k, v in o.items():
+                arbre(v, f"{chemin}.{k}", prof + 1)
+        elif isinstance(o, list):
+            print(f"   {chemin}[] len={len(o)}" + (f" ex0={json.dumps(o[0], ensure_ascii=False)[:300]}" if o else ""))
+            if o and isinstance(o[0], (dict, list)):
+                arbre(o[0], chemin + "[0]", prof + 1)
+        else:
+            print(f"   {chemin} = {str(o)[:160]!r}")
+    h = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
+    for p in props(h, "CalendarModule"):
+        arbre({k: v for k, v in p.items() if k != "header"}, "CalendarModule")
+    h = netutil.fetch_text("https://www.uci.org/terms-and-conditions/5TXuZIQvtkSJH1nYwf94FY", headers={"Accept": "text/html"}, retries=2) or ""
+    for p in props(h, "ContentBlock"):
+        if re.match(r"(II|III)\.", p.get("title", "")):
+            print("   ==", p.get("title"), "::", texte(p.get("content", ""))[:3500])
     titre("HTML brut de <main> (calendrier et CGU) et chunks JS")
     for u in ("https://www.uci.org/road/calendar", "https://www.uci.org/terms-and-conditions/5TXuZIQvtkSJH1nYwf94FY"):
         h = netutil.fetch_text(u, headers={"Accept": "text/html"}, retries=2) or ""
         m = re.search(r"(?is)<main\b.*?</main>", h)
+        continue
         print(f"-- {u} : <main> brut ({len(m.group(0)) if m else 0} o) :", (m.group(0)[:3000] if m else "(absent)"))
         print("   attributs data-* distincts :", sorted(set(re.findall(r"\s(data-[a-z0-9-]+)=", h)))[:60])
         print("   div id :", sorted(set(re.findall(r'<div[^>]+id="([^"]+)"', h)))[:40])
