@@ -1,0 +1,227 @@
+{
+ "_fixture": true,
+ "generated_at": "2026-07-11T19:42:00Z",
+ "season": 2025,
+ "races": [
+  {
+   "id": "fx-omloop-fictif",
+   "name": "Omloop Fictif",
+   "country": "BEL",
+   "flag": "be",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "race_type": "one_day",
+   "start_date": "2026-02-28",
+   "end_date": "2026-02-28",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "classe",
+   "winner": {
+    "id": "modele-romain-19890406",
+    "name": "Romain Modèle",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Delta Pro Cycling"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "epure-paul-19970711",
+     "name": "Paul Épure",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Golf Team"
+    },
+    "rank": 5,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-trophee-fdj-1",
+   "name": "Trophée FDJ de Maquette",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "FDJ",
+   "race_type": "one_day",
+   "start_date": "2026-03-07",
+   "end_date": "2026-03-07",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "fdj",
+   "winner": {
+    "id": "temoin-mathis-19890308",
+    "name": "Mathis Témoin",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Sierra Team"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "calque-jean-20041204",
+     "name": "Jean Calque",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci"
+   ]
+  },
+  {
+   "id": "fx-classique-paves",
+   "name": "Classique des Pavés (fictive)",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "race_type": "one_day",
+   "start_date": "2026-04-12",
+   "end_date": "2026-04-12",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "classe",
+   "winner": {
+    "id": "schema-luca-19980126",
+    "name": "Luca Schéma",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Zoulou Racing"
+   },
+   "leader": null,
+   "best_french": {
+    "rider": {
+     "id": "schema-luca-19980126",
+     "name": "Luca Schéma",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Zoulou Racing"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "sources": [
+    "uci",
+    "aso"
+   ]
+  }
+ ],
+ "upcoming": [],
+ "latest": [
+  {
+   "race_id": "fx-classique-paves",
+   "race_name": "Classique des Pavés (fictive)",
+   "stage_number": null,
+   "date": "2026-04-12",
+   "label": "Course",
+   "winner": {
+    "id": "schema-luca-19980126",
+    "name": "Luca Schéma",
+    "nationality": "FRA",
+    "flag": "fr",
+    "is_french": true,
+    "team": "Zoulou Racing"
+   },
+   "best_french": {
+    "rider": {
+     "id": "schema-luca-19980126",
+     "name": "Luca Schéma",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Zoulou Racing"
+    },
+    "rank": 1,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Luca Schéma remporte Classique des Pavés (fictive) en 5h46'31\". Premier Français, Luca Schéma termine 1er."
+  },
+  {
+   "race_id": "fx-trophee-fdj-1",
+   "race_name": "Trophée FDJ de Maquette",
+   "stage_number": null,
+   "date": "2026-03-07",
+   "label": "Course",
+   "winner": {
+    "id": "temoin-mathis-19890308",
+    "name": "Mathis Témoin",
+    "nationality": "BEL",
+    "flag": "be",
+    "is_french": false,
+    "team": "Sierra Team"
+   },
+   "best_french": {
+    "rider": {
+     "id": "calque-jean-20041204",
+     "name": "Jean Calque",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Sierra Team"
+    },
+    "rank": 2,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Mathis Témoin remporte Trophée FDJ de Maquette en 4h32'05\". Premier Français, Jean Calque termine 2e."
+  },
+  {
+   "race_id": "fx-omloop-fictif",
+   "race_name": "Omloop Fictif",
+   "stage_number": null,
+   "date": "2026-02-28",
+   "label": "Course",
+   "winner": {
+    "id": "modele-romain-19890406",
+    "name": "Romain Modèle",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Delta Pro Cycling"
+   },
+   "best_french": {
+    "rider": {
+     "id": "epure-paul-19970711",
+     "name": "Paul Épure",
+     "nationality": "FRA",
+     "flag": "fr",
+     "is_french": true,
+     "team": "Golf Team"
+    },
+    "rank": 5,
+    "classification": "stage"
+   },
+   "ai_summary": "[Résumé fictif] Romain Modèle remporte Omloop Fictif en 4h45'42\". Premier Français, Paul Épure termine 5e."
+  }
+ ],
+ "fdj_united_series": null,
+ "french_wins": [
+  {
+   "date": "2026-04-12",
+   "race_id": "fx-classique-paves",
+   "stage_number": null,
+   "rider": "Luca Schéma",
+   "rider_id": "schema-luca-19980126",
+   "race_name": "Classique des Pavés (fictive)",
+   "label": "Course"
+  }
+ ],
+ "notification": {
+  "send": false
+ }
+}
