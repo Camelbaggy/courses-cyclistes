@@ -1,40 +1,52 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Essai réseau : découverte des endpoints de classement DataRide (phase de sonde 3)."""
+"""Essai réseau : découverte des endpoints de classement DataRide (phase de sonde 4)."""
 import json
-import re
 import sys
 
 sys.path.insert(0, ".")
-import netutil  # noqa: E402
 import uci  # noqa: E402
 
-BASE = "https://dataride.uci.org"
-H = {"X-Requested-With": "XMLHttpRequest", "Referer": BASE + "/iframe/Rankings/10/"}
+N = 0
+
+
+def post(chemin, champs, nom):
+    global N
+    N += 1
+    return uci._post(chemin, champs, nom)
+
+
+def j(x, n=700):
+    s = json.dumps(x, ensure_ascii=False)
+    return s[:n] + (f"...(+{len(s) - n})" if len(s) > n else "")
+
+
+def resume(nom, rep):
+    if isinstance(rep, dict):
+        d = rep.get("data") or []
+        print(f"{nom}: clés={list(rep.keys())} total={rep.get('total')} len={len(d)}")
+        for r in (d[:1] + d[-1:]):
+            print("   ", {k: r.get(k) for k in ("Rank", "DisplayName", "NationName", "TeamName", "Points", "BirthDate", "ComputationDate", "MomentId", "UciId", "ObjectId")})
+        if d:
+            print("    clés ligne:", sorted(d[0].keys()))
+    else:
+        print(f"{nom}: {type(rep).__name__} {j(rep)}")
+
 
 f = [("RaceTypeId", 0), ("CategoryId", 22), ("SeasonId", 477)]
-rep = uci._post("/iframe/RankingsDiscipline/", uci._kendo(100, 0, f, None, disciplineId=10), "rd")
-print("type", type(rep).__name__, "clés", list(rep.keys()) if isinstance(rep, dict) else len(rep))
-groupes = rep if isinstance(rep, list) else rep.get("data", [])
-for g in groupes:
-    print("GROUPE", g.get("GroupId"), g.get("GroupName"))
-    for r in g.get("Rankings", []):
-        print("   ranking Id", r.get("Id"), r.get("RankingName"), "typeId", r.get("RankingTypeId"), "moment", r.get("MomentId"),
-              "cat", r.get("CategoryId"), "nb aperçu", len(r.get("ObjectRankings") or []), "total", r.get("TotalObjectRanking"),
-              "active", r.get("Active"), "calendar", r.get("Calendar"), "continent", r.get("Continent"))
-        o = (r.get("ObjectRankings") or [])
-        if o:
-            print("      dernier aperçu rang", o[-1].get("Rank"), o[-1].get("DisplayName"), o[-1].get("Points"))
+rep = post("/iframe/RankingsDiscipline/", uci._kendo(100, 0, f, None, disciplineId=10), "rd")
+for g in rep:
+    print("GROUPE", g.get("GroupId"), g.get("GroupName"), [(r.get("Id"), r.get("RankingTypeId"), r.get("RankingName"), r.get("MomentId")) for r in g.get("Rankings", [])])
 
-url = ("/iframe/RankingDetails/1?disciplineId=10&groupId=1&momentId=206851&disciplineSeasonId=477&rankingTypeId=1"
-       "&categoryId=22&raceTypeId=0")
-t = netutil.fetch_text(BASE + url, headers=H, retries=1)
-print("DETAIL taille", len(t or ""))
-if t:
-    sc = "\n".join(re.findall(r"<script(?![^>]*src)[^>]*>(.*?)</script>", t, re.S))
-    sc = re.sub(r"[ \t]+", " ", sc)
-    sc = re.sub(r"\n\s*\n+", "\n", sc)
-    sc = re.sub(r"\s+", " ", sc)
-    for mot in ("/iframe/ObjectRankings/", "/iframe/TypeOfRankings/"):
-        for m in re.finditer(re.escape(mot), sc):
-            print(f"== JS {mot} @{m.start()}:", sc[max(0, m.start() - 900):m.start() + 700])
+print("---- TypeOfRankings")
+rep = post("/iframe/TypeOfRankings/", uci._kendo(40, 0, None, None, rankingId=1, groupId=1, momentId=206851, disciplineId=10, currentRankingTypeId=1), "tor")
+print(j(rep, 1200))
+
+print("---- ObjectRankings")
+A = post("/iframe/ObjectRankings/", uci._kendo(100, 0, None, None, rankingId=1, disciplineId=10, rankingTypeId=1), "or_a")
+resume("A rankingId=1", A)
+B = post("/iframe/ObjectRankings/", uci._kendo(100, 0, None, None, rankingId=1, disciplineId=10, rankingTypeId=1, momentId=206290), "or_b")
+resume("B +momentId=206290 (saison 2026)", B)
+C = post("/iframe/ObjectRankings/", uci._kendo(1000, 0, None, None, rankingId=1, disciplineId=10, rankingTypeId=1), "or_c")
+resume("C pageSize=1000", C)
+print("requêtes:", N + 0)
