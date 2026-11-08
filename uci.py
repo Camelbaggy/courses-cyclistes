@@ -230,6 +230,8 @@ class _Temps:
                 print(f"[INFO] UCI : écart illisible {txt!r}")
                 return None, None
             ecart = int(d)
+            if ecart == 0 and self.prec_ecart is not None:
+                return self.prec_temps, self.prec_ecart  # « +0 » / « +00 » = même temps que la ligne précédente
             temps = self.premier + ecart if self.premier is not None else None
         else:
             d = parse_duree(txt)
@@ -611,6 +613,9 @@ def _tests() -> None:
     assert rows[6]["status"] == "DNF" and rows[6]["rank"] is None and rows[6]["time_s"] is None
     assert rows[7]["status"] == "DNS" and rows[0]["bib"] == 1 and rows[0]["rider_id"] == "aaa-bob-19980921"
     assert riders["aaa-bob-19980921"]["name"] == "Bob Aaa" and riders["aaa-bob-19980921"]["is_french"]
+    rows = normalize_rows([L(1, "AAA Bob", "4:00:00"), L(2, "BBB Cy", "+0"), L(3, "CCC Di", "+1:32"), L(4, "DDD Ed", "+0"),
+                           L(5, "EEE Fy", "+00")], "stage", {})
+    assert [r["gap_s"] for r in rows] == [0, 0, 92, 92, 92] and rows[4]["time_s"] == 14492
     # Tous temps absolus (contre-la-montre, fractions)
     rows = normalize_rows([L(1, "AAA Bob", "28:16.61"), L(2, "BBB Cy", "28:30.10"), L(3, "CCC Di", "29:00.99")], "stage", {})
     assert [r["time_s"] for r in rows] == [1696, 1710, 1740] and [r["gap_s"] for r in rows] == [0, 14, 44]

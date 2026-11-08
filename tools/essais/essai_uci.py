@@ -92,7 +92,7 @@ def course_complete(comp):
     # contrôles de cohérence
     for s in race["stages"]:
         for cle, rows in s["results"].items():
-            if cle in uci.CLES_TEMPS and cle != "teams":
+            if cle in uci.CLES_TEMPS and cle != "teams" and s["type"] != "ttt":
                 tps = [r["time_s"] for r in rows if r["time_s"] is not None]
                 if tps != sorted(tps):
                     print(f"  [CHECK] temps non croissants : étape {s['number']} {cle}")
@@ -192,13 +192,19 @@ MOTS_CGU = re.compile(r"scrap|automat|robot|crawl|spider|extract|reproduc|reus|r
                       r"harvest|systematic|intellectual|copyright|database|prior (written )?(consent|permission|authori)", re.I)
 
 
+def principal(html):
+    m = re.search(r"(?is)<main\b.*?</main>", html)
+    return texte(m.group(0)) if m else ""
+
+
 def cgu(url):
     html = netutil.fetch_text(url, headers={"Accept": "text/html"}, retries=2, raw_name="cgu_" + url[-30:])
     if not html:
         print(f"  (rien reçu de {url})")
         return
-    t = texte(html)
-    print(f"  {url} : {len(t)} caractères de texte ; fin du texte : {t[-700:]}")
+    t = principal(html) or texte(html)
+    print(f"  {url} : {len(t)} caractères de texte principal (main={bool(principal(html))})")
+    print("  TEXTE:", t[:7000])
     print("   liens documents :", [l for l in liens(html) if re.search(r"\.pdf|document|assets\.ctfassets|legal|terms", l, re.I)][:15])
     phrases = re.split(r"(?<=[.;:])\s+", t)
     n = 0
@@ -240,6 +246,22 @@ def partie_calendrier():
             print("   JSON intégré :", m.group(1)[:500].replace("\n", " "))
         for m in list(re.finditer(r"(?i)(calendar[^\"'<>\s]{0,80}|/api/[^\"'<>\s]{0,100}|GetCalendar[^\"'<>\s]{0,60})", html))[:25]:
             print("   motif :", m.group(1)[:140])
+    titre("Contenu principal de la page calendrier et réglages JS")
+    html = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
+    print("main :", (principal(html) or "(pas de <main>)")[:2500])
+    for m in re.finditer(r"(?is)<script(?![^>]+src)[^>]*>(.*?)</script>", html):
+        corps = m.group(1)
+        if "webSettings" in corps:
+            reste = re.sub(r'"localizations":\{.*?\},"', '"localizations":{...},"', corps, flags=re.S)
+            print("webSettings sans localizations :", re.sub(r"\s+", " ", reste)[:1800])
+    for balise in re.findall(r"<(?:div|section|ul|a)[^>]+(?:data-[a-z-]*(?:url|api|endpoint|calendar|source)[a-z-]*)=[^>]*>", html, re.I)[:15]:
+        print("balise data-* :", balise[:300])
+    mainjs = netutil.fetch_text("https://www.uci.org/assets/1.0.44488/main.js", headers={"Accept": "*/*"}, retries=2) or ""
+    print(f"main.js : {len(mainjs)} o")
+    for motif in ("calendar", "/api", "fetch(", "XMLHttpRequest", "search", "endpoint", "ajax"):
+        pos = [m.start() for m in re.finditer(re.escape(motif), mainjs)][:4]
+        for k in pos:
+            print(f"   [{motif}] @{k}: {mainjs[max(0, k - 100):k + 220]!r}")
     titre("Scripts de la page calendrier et motifs d'API")
     html = netutil.fetch_text("https://www.uci.org/road/calendar", headers={"Accept": "text/html"}, retries=2) or ""
     scripts = [absolu("https://www.uci.org/road/calendar", s) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)', html, re.I)]
