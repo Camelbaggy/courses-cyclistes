@@ -99,7 +99,7 @@ def get_races(page: str = "") -> List[Dict[str, Any]]:
 
 _MOIS = {"janvier": 1, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "aout": 8,
          "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12}
-CALENDAR_PATHS = ["/fdj-united-series/calendrier", "/calendrier", "/fdj-united-series"]
+CALENDAR_PATHS = ["/calendrier?french_cup=1", "/fdj-united-series"]   # « Calendrier FDJ UNITED SERIES », filtre année
 _pages_cal: Dict[str, Optional[str]] = {}
 
 

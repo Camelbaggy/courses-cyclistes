@@ -48,7 +48,24 @@ def diag_pages(annee):
     return pages
 
 
+def diag_2026_et_recherche():
+    """Valide le parseur sur les pages 2026 (déjà complètes) et cherche les titres 2027 absents."""
+    pages = diag_pages(2026)
+    par_page = wc.parse_pages(2026, pages)
+    print("\n#### Parseur sur 2026")
+    for titre, cs in par_page.items():
+        print(f"  {titre} : {len(cs)} courses, par catégorie {dict(collections.Counter(c['category'] or '?' for c in cs))}")
+        print("     classes :", dict(collections.Counter(c['uci_class'] or '?' for c in cs)))
+        print("     sans pays :", [c['name'] for c in cs if not c['country']][:15])
+        for c in cs[:3] + [c for c in cs if c['country'] == 'FRA'][:4]:
+            print("     ex.", c)
+    for q in ("2027 UCI Europe Tour", "2027 UCI ProSeries", "2027 French National Road Championships"):
+        d = wc._api({"action": "query", "list": "search", "srsearch": q, "srlimit": "5", "srprop": ""})
+        print(f"  recherche « {q} » :", [r.get("title") for r in ((d or {}).get("query") or {}).get("search", [])])
+
+
 def main():
+    diag_2026_et_recherche()
     annee = 2027
     pages = diag_pages(annee)
     par_page = wc.parse_pages(annee, pages)
@@ -111,6 +128,7 @@ def diag_lnc():
             continue
         liens = sorted(set(re.findall(r'href="([^"#]+)"', page)))
         print("    liens utiles :", [l for l in liens if re.search(r"calend|agenda|course|saison|resultat|fdj|2027|2026", l, re.I)][:40])
+        print("    selects/inputs :", re.findall(r'<(?:select|input)[^>]*name="([^"]+)"', page)[:20])
         lignes = lnc._lignes(page)
         autour = [i for i, l in enumerate(lignes) if re.search(r"2027|calendrier|prochaine", l, re.I)]
         for i in autour[:12]:
