@@ -283,7 +283,7 @@ async function charger(chemin) {
   return p;
 }
 
-const state = { index: null, tab: "recents", filtreCat: "all", course: null, sel: null, sub: null, frOnly: false, limit: 50, ouvertParApp: false };
+const state = { index: null, tab: "recents", filtreCat: "all", calVue: "resultats", course: null, sel: null, sub: null, frOnly: false, limit: 50, ouvertParApp: false };
 
 /* ================== éléments communs ================== */
 function catBadge(c, cl) {
@@ -320,14 +320,21 @@ function renderRecents() {
 }
 
 function renderCalendrier() {
-  const races = (state.index.races || []).map(r => ({ ...r, _futur: false }));
+  // Résultats : les plus récents d'abord ; À venir : la prochaine course d'abord.
   const up = (state.index.upcoming || []).map(u => ({ ...u, _futur: true }));
-  let tout = races.concat(up).sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+  const avenir = state.calVue === "avenir" && up.length;
+  let tout = avenir
+    ? up.sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+    : (state.index.races || []).map(r => ({ ...r, _futur: false }))
+        .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || "") || (a.name || "").localeCompare(b.name || ""));
   const f = state.filtreCat;
   if (f !== "all") tout = tout.filter(r => r.category === f);
+  const vues = up.length ? `<div class="chips">
+      <button class="chip ${!avenir ? "active" : ""}" data-calvue="resultats">Résultats</button>
+      <button class="chip ${avenir ? "active" : ""}" data-calvue="avenir">À venir (${up.length})</button></div>` : "";
   const chips = ["all"].concat(CATS).map(c =>
     `<button class="chip ${f === c ? "active" : ""}" data-cat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("");
-  let html = `<div class="chips">${chips}</div>`;
+  let html = `${vues}<div class="chips">${chips}</div>`;
   if (!tout.length) return html + `<div class="empty card">Aucune course dans cette catégorie.</div>`;
   let mois = "";
   tout.forEach(r => {
@@ -689,6 +696,7 @@ document.addEventListener("click", e => {
   if (!t) return;
   if (t.dataset.tab) { state.tab = t.dataset.tab; renderMain(); window.scrollTo(0, 0); return; }
   if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
+  if (t.dataset.calvue) { state.calVue = t.dataset.calvue; renderMain(); return; }
   if (t.dataset.open) { ouvrir(t.dataset.open, t.dataset.stage); return; }
   if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
     state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
@@ -720,7 +728,7 @@ async function init() {
   if (g && !isNaN(g)) {
     document.getElementById("maj").textContent = `MàJ ${g.getDate()} ${MOIS_C[g.getMonth()]} ${p2(g.getHours())}h${p2(g.getMinutes())}`;
   }
-  document.getElementById("foot").textContent = `Saison ${ix.season ?? ""} · ${(ix.races || []).length} courses suivies · sources officielles UCI, ASO, LNC`;
+  document.getElementById("foot").textContent = `Saison ${ix.season ?? ""} · ${(ix.races || []).length} courses suivies · résultats UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)`;
   renderMain();
   routeur();
 }
