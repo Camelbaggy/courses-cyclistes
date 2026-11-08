@@ -46,7 +46,13 @@ header.top {
 }
 .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .app-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
-.app-sub { font-size: .72rem; color: var(--muted); }
+.app-sub { font-size: .72rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.saison { position: relative; }
+.saison-btn { font-size: .74rem; font-weight: 700; color: var(--accent); border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; background: var(--card); }
+.saison-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 4px; display: none; min-width: 130px; }
+.saison-menu.open { display: block; }
+.saison-menu button { white-space: nowrap; display: block; width: 100%; text-align: left; font-size: .85rem; font-weight: 600; padding: 7px 12px; border-radius: 7px; color: var(--muted); }
+.saison-menu button.active { color: var(--accent); background: var(--accent-soft); }
 .tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 .tab {
   font-size: .82rem; font-weight: 600; color: var(--muted); padding: 10px 2px;
@@ -135,8 +141,9 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 .errbox button { margin-top: 8px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--bad); font-weight: 600; color: var(--bad); }
 
 /* ---------- fiche course ---------- */
-#sheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
-#sheet.open { display: block; }
+#sheet, #rsheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
+#sheet.open, #rsheet.open { display: block; }
+#rsheet { z-index: 60; }
 .sheet-bar {
   position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 6px;
@@ -185,6 +192,31 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .fixture-banner { background: var(--warn); color: #000; font-size: .7rem; font-weight: 700; text-align: center; padding: 2px 8px; }
 a { color: var(--accent); }
+
+/* ---------- fiche coureur ---------- */
+.rlink { cursor: pointer; border-bottom: 1px dotted var(--muted); }
+.rlink:hover, .rlink:focus-visible { color: var(--accent); border-bottom-color: var(--accent); outline: none; }
+.rhead { display: flex; align-items: center; gap: 12px; }
+.rhead .flag { width: 32px; height: 22px; }
+.rhead h2 { font-size: 1.2rem; line-height: 1.2; overflow-wrap: anywhere; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.tile.wide { grid-column: 1 / -1; }
+.tile small { display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tile b { display: block; font-size: 1.5rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.tile b.off { font-size: 1.05rem; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.tile .sub { font-size: .74rem; color: var(--muted); }
+.pal-group { padding: 0; overflow: hidden; }
+.pal-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 9px 12px; background: var(--elev); font-weight: 700; font-size: .88rem; }
+.pal-head span.n { overflow-wrap: anywhere; min-width: 0; flex: 1; }
+.pal-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) 44px; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 8px 12px; border-top: 1px solid var(--border); font-size: .85rem; }
+.pal-row:active, .pal-head:active { background: var(--elev); }
+.pal-row .d { color: var(--muted); font-size: .74rem; }
+.pal-row .l { min-width: 0; overflow-wrap: anywhere; }
+.pal-row .k { text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; border-radius: 6px; padding: 2px 0; background: var(--elev); }
+.pal-row .k.r1 { background: var(--jaune); color: #111827; }
+.pal-row .k.r2 { background: #cbd5e1; color: #111827; }
+.pal-row .k.r3 { background: #d6945a; color: #111827; }
 footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
 </style>
 </head>
@@ -193,7 +225,9 @@ footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px
 <header class="top">
   <div class="top-row">
     <div class="app-title">Courses cyclistes</div>
-    <div class="app-sub" id="maj"></div>
+    <div class="app-sub"><span id="maj"></span>
+      <span class="saison" id="saison" hidden><button class="saison-btn" id="saison-btn" aria-haspopup="true" aria-expanded="false" data-action="saison-menu"></button>
+        <div class="saison-menu" id="saison-menu" role="menu"></div></span></div>
   </div>
   <nav class="tabs" id="tabs" role="tablist">
     <button class="tab active" role="tab" data-tab="recents">Récents</button>
@@ -211,6 +245,14 @@ footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px
     <div class="sheet-title"><b id="sheet-name"></b><span id="sheet-sub"></span></div>
   </div>
   <div class="sheet-body" id="sheet-body"></div>
+</section>
+
+<section id="rsheet" aria-label="Fiche coureur" aria-hidden="true">
+  <div class="sheet-bar">
+    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
+    <div class="sheet-title"><b id="rsheet-name"></b><span id="rsheet-sub"></span></div>
+  </div>
+  <div class="sheet-body" id="rsheet-body"></div>
 </section>
 
 <script>
@@ -283,7 +325,12 @@ async function charger(chemin) {
   return p;
 }
 
-const state = { index: null, tab: "recents", filtreCat: "all", calVue: "resultats", course: null, sel: null, sub: null, frOnly: false, limit: 50, ouvertParApp: false };
+/** Nom de coureur cliquable (ouvre la fiche coureur) ; sans identifiant : texte simple. */
+function plink(id, texte) {
+  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}">${esc(texte)}</span>` : esc(texte);
+}
+
+const state = { index: null, riders: null, saisons: null, saison: null, subVoulu: null, tab: "recents", filtreCat: "all", calVue: "resultats", course: null, sel: null, sub: null, frOnly: false, limit: 50, ouvertParApp: false };
 
 /* ================== éléments communs ================== */
 function catBadge(c, cl) {
@@ -293,7 +340,7 @@ function courseParId(id) { return (state.index?.races || []).find(r => r.id === 
 function ligneCoureur(ref, label, extra) {
   if (!ref) return "";
   return `<div class="winner-line"><span class="pill-label">${esc(label)}</span>${flag(ref.flag, ref.nationality)}
-    <div class="who"><div class="nm">${esc(ref.name)}${ref.is_french ? ' <span class="badge fr">FR</span>' : ""}</div>
+    <div class="who"><div class="nm">${plink(ref.id, ref.name)}${ref.is_french ? ' <span class="badge fr">FR</span>' : ""}</div>
     <div class="small muted">${esc(ref.team || "")}${extra ? " · " + esc(extra) : ""}</div></div></div>`;
 }
 function messageErreur(msg, action) {
@@ -347,7 +394,7 @@ function renderCalendrier() {
         <div class="small muted" style="margin-top:3px">${catBadge(r.category, r.uci_class)}
         ${r._futur ? ' <span class="badge">à venir</span>' : r.status === "in_progress" ? ` <span class="badge live">en cours · ${r.stages_done}${r.stages_total ? "/" + r.stages_total : ""} étapes</span>` : ""}
         ${r.race_type === "stage_race" && !r._futur && r.status !== "in_progress" ? ` <span class="badge">${r.stages_done} étapes</span>` : ""}</div>
-        ${!r._futur && (r.winner || r.leader) ? `<div class="small" style="margin-top:4px">${r.winner ? "Vainqueur" : "Leader"} : <b>${esc((r.winner || r.leader).name)}</b>${(r.winner || r.leader).is_french ? ' <span class="badge fr">FR</span>' : ""}</div>` : ""}
+        ${!r._futur && (r.winner || r.leader) ? `<div class="small" style="margin-top:4px">${r.winner ? "Vainqueur" : "Leader"} : <b>${plink((r.winner || r.leader).id, (r.winner || r.leader).name)}</b>${(r.winner || r.leader).is_french ? ' <span class="badge fr">FR</span>' : ""}</div>` : ""}
       </div>`;
     html += r._futur
       ? `<div class="card cal-item future" style="margin-bottom:6px">${inner}</div>`
@@ -383,7 +430,7 @@ function renderFrancais() {
   <div class="stack">${W.map(w => {
     const c = courseParId(w.race_id);
     return `<button class="card click" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
-      <div class="card-head">${flag("fr", "France")}<span class="race-name">${esc(w.rider)}</span></div>
+      <div class="card-head">${flag("fr", "France")}<span class="race-name">${plink(w.rider_id, w.rider)}</span></div>
       <div class="small muted">${esc(w.race_name)} · ${esc(w.label)}${c ? " · " + esc(c.uci_class) : ""}</div>
       <div class="small muted" style="margin-top:2px">${esc(dateLongue(w.date))}</div></button>`;
   }).join("")}</div>`;
@@ -440,7 +487,7 @@ function renderMaillots(c, sel) {
   const items = defs.map(([cle, lab, cl]) => {
     const r = (k[cle] || []).find(x => x.rank === 1);
     const ref = r && c.riders[r.rider_id];
-    return ref ? `<div class="jersey"><span class="dot ${cl}"></span><div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${esc(ref.name)}</span></div></div>` : "";
+    return ref ? `<div class="jersey"><span class="dot ${cl}"></span><div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${plink(ref.id || r.rider_id, ref.name)}</span></div></div>` : "";
   }).join("");
   return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div></div>` : "";
 }
@@ -477,7 +524,7 @@ function renderResume(st) {
 function renderFrancaisEnVue(st) {
   const H = (st && st.french_highlights) || [];
   if (!H.length) return "";
-  return `<div class="card"><div class="sec-title">Les Français</div>${H.map(h => `<div class="hl"><div class="l">${flag(h.rider.flag, h.rider.nationality)}<span><b>${esc(h.rider.name)}</b></span></div>
+  return `<div class="card"><div class="sec-title">Les Français</div>${H.map(h => `<div class="hl"><div class="l">${flag(h.rider.flag, h.rider.nationality)}<span><b>${plink(h.rider.id, h.rider.name)}</b></span></div>
     <div class="r">${h.stage_rank != null ? rang(h.stage_rank) : ""}${h.gc_rank != null ? ` · ${rang(h.gc_rank)} au gén.${h.gc_gap_s ? " " + fmtEcart(h.gc_gap_s) : ""}` : ""}</div></div>`).join("")}</div>`;
 }
 
@@ -530,7 +577,7 @@ function ligneHTML(r, cle, c, mvt) {
   let rk = r.rank != null ? String(r.rank) : "–";
   if (mvt != null && mvt !== 0) rk += `<small class="${mvt > 0 ? "up" : "down"}">${mvt > 0 ? "▲" : "▼"}${Math.abs(mvt)}</small>`;
   return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${rk}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
-    <div class="mid"><div class="nm">${esc(nom)}</div><div class="tm">${esc(ref ? ref.team || "" : "")}</div></div>
+    <div class="mid"><div class="nm">${ref ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(ref ? ref.team || "" : "")}</div></div>
     <div class="val ${cls2}">${esc(val)}${sous ? `<small>${esc(sous)}</small>` : ""}</div></div>`;
 }
 
@@ -557,7 +604,7 @@ function renderTable(c, sel, sub) {
         const ref = c.riders[r.rider_id];
         const lib = r._etape ? (r._etape.number === 0 ? "Prologue" : `Étape ${r._etape.number}`) : "";
         return `<div class="row ${ref && ref.is_french ? "fr" : ""}"><div class="rk">–</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
-          <div class="mid"><div class="nm">${esc(ref ? ref.name : "Dossard " + r.bib)}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
+          <div class="mid"><div class="nm">${ref ? plink(r.rider_id, ref.name) : esc("Dossard " + r.bib)}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
           <div class="val gap">${esc(lib)}</div></div>`;
       }).join("")}</div>`;
     });
@@ -628,6 +675,14 @@ function renderFiche() {
 }
 
 /* ================== navigation ================== */
+function parseHashCoureur() {
+  const m = /^#coureur\/([\w-]+)$/.exec(location.hash);
+  return m ? m[1] : null;
+}
+function majScroll() {
+  const ouvert = document.getElementById("sheet").classList.contains("open") || document.getElementById("rsheet").classList.contains("open");
+  document.body.style.overflow = ouvert ? "hidden" : "";
+}
 function parseHash() {
   const m = /^#course\/([\w-]+)(?:\/([\w]+))?$/.exec(location.hash);
   return m ? { id: m[1], etape: m[2] ?? null } : null;
@@ -640,9 +695,10 @@ function setHashEtape(sel) {
 async function ouvrirCourse(id, etape) {
   const sheet = document.getElementById("sheet"), body = document.getElementById("sheet-body");
   const r = courseParId(id);
+  const dejaOuverte = sheet.classList.contains("open") && state.course && state.course.id === id;
   sheet.classList.add("open"); sheet.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
-  sheet.scrollTop = 0;
+  majScroll();
+  if (!dejaOuverte) sheet.scrollTop = 0;
   document.getElementById("sheet-name").textContent = r ? r.name : "Course";
   document.getElementById("sheet-sub").textContent = r ? sousTitreCourse(r) : "";
   if (!state.course || state.course.id !== id) {
@@ -666,38 +722,141 @@ async function ouvrirCourse(id, etape) {
     if (!ok) sel = selectionDefaut(c);
   } else sel = "";
   state.sel = sel;
+  if (state.subVoulu) { state.sub = state.subVoulu; state.subVoulu = null; }
   renderFiche();
 }
 
 function fermerFiche() {
   const sheet = document.getElementById("sheet");
   sheet.classList.remove("open"); sheet.setAttribute("aria-hidden", "true");
-  document.body.style.overflow = "";
+  majScroll();
+}
+
+/* ================== fiche coureur ================== */
+function fermerCoureur() {
+  const rs = document.getElementById("rsheet");
+  rs.classList.remove("open"); rs.setAttribute("aria-hidden", "true");
+  state.coureurOuvert = null;
+  majScroll();
+}
+
+const CLASSEMENT_LABEL = { stage: "Étape / course", gc: "Général", points: "Points", mountain: "Montagne", youth: "Jeunes" };
+function rangClasse(n) { return n >= 1 && n <= 3 ? ` r${n}` : ""; }
+
+function renderCoureur(id) {
+  const D = state.riders, f = D.riders[id];
+  const body = document.getElementById("rsheet-body");
+  if (!f) {
+    document.getElementById("rsheet-name").textContent = "Coureur";
+    document.getElementById("rsheet-sub").textContent = "";
+    body.innerHTML = `<div class="empty card">Fiche indisponible pour ce coureur.</div>`;
+    return;
+  }
+  const S = f.stats || {}, v = k => S[k] || 0;
+  document.getElementById("rsheet-name").textContent = f.name || "Coureur";
+  document.getElementById("rsheet-sub").textContent = [f.team, f.age != null ? `${f.age} ans` : ""].filter(Boolean).join(" · ");
+  const rk = D.ranking;
+  const uci = f.uci_rank != null
+    ? `<b>${esc(rang(f.uci_rank))}</b><span class="sub">${f.uci_points != null ? esc(num(f.uci_points)) + " pts · " : ""}au ${esc(dateLongue(rk && rk.date))}</span>`
+    : rk ? `<b class="off">Non classé</b><span class="sub">${esc(rk.name || "Classement UCI")} du ${esc(dateLongue(rk.date))}</span>`
+         : `<b class="off">Indisponible</b><span class="sub">Classement UCI non publié</span>`;
+  const tuiles = `<div class="tiles">
+    <div class="tile wide"><small>Classement UCI</small>${uci}</div>
+    <div class="tile"><small>Victoires</small><b>${v("wins")}</b><span class="sub">${v("gc_wins") ? `+ ${v("gc_wins")} général final${v("gc_wins") > 1 ? "s" : ""}` : "étapes et courses d'un jour"}</span></div>
+    <div class="tile"><small>Podiums</small><b>${v("podiums")}</b><span class="sub">étapes et courses d'un jour</span></div>
+    <div class="tile"><small>Top 10</small><b>${v("top10")}</b><span class="sub">étapes et courses d'un jour</span></div>
+    <div class="tile"><small>Jours de course</small><b>${v("race_days")}</b><span class="sub">${v("races")} course${v("races") > 1 ? "s" : ""}${v("dnf") ? ` · ${v("dnf")} abandon${v("dnf") > 1 ? "s" : ""}` : ""}</span></div>
+  </div>`;
+  // palmarès groupé par course (le plus récent d'abord)
+  const R = f.results || [], groupes = [], idx = {};
+  R.forEach(x => {
+    if (!(x.race_id in idx)) { idx[x.race_id] = groupes.length; groupes.push({ id: x.race_id, items: [] }); }
+    groupes[idx[x.race_id]].items.push(x);
+  });
+  let pal;
+  if (!R.length) {
+    pal = `<div class="empty card">${v("top10") || v("gc_wins") ? "Détail du palmarès non conservé pour ce coureur (fichier allégé)." : "Aucune place dans les 10 premiers cette saison."}</div>`;
+  } else {
+    pal = groupes.map(g => {
+      const c = (D.races || {})[g.id] || {}, ci = courseParId(g.id);
+      const nom = c.name || (ci && ci.name) || g.id;
+      return `<div class="card table-card pal-group">
+        <button class="pal-head" data-open="${esc(g.id)}" data-stage="">${ci ? flag(ci.flag, ci.country) : ""}<span class="n">${esc(nom)}</span>${c.category ? catBadge(c.category, c.uci_class) : ""}</button>
+        ${g.items.map(x => {
+          const stage = x.classification === "stage" ? (x.stage_number == null ? "" : x.stage_number) : "F";
+          return `<button class="pal-row" data-open="${esc(g.id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification)}">
+            <span class="d">${esc(dateCourte(x.date))}</span><span class="l">${esc(x.label)}</span><span class="k${rangClasse(x.rank)}">${esc(x.rank)}</span></button>`;
+        }).join("")}</div>`;
+    }).join("");
+  }
+  const fr = f.is_french ? ' <span class="badge fr">FR</span>' : "";
+  body.innerHTML = `<div class="stack">
+    <div class="rhead">${flag(f.flag, f.nationality)}<h2>${esc(f.name)}${fr}</h2></div>
+    ${tuiles}
+    <div><div class="sec-title">Palmarès de la saison ${esc(D.season ?? "")}</div><div class="stack" style="gap:8px">${pal}</div>
+      <div class="small muted" style="margin-top:8px">10 premières places des étapes, des courses d'un jour et des classements finaux (général, points, montagne, jeunes).</div></div>
+  </div>`;
+}
+
+async function ouvrirCoureur(id) {
+  const rs = document.getElementById("rsheet"), body = document.getElementById("rsheet-body");
+  const nouveau = state.coureurOuvert !== id;
+  state.coureurOuvert = id;
+  rs.classList.add("open"); rs.setAttribute("aria-hidden", "false");
+  majScroll();
+  if (nouveau) rs.scrollTop = 0;
+  if (!state.riders) {
+    document.getElementById("rsheet-name").textContent = "Coureur";
+    document.getElementById("rsheet-sub").textContent = "";
+    body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
+    try {
+      const d = await chargerAvecRepli(`riders-${state.saison}.json`, "riders.json");
+      if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
+      state.riders = d;
+    } catch (e) {
+      console.warn("Fiches coureurs indisponibles :", e.message);
+      if (parseHashCoureur() !== id) return;
+      document.getElementById("rsheet-name").textContent = "Coureur";
+      body.innerHTML = `<div class="errbox"><div>Fiche indisponible</div><button data-action="retry">Réessayer</button></div>`;
+      return;
+    }
+  }
+  renderCoureur(id);
 }
 
 function routeur() {
-  const h = parseHash();
+  const rid = parseHashCoureur(), h = parseHash();
+  if (rid) { ouvrirCoureur(rid); return; }      // la fiche course éventuelle reste ouverte dessous
+  fermerCoureur();
   if (h) ouvrirCourse(h.id, h.etape); else fermerFiche();
 }
 window.addEventListener("hashchange", routeur);
 
+function ouvrirCoureurLien(id) {
+  state.ouvertParApp = true;
+  location.hash = `#coureur/${id}`;
+}
 function ouvrir(id, etape) {
   state.ouvertParApp = true;
   location.hash = `#course/${id}${etape !== "" && etape != null ? "/" + etape : ""}`;
 }
 function retour() {
   if (state.ouvertParApp && history.length > 1) history.back();
-  else { history.replaceState(null, "", location.pathname + location.search); fermerFiche(); }
+  else { history.replaceState(null, "", location.pathname + location.search); fermerCoureur(); fermerFiche(); }
 }
 
 /* ================== événements (délégation) ================== */
 document.addEventListener("click", e => {
+  if (!e.target.closest("#saison")) basculerMenuSaison(false);
+  const lien = e.target.closest("[data-rider]");
+  if (lien) { e.preventDefault(); ouvrirCoureurLien(lien.dataset.rider); return; }
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
+  if (t.dataset.saison) { changerSaison(+t.dataset.saison); return; }
   if (t.dataset.tab) { state.tab = t.dataset.tab; renderMain(); window.scrollTo(0, 0); return; }
   if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
   if (t.dataset.calvue) { state.calVue = t.dataset.calvue; renderMain(); return; }
-  if (t.dataset.open) { ouvrir(t.dataset.open, t.dataset.stage); return; }
+  if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; ouvrir(t.dataset.open, t.dataset.stage); return; }
   if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
     state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
   }
@@ -706,23 +865,81 @@ document.addEventListener("click", e => {
   if (a === "back") retour();
   else if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
   else if (a === "more") { state.limit += 50; document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
+  else if (a === "saison-menu") { basculerMenuSaison(); }
   else if (a === "retry") { routeur(); }
-  else if (a === "retry-index") { init(); }
+  else if (a === "retry-index") { init(!!state.saison && !!state.saisons); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && parseHash()) retour(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && (parseHash() || parseHashCoureur())) retour();
+  const lien = e.target.closest && e.target.closest("[data-rider]");
+  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); ouvrirCoureurLien(lien.dataset.rider); }
+});
 
 /* ================== démarrage ================== */
-async function init() {
+/* ================== saisons ================== */
+async function chargerAvecRepli(chemin, repli) {
+  try { return await charger(chemin); } catch (e) { if (!repli) throw e; return await charger(repli); }
+}
+function basculerMenuSaison(ouvrir) {
+  const m = document.getElementById("saison-menu");
+  if (!m) return;
+  const o = ouvrir === undefined ? !m.classList.contains("open") : ouvrir;
+  m.classList.toggle("open", o);
+  document.getElementById("saison-btn").setAttribute("aria-expanded", String(o));
+}
+function majSelecteurSaison() {
+  const S = state.saisons, box = document.getElementById("saison");
+  const dispo = (S && S.available) || [];
+  box.hidden = dispo.length < 2;
+  if (box.hidden) return;
+  document.getElementById("saison-btn").textContent = `${state.saison} ▾`;
+  document.getElementById("saison-menu").innerHTML = dispo.map(y =>
+    `<button role="menuitem" class="${y === state.saison ? "active" : ""}" data-saison="${esc(y)}">${esc(y)}${S.current === y ? " · en cours" : ""}</button>`).join("");
+}
+function saisonDansUrl() {
+  const u = new URL(location.href);
+  u.searchParams.set("saison", state.saison);
+  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+}
+async function chargerIndex(saison) {
+  const S = state.saisons;
+  if (!S) return charger("index.json");
+  return chargerAvecRepli(`index-${saison}.json`, saison === S.current ? "index.json" : null);
+}
+async function changerSaison(y) {
+  basculerMenuSaison(false);
+  if (y === state.saison) return;
+  state.saison = y;
+  cache.clear();
+  state.course = null; state.riders = null; state.coureurOuvert = null;
+  fermerCoureur(); fermerFiche();
+  history.replaceState(null, "", location.pathname + location.search);
+  state.filtreCat = "all"; state.calVue = "resultats"; state.ouvertParApp = false;
+  saisonDansUrl();
+  await init(true);
+}
+
+async function init(rechargement) {
   const main = document.getElementById("main");
   main.innerHTML = `<div class="loading">Chargement…</div>`;
   try {
-    state.index = await charger("index.json");
+    if (!rechargement) {
+      try { state.saisons = await charger("seasons.json"); } catch (e) { state.saisons = null; }
+      const S = state.saisons;
+      if (S && Array.isArray(S.available) && S.available.length) {
+        const demande = parseInt(PARAMS.get("saison"), 10);
+        state.saison = S.available.includes(demande) ? demande : (S.available.includes(S.current) ? S.current : S.available[0]);
+      } else state.saisons = null;
+    }
+    state.index = await chargerIndex(state.saison);
   } catch (e) {
     console.error("Chargement de l'index échoué :", e);
     main.innerHTML = messageErreur(`Impossible de charger les données (${e.message}).`, "retry-index");
     return;
   }
   const ix = state.index;
+  if (!state.saisons) state.saison = ix.season ?? null;
+  majSelecteurSaison();
   if (ix._fixture) document.getElementById("banner").innerHTML = '<div class="fixture-banner">DONNÉES FICTIVES DE TEST</div>';
   const g = ix.generated_at ? new Date(ix.generated_at) : null;
   if (g && !isNaN(g)) {

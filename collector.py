@@ -18,6 +18,7 @@ import aso
 import cyclingnews
 import directvelo
 import lnc
+import riders
 import selection
 import uci
 import wikipedia_cal
@@ -57,6 +58,75 @@ def _date(s: Optional[str]) -> Optional[dt.date]:
         return dt.date.fromisoformat(s) if s else None
     except ValueError:
         return None
+
+
+def _dump_if_changed(path: str, data: Dict, ignore: Tuple[str, ...] = ("generated_at",)) -> bool:
+    """Écrit `data` seulement si son contenu (hors clés `ignore`) diffère du fichier existant : pas de commit vide."""
+    old = _load(path, None)
+    if isinstance(old, dict) and {k: v for k, v in old.items() if k not in ignore} == \
+            {k: v for k, v in data.items() if k not in ignore}:
+        return False
+    _dump(path, data)
+    return True
+
+
+def _ranking_du_jour(today: dt.date) -> Optional[Dict]:
+    """Classement UCI (module uci_ranking, s'il existe), mis en cache dans data/ranking.json et rafraîchi une fois
+    par jour seulement. Aucun classement : None (les fiches affichent « non publié »)."""
+    path = os.path.join(DATA_DIR, "ranking.json")
+    cached = _load(path, None)
+    if cached and cached.get("_fetched") == today.isoformat():
+        return cached
+    try:
+        import uci_ranking
+        ranking = uci_ranking.get_ranking()
+    except Exception as e:  # source secondaire : jamais bloquante
+        print(f"[WARN] classement UCI indisponible : {e}")
+        ranking = None
+    if ranking and ranking.get("rows"):
+        ranking["_fetched"] = today.isoformat()
+        _dump(path, ranking)
+        return ranking
+    return cached
+
+
+def write_riders_files(seasons: List[int], current: int, by_season: Dict[int, List[Dict]],
+                       today: dt.date) -> None:
+    """Fiches coureurs (data/riders-<année>.json) : saison courante recalculée à chaque passage avec le classement
+    UCI du jour ; saisons passées calculées une seule fois (leurs résultats ne bougent plus)."""
+    ranking = _ranking_du_jour(today)
+    for y in seasons:
+        path = os.path.join(DATA_DIR, f"riders-{y}.json")
+        if y != current and os.path.exists(path):
+            continue
+        data = riders.build_riders(by_season.get(y, []), ranking if y == current else None, season=y)
+        _dump_if_changed(path, data)
+
+
+def write_season_indexes(current: int, current_index: Dict, today: Optional[dt.date] = None) -> None:
+    """Un index par saison (data/index-<année>.json) pour le sélecteur de saison de la page, plus data/seasons.json.
+    La saison courante reprend l'index du passage ; les saisons passées sont reconstruites depuis leurs fichiers de
+    course (conservés), sans calendrier à venir, en gardant leur dernier classement FDJ connu."""
+    by_season: Dict[int, List[Dict]] = {}
+    for fname in os.listdir(RACES_DIR):
+        if fname.endswith(".json"):
+            r = _load(os.path.join(RACES_DIR, fname), None)
+            if r and isinstance(r.get("season"), int):
+                by_season.setdefault(r["season"], []).append(r)
+    seasons = sorted(set(by_season) | {current}, reverse=True)
+    for y in seasons:
+        path = os.path.join(DATA_DIR, f"index-{y}.json")
+        if y == current:
+            _dump_if_changed(path, current_index)
+            continue
+        if y > current:   # saison suivante pas encore affichée (fin octobre - janvier) : pas proposée
+            continue
+        old = _load(path, {})
+        idx = build_index(by_season.get(y, []), y, [], old.get("fdj_united_series"))
+        _dump_if_changed(path, idx)
+    write_riders_files([y for y in seasons if y <= current], current, by_season, today or dt.date.today())
+    _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"),
+                     {"current": current, "available": [y for y in seasons if y <= current]}, ignore=())
 
 
 def race_path(race_id: str) -> str:
@@ -329,8 +399,10 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
         picked = selection.select(comps, fdj_races)
         # Début de saison UCI (fin octobre) : tant qu'aucune course suivie de la nouvelle saison n'a de résultat,
         # le dashboard reste sur la saison précédente.
-        if auto and not picked:
-            print(f"[SAISON] aucune course suivie courue en {season} : affichage de la saison {season - 1}")
+        # La nouvelle saison ne s'affiche qu'à sa première course WT / Pro / FDJ courue : un championnat continental
+        # ou une course mineure de fin octobre ne suffit pas.
+        if auto and not any(cat in ("WT", "Pro", "FDJ") for _, cat, _ in picked):
+            print(f"[SAISON] aucune course WT/Pro/FDJ courue en {season} : affichage de la saison {season - 1}")
             season, auto = season - 1, False
             continue
         break
@@ -433,6 +505,8 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
     index = build_index(list(races.values()), season, upcoming, fdj)
     if new_items:
         index["notification"] = agents_flash.build_notification(new_items)
+    if not only:
+        write_season_indexes(season, index, today)
     # Rien de neuf (hors horodatage) : fichiers inchangés, donc pas de commit inutile à chaque passage horaire.
     old_index = _load(os.path.join(DATA_DIR, "index.json"), {})
     unchanged = {k: v for k, v in old_index.items() if k != "generated_at"} == \

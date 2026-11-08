@@ -54,6 +54,8 @@ courses en cours ou terminées depuis moins de 3 jours (plus les nouvelles).
 ```
 data/index.json               index léger, lu au chargement de la page
 data/races/<race_id>.json      détail d'une course, chargé à l'ouverture
+data/seasons.json              {"current": 2026, "available": [2026, 2025]} — sélecteur de saison de la page
+data/index-<année>.json        index de chaque saison (même schéma ; index.json = saison courante)
 data/state.json                état interne (clés déjà notifiées, horodatages) — non lu par la page
 ```
 
