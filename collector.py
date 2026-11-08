@@ -227,8 +227,9 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
     # Résumés : conservés si l'étape n'a pas changé ; Gemini seulement pour les étapes récentes.
     for idx, st in enumerate(race["stages"]):
         old = prev_stages.get(st.get("number"))
-        if old and old.get("ai_summary") and _stage_fingerprint(old) == _stage_fingerprint(st) \
-                and not (old.get("summary_source") == "fallback" and _is_recent(st, today, AI_DAYS)):
+        # Seuls les résumés Gemini sont conservés ; le repli déterministe est toujours recalculé (gratuit).
+        if old and old.get("ai_summary") and old.get("summary_source") == "gemini" \
+                and _stage_fingerprint(old) == _stage_fingerprint(st):
             st["ai_summary"], st["summary_source"] = old["ai_summary"], old.get("summary_source")
             continue
         if _is_recent(st, today, AI_DAYS):
