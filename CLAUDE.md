@@ -60,6 +60,8 @@ index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
 - Budget de temps (`--budget-min`, 40 min par défaut) : au-delà, la collecte s'arrête proprement (courses les plus
   récentes traitées d'abord) et reprend au passage suivant. Le premier rattrapage d'une saison prend ~3 passages.
+- Saison : déterminée par les dates UCI (`uci.season_for`) ; tant qu'aucune course suivie de la nouvelle saison
+  n'a de résultat (novembre-janvier), le dashboard reste sur la saison précédente. Aucune action au changement d'année.
 - Gemini seulement pour les étapes des 3 derniers jours ; repli déterministe pour l'historique. Pas de push pour
   un rattrapage (nouveautés de plus de 2 jours).
 
