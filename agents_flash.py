@@ -112,7 +112,7 @@ def call_gemini_flash(system_instruction: str, user_prompt: str, temperature: fl
         )
         for attempt in range(2):
             try:
-                with urllib.request.urlopen(req, timeout=75) as resp:
+                with urllib.request.urlopen(req, timeout=150) as resp:
                     body = json.loads(resp.read().decode("utf-8"))
                 cand = (body.get("candidates") or [{}])[0]
                 parts = cand.get("content", {}).get("parts", [])
@@ -542,7 +542,20 @@ def check_numbers(summary: str, dossier: str) -> List[str]:
     for n in sorted(_numbers(summary)):
         if n not in allowed and not any(str(n) in str(c) for c in compact if c in allowed):
             issues.append(f"le nombre {n} ne figure ni dans la partie factuelle ni dans les récits")
+    # Sans récit, aucun scénario de course n'est connu : les termes de déroulé sont proscrits.
+    if not stories.strip() or "(aucun récit disponible)" in stories:
+        low = summary.lower()
+        for mot in _SCENARIO_WORDS:
+            if mot in low and mot not in facts.lower():
+                issues.append(f"« {mot}… » décrit un déroulé de course alors qu'aucun récit n'est disponible : "
+                              "ne décris pas comment la course s'est jouée, seulement les classements")
     return issues
+
+
+# Racines de mots décrivant le déroulé d'une course, interdites quand le dossier ne contient aucun récit.
+_SCENARIO_WORDS = ("sprint", "échapp", "attaqu", "attaque", "chute", "crev", "solitaire", "démarr", "accélér",
+                   "offensive", "pluie", "vent ", "peloton", "contre-attaq", "rattrap", "lâch", "décroch",
+                   "puncheur", "mano a mano", "duel")
 
 
 AUDITOR_SYSTEM_PROMPT = """Tu es le contrôleur qualité d'une rédaction cycliste. Tu compares un résumé d'étape à son dossier. Le dossier a une partie FACTUELLE (classements, écarts, parcours, abandons) puis une section RÉCITS (contexte narratif, souvent en anglais).
