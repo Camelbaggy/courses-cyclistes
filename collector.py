@@ -59,6 +59,41 @@ def _date(s: Optional[str]) -> Optional[dt.date]:
         return None
 
 
+def _dump_if_changed(path: str, data: Dict, ignore: Tuple[str, ...] = ("generated_at",)) -> bool:
+    """Écrit `data` seulement si son contenu (hors clés `ignore`) diffère du fichier existant : pas de commit vide."""
+    old = _load(path, None)
+    if isinstance(old, dict) and {k: v for k, v in old.items() if k not in ignore} == \
+            {k: v for k, v in data.items() if k not in ignore}:
+        return False
+    _dump(path, data)
+    return True
+
+
+def write_season_indexes(current: int, current_index: Dict) -> None:
+    """Un index par saison (data/index-<année>.json) pour le sélecteur de saison de la page, plus data/seasons.json.
+    La saison courante reprend l'index du passage ; les saisons passées sont reconstruites depuis leurs fichiers de
+    course (conservés), sans calendrier à venir, en gardant leur dernier classement FDJ connu."""
+    by_season: Dict[int, List[Dict]] = {}
+    for fname in os.listdir(RACES_DIR):
+        if fname.endswith(".json"):
+            r = _load(os.path.join(RACES_DIR, fname), None)
+            if r and isinstance(r.get("season"), int):
+                by_season.setdefault(r["season"], []).append(r)
+    seasons = sorted(set(by_season) | {current}, reverse=True)
+    for y in seasons:
+        path = os.path.join(DATA_DIR, f"index-{y}.json")
+        if y == current:
+            _dump_if_changed(path, current_index)
+            continue
+        if y > current:   # saison suivante pas encore affichée (fin octobre - janvier) : pas proposée
+            continue
+        old = _load(path, {})
+        idx = build_index(by_season.get(y, []), y, [], old.get("fdj_united_series"))
+        _dump_if_changed(path, idx)
+    _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"),
+                     {"current": current, "available": [y for y in seasons if y <= current]}, ignore=())
+
+
 def race_path(race_id: str) -> str:
     return os.path.join(RACES_DIR, f"{race_id}.json")
 
@@ -435,6 +470,8 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
     index = build_index(list(races.values()), season, upcoming, fdj)
     if new_items:
         index["notification"] = agents_flash.build_notification(new_items)
+    if not only:
+        write_season_indexes(season, index)
     # Rien de neuf (hors horodatage) : fichiers inchangés, donc pas de commit inutile à chaque passage horaire.
     old_index = _load(os.path.join(DATA_DIR, "index.json"), {})
     unchanged = {k: v for k, v in old_index.items() if k != "generated_at"} == \
