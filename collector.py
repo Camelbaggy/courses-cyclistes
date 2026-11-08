@@ -18,6 +18,7 @@ import aso
 import cyclingnews
 import directvelo
 import lnc
+import riders
 import selection
 import uci
 import wikipedia_cal
@@ -69,7 +70,40 @@ def _dump_if_changed(path: str, data: Dict, ignore: Tuple[str, ...] = ("generate
     return True
 
 
-def write_season_indexes(current: int, current_index: Dict) -> None:
+def _ranking_du_jour(today: dt.date) -> Optional[Dict]:
+    """Classement UCI (module uci_ranking, s'il existe), mis en cache dans data/ranking.json et rafraîchi une fois
+    par jour seulement. Aucun classement : None (les fiches affichent « non publié »)."""
+    path = os.path.join(DATA_DIR, "ranking.json")
+    cached = _load(path, None)
+    if cached and cached.get("_fetched") == today.isoformat():
+        return cached
+    try:
+        import uci_ranking
+        ranking = uci_ranking.get_ranking()
+    except Exception as e:  # source secondaire : jamais bloquante
+        print(f"[WARN] classement UCI indisponible : {e}")
+        ranking = None
+    if ranking and ranking.get("rows"):
+        ranking["_fetched"] = today.isoformat()
+        _dump(path, ranking)
+        return ranking
+    return cached
+
+
+def write_riders_files(seasons: List[int], current: int, by_season: Dict[int, List[Dict]],
+                       today: dt.date) -> None:
+    """Fiches coureurs (data/riders-<année>.json) : saison courante recalculée à chaque passage avec le classement
+    UCI du jour ; saisons passées calculées une seule fois (leurs résultats ne bougent plus)."""
+    ranking = _ranking_du_jour(today)
+    for y in seasons:
+        path = os.path.join(DATA_DIR, f"riders-{y}.json")
+        if y != current and os.path.exists(path):
+            continue
+        data = riders.build_riders(by_season.get(y, []), ranking if y == current else None, season=y)
+        _dump_if_changed(path, data)
+
+
+def write_season_indexes(current: int, current_index: Dict, today: Optional[dt.date] = None) -> None:
     """Un index par saison (data/index-<année>.json) pour le sélecteur de saison de la page, plus data/seasons.json.
     La saison courante reprend l'index du passage ; les saisons passées sont reconstruites depuis leurs fichiers de
     course (conservés), sans calendrier à venir, en gardant leur dernier classement FDJ connu."""
@@ -90,6 +124,7 @@ def write_season_indexes(current: int, current_index: Dict) -> None:
         old = _load(path, {})
         idx = build_index(by_season.get(y, []), y, [], old.get("fdj_united_series"))
         _dump_if_changed(path, idx)
+    write_riders_files([y for y in seasons if y <= current], current, by_season, today or dt.date.today())
     _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"),
                      {"current": current, "available": [y for y in seasons if y <= current]}, ignore=())
 
@@ -471,7 +506,7 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
     if new_items:
         index["notification"] = agents_flash.build_notification(new_items)
     if not only:
-        write_season_indexes(season, index)
+        write_season_indexes(season, index, today)
     # Rien de neuf (hors horodatage) : fichiers inchangés, donc pas de commit inutile à chaque passage horaire.
     old_index = _load(os.path.join(DATA_DIR, "index.json"), {})
     unchanged = {k: v for k, v in old_index.items() if k != "generated_at"} == \
