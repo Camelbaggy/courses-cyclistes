@@ -114,7 +114,7 @@ def montrer(j, n=2, maxc=900):
     return data
 
 
-def passe8():
+def passe9():
     from collections import Counter
     base = "https://dataride.uci.org"
     code, t = get(base + "/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId=10", accept="application/json", maxprint=1200)
@@ -140,14 +140,12 @@ def passe8():
     print("  categorie Men Elite:", cat)
     flt = [("SeasonId", sid)] + ([("CategoryId", cat)] if cat is not None else [])
     comps = []
+    flt3 = [("RaceTypeId", 0), ("CategoryId", cat), ("SeasonId", sid)]
     essais = {
-        "A kendo filtres sans tri": lambda pg: kendo(page=pg, taille=100, filtres=flt),
-        "B kendo filtres + tri": lambda pg: kendo(page=pg, taille=100, filtres=flt, tri=("StartDate", "asc")),
-        "C compact DataSourceRequest": lambda pg: {"page": pg, "pageSize": 100, "sort": "StartDate-asc",
-                                                    "filter": "~and~".join(f"{c}~eq~{v}" for c, v in flt)},
-        "D champs a plat": lambda pg: {"page": pg, "pageSize": 100, "take": 100, "skip": (pg - 1) * 100,
-                                        **{c: v for c, v in flt}, "disciplineId": 10},
-        "E kendo filtres, operateur contains-free (sans logic)": lambda pg: {k: v for k, v in kendo(page=pg, taille=100, filtres=flt).items() if k != "filter[logic]"},
+        "A replique de la page (3 filtres, disciplineId, tri StartDate desc)":
+            lambda pg: kendo(page=pg, taille=100, filtres=flt3, tri=("StartDate", "desc"), disciplineId=10),
+        "B 3 filtres, sans disciplineId": lambda pg: kendo(page=pg, taille=100, filtres=flt3, tri=("StartDate", "desc")),
+        "C 3 filtres, disciplineId, sans tri": lambda pg: kendo(page=pg, taille=100, filtres=flt3, disciplineId=10),
     }
     choisi = None
     for nom, f in essais.items():
@@ -197,4 +195,4 @@ def passe8():
 
 
 if __name__ == "__main__":
-    passe8()
+    passe9()
