@@ -27,6 +27,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}   # tête de la branche au démarrage, pas le commit déclencheur (déjà dépassé si un passage précédent a commité)
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -48,5 +50,6 @@ jobs:
           git add data/
           if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
           git commit -m "chore: mise à jour automatique des résultats"
-          git pull --rebase origin "${GITHUB_REF_NAME}"
+          # si un autre passage a commité entre-temps, nos données (plus récentes) l'emportent
+          git pull --rebase -X theirs origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
