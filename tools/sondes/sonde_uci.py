@@ -79,20 +79,27 @@ def post(path, champs, base="https://dataride.uci.org", maxprint=1500):
                                            "Referer": base + "/iframe/Results/10/"})
 
 
-def passe4():
+def post_json(path, champs, base="https://dataride.uci.org"):
+    import urllib.parse
+    c, t = post(path, champs, base=base, maxprint=0)
+    try:
+        return json.loads(t)
+    except Exception:
+        return None
+
+
+def passe5():
     base = "https://dataride.uci.org"
-    for d in (10, 8):
-        code, t = get(f"{base}/iframe/Results/{d}/", accept="text/html", show=False)
-        if t:
-            print("  <title>", re.findall(r"<title[^>]*>(.*?)</title>", t, re.S)[:1], len(t))
-            contexte(t, ["/iframe/Competitions/"], avant=900, apres=900, maxn=2)
-            print("  selects:", re.findall(r"<select[^>]*>", t)[:10])
-            print("  discipline/season/class/etc:", sorted(set(re.findall(r"(?:disciplineId|seasonId|classId|categoryId|competitionClassId|momentId|countryId|DisciplineSeasonId)\w*", t)))[:40])
-            print("  extrait visible:", re.sub(r"\s+", " ", re.sub(r"<script.*?</script>", "", t, flags=re.S))[:1200])
-    for d in (10, 8):
-        post("/iframe/Competitions/", {"disciplineId": d, "page": 1, "pageSize": 3, "take": 3, "skip": 0})
-    post("/iframe/Races/", {"disciplineId": 8, "competitionId": 77319, "page": 1, "pageSize": 5, "take": 5, "skip": 0})
+    code, t = get(f"{base}/iframe/Results/10/", accept="text/html", show=False)
+    if t:
+        contexte(t, ["iframeCompetitionsSource(", "competitionsSource(", "filter", "Season"], avant=200, apres=700, maxn=3)
+        corps = re.sub(r"<script.*?</script>", "", t, flags=re.S)
+        print("  HTML visible:", re.sub(r"\s+", " ", corps)[1500:4500])
+    for d in range(1, 13):
+        j = post_json("/iframe/Competitions/", {"disciplineId": d, "page": 1, "pageSize": 2, "take": 2, "skip": 0})
+        if j:
+            print(f"  >>> disciplineId={d}: total={j.get('total')} ex={json.dumps(j.get('data', [])[:1], ensure_ascii=False)[:700]}")
 
 
 if __name__ == "__main__":
-    passe4()
+    passe5()
