@@ -88,16 +88,90 @@ def post_json(path, champs, base="https://dataride.uci.org"):
         return None
 
 
-def passe6():
+def kendo(page=1, taille=40, filtres=None, tri=None, **extra):
+    """Paramètres envoyés par une DataSource Kendo (serverPaging / serverFiltering / serverSorting)."""
+    d = {"take": taille, "skip": (page - 1) * taille, "page": page, "pageSize": taille}
+    if tri:
+        d["sort[0][field]"], d["sort[0][dir]"] = tri
+    if filtres:
+        d["filter[logic]"] = "and"
+        for n, (champ, val) in enumerate(filtres):
+            d[f"filter[filters][{n}][field]"] = champ
+            d[f"filter[filters][{n}][operator]"] = "eq"
+            d[f"filter[filters][{n}][value]"] = val
+    d.update(extra)
+    return d
+
+
+def montrer(j, n=2, maxc=900):
+    if not isinstance(j, dict):
+        print("  (pas du JSON)")
+        return []
+    data = j.get("data") or []
+    print(f"  total={j.get('total')} len(data)={len(data)} cles={sorted(data[0].keys()) if data else None}")
+    for r in data[:n]:
+        print("  ex:", json.dumps(r, ensure_ascii=False)[:maxc])
+    return data
+
+
+def passe7():
+    from collections import Counter
     base = "https://dataride.uci.org"
-    code, t = get(base + "/iframe/Results/10/", accept="text/html", show=False)
-    if t:
-        k0 = t.find("var categoriesDropdown")
-        print(t[k0:k0 + 9500])
-    for chemin in ("/iframe/GetRestrictedResultsRaceTypes/?disciplineId=10&disciplineSeasonId=",
-                   "/iframe/GetRestrictedResultsCategories/?disciplineId=10&disciplineSeasonId="):
-        get(base + chemin, accept="application/json", maxprint=1500)
+    code, t = get(base + "/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId=10", accept="application/json", maxprint=1200)
+    try:
+        saisons = json.loads(t)
+    except Exception:
+        return
+    cible = {}
+    for x in saisons:
+        for an in ("2025", "2026", "2027"):
+            if an in str(x.get("Name")):
+                cible[an] = x["Id"]
+    print("  saisons retenues:", cible)
+    sid = cible.get("2026")
+    if sid is None:
+        return
+    code, t = get(f"{base}/iframe/GetRestrictedResultsCategories/?disciplineId=10&disciplineSeasonId={sid}", accept="application/json", maxprint=1500)
+    get(f"{base}/iframe/GetRestrictedResultsRaceTypes/?disciplineId=10&disciplineSeasonId={sid}", accept="application/json", maxprint=1500)
+    try:
+        cat = next(c["Id"] for c in json.loads(t) if c.get("Name") == "Men Elite")
+    except Exception:
+        cat = None
+    print("  categorie Men Elite:", cat)
+    flt = [("SeasonId", sid)] + ([("CategoryId", cat)] if cat is not None else [])
+    comps = []
+    for pg in (1, 2, 3):
+        j = post_json("/iframe/Competitions/", kendo(page=pg, taille=100, filtres=flt, tri=("StartDate", "asc")))
+        data = montrer(j, n=2 if pg == 1 else 0)
+        comps += data
+        if not data or len(comps) >= (j or {}).get("total", 0):
+            break
+    print("  total recupere:", len(comps))
+    print("  par ClassCode:", Counter(c.get("ClassCode") for c in comps).most_common())
+    print("  par CategoryCode:", Counter(c.get("CategoryCode") for c in comps).most_common(6))
+    cles = {}
+    for mot in ("paris-roubaix", "tour de france", "paris-nice", "paris - nice"):
+        for c in comps:
+            nom = str(c.get("CompetitionName")).lower()
+            if mot in nom and "women" not in nom and "femmes" not in nom:
+                print("  >>", json.dumps(c, ensure_ascii=False)[:500])
+                cles.setdefault(mot, c)
+    for mot, c in cles.items():
+        cid = c.get("CompetitionId")
+        print(f"\n######## {mot} -> {cid}")
+        j = post_json("/iframe/Races/", kendo(taille=60, competitionId=cid, disciplineId=10))
+        races = montrer(j, n=1, maxc=700)
+        if not races:
+            continue
+        for r in ((races[0], races[-1]) if len(races) > 1 else (races[0],)):
+            j = post_json("/iframe/Events/", {"disciplineId": 10, "raceId": r["Id"]})
+            evs = montrer(j, n=3, maxc=500)
+            for e in evs[:2]:
+                eid = e.get("Id") or e.get("EventId")
+                jr = post_json("/iframe/Results/", kendo(taille=5, disciplineId=10, eventId=eid))
+                print(f"  -- Results eventId={eid}")
+                montrer(jr, n=2, maxc=900)
 
 
 if __name__ == "__main__":
-    passe6()
+    passe7()
