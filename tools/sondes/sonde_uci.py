@@ -62,15 +62,27 @@ def explorer(url, n=60):
     return txt
 
 
-def passe2():
-    get("https://dataride.uci.ch/robots.txt", maxprint=4000)
-    t = explorer("https://dataride.uci.org/iframe/CompetitionResults/77319?disciplineId=8")
+def contexte(txt, motifs, avant=300, apres=500, maxn=4):
+    for m in motifs:
+        pos = [x.start() for x in re.finditer(re.escape(m), txt)][:maxn]
+        for k in pos:
+            print(f"  --- contexte de {m!r} @{k}:")
+            print("  " + txt[max(0, k - avant):k + apres].replace("\n", "\n  "))
+
+
+def passe3():
+    base = "https://dataride.uci.org"
+    code, t = get(base + "/iframe/CompetitionResults/77319?disciplineId=8", accept="text/html", show=False)
     if t:
-        print(t[:3000])
-    for u in ("https://www.uci.org/competition-hub/2026-uci-road-world-championships/14QBdFX8GqbCHUPE234D0Q?tab=races-results",
-              "https://wwwnew.uci.org/road/calendar", "https://www.uci.org/road/calendar"):
-        explorer(u)
+        contexte(t, ["/iframe/Results/", "/iframe/EventResults/", "/iframe/Events/", "/iframe/Races/", "type: \"POST\"", "transport"], maxn=2)
+        print("  formulaires/inputs:", re.findall(r"<input[^>]*>", t)[:15])
+    code, t2 = get(base + "/iframe/Competitions/", accept="text/html", show=False)
+    if t2:
+        print("  <title>", re.findall(r"<title[^>]*>(.*?)</title>", t2, re.S)[:1], len(t2))
+        contexte(t2, ["/iframe/Competitions/", "read:", "url:"], maxn=3)
+        print("  selects:", re.findall(r"<select[^>]*>", t2)[:15])
+        print("  inputs:", re.findall(r"<input[^>]*>", t2)[:25])
 
 
 if __name__ == "__main__":
-    passe2()
+    passe3()
