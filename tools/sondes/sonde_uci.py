@@ -5,9 +5,13 @@ import re, sys, time, json, urllib.request, urllib.error
 UA = "courses-cyclistes-sonde/0.1 (projet personnel non commercial)"
 _last = [0.0]
 STOP = [False]
+DEBUT = time.time()
+BUDGET = 240  # secondes : on s'arrête proprement au-delà
 
 
 def get(url, accept="*/*", maxprint=600, show=True, data=None, headers=None):
+    if time.time() - DEBUT > BUDGET:
+        STOP[0] = True
     if STOP[0]:
         print("ARRET (blocage anti-robot constaté), requête ignorée:", url)
         return None, ""
@@ -18,7 +22,7 @@ def get(url, accept="*/*", maxprint=600, show=True, data=None, headers=None):
     h.update(headers or {})
     req = urllib.request.Request(url, headers=h, data=data)
     try:
-        r = urllib.request.urlopen(req, timeout=30)
+        r = urllib.request.urlopen(req, timeout=20)
         code, body, hd = r.status, r.read(), r.headers
     except urllib.error.HTTPError as e:
         code, body, hd = e.code, e.read(), e.headers
@@ -191,12 +195,12 @@ def passe11():
     # 1) derniers evenements passes (delai de publication)
     passes.sort(key=lambda c: ms(c["EndDate"]), reverse=True)
     print("\n  ==== 8 dernieres courses passees (aujourd'hui = %s) ====" % time.strftime("%Y-%m-%d", time.gmtime()))
-    for c in passes[:8]:
+    for c in passes[:6]:
         print("  *", resume_competition(c))
     # 2) couverture par classe (une course passee 2026 par classe, de preference francaise)
     print("\n  ==== couverture par classe ====")
     vus = set()
-    for cl in ("1.UWT", "2.UWT", "1.Pro", "2.Pro", "1.1", "2.1", "1.2", "2.2", "CN", "CC", "CRTP"):
+    for cl in ("1.Pro", "2.Pro", "1.1", "2.1", "1.2", "2.2", "CN", "CC"):
         cands = [c for c in c26 if c["ClassCode"] == cl and ms(c["EndDate"]) < now]
         cands.sort(key=lambda c: (c["CountryIsoCode3"] != "FRA", -ms(c["EndDate"])))
         if cands:
