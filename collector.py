@@ -93,40 +93,39 @@ def _ranking_du_jour(today: dt.date) -> Optional[Dict]:
 def write_riders_files(seasons: List[int], current: int, by_season: Dict[int, List[Dict]],
                        today: dt.date) -> None:
     """Fiches coureurs (data/riders-<année>.json) : saison courante recalculée à chaque passage avec le classement
-    UCI du jour ; saisons passées calculées une seule fois (leurs résultats ne bougent plus)."""
+    UCI du jour (ainsi que la suivante pendant l'intersaison) ; saisons passées calculées une seule fois."""
     ranking = _ranking_du_jour(today)
     for y in seasons:
         path = os.path.join(DATA_DIR, f"riders-{y}.json")
-        if y != current and os.path.exists(path):
+        if y < current and os.path.exists(path):
             continue
-        data = riders.build_riders(by_season.get(y, []), ranking if y == current else None, season=y)
+        data = riders.build_riders(by_season.get(y, []), ranking if y >= current else None, season=y)
         _dump_if_changed(path, data)
 
 
-def write_season_indexes(current: int, current_index: Dict, today: Optional[dt.date] = None) -> None:
-    """Un index par saison (data/index-<année>.json) pour le sélecteur de saison de la page, plus data/seasons.json.
-    La saison courante reprend l'index du passage ; les saisons passées sont reconstruites depuis leurs fichiers de
-    course (conservés), sans calendrier à venir, en gardant leur dernier classement FDJ connu."""
+def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optional[dt.date] = None) -> None:
+    """Un index par saison (data/index-<année>.json) pour le calendrier de la page, plus data/seasons.json.
+    Les saisons calculées ce passage (`computed`, dont la courante et, pendant l'intersaison, la suivante) sont écrites
+    telles quelles ; les saisons passées sont reconstruites depuis leurs fichiers de course (conservés), sans
+    calendrier à venir, en gardant leur dernier classement FDJ connu."""
+    if not isinstance(computed, dict) or "races" in computed:   # compatibilité : un seul index (saison courante)
+        computed = {current: computed}
     by_season: Dict[int, List[Dict]] = {}
     for fname in os.listdir(RACES_DIR):
         if fname.endswith(".json"):
             r = _load(os.path.join(RACES_DIR, fname), None)
             if r and isinstance(r.get("season"), int):
                 by_season.setdefault(r["season"], []).append(r)
-    seasons = sorted(set(by_season) | {current}, reverse=True)
+    seasons = sorted({y for y in by_season if y <= current} | set(computed), reverse=True)
     for y in seasons:
         path = os.path.join(DATA_DIR, f"index-{y}.json")
-        if y == current:
-            _dump_if_changed(path, current_index)
-            continue
-        if y > current:   # saison suivante pas encore affichée (fin octobre - janvier) : pas proposée
+        if y in computed:
+            _dump_if_changed(path, computed[y])
             continue
         old = _load(path, {})
-        idx = build_index(by_season.get(y, []), y, [], old.get("fdj_united_series"))
-        _dump_if_changed(path, idx)
-    write_riders_files([y for y in seasons if y <= current], current, by_season, today or dt.date.today())
-    _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"),
-                     {"current": current, "available": [y for y in seasons if y <= current]}, ignore=())
+        _dump_if_changed(path, build_index(by_season.get(y, []), y, [], old.get("fdj_united_series")))
+    write_riders_files(seasons, current, by_season, today or dt.date.today())
+    _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"), {"current": current, "available": seasons}, ignore=())
 
 
 def race_path(race_id: str) -> str:
@@ -371,10 +370,22 @@ def build_index(races: List[Dict], season: int, upcoming: List[Dict], fdj: Optio
 
 # --------------------------------------------------------------------------- point d'entrée
 
+def _saison_de(date_iso: Optional[str]) -> Optional[int]:
+    """Saison UCI d'une date (bornes officielles) ; repli : année civile, ou la suivante après le 18 octobre."""
+    if not date_iso:
+        return None
+    y = uci.season_for(date_iso)
+    if y:
+        return y
+    d = _date(date_iso)
+    return d.year + 1 if d and (d.month, d.day) > (10, 18) else (d.year if d else None)
+
+
 def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", max_races: int = 0,
         budget_min: float = 0) -> Dict:
-    """budget_min > 0 : au-delà de ce temps, plus aucune nouvelle course n'est collectée ; l'index et l'état sont
-    écrits avec ce qui a été fait, le passage suivant reprend (fichiers de course et décisions mémorisés)."""
+    """Collecte la saison affichée et, pendant l'intersaison (nouvelle saison UCI commencée mais sans course
+    WT / Pro / FDJ courue), aussi la nouvelle saison, proposée dans le calendrier sans être affichée par défaut.
+    budget_min > 0 : au-delà de ce temps, plus aucune nouvelle course n'est collectée ; le passage suivant reprend."""
     today = today or dt.date.today()
     t0 = time.monotonic()
 
@@ -387,126 +398,150 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
 
     fdj = lnc.get_fdj_united_series()
     fdj_races = (fdj or {}).get("races") or []
-    auto = not season
-    if auto:
-        season = uci.season_for(today) or today.year
-    while True:
-        season_id = uci.get_season_id(season)
-        if season_id is None:
+
+    # Saisons à collecter : [saison affichée] (+ la nouvelle pendant l'intersaison)
+    plan: List[Tuple[int, List[Dict]]] = []
+    if season:
+        sid = uci.get_season_id(season)
+        if sid is None:
             raise SystemExit(f"[ERREUR] Saison UCI {season} introuvable")
-        comps = uci.list_competitions(season_id)
-        print(f"[UCI] {len(comps)} courses hommes élite courues ou en cours en {season}")
-        picked = selection.select(comps, fdj_races)
-        # Début de saison UCI (fin octobre) : tant qu'aucune course suivie de la nouvelle saison n'a de résultat,
-        # le dashboard reste sur la saison précédente.
-        # La nouvelle saison ne s'affiche qu'à sa première course WT / Pro / FDJ courue : un championnat continental
-        # ou une course mineure de fin octobre ne suffit pas.
-        if auto and not any(cat in ("WT", "Pro", "FDJ") for _, cat, _ in picked):
-            print(f"[SAISON] aucune course WT/Pro/FDJ courue en {season} : affichage de la saison {season - 1}")
-            season, auto = season - 1, False
-            continue
-        break
-    # Une manche FDJ United Series est rangée en « FDJ » même si sa classe (1.Pro) la retenait déjà,
-    # et l'index relie chaque manche à sa fiche.
-    for i, (comp, category, reason) in enumerate(picked):
-        manche = selection.match_fdj(comp, fdj_races)
-        if manche is not None:
-            picked[i] = (comp, "FDJ", "fdj")
-            manche["race_id"] = f"uci-{comp['competition_id']}"
-    picked_ids = {c["competition_id"] for c, _, _ in picked}
-    if only:
-        picked = [p for p in picked if only.lower() in p[0]["name"].lower()]
-    print(f"[SELECTION] {len(picked)} courses retenues d'office")
+        plan.append((season, uci.list_competitions(sid)))
+    else:
+        s0 = uci.season_for(today) or today.year
+        sid = uci.get_season_id(s0)
+        if sid is None:
+            raise SystemExit(f"[ERREUR] Saison UCI {s0} introuvable")
+        comps0 = uci.list_competitions(sid)
+        majeures = [p for p in selection.select(comps0, fdj_races) if p[1] in ("WT", "Pro", "FDJ")]
+        if majeures:
+            plan.append((s0, comps0))
+        else:
+            print(f"[SAISON] aucune course WT/Pro/FDJ courue en {s0} : saison {s0 - 1} affichée, {s0} collectée aussi")
+            sid_prec = uci.get_season_id(s0 - 1)
+            plan.append((s0 - 1, uci.list_competitions(sid_prec) if sid_prec else []))
+            plan.append((s0, comps0))
+    season = plan[0][0]
+    for y, comps in plan:
+        print(f"[UCI] {len(comps)} courses hommes élite courues ou en cours en {y}")
 
     cn_items = cyclingnews.fetch_items()
-    races: Dict[str, Dict] = {}
+    races_by_season: Dict[int, Dict[str, Dict]] = {y: {} for y, _ in plan}
     new_items: List[Tuple[Dict, int]] = []
-
-    def handle(comp: Dict, category: str, reason: str, fetched: Optional[Dict] = None) -> None:
-        rid = f"uci-{comp['competition_id']}"
-        previous = _load(race_path(rid), None)
-        if fetched is None and not _needs_refresh(comp, previous, today):
-            if previous.get("category") != category or previous.get("selection_reason") != reason:
-                previous["category"], previous["selection_reason"] = category, reason
-                _dump(race_path(rid), previous)
-            races[rid] = previous
-            return
-        print(f"[COURSE] {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')})")
-        race = collect_race(comp, category, reason, previous, today, cn_items, fetched)
-        if not race:
-            return
-        race["season"] = season
-        races[rid] = race
-        _dump(race_path(rid), race)
-        for idx in range(len(race["stages"])):
-            key = stage_key(race, idx)
-            if key not in notified:
-                notified.add(key)
-                if _is_recent(race["stages"][idx], today, NOTIFY_DAYS):
-                    new_items.append((race, idx))
-
-    count = 0
-    # les plus récentes d'abord : ce sont elles qui comptent si le budget de temps est atteint
-    picked.sort(key=lambda p: p[0].get("start_date") or "", reverse=True)
     stopped = False
-    for comp, category, reason in picked:
-        if over_budget():
-            stopped = True
-            break
-        handle(comp, category, reason)
-        count += 1
-        if max_races and count >= max_races:
-            break
+    count = 0
 
-    # .1 / .2 hors de France : retenues si un Français termine dans les 10 premiers.
-    if not only and not (max_races and count >= max_races):
-        for comp in sorted(comps, key=lambda c: c.get("start_date") or "", reverse=True):
+    for y, comps in plan:
+        races = races_by_season[y]
+        picked = selection.select(comps, fdj_races)
+        # Une manche FDJ United Series est rangée en « FDJ » même si sa classe (1.Pro) la retenait déjà,
+        # et l'index relie chaque manche à sa fiche.
+        for i, (comp, category, reason) in enumerate(picked):
+            manche = selection.match_fdj(comp, fdj_races)
+            if manche is not None:
+                picked[i] = (comp, "FDJ", "fdj")
+                manche["race_id"] = f"uci-{comp['competition_id']}"
+        picked_ids = {c["competition_id"] for c, _, _ in picked}
+        if only:
+            picked = [p for p in picked if only.lower() in p[0]["name"].lower()]
+        print(f"[SELECTION] {y} : {len(picked)} courses retenues d'office")
+
+        def handle(comp: Dict, category: str, reason: str, fetched: Optional[Dict] = None) -> None:
+            rid = f"uci-{comp['competition_id']}"
+            previous = _load(race_path(rid), None)
+            if fetched is None and not _needs_refresh(comp, previous, today):
+                if previous.get("category") != category or previous.get("selection_reason") != reason \
+                        or previous.get("season") != y:
+                    previous["category"], previous["selection_reason"], previous["season"] = category, reason, y
+                    _dump(race_path(rid), previous)
+                races[rid] = previous
+                return
+            print(f"[COURSE] {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')})")
+            race = collect_race(comp, category, reason, previous, today, cn_items, fetched)
+            if not race:
+                return
+            race["season"] = y
+            races[rid] = race
+            _dump(race_path(rid), race)
+            for idx in range(len(race["stages"])):
+                key = stage_key(race, idx)
+                if key not in notified:
+                    notified.add(key)
+                    if _is_recent(race["stages"][idx], today, NOTIFY_DAYS):
+                        new_items.append((race, idx))
+
+        # les plus récentes d'abord : ce sont elles qui comptent si le budget de temps est atteint
+        picked.sort(key=lambda p: p[0].get("start_date") or "", reverse=True)
+        for comp, category, reason in picked:
             if over_budget():
                 stopped = True
                 break
-            if comp["competition_id"] in picked_ids or comp.get("uci_class") not in TOP10_CLASSES:
-                continue
-            cid = str(comp["competition_id"])
-            rid = f"uci-{cid}"
-            if top10_cache.get(cid) is False:
-                continue
-            previous = _load(race_path(rid), None)
-            if previous and not _needs_refresh(comp, previous, today):
-                races[rid] = previous
-                continue
-            data = uci.get_race(comp)
-            if not data or not data.get("stages"):
-                continue
-            probe = {"stages": data["stages"], "final": data.get("final"), "riders": data.get("riders") or {},
-                     "race_type": data.get("race_type")}
-            ok = selection.french_top10(probe)
-            end = _date(comp.get("end_date"))
-            if end and (today - end).days > REFRESH_DAYS and data.get("complete", True):
-                top10_cache[cid] = ok
-            if ok:
-                cat = "." + comp["uci_class"].split(".")[1][0]
-                handle(comp, cat, "francais_top10", fetched=data)
+            handle(comp, category, reason)
+            count += 1
+            if max_races and count >= max_races:
+                break
 
-    # Calendrier prévisionnel : Wikipédia (pages « {année} UCI World Tour / ProSeries / Europe Tour »), complété
-    # par les manches FDJ United Series publiées par la LNC. Vide tant que ces pages n'existent pas.
+        # .1 / .2 hors de France : retenues si un Français termine dans les 10 premiers.
+        if not only and not stopped and not (max_races and count >= max_races):
+            for comp in sorted(comps, key=lambda c: c.get("start_date") or "", reverse=True):
+                if over_budget():
+                    stopped = True
+                    break
+                if comp["competition_id"] in picked_ids or comp.get("uci_class") not in TOP10_CLASSES:
+                    continue
+                cid = str(comp["competition_id"])
+                rid = f"uci-{cid}"
+                if top10_cache.get(cid) is False:
+                    continue
+                previous = _load(race_path(rid), None)
+                if previous and not _needs_refresh(comp, previous, today):
+                    races[rid] = previous
+                    continue
+                data = uci.get_race(comp)
+                if not data or not data.get("stages"):
+                    continue
+                probe = {"stages": data["stages"], "final": data.get("final"), "riders": data.get("riders") or {},
+                         "race_type": data.get("race_type")}
+                ok = selection.french_top10(probe)
+                end = _date(comp.get("end_date"))
+                if end and (today - end).days > REFRESH_DAYS and data.get("complete", True):
+                    top10_cache[cid] = ok
+                if ok:
+                    cat = "." + comp["uci_class"].split(".")[1][0]
+                    handle(comp, cat, "francais_top10", fetched=data)
+
+    # Calendrier prévisionnel : Wikipédia (EN + FR), complété par les manches FDJ de la LNC ; réparti par saison UCI.
     try:
         upcoming = wikipedia_cal.list_upcoming(today)
     except Exception as e:  # une source secondaire ne doit jamais faire échouer le passage
         print(f"[WARN] calendrier Wikipédia indisponible : {e}")
         upcoming = []
-    print(f"[CALENDRIER] {len(upcoming)} course(s) suivie(s) à venir")
-    # Garde les fichiers de courses non revues ce passage (index complet de la saison)
-    for fname in os.listdir(RACES_DIR):
-        rid = fname[:-5]
-        if fname.endswith(".json") and rid not in races and not only:
-            prev = _load(os.path.join(RACES_DIR, fname), None)
-            if prev and prev.get("season") == season:
-                races[rid] = prev
-    index = build_index(list(races.values()), season, upcoming, fdj)
+    upcoming_by_season: Dict[int, List[Dict]] = {}
+    for u in upcoming:
+        upcoming_by_season.setdefault(_saison_de(u.get("start_date")) or season, []).append(u)
+    print(f"[CALENDRIER] à venir par saison : " + ", ".join(f"{y} : {len(v)}" for y, v in sorted(upcoming_by_season.items())))
+
+    # Fichiers de courses non revus ce passage : gardés dans l'index de leur saison
+    if not only:
+        for fname in os.listdir(RACES_DIR):
+            rid = fname[:-5]
+            if not fname.endswith(".json"):
+                continue
+            for y, races in races_by_season.items():
+                if rid not in races:
+                    prev = _load(os.path.join(RACES_DIR, fname), None)
+                    if prev and prev.get("season") == y:
+                        races[rid] = prev
+    indexes = {y: build_index(list(r.values()), y, upcoming_by_season.get(y, []), fdj if y == season else None)
+               for y, r in races_by_season.items()}
+    # Saison suivante sans aucune course collectée mais avec un calendrier publié : proposée quand même
+    for y, ups in upcoming_by_season.items():
+        if y > season and y not in indexes:
+            indexes[y] = build_index([], y, ups, None)
+    index = indexes[season]
     if new_items:
         index["notification"] = agents_flash.build_notification(new_items)
     if not only:
-        write_season_indexes(season, index, today)
+        write_season_indexes(season, indexes, today)
     # Rien de neuf (hors horodatage) : fichiers inchangés, donc pas de commit inutile à chaque passage horaire.
     old_index = _load(os.path.join(DATA_DIR, "index.json"), {})
     unchanged = {k: v for k, v in old_index.items() if k != "generated_at"} == \
@@ -521,5 +556,6 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
         _dump(os.path.join(DATA_DIR, "state.json"), new_state)
     if stopped:
         print(f"[BUDGET] budget de {budget_min:.0f} min atteint : collecte interrompue, reprise au prochain passage")
-    print(f"[FIN] {len(races)} courses dans l'index, {len(new_items)} nouveauté(s) à notifier")
+    print(f"[FIN] saison {season} : {len(races_by_season[season])} courses ; saisons dans le calendrier : "
+          f"{sorted(indexes, reverse=True)} ; {len(new_items)} nouveauté(s) à notifier")
     return index

@@ -193,6 +193,33 @@ def _alleger(riders: Dict[str, Dict[str, Any]]) -> None:
             f["results"] = []
 
 
+def _meilleurs(races: List[Dict[str, Any]], fiches: Dict[str, Dict[str, Any]], n: int = 3) -> None:
+    """Pour chaque Français : ses `n` résultats de la saison ayant rapporté le plus de points UCI (champ `best`,
+    même forme que `results` + `uci_points`). Points tels que publiés par l'UCI (PointPcR), sans recalcul."""
+    cands: Dict[str, List[Dict[str, Any]]] = {}
+
+    def ajouter(rid: Optional[str], r: Dict[str, Any], res: Dict[str, Any]) -> None:
+        pts = r.get("uci_points")
+        if rid in fiches and fiches[rid].get("is_french") and pts and r.get("status") is None and r.get("rank"):
+            cands.setdefault(rid, []).append(dict(res, uci_points=pts))
+
+    for race in races:
+        for s in _etapes(race):
+            numero = s.get("number")
+            label = "Course" if numero is None else (s.get("name") or f"Étape {numero}")
+            date = s.get("date") or race.get("start_date") or ""
+            for r in _classement_course(race, s):
+                ajouter(r.get("rider_id"), r, _resultat(race, date, numero, label, "stage", r.get("rank")))
+        fin = _classements_finaux(race)
+        date_fin = (_etapes(race)[-1].get("date") if race.get("stages") else None) or race.get("end_date") or ""
+        for cle, label in FINAUX:
+            for r in fin.get(cle) or []:
+                ajouter(r.get("rider_id"), r, _resultat(race, date_fin, None, label, cle, r.get("rank")))
+    for rid, lst in cands.items():
+        lst.sort(key=lambda x: (-x["uci_points"], x["rank"], x["date"]))
+        fiches[rid]["best"] = lst[:n]
+
+
 def build_riders(races: List[Dict[str, Any]], ranking: Optional[Dict[str, Any]],
                  now: Optional[datetime.datetime] = None, season: Optional[int] = None) -> Dict[str, Any]:
     """`season` : saison UCI visée ; si fournie, seules les courses de cette saison sont prises en compte
@@ -201,6 +228,7 @@ def build_riders(races: List[Dict[str, Any]], ranking: Optional[Dict[str, Any]],
     if season is not None:
         races = [r for r in races if r.get("season") in (None, season)]
     riders = _agreger(races)
+    _meilleurs(races, riders)
     for f in riders.values():
         f["age"] = _age(f["birth_date"], now.date())
     appaires = _rapprocher(riders, ranking or {})

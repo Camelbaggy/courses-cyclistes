@@ -72,10 +72,43 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
 
   await page.goto(base); await page.waitForSelector('.card');
   await cap('01-recents', true);
-  for (const [t, nom] of [['calendrier', '02-calendrier'], ['fdj', '03-fdj'], ['francais', '04-francais']]) {
-    await page.click(`.tab[data-tab="${t}"]`); await cap(nom, true);
+  // Calendrier : saison en cours, puis autre saison ; Résultats / À venir ; filtre WT
+  await page.click('.tab[data-tab="calendrier"]'); await page.waitForSelector('#cal-saisons'); await page.waitForSelector('.cal-item');
+  await cap('02a-calendrier-resultats', true);
+  await page.click('[data-calvue="avenir"]'); await cap('02b-calendrier-avenir-vide', false);
+  const saisons = await page.$$eval('[data-calsaison]', b => b.map(x => x.dataset.calsaison));
+  for (const y of saisons.slice(0, 2)) {
+    await page.click(`[data-calsaison="${y}"]`); await page.waitForTimeout(400);
+    await page.click('[data-calvue="resultats"]'); await cap(`02c-calendrier-${y}-resultats`, false);
+    await page.click('[data-calvue="avenir"]'); await cap(`02d-calendrier-${y}-avenir`, false);
   }
-  await page.click('.tab[data-tab="calendrier"]'); await page.click('.chip[data-cat="WT"]'); await cap('02b-calendrier-wt', false);
+  await page.click('.chip[data-cat="WT"]'); await cap('02e-calendrier-avenir-wt', false);
+  await page.click('.chip[data-cat="all"]');
+  // Classements : UCI (recherche, Français, plus), FDJ Series
+  await page.click('.tab[data-tab="classements"]'); await page.waitForSelector('.row.uc, .empty');
+  await cap('03a-classement-uci', false);
+  if (await page.$('#uc-q')) {
+    await page.click('[data-action="uc-more"]').catch(() => {}); await cap('03b-uci-plus', false);
+    await page.click('[data-action="uc-fr"]'); await cap('03c-uci-francais', false);
+    await page.click('[data-action="uc-fr"]'); await page.fill('#uc-q', 'ebauche'); await cap('03d-uci-recherche', false);
+    await page.fill('#uc-q', '');
+    const lien = await page.$('#uc-list .rlink');
+    if (lien) { await lien.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('03e-uci-fiche-coureur', false); await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300); }
+  }
+  await page.click('[data-clsub="fdj"]'); await cap('03f-classement-fdj', true);
+  await page.click('.tab[data-tab="francais"]'); await page.waitForSelector('.fr-card'); await cap('04a-francais', false);
+  await page.evaluate(() => document.querySelector('details.nc') && (document.querySelector('details.nc').open = true));
+  await cap('04b-francais-complet', true);
+  await page.click('.fr-card'); await page.waitForSelector('#rsheet.open .tile'); await cap('04c-francais-fiche', false);
+  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
+  // fiche coureur ouverte depuis le calendrier d'une autre saison (riders-<saison>)
+  await page.goto(base + '&saison=' + saisons[0]); await page.waitForSelector('.card');
+  await page.click('.tab[data-tab="calendrier"]'); await page.click(`[data-calsaison="${saisons[0]}"]`); await page.waitForSelector('.cal-item');
+  await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
+  const rl = await page.$('#sheet .rlink'); if (rl) { await rl.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('05-fiche-coureur-saison', false); }
+  await page.goto(base); await page.waitForSelector('.card');
+  await cap('01-recents', true);
+  if (conf.navonly) { await browser.close(); console.log('ERREURS_CONSOLE', JSON.stringify(erreurs)); console.log('DEBORDEMENTS', JSON.stringify(debord)); return; }
 
   // fiche course par étapes (étape la plus récente)
   await page.goto(base + '#course/fx-tour-test'); await page.waitForSelector('#sheet.open .card');
@@ -129,6 +162,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sortie", nargs="?", default=SORTIE_DEFAUT)
     ap.add_argument("--data", default="tools/fixtures/data", help="dossier de données relatif à la racine du dépôt")
+    ap.add_argument("--nav", action="store_true", help="seulement les onglets (données réelles : sans les fiches fictives)")
     ap.add_argument("--sombre", action="store_true", help="thème sombre (suffixe -sombre sur les fichiers)")
     args = ap.parse_args()
     sortie = Path(args.sortie)
@@ -140,7 +174,7 @@ def main():
     for p in sorted(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux*/chrome")):
         chromium = str(p)
     conf = {"port": port, "data": args.data, "sortie": str(sortie), "chromium": chromium,
-            "scheme": "dark" if args.sombre else "light", "suffixe": "-sombre" if args.sombre else ""}
+            "scheme": "dark" if args.sombre else "light", "suffixe": "-sombre" if args.sombre else "", "navonly": args.nav}
     env = dict(os.environ, NODE_PATH=NODE_PATH, APERCU_CONF=json.dumps(conf))
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
         f.write(SCRIPT_NODE)

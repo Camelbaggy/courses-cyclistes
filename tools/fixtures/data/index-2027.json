@@ -1,0 +1,171 @@
+{
+ "_fixture": true,
+ "generated_at": "2026-10-30T12:00:00Z",
+ "season": 2027,
+ "races": [
+  {
+   "id": "fx-afrique-2027",
+   "name": "Championnats d'Afrique (fictifs)",
+   "country": "RWA",
+   "flag": "rw",
+   "uci_class": "CC",
+   "category": "Champ.",
+   "race_type": "one_day",
+   "start_date": "2026-10-28",
+   "end_date": "2026-10-28",
+   "status": "finished",
+   "stages_done": 1,
+   "stages_total": 1,
+   "selection_reason": "classe",
+   "winner": {
+    "id": "modele-romain-19890406",
+    "name": "Romain Modèle",
+    "nationality": "AUS",
+    "flag": "au",
+    "is_french": false,
+    "team": "Delta Pro Cycling"
+   },
+   "leader": null,
+   "best_french": null,
+   "sources": [
+    "uci"
+   ]
+  }
+ ],
+ "upcoming": [
+  {
+   "name": "Épreuve fictive n°1",
+   "country": "AUS",
+   "flag": "au",
+   "uci_class": "2.UWT",
+   "category": "WT",
+   "start_date": "2027-01-19",
+   "end_date": "2027-01-23"
+  },
+  {
+   "name": "Épreuve fictive n°2",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "Pro",
+   "start_date": "2027-01-28",
+   "end_date": "2027-01-28"
+  },
+  {
+   "name": "Épreuve fictive n°3",
+   "country": "ESP",
+   "flag": "es",
+   "uci_class": "1.1",
+   "category": ".1",
+   "start_date": "2027-02-06",
+   "end_date": "2027-02-06"
+  },
+  {
+   "name": "Épreuve fictive n°4",
+   "country": "ITA",
+   "flag": "it",
+   "uci_class": "1.2",
+   "category": ".2",
+   "start_date": "2027-02-15",
+   "end_date": "2027-02-15"
+  },
+  {
+   "name": "Épreuve fictive n°5",
+   "country": "BEL",
+   "flag": "be",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "start_date": "2027-02-24",
+   "end_date": "2027-02-28"
+  },
+  {
+   "name": "Épreuve fictive n°6",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "FDJ",
+   "start_date": "2027-03-05",
+   "end_date": "2027-03-05"
+  },
+  {
+   "name": "Épreuve fictive n°7",
+   "country": "AUS",
+   "flag": "au",
+   "uci_class": "2.UWT",
+   "category": "WT",
+   "start_date": "2027-03-14",
+   "end_date": "2027-03-14"
+  },
+  {
+   "name": "Épreuve fictive n°8",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "Pro",
+   "start_date": "2027-03-23",
+   "end_date": "2027-03-23"
+  },
+  {
+   "name": "Épreuve fictive n°9",
+   "country": "ESP",
+   "flag": "es",
+   "uci_class": "1.1",
+   "category": ".1",
+   "start_date": "2027-04-01",
+   "end_date": "2027-04-05"
+  },
+  {
+   "name": "Épreuve fictive n°10",
+   "country": "ITA",
+   "flag": "it",
+   "uci_class": "1.2",
+   "category": ".2",
+   "start_date": "2027-04-10",
+   "end_date": "2027-04-10"
+  },
+  {
+   "name": "Épreuve fictive n°11",
+   "country": "BEL",
+   "flag": "be",
+   "uci_class": "1.UWT",
+   "category": "WT",
+   "start_date": "2027-04-19",
+   "end_date": "2027-04-19"
+  },
+  {
+   "name": "Épreuve fictive n°12",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "FDJ",
+   "start_date": "2027-04-28",
+   "end_date": "2027-04-28"
+  },
+  {
+   "name": "Épreuve fictive n°13",
+   "country": "AUS",
+   "flag": "au",
+   "uci_class": "2.UWT",
+   "category": "WT",
+   "start_date": "2027-05-07",
+   "end_date": "2027-05-11"
+  },
+  {
+   "name": "Épreuve fictive n°14",
+   "country": "FRA",
+   "flag": "fr",
+   "uci_class": "1.Pro",
+   "category": "Pro",
+   "start_date": "2027-05-16",
+   "end_date": "2027-05-16"
+  }
+ ],
+ "latest": [],
+ "fdj_united_series": null,
+ "french_wins": [],
+ "notification": {
+  "send": false,
+  "title": "Données fictives",
+  "message": "Jeu de test"
+ }
+}

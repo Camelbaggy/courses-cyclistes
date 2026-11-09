@@ -345,16 +345,29 @@ def _liste_paginee(chemin: str, filtres: Optional[List[Tuple[str, Any]]] = None,
     return sortie
 
 
+_BORNES: Optional[Dict[int, Tuple[str, str]]] = None
+
+
+def season_bounds() -> Dict[int, Tuple[str, str]]:
+    """{année: (début ISO, fin ISO)} des saisons UCI route (la saison N court de mi-octobre N-1 à mi-octobre N)."""
+    global _BORNES
+    if _BORNES is None:
+        saisons = netutil.fetch_json(f"{BASE}/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId={DISCIPLINE_ROUTE}",
+                                     raw_name="uci_saisons")
+        _BORNES = {}
+        for s in saisons if isinstance(saisons, list) else []:
+            debut, fin = _date_iso((s or {}).get("StartDate")), _date_iso((s or {}).get("EndDate"))
+            if isinstance(s, dict) and s.get("Year") and debut and fin:
+                _BORNES[s["Year"]] = (debut, fin)
+    return _BORNES
+
+
 def season_for(day: Any) -> Optional[int]:
-    """Année de la saison UCI route contenant la date `day` (la saison N court de mi-octobre N-1 à mi-octobre N)."""
-    saisons = netutil.fetch_json(f"{BASE}/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId={DISCIPLINE_ROUTE}",
-                                 raw_name="uci_saisons")
-    if not isinstance(saisons, list):
-        return None
-    iso = day.isoformat()
-    for s in saisons:
-        if isinstance(s, dict) and (_date_iso(s.get("StartDate")) or "9999") <= iso <= (_date_iso(s.get("EndDate")) or ""):
-            return s.get("Year")
+    """Année de la saison UCI route contenant la date `day` (objet date ou chaîne ISO)."""
+    iso = day if isinstance(day, str) else day.isoformat()
+    for annee, (debut, fin) in season_bounds().items():
+        if debut <= iso <= fin:
+            return annee
     return None
 
 
