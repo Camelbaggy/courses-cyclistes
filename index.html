@@ -1071,7 +1071,7 @@ async function init() {
   if (g && !isNaN(g)) {
     document.getElementById("maj").textContent = `MàJ ${g.getDate()} ${MOIS_C[g.getMonth()]} ${p2(g.getHours())}h${p2(g.getMinutes())}`;
   }
-  document.getElementById("foot").textContent = `Saison ${ix.season ?? ""} · ${(ix.races || []).length} courses suivies · résultats UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)`;
+  document.getElementById("foot").textContent = "Résultats et classement : UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)";
   renderMain(); preparerOnglet();
   routeur();
 }
