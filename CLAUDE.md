@@ -24,7 +24,7 @@ python run_pipeline.py --season 2026 --only Roubaix   # une course
 python tools/inspect_data.py data                     # résumé lisible des données produites
 python uci.py && python selection.py && python wikipedia_cal.py && python riders.py --test   # tests locaux (assert)
 AI_BUDGET_SECONDS=0 python tools/essais/essai_ia.py   # dossier, repli, notification sur tools/fixtures_ia
-python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright)
+python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright), dossier obligatoire
 python run_pipeline.py --archive 2023 --max-races 5  # mode archives (écrit dans data/archives/ : à supprimer ensuite)
 python collector.py --test                            # tests locaux de compact_race (sans réseau)
 python -m py_compile *.py tools/*/*.py                # contrôle statique
@@ -63,7 +63,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
-run_pipeline.py --archive 2021-2025 ── collector.run_archive (saisons passées -> data/archives/, voir ci-dessous)
+run_pipeline.py --archive 2021-2025 ── collector.run_archive (rotation calendrier -> archives, puis saisons passées -> data/archives/, voir ci-dessous)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
 index.html : page unique (CSS + JS inline)
 ```
@@ -80,9 +80,18 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est plus jamais recollectée
   (aucune requête). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
   `ARCHIVES_SAISONS`, défaut 2021-2025, même groupe de concurrence que `update.yml`, commit de `data/archives/`
-  seulement). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
+  seulement : désormais `git add data/`, pour inclure les suppressions de la rotation). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
   écrire ni y committer d'archives. Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
   en Pro et les classes 2009-2010 (`1.CH`, `2.CH`, `CPE`, `AU1`, `MNM`) en WT (libellé `uci_class` inchangé).
+- **Rotation calendrier -> archives** : une saison S quitte le Calendrier (`seasons.json.available`) et passe dans
+  `data/archives/<S>/` quand S+1 est terminée, soit quand la date du jour dépasse de plus de 14 jours la fin de la
+  dernière course (`end_date`, à défaut `start_date`, des courses et des `upcoming` de `data/index-<S+1>.json`) ; une
+  course à venir future, un index de S+1 absent ou vide : pas de rotation (exemple : 2026 part ~2 semaines après la
+  dernière course de 2027). Règle pure `collector.saisons_a_archiver`, utilisée par `write_season_indexes` (update.yml :
+  la saison n'est plus listée ni réécrite) et par `collector.migrer_saisons_anciennes` (appelée au début de
+  `run_archive`, donc par archives.yml seulement : compactage dans `data/archives/<S>/`, classement de fin de saison,
+  riders.json, state complete, puis suppression de `data/races/<id>.json`, `index-<S>.json`, `riders-<S>.json` de S).
+  Le contrôle nocturne ne lit que des fichiers (aucune requête). update.yml n'écrit jamais dans `data/archives/`.
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
@@ -119,8 +128,12 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 ## Interface (`index.html`)
 
 Page autonome sans dépendance, thème sombre unique (comme le dashboard des Coupes d'Europe), drapeaux flagcdn.com ;
-toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents · Calendrier (un sous-onglet par saison,
-Résultats / À venir, filtres de catégorie) · Classements (UCI, FDJ Series) · Français (triés par rang UCI, 3
-meilleurs résultats). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
-change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons) ; `?saison=AAAA`. Vérifier le rendu
+toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents · Calendrier (un sous-onglet par saison de
+`seasons.json.available`, Résultats / À venir, filtres de catégorie) · Classements (UCI, FDJ Series) · Français
+(triés par rang UCI, 3 meilleurs résultats) · Archives (menu déroulant des saisons de `archives/index.json`, lien
+`?archive=AAAA`, chargement paresseux : classement UCI de fin de saison, victoires françaises, liste des courses ;
+fiche course lue dans `archives/<année>/races/`, fiche coureur dans `archives/<année>/riders.json`, jamais de repli
+vers une autre saison ; les clés null sont absentes des archives, la page traite absent = null ; anciennes classes
+HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle d'équivalence). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
+change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons + `archives/` fictives, régénérables par `tools/fixtures/generer_archives.py`) ; `?saison=AAAA`. Vérifier le rendu
 avec `tools/apercu.py` (option `--nav` sur les données réelles) après toute modification.

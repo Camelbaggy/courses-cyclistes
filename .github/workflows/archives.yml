@@ -1,6 +1,6 @@
 name: Archives (saisons passées)
 
-# Collecte des saisons passées dans data/archives/ (docs/PLAN_ARCHIVES.md). Passages nocturnes, hors des créneaux de
+# Collecte des saisons passées dans data/archives/ (docs/PLAN_ARCHIVES.md) et rotation N / N-1 (les saisons < N-1 quittent data/ pour data/archives/). Passages nocturnes, hors des créneaux de
 # update.yml ; chaque passage reprend où le précédent s'est arrêté (budget de temps) et une saison complète n'est
 # plus jamais recollectée. Saisons : entrée manuelle, sinon variable de dépôt ARCHIVES_SAISONS, sinon 2021-2025.
 on:
@@ -46,7 +46,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/archives/
+          git add data/   # inclut les suppressions de la rotation N / N-1
           if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
           git commit -m "chore: archives ${SAISONS}"
           # si un autre passage a commité entre-temps (update.yml : data/ hors archives), pas de conflit attendu
