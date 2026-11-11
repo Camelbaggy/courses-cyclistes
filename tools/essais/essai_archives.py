@@ -23,6 +23,7 @@ MSG = os.environ.get("MSG", "")
 m = re.search(r"\[annees:([0-9,]+)\]", MSG)
 ANNEES = [int(a) for a in m.group(1).split(",")] if m else [2023, 2018, 2013, 2008]
 netutil.HOST_DELAYS["dataride.uci.org"] = 2.0
+uci.GARDER_BRUT = True  # diagnostic : ResultValue brut dans `_rv`
 DEBUT = time.time()
 NB_REQ = Counter()
 _fetch = netutil.fetch_text
@@ -134,6 +135,9 @@ def lecture_grand_tour(comp):
                 continue
             rows = uci._classements_event(ev, cle, riders)
             print(f"     [{cle}] {resume_lignes(rows, riders) if rows is not None else 'ÉCHEC'}")
+            sans = [r for r in rows or [] if 'rider_id' in r and not r['status'] and r['time_s'] is None and r['points'] is None]
+            if sans:
+                print(f"        {len(sans)} lignes sans statut ni valeur ; ex. :", [(r['rank'], r.get('_rv')) for r in sans[:5]])
 
 
 def saison(annee):
@@ -156,10 +160,10 @@ def saison(annee):
     print("dates vides :", sum(1 for c in comps if not c["start_date"]), "| pays vides :", sum(1 for c in comps if not c["country"]))
     sel = selection.select(comps, None)
     print(f"sélection actuelle (sans FDJ) : {len(sel)} ; par catégorie {Counter(cat for _, cat, _ in sel).most_common()}")
-    for motif in ("Giro", "Tour de France", "Vuelta", "Milano", "Ronde van Vlaanderen|Tour des Flandres", "Roubaix",
+    for motif in ("Giro d.Italia", "Tour de France", "Vuelta", "Milano", "Ronde van Vlaanderen|Tour des Flandres", "Roubaix",
                   "Li[eè]ge", "Lombardia", "Championnat|National Championships"):
         c = [x for x in comps if re.search(motif, x["name"], re.I)]
-        print(f"   {motif!r} : {[(x['name'], x['uci_class'], x['country'], x['start_date']) for x in c[:3]]}")
+        print(f"   {motif!r} : {[(x['name'], x['uci_class'], x['country'], x['start_date']) for x in c[:4]]}")
 
     gt = trouve(comps, [r"^Tour de France"], "WT")
     if gt:
@@ -229,6 +233,13 @@ def conditions():
 
 
 def main():
+    if m:  # saisons choisies : liste complète déjà documentée (docs/recherche/archives_dataride.md)
+        for a in ANNEES:
+            saison(a)
+        titre("Bilan")
+        print("requêtes par endpoint :", NB_REQ.most_common())
+        print("codes Irm :", uci.IRM_VUS.most_common())
+        return
     titre("Saisons DataRide disponibles (route)")
     saisons = netutil.fetch_json(f"{uci.BASE}/iframe/GetRestrictedResultsDisciplineSeasons/?disciplineId={uci.DISCIPLINE_ROUTE}")
     if not isinstance(saisons, list):
