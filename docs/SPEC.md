@@ -179,7 +179,7 @@ Conventions : temps et écarts **toujours en secondes entières** dans le JSON (
 ### 4.4 `data/archives/` (saisons passées, mode archives)
 
 Écrit uniquement par `python run_pipeline.py --archive SAISONS` (`collector.run_archive`, workflow `archives.yml`) ;
-ne touche jamais aux fichiers de 4.1 à 4.3.
+ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessous (suppression des fichiers d'une saison migrée).
 
 - `data/archives/index.json` : `{"generated_at", "seasons": [{"season", "complete", "races", "size_bytes"}]}`, saisons
   triées par ordre décroissant.
@@ -195,6 +195,20 @@ ne touche jamais aux fichiers de 4.1 à 4.3.
 - Une saison `complete` (parcourue entièrement, sans arrêt sur budget, et close selon les bornes UCI) n'est plus
   jamais recollectée. Sélection : `selection.select(comps, [])` (sans manche FDJ / Coupe de France historique), plus
   sondage « Français dans le top 10 » des .1 / .2 étrangères.
+
+- **Rotation calendrier -> archives** : une saison S de `seasons.json.available` est à archiver quand S+1 est
+  terminée : date du jour > fin de la dernière course de S+1 + 14 jours (max des `end_date`, à défaut `start_date`, des
+  `races` et `upcoming` de `data/index-<S+1>.json`). Course à venir encore future, index de S+1 absent ou vide : pas de
+  rotation. Fonction pure `collector.saisons_a_archiver(seasons_dispo, index_par_saison, today)`. Effets : (1)
+  `write_season_indexes` (update.yml) ne liste plus S dans `seasons.json.available` et ne réécrit plus ses
+  `index-S.json` / `riders-S.json` ; (2) `collector.migrer_saisons_anciennes` (début de `run_archive`, archives.yml
+  seulement, jamais update.yml qui n'a pas `data/archives/`) compacte chaque course de S dans `archives/<S>/races/`
+  (sans écraser une course déjà archivée ; les résumés d'origine sont conservés), écrit `index.json` (archive, complete),
+  `ranking.json` + `riders.json` de fin de saison, `state.json` `{"complete": true, "top10_checked": {}}`, et
+  seulement ensuite supprime `data/races/<id>.json`, `data/index-S.json`, `data/riders-S.json`. Log
+  `[ROTATION] saison S -> archives (N courses)`. archives.yml commit `data/` (suppressions incluses).
+- La page lit `archives/index.json` (liste des saisons, `complete`) à l'ouverture de l'onglet Archives, puis
+  `archives/<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
 
 ## 5. Interfaces Python (contrat entre modules)
 
@@ -237,6 +251,9 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
 
 ## 6. Interface (`index.html`, page unique sans dépendance, mobile ~390 px)
 
+- Onglet **Archives** (5e) : menu déroulant des saisons archivées (« 2023 (collecte en cours) » si `complete` est faux),
+  encart « Classement UCI de fin de saison » (top 10), « Victoires françaises », liste des courses avec les mêmes filtres
+  de catégorie que le Calendrier ; fiches course et coureur issues de `archives/<année>/`.
 - Onglets : **Récents** (cartes `latest` : course, étape, vainqueur, meilleur Français, résumé IA) ·
   **Calendrier** (courses de la saison groupées par mois, filtre par catégorie WT / Pro / FDJ / .1 / .2 / Champ.,
   statut, vainqueur ; à venir en grisé) · **FDJ United Series** (classement + manches) · **Français**

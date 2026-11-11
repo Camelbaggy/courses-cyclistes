@@ -47,10 +47,10 @@ header.top {
 .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
 .app-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
 .app-sub { font-size: .72rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-.tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
+.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .tab {
-  font-size: .82rem; font-weight: 600; color: var(--muted); padding: 10px 2px;
-  border-bottom: 3px solid transparent; white-space: nowrap;
+  font-size: .74rem; font-weight: 600; color: var(--muted); padding: 10px 0;
+  border-bottom: 3px solid transparent; white-space: nowrap; min-width: 0;
 }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
@@ -235,6 +235,16 @@ a { color: var(--accent); }
 .best .pt { font-size: .68rem; color: var(--muted); white-space: nowrap; }
 details.nc { margin-top: 12px; }
 details.nc summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--muted); padding: 8px 2px; }
+.sel { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font: inherit; font-size: .95rem; font-weight: 600; padding: 9px 12px; }
+.sel:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.badge[title] { cursor: help; }
+.wins-row { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; width: 100%; text-align: left; padding: 8px 12px; border-top: 1px solid var(--border); font-size: .84rem; }
+.wins-row:first-child { border-top: none; }
+.wins-row:active { background: var(--elev); }
+.wins-row .d { color: var(--muted); font-size: .74rem; }
+.wins-row .l { min-width: 0; overflow-wrap: anywhere; }
+.wins-row .l small { display: block; color: var(--muted); font-size: .74rem; }
+.arch-note { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
 footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
 </style>
 </head>
@@ -250,6 +260,7 @@ footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px
     <button class="tab" role="tab" data-tab="calendrier">Calendrier</button>
     <button class="tab" role="tab" data-tab="classements">Classements</button>
     <button class="tab" role="tab" data-tab="francais">Français</button>
+    <button class="tab" role="tab" data-tab="archives">Archives</button>
   </nav>
 </header>
 <main id="main"><div class="loading">Chargement…</div></main>
@@ -333,7 +344,7 @@ const cache = new Map();
 async function charger(chemin) {
   if (cache.has(chemin)) return cache.get(chemin);
   const p = fetch(`${BASE}/${chemin}`, { cache: "no-cache" }).then(r => {
-    if (!r.ok) throw new Error(`HTTP ${r.status} pour ${BASE}/${chemin}`);
+    if (!r.ok) { const e = new Error(`HTTP ${r.status} pour ${BASE}/${chemin}`); e.status = r.status; throw e; }
     return r.json();
   });
   cache.set(chemin, p);
@@ -348,19 +359,36 @@ function plink(id, texte) {
 
 const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null, calSaison: null, ctxSaison: null,
   subVoulu: null, tab: "recents", clSub: "uci", filtreCat: "all", calVue: "resultats", course: null, sel: null, sub: null, frOnly: false,
-  limit: 50, ouvertParApp: false, ranking: undefined, uc: { fr: false, q: "", limit: 100 } };
+  limit: 50, ouvertParApp: false, ranking: undefined, uc: { fr: false, q: "", limit: 100 },
+  // archives : index (undefined = pas chargé, null = indisponible), saison choisie, index/classements par saison,
+  // chemin (année) de chaque course d'archive connue, catégorie filtrée ; courseArchive = année de la fiche ouverte
+  archIdx: undefined, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
+  ctxArchive: false, courseArchive: null };
 
 /* ================== éléments communs ================== */
+const CLASSES_ANCIENNES = {
+  "1.HC": "ancienne classe HC, équivalent Pro", "2.HC": "ancienne classe HC, équivalent Pro",
+  "1.CH": "calendrier historique (avant 2011), équivalent WorldTour", "2.CH": "calendrier historique (avant 2011), équivalent WorldTour",
+  "CPE": "ProTour (avant 2011), équivalent WorldTour", "AU1": "ProTour (avant 2011), équivalent WorldTour", "MNM": "ProTour (avant 2011), équivalent WorldTour",
+};
+function equivClasse(cl) { return Object.prototype.hasOwnProperty.call(CLASSES_ANCIENNES, cl) ? CLASSES_ANCIENNES[cl] : ""; }
 function catBadge(c, cl) {
-  return `<span class="badge cat-${esc((c || "").replace(/[^\w]/g, ""))}">${esc(cl || c)}</span>`;
+  const eq = equivClasse(cl);
+  return `<span class="badge cat-${esc((c || "").replace(/[^\w]/g, ""))}"${eq ? ` title="${esc(eq)}"` : ""}>${esc(cl || c)}</span>`;
 }
 function courseParId(id) {
-  const ordre = [state.indexes[state.calSaison], state.index].concat(Object.values(state.indexes));
+  const ordre = [state.indexes[state.calSaison], state.index].concat(Object.values(state.indexes), Object.values(state.archIndexes));
   for (const ix of ordre) { const r = ix && (ix.races || []).find(x => x.id === id); if (r) return r; }
   return null;
 }
-/** Saison de contexte : celle du sous-onglet Calendrier si on y est, sinon la saison en cours. */
-function majContexte() { state.ctxSaison = state.tab === "calendrier" ? state.calSaison : state.current; }
+/** Saison de contexte : celle d'une fiche d'archive ouverte, de l'onglet Archives ou du sous-onglet Calendrier,
+ *  sinon la saison en cours (ctxArchive : les fiches coureurs viennent alors de archives/<année>/riders.json). */
+function majContexte() {
+  const f = document.getElementById("sheet");
+  if (state.courseArchive != null && f && f.classList.contains("open")) { state.ctxSaison = state.courseArchive; state.ctxArchive = true; }
+  else if (state.tab === "archives") { state.ctxSaison = state.archSaison; state.ctxArchive = state.archSaison != null; }
+  else { state.ctxSaison = state.tab === "calendrier" ? state.calSaison : state.current; state.ctxArchive = false; }
+}
 function ligneCoureur(ref, label, extra) {
   if (!ref) return "";
   return `<div class="winner-line"><span class="pill-label">${esc(label)}</span>${flag(ref.flag, ref.nationality)}
@@ -426,6 +454,12 @@ function renderCalendrier() {
       : saisonTerminee(y, ix) ? "Toutes les courses de la saison ont été courues." : "Calendrier pas encore publié.";
     return html + `<div class="empty card">${vide}</div>`;
   }
+  return html + listeCourses(tout);
+}
+
+/** Courses groupées par mois (liste commune au Calendrier et aux Archives) ; `tout` déjà filtré et trié. */
+function listeCourses(tout) {
+  let html = "";
   let mois = "";
   tout.forEach(r => {
     const p = pd(r.start_date);
@@ -481,6 +515,18 @@ async function chargerRanking() {
 async function chargerRidersCourant() {
   try { return await chargerAvecRepli(`riders-${state.current}.json`, "riders.json"); } catch (e) { return null; }
 }
+/** Ligne du classement UCI ; `ids` : fiches connues (le nom n'est cliquable que s'il y a une fiche), null = toujours cliquable. */
+function ligneUci(r, ids) {
+  const mv = r.previous_rank == null || r.rank == null ? ""
+    : r.previous_rank > r.rank ? `<span class="mv up">▲${r.previous_rank - r.rank}</span>`
+    : r.previous_rank < r.rank ? `<span class="mv down">▼${r.rank - r.previous_rank}</span>` : `<span class="mv">=</span>`;
+  const nom = r.name || r.rider || "";
+  const lien = r.rider_id && (!ids || ids[r.rider_id]);
+  return `<div class="row uc ${r.nationality === "FRA" ? "fr" : ""}">
+    <div class="rk">${esc(r.rank)}${mv}</div>${drapeauIso3(r.nationality)}
+    <div class="mid"><div class="nm">${lien ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(r.team || "")}</div></div>
+    <div class="val">${esc(num(r.points))}<small>pts</small></div></div>`;
+}
 function lignesUci() {
   const R = state.ranking, U = state.uc;
   let rows = R.rows || [];
@@ -490,16 +536,7 @@ function lignesUci() {
   if (q) rows = rows.filter(r => normaliser(r.name).includes(q) || normaliser(r.rider).includes(q));
   const vis = rows.slice(0, U.limit), reste = rows.length - vis.length;
   const ids = (state.ridersCl && state.ridersCl.riders) || {};
-  const html = vis.map(r => {
-    const mv = r.previous_rank == null || r.rank == null ? ""
-      : r.previous_rank > r.rank ? `<span class="mv up">▲${r.previous_rank - r.rank}</span>`
-      : r.previous_rank < r.rank ? `<span class="mv down">▼${r.rank - r.previous_rank}</span>` : `<span class="mv">=</span>`;
-    const nom = r.name || r.rider || "";
-    return `<div class="row uc ${r.nationality === "FRA" ? "fr" : ""}">
-      <div class="rk">${esc(r.rank)}${mv}</div>${drapeauIso3(r.nationality)}
-      <div class="mid"><div class="nm">${r.rider_id && ids[r.rider_id] ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(r.team || "")}</div></div>
-      <div class="val">${esc(num(r.points))}<small>pts</small></div></div>`;
-  }).join("");
+  const html = vis.map(r => ligneUci(r, ids)).join("");
   const compte = `${rows.length}${rows.length !== total ? " / " + total : ""} coureur${rows.length > 1 ? "s" : ""}`;
   return { compte, html: (html ? `<div class="rows">${html}</div>` : `<div class="empty">Aucun coureur trouvé.</div>`)
     + (reste > 0 ? `<button class="more" data-action="uc-more">Afficher ${Math.min(100, reste)} de plus (${reste} restants)</button>` : "") };
@@ -525,6 +562,82 @@ function renderClassements() {
   if (state.clSub === "fdj") return bar + renderFdj();
   if (state.ranking === undefined || state.ridersCl === undefined) return bar + `<div class="loading">Chargement…</div>`;
   return bar + renderUci();
+}
+
+/* ---- onglet Archives ---- */
+async function chargerArchivesIndex() {
+  if (state.archIdx !== undefined) return state.archIdx;
+  try { state.archIdx = await charger("archives/index.json"); }
+  catch (e) { console.warn("Archives indisponibles :", e.message); state.archIdx = null; }
+  if (state.archIdx && !Array.isArray(state.archIdx.seasons)) state.archIdx = null;
+  if (state.archIdx) state.archIdx.seasons = state.archIdx.seasons.slice().sort((a, b) => b.season - a.season);
+  return state.archIdx;
+}
+/** Index d'une saison d'archive (et mémorisation du chemin de chacune de ses courses) ; lève en cas d'échec. */
+async function chargerIndexArchive(y) {
+  if (state.archIndexes[y]) return state.archIndexes[y];
+  const ix = await charger(`archives/${y}/index.json`);
+  (ix.races || []).forEach(r => state.archChemins.set(r.id, y));
+  state.archIndexes[y] = ix;
+  return ix;
+}
+/** Cherche l'année d'archive d'une course dont on ne connaît que l'identifiant (lien direct) ; null si absente. */
+async function chercherArchive(id) {
+  const A = await chargerArchivesIndex();
+  for (const s of (A && A.seasons) || []) {
+    let ix;
+    try { ix = await chargerIndexArchive(s.season); } catch (e) { continue; }
+    if ((ix.races || []).some(r => r.id === id)) return s.season;
+  }
+  return null;
+}
+function choisirSaisonArchive() {
+  const A = state.archIdx, ids = ((A && A.seasons) || []).map(s => s.season);
+  const demande = parseInt(PARAMS.get("archive"), 10);
+  if (!ids.includes(state.archSaison)) state.archSaison = ids.includes(demande) ? demande : (ids[0] ?? null);
+}
+function archiveDansUrl() {
+  const u = new URL(location.href);
+  if (state.tab === "archives" && state.archSaison != null) u.searchParams.set("archive", state.archSaison);
+  else u.searchParams.delete("archive");
+  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+}
+function blocVictoiresFr(ix) {
+  const W = ix.french_wins || [];
+  if (!W.length) return "";
+  const lignes = W.map(w => `<button class="wins-row" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
+      <span class="d">${esc(dateCourte(w.date))}</span>
+      <span class="l"><b>${plink(w.rider_id, w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span></button>`).join("");
+  return `<details class="card table-card"${W.length <= 8 ? " open" : ""}><summary class="group-title" style="cursor:pointer">Victoires françaises · ${W.length}</summary>${lignes}</details>`;
+}
+function blocClassementArchive(y) {
+  const R = state.archRankings[y];
+  if (!R || !(R.rows || []).length) return "";
+  return `<div><div class="sec-title">Classement UCI de fin de saison</div>
+    <div class="card table-card"><div class="group-title">${esc(R.name || "Classement UCI")}${R.date ? ` · au ${esc(dateLongue(R.date))}` : ""}</div>
+    <div class="rows">${R.rows.slice(0, 10).map(r => ligneUci(r, null)).join("")}</div></div></div>`;
+}
+function renderArchives() {
+  const A = state.archIdx;
+  if (A === undefined) return `<div class="loading">Chargement…</div>`;
+  const saisons = (A && A.seasons) || [];
+  if (!saisons.length) return `<div class="empty card">Aucune archive disponible pour l'instant.</div>`;
+  const y = state.archSaison, ix = state.archIndexes[y];
+  const sel = `<select class="sel" id="arch-sel" aria-label="Saison des archives">${saisons.map(s =>
+    `<option value="${esc(s.season)}"${s.season === y ? " selected" : ""}>${esc(s.season)}${s.complete ? "" : " (collecte en cours)"}</option>`).join("")}</select>`;
+  if (!ix) {
+    if (state.archIndexes["_err" + y]) return `<div class="stack">${sel}${messageErreur(`Impossible de charger la saison ${y}.`, "retry-arch")}</div>`;
+    return `<div class="stack">${sel}<div class="loading">Chargement…</div></div>`;
+  }
+  const rs = ix.races || [], f = state.archCat;
+  const tout = rs.filter(r => f === "all" || r.category === f)
+    .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || "") || (a.name || "").localeCompare(b.name || ""));
+  const chips = ["all"].concat(CATS).map(c =>
+    `<button class="chip ${f === c ? "active" : ""}" data-acat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("");
+  const note = ix.complete ? "" : `<div class="arch-note">Collecte en cours : cette saison est incomplète, des courses s'ajoutent à chaque passage.</div>`;
+  return `<div class="stack">${sel}${note}${blocClassementArchive(y)}${blocVictoiresFr(ix)}
+    <div><div class="sec-title">Résultats (${rs.length})</div><div class="chips">${chips}</div>
+    ${tout.length ? listeCourses(tout) : `<div class="empty card">${rs.length ? "Aucune course dans cette catégorie." : "Aucune course archivée pour cette saison."}</div>`}</div></div>`;
 }
 
 /* ---- onglet Français ---- */
@@ -560,11 +673,24 @@ function renderFrancais() {
 
 /** Charge (si besoin) les données propres à l'onglet affiché, puis redessine. */
 async function preparerOnglet() {
-  const t = state.tab, avant = `${t}|${state.clSub}|${state.calSaison}`;
-  const encore = () => `${state.tab}|${state.clSub}|${state.calSaison}` === avant;
+  const t = state.tab, avant = `${t}|${state.clSub}|${state.calSaison}|${state.archSaison}`;
+  const encore = () => `${state.tab}|${state.clSub}|${state.calSaison}|${state.archSaison}` === avant;
   if (t === "calendrier" && !state.indexes[state.calSaison]) {
     const y = state.calSaison;
     try { state.indexes[y] = await chargerIndex(y); } catch (e) { console.error("Saison", y, e); state.indexes["_err" + y] = true; }
+  } else if (t === "archives") {
+    if (state.archIdx === undefined) { await chargerArchivesIndex(); choisirSaisonArchive(); }
+    const y = state.archSaison;
+    if (state.tab === t) { archiveDansUrl(); renderMain(); }
+    if (y == null || (state.archIndexes[y] && state.archRankings[y] !== undefined)) return;
+    try {
+      const ix = await chargerIndexArchive(y);
+      if (ix.complete && state.archRankings[y] === undefined) {
+        try { state.archRankings[y] = await charger(`archives/${y}/ranking.json`); } catch (e) { state.archRankings[y] = null; }
+      } else if (state.archRankings[y] === undefined) state.archRankings[y] = null;
+    } catch (e) { console.error("Archive", y, e); state.archIndexes["_err" + y] = true; }
+    if (state.tab === t && state.archSaison === y) renderMain();
+    return;
   } else if (t === "francais" && state.ridersCl === undefined) {
     state.ridersCl = await chargerRidersCourant();
   } else if (t === "classements" && state.clSub === "uci" && (state.ranking === undefined || state.ridersCl === undefined)) {
@@ -579,7 +705,7 @@ function renderMain() {
   document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === state.tab));
   if (!state.index) return;
   majContexte();
-  const f = { recents: renderRecents, calendrier: renderCalendrier, classements: renderClassements, francais: renderFrancais }[state.tab];
+  const f = { recents: renderRecents, calendrier: renderCalendrier, classements: renderClassements, francais: renderFrancais, archives: renderArchives }[state.tab];
   el.innerHTML = f();
   if (state.tab === "classements" && state.clSub === "uci" && document.getElementById("uc-list")) majListeUci();
 }
@@ -744,7 +870,7 @@ function renderTable(c, sel, sub) {
         const ref = c.riders[r.rider_id];
         const lib = r._etape ? (r._etape.number === 0 ? "Prologue" : `Étape ${r._etape.number}`) : "";
         return `<div class="row ${ref && ref.is_french ? "fr" : ""}"><div class="rk">–</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
-          <div class="mid"><div class="nm">${ref ? plink(r.rider_id, ref.name) : esc("Dossard " + r.bib)}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
+          <div class="mid"><div class="nm">${ref ? plink(r.rider_id, ref.name) : esc(r.bib ? "Dossard " + r.bib : "Coureur inconnu")}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
           <div class="val gap">${esc(lib)}</div></div>`;
       }).join("")}</div>`;
     });
@@ -801,6 +927,7 @@ function renderFiche() {
   body.innerHTML = `<div class="stack">
     <div class="card-head" style="margin:0">${flag(c.flag, c.country)}${catBadge(c.category, c.uci_class)}${tp}
       <span class="small muted">${esc(plage(c.start_date, c.end_date))}${c.country ? " · " + esc(c.country) : ""}</span></div>
+    ${equivClasse(c.uci_class) ? `<div class="small muted">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : ""}
     ${chips}
     ${entete}
     ${c.race_type === "stage_race" ? renderMaillots(c, sel) : ""}
@@ -832,6 +959,20 @@ function setHashEtape(sel) {
   history.replaceState(history.state, "", h);
 }
 
+/** Fiche d'une course : chemin d'archive connu (liste d'archive affichée), sinon races/, sinon recherche dans les archives
+ *  (lien direct). Renvoie { d, annee } (annee = année d'archive ou null). */
+async function chargerCourse(id) {
+  const an = state.archChemins.get(id);
+  if (an != null) return { d: await charger(`archives/${an}/races/${id}.json`), annee: an };
+  try { return { d: await charger(`races/${id}.json`), annee: null }; }
+  catch (e) {
+    if (e.status !== 404) throw e;
+    const trouve = await chercherArchive(id);
+    if (trouve == null) throw e;
+    return { d: await charger(`archives/${trouve}/races/${id}.json`), annee: trouve };
+  }
+}
+
 async function ouvrirCourse(id, etape) {
   const sheet = document.getElementById("sheet"), body = document.getElementById("sheet-body");
   const r = courseParId(id);
@@ -845,9 +986,9 @@ async function ouvrirCourse(id, etape) {
     state.course = null;
     body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
     try {
-      const d = await charger(`races/${id}.json`);
+      const { d, annee } = await chargerCourse(id);
       if (parseHash()?.id !== id) return;   // l'utilisateur est parti entre-temps
-      state.course = d;
+      state.course = d; state.courseArchive = annee;
     } catch (e) {
       console.error("Chargement de la course échoué :", e);
       body.innerHTML = messageErreur(`Impossible de charger cette course (${e.message}).`, "retry");
@@ -856,6 +997,7 @@ async function ouvrirCourse(id, etape) {
     state.frOnly = false; state.limit = 50; state.sub = null;
   }
   const c = state.course;
+  majContexte();
   let sel = etape != null && etape !== "" ? etape : selectionDefaut(c);
   if (c.race_type === "stage_race") {
     const ok = sel === "F" ? !!c.final : etapes(c).some(s => String(s.number) === String(sel));
@@ -869,7 +1011,7 @@ async function ouvrirCourse(id, etape) {
 function fermerFiche() {
   const sheet = document.getElementById("sheet");
   sheet.classList.remove("open"); sheet.setAttribute("aria-hidden", "true");
-  majScroll();
+  majScroll(); majContexte();
 }
 
 /* ================== fiche coureur ================== */
@@ -945,21 +1087,31 @@ async function ouvrirCoureur(id) {
   rs.classList.add("open"); rs.setAttribute("aria-hidden", "false");
   majScroll();
   if (nouveau) rs.scrollTop = 0;
-  const voulue = state.ctxSaison ?? state.current;
-  if (!state.riders || state.ridersFor !== voulue) {
+  const arch = state.ctxArchive, voulue = state.ctxSaison ?? state.current;
+  const cle = arch ? `archives/${voulue}/riders.json` : `riders-${voulue}.json`;
+  if (!state.riders || state.ridersFor !== cle) {
     document.getElementById("rsheet-name").textContent = "Coureur";
     document.getElementById("rsheet-sub").textContent = "";
     body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
+    const indisponible = () => {   // archive : jamais de repli vers les fiches d'une autre saison
+      state.riders = null; state.ridersFor = null;
+      body.innerHTML = `<div class="empty card">Fiche disponible à la fin de la collecte de la saison ${esc(voulue)}.</div>`;
+    };
+    if (arch && state.archIndexes[voulue] && !state.archIndexes[voulue].complete) { indisponible(); return; }
     try {
       let d;
-      try { d = await charger(`riders-${voulue}.json`); }
-      catch (e) { d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json"); }
+      if (arch) d = await charger(cle);
+      else {
+        try { d = await charger(cle); }
+        catch (e) { d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json"); }
+      }
       if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
-      state.riders = d; state.ridersFor = voulue;
+      state.riders = d; state.ridersFor = cle;
     } catch (e) {
       console.warn("Fiches coureurs indisponibles :", e.message);
       if (parseHashCoureur() !== id) return;
       document.getElementById("rsheet-name").textContent = "Coureur";
+      if (arch && e.status === 404) { indisponible(); return; }
       body.innerHTML = `<div class="errbox"><div>Fiche indisponible</div><button data-action="retry">Réessayer</button></div>`;
       return;
     }
@@ -995,8 +1147,9 @@ document.addEventListener("click", e => {
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
   if (t.dataset.calsaison) { changerSaisonCal(+t.dataset.calsaison); return; }
-  if (t.dataset.tab) { state.tab = t.dataset.tab; renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
+  if (t.dataset.tab) { state.tab = t.dataset.tab; archiveDansUrl(); renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
   if (t.dataset.clsub) { state.clSub = t.dataset.clsub; renderMain(); preparerOnglet(); return; }
+  if (t.dataset.acat) { state.archCat = t.dataset.acat; renderMain(); return; }
   if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
   if (t.dataset.calvue) { state.calVue = t.dataset.calvue; renderMain(); return; }
   if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; ouvrir(t.dataset.open, t.dataset.stage); return; }
@@ -1011,8 +1164,14 @@ document.addEventListener("click", e => {
   else if (a === "uc-more") { state.uc.limit += 100; majListeUci(); }
   else if (a === "uc-fr") { state.uc.fr = !state.uc.fr; state.uc.limit = 100; t.setAttribute("aria-pressed", state.uc.fr); majListeUci(); }
   else if (a === "retry-cal") { delete state.indexes["_err" + state.calSaison]; cache.delete(`index-${state.calSaison}.json`); renderMain(); preparerOnglet(); }
+  else if (a === "retry-arch") { delete state.archIndexes["_err" + state.archSaison]; cache.delete(`archives/${state.archSaison}/index.json`); renderMain(); preparerOnglet(); }
   else if (a === "retry") { routeur(); }
   else if (a === "retry-index") { cache.clear(); init(); }
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "arch-sel") return;
+  state.archSaison = parseInt(e.target.value, 10); state.archCat = "all";
+  archiveDansUrl(); renderMain(); preparerOnglet();
 });
 document.addEventListener("input", e => {
   if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; majListeUci(); }
@@ -1066,6 +1225,7 @@ async function init() {
   const demande = parseInt(PARAMS.get("saison"), 10);
   state.calSaison = state.saisons.available.includes(demande) ? demande : state.current;
   state.ctxSaison = state.current;
+  if (PARAMS.get("archive")) state.tab = "archives";   // lien direct vers l'onglet Archives
   if (ix._fixture) document.getElementById("banner").innerHTML = '<div class="fixture-banner">DONNÉES FICTIVES DE TEST</div>';
   const g = ix.generated_at ? new Date(ix.generated_at) : null;
   if (g && !isNaN(g)) {

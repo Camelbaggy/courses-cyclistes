@@ -49,8 +49,9 @@ Livrable : `docs/recherche/archives_dataride.md` (couverture réelle par époque
 > sélection par époque (`1.HC`/`2.HC` -> Pro ; `1.CH`, `2.CH`, `CPE`, `AU1`, `MNM` -> WT), `collector.run_archive`
 > + `compact_race` (annexes top 30, clés null supprimées), `run_pipeline.py --archive`, `archives.yml`, checkout
 > partiel d'`update.yml`, classement UCI de fin de saison (`ranking.json`) et fiches coureurs par saison
-> (`riders.json`). RESTE À FAIRE : Coupe de France historique (liste par année), dépôt dédié au-delà de ~200 Mo,
-> fiches carrière (`carrieres/`), `tools/inspect_data.py --archive`, interface (§4).
+> (`riders.json`), rotation calendrier -> archives (`saisons_a_archiver`, `migrer_saisons_anciennes`). RESTE À FAIRE :
+> Coupe de France historique (liste par année), dépôt dédié au-delà de ~200 Mo, fiches carrière (`carrieres/`),
+> `tools/inspect_data.py --archive`, interface : encart « Éditions précédentes » et onglet « Carrière » (§4).
 
 ### Sélection par époque (`selection.py`)
 
@@ -101,15 +102,19 @@ servi par GitHub Pages et cloné à chaque passage horaire.
 Principe : **la saison en cours reste la porte d'entrée** ; les archives se consultent, elles ne s'imposent pas.
 
 - **Récents, Classements** : inchangés (saison en cours uniquement).
-- **Calendrier** : les chips de saison n'affichent que les 2–3 dernières saisons ; une chip « Archives ▾ » ouvre une
-  liste groupée par tranche (2021–2025, 2016–2020…). Le reste de l'onglet (Résultats / À venir, filtres) est
-  identique quelle que soit la saison.
+- **Calendrier** : les chips de saison n'affichent que `seasons.json.available` (rotation : une saison S en sort quand
+  S+1 est terminée depuis plus de 14 jours, voir SPEC §4.4). **[fait]**
+- **Onglet Archives** (5e onglet principal, à la place de la chip « Archives ▾ » initialement prévue) : menu déroulant
+  des saisons (`archives/index.json`), `?archive=AAAA`, vue « Résultats » du Calendrier réutilisée (mêmes filtres de
+  catégorie), « Victoires françaises », classement UCI de fin de saison (top 10), fiches course et coureur d'archive,
+  chargement paresseux. **[fait]** (jeu d'essai : `tools/fixtures/data/archives/`, captures `tools/apercu.py`).
 - **Fiche course** : nouvel encart « Éditions précédentes » (vainqueurs et meilleur Français de chaque édition
   archivée), chargé à la demande.
 - **Fiche coureur** : onglets « Saison » (actuel) et « Carrière » (tableau par saison : équipe, victoires, podiums,
   rang UCI ; palmarès complet replié par saison).
 - **Français** : inchangé (saison en cours) ; plus tard éventuellement un filtre « Saison » réutilisant les archives.
-- Libellés d'époque affichés tels quels (« 2.HC », « Coupe de France ») avec une info-bulle d'équivalence.
+- Libellés d'époque affichés tels quels (« 2.HC », « Coupe de France ») avec une info-bulle d'équivalence. **[fait pour
+  les classes HC / CH / CPE / AU1 / MNM]**
 - Chargement paresseux partout : aucune archive n'est téléchargée tant qu'on ne l'ouvre pas ; la page d'accueil
   garde le même poids qu'aujourd'hui.
 

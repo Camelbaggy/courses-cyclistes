@@ -5,7 +5,9 @@ Sert le dépôt en local (http.server, port libre, dans un thread) puis pilote C
 (paquet Python s'il existe, sinon Node via NODE_PATH). Journalise les erreurs console et détecte tout
 débordement horizontal.
 
-    python tools/apercu.py [dossier_de_sortie] [--data tools/fixtures/data]
+    python tools/apercu.py <dossier_de_sortie> [--data tools/fixtures/data] [--sombre] [--nav]
+
+Le dossier de sortie est obligatoire (créé s'il n'existe pas) : aucun chemin par défaut.
 """
 import argparse
 import functools
@@ -19,7 +21,6 @@ import threading
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
-SORTIE_DEFAUT = "/tmp/claude-0/-home-user-coupes-europe/20baa5c7-224c-43e8-ae00-49aa1c0fef33/scratchpad/apercu"
 NODE_PATH = "/opt/node-tools/node_modules"
 
 # Script Node (Playwright). Reçoit sa configuration en JSON dans APERCU_CONF.
@@ -44,11 +45,12 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const debord = [];
   async function verifie(nom) {
     const r = await page.evaluate(() => {
-      const sheet = document.getElementById('sheet');
+      const rs = document.getElementById('rsheet');
+      const sheet = rs.classList.contains('open') ? rs : document.getElementById('sheet');
       const ouvert = sheet.classList.contains('open');
       const el = ouvert ? sheet : document.documentElement;
       const pires = [];
-      document.querySelectorAll(ouvert ? '#sheet *' : 'main *').forEach(n => {
+      document.querySelectorAll(ouvert ? `#${sheet.id} *` : 'header.top *, main *').forEach(n => {
         const b = n.getBoundingClientRect();
         if (b.width > 0 && b.right > 391 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs')) pires.push(n.className || n.tagName);
       });
@@ -108,7 +110,37 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const rl = await page.$('#sheet .rlink'); if (rl) { await rl.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('05-fiche-coureur-saison', false); }
   await page.goto(base); await page.waitForSelector('.card');
   await cap('01-recents', true);
+  // Archives : onglet par défaut (saison la plus récente), liste vide si aucune archive
+  await page.goto(base); await page.waitForSelector('.card');
+  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel, .empty');
+  await page.waitForSelector('.cal-item, .empty, .errbox'); await cap('06a-archives', true);
   if (conf.navonly) { await browser.close(); console.log('ERREURS_CONSOLE', JSON.stringify(erreurs)); console.log('DEBORDEMENTS', JSON.stringify(debord)); return; }
+
+  // Archives (jeu fictif) : autre saison via le select, filtre, fiches course et coureur d'archive
+  await page.selectOption('#arch-sel', '2023'); await page.waitForSelector('.arch-note'); await cap('06b-archives-2023-en-cours', true);
+  await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
+  await page.click('[data-acat="Pro"]'); await cap('06c-archives-filtre-pro', false);
+  await page.click('[data-acat="all"]');
+  console.log('url archives :', await page.evaluate(() => location.search));
+  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .card');
+  await cap('07a-archive-fiche-etapes', false);
+  await hauteurFiche('07b-archive-fiche-complete');
+  const rlA = await page.$('#sheet .rlink'); await rlA.click(); await page.waitForSelector('#rsheet.open .tile');
+  await cap('07c-archive-fiche-coureur', false);
+  await page.click('#rsheet [data-action="back"]'); await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
+  await page.goto(base + '&archive=2023'); await page.waitForSelector('.cal-item');
+  await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
+  const rlB = await page.$('#sheet .rlink'); await rlB.click(); await page.waitForSelector('#rsheet.open .empty');
+  await cap('07d-archive-coureur-sans-riders', false);
+  // lien direct vers une course d'archive (404 volontaire sur races/, puis recherche dans les archives)
+  const avantA = erreurs.length;
+  await page.goto(base + '#course/fx-a24-classique-hc'); await page.waitForSelector('#sheet.open .card');
+  await cap('07e-archive-lien-direct', false);
+  const rlC = await page.$('#sheet .rlink'); await rlC.click(); await page.waitForSelector('#rsheet.open .tile');
+  const saison = await page.evaluate(() => document.getElementById('rsheet-body').textContent.includes('Palmarès de la saison 2024'));
+  console.log('lien direct archive : fiche coureur de la saison 2024 :', saison);
+  console.log('ERREURS_ATTENDUES (404 lien direct)', JSON.stringify(erreurs.splice(avantA)));
+  await page.goto(base);
 
   // fiche course par étapes (étape la plus récente)
   await page.goto(base + '#course/fx-tour-test'); await page.waitForSelector('#sheet.open .card');
@@ -160,7 +192,7 @@ def serveur(racine):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("sortie", nargs="?", default=SORTIE_DEFAUT)
+    ap.add_argument("sortie", help="dossier de sortie des captures (obligatoire)")
     ap.add_argument("--data", default="tools/fixtures/data", help="dossier de données relatif à la racine du dépôt")
     ap.add_argument("--nav", action="store_true", help="seulement les onglets (données réelles : sans les fiches fictives)")
     ap.add_argument("--sombre", action="store_true", help="thème sombre (suffixe -sombre sur les fichiers)")
