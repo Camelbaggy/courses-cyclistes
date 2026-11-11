@@ -42,6 +42,10 @@ Pour tester le collecteur complet sans committer de données : `[essai:collecte]
 Lire les logs avec les outils GitHub MCP. `update.yml` (horaire, 13 h–22 h UTC + 6 h 41) commit `data/` sur `main` :
 une branche de travail se retrouve vite derrière `main` ; ne pas committer `data/` à la main sur `main`. Une PR
 fusionnée ne doit pas être réutilisée : repartir de `origin/main` et ouvrir une nouvelle PR.
+Claude peut fusionner lui-même ses PR (outils GitHub MCP) une fois le travail vérifié (contrôles locaux, essais
+ou logs CI concluants), sans attendre de validation.
+Déléguer à des agents Sonnet (outil Agent, `model: "sonnet"`) les tâches opérationnelles (lecture de logs, essais,
+contrôles), l'écriture de code et la rédaction de fichiers ; garder la conception et la vérification finale.
 
 ## Architecture
 

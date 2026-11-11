@@ -21,9 +21,13 @@ Ordre proposé (du plus récent au plus ancien, car les données sont plus compl
 | T1 | 2021 → 2025 | Époque actuelle (ProSeries depuis 2020) : mêmes classes qu'aujourd'hui ; Coupe de France puis FDJ United Series |
 | T2 | 2016 → 2020 | Classes `HC` (1.HC / 2.HC) avant les ProSeries ; 2020 saison réduite (Covid) ; classement mondial UCI actuel depuis 2016 |
 | T3 | 2011 → 2015 | UCI WorldTour (depuis 2011), classes HC ; classement mondial différent (WorldTour + circuits continentaux) |
-| T4 | 2005 → 2010 | ProTour et calendrier historique séparés ; profondeur réelle de DataRide à vérifier |
+| T4 | 2009 → 2010 | ProTour (`CPE`, `AU1`, `MNM`…) et calendrier historique (`1.CH` / `2.CH` : grands tours, monuments) séparés |
 
-T4 n'est engagée que si l'étape 0 montre que DataRide couvre ces années correctement.
+**Étape 0 faite** (`docs/recherche/archives_dataride.md`) : DataRide n'a de courses hommes élite qu'à partir de 2009
+(2005-2008 : seulement les championnats du monde) ; T3 et T4 (réduite à 2009-2010) sont engageables, en dernier.
+Limites constatées avant 2016 : pas de dossards (2009-2013), pas de championnats nationaux (`CN`), abandons du
+général final des grands tours sans code (rang vide, aucune valeur), classement « WorldTour Ranking - Ends 2018 »
+(~250 lignes) au lieu du World Ranking. Conditions d'utilisation de DataRide : aucune trouvée (à trancher).
 
 ## 2. Étape 0 : sonde de profondeur (préalable, ~1 h)
 
@@ -47,6 +51,7 @@ Livrable : `docs/recherche/archives_dataride.md` (couverture réelle par époque
 |---|---|
 | `1.UWT` / `2.UWT` → WT | idem depuis 2011 ; `1.UWT`/`2.UWT` ou codes ProTour (`PT`) avant |
 | `1.Pro` / `2.Pro` → Pro | `1.HC` / `2.HC` avant 2020 (rangées en « Pro », libellé d'origine conservé) |
+| — | 2009-2010 : `1.CH` / `2.CH` (calendrier historique : grands tours, monuments) et classes ProTour (`CPE`, `AU1`, `MNM`) → WT |
 | FDJ United Series | Coupe de France (liste par année : LNC si disponible, sinon Wikipédia « Coupe de France de cyclisme sur route {année} ») |
 | .1 / .2, championnats | identiques |
 
