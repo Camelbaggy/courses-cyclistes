@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guide pour Claude Code dans ce dépôt.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Projet
 
@@ -22,13 +22,14 @@ Python 3 bibliothèque standard uniquement ; la CI tourne en **Python 3.11** (pa
 python run_pipeline.py --no-notify                    # saison en cours, sans push
 python run_pipeline.py --season 2026 --only Roubaix   # une course
 python tools/inspect_data.py data                     # résumé lisible des données produites
-python uci.py && python selection.py                  # tests locaux sans réseau (assert)
+python uci.py && python selection.py && python wikipedia_cal.py && python riders.py --test   # tests locaux (assert)
 AI_BUDGET_SECONDS=0 python tools/essais/essai_ia.py   # dossier, repli, notification sur tools/fixtures_ia
 python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright)
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
 
-`AI_BUDGET_SECONDS=0` ou pas de `GEMINI_API_KEY` : résumés de repli déterministes.
+`AI_BUDGET_SECONDS=0` ou pas de `GEMINI_API_KEY` : résumés de repli déterministes. Attention : `python riders.py`
+sans `--test` écrit un fichier dans `data/` (à supprimer, `data/` n'est écrit que par le pipeline).
 
 ### Tester sur de vraies données
 
@@ -37,8 +38,10 @@ Le conteneur de développement n'a pas accès aux sources ; GitHub Actions oui. 
 - commit contenant `[pipeline]` → pipeline complet, données **committées sur la branche**
   (`pipeline_branche.yml` ; options `[avec-ia]`, `[saison:2026]`, `[max:N]`) ; puis `git pull` et
   `tools/inspect_data.py` / `tools/apercu.py --data data` en local.
+Pour tester le collecteur complet sans committer de données : `[essai:collecte]` (travaille sur une copie de `data/`).
 Lire les logs avec les outils GitHub MCP. `update.yml` (horaire, 13 h–22 h UTC + 6 h 41) commit `data/` sur `main` :
-une branche de travail se retrouve vite derrière `main` ; ne pas committer `data/` à la main sur `main`.
+une branche de travail se retrouve vite derrière `main` ; ne pas committer `data/` à la main sur `main`. Une PR
+fusionnée ne doit pas être réutilisée : repartir de `origin/main` et ouvrir une nouvelle PR.
 
 ## Architecture
 
@@ -50,20 +53,27 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ directvelo.py récits des courses françaises (Crawl-delay 10 s)
                                  ├ cyclingnews.py récits (RSS, ~3 jours de profondeur)
                                  ├ wikipedia_cal.py calendrier à venir (Wikipédia EN + FR « UCI ProSeries {année} »…, fusionnés) + LNC
-                                 ├ riders.py     fiches coureurs (palmarès de la saison, classement UCI)
+                                 ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
+                                 ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
-index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/<id>.json
+index.html : page unique (CSS + JS inline)
 ```
+
+Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs/SPEC.md` §4) : `seasons.json`
+(`current`, `available`), `index-<année>.json` par saison (`index.json` = saison courante), `races/<id>.json`
+(`uci-<CompetitionId>`, communs à toutes les saisons, champ `season`), `riders-<année>.json`, `ranking.json`,
+`state.json` (interne). Tout fichier n'est réécrit que si son contenu change (hors horodatage) : pas de commit vide.
 
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
 - Budget de temps (`--budget-min`, 40 min par défaut) : au-delà, la collecte s'arrête proprement (courses les plus
   récentes traitées d'abord) et reprend au passage suivant. Le premier rattrapage d'une saison prend ~3 passages.
-- Saison : déterminée par les dates UCI (`uci.season_for`) ; tant qu'aucune course suivie de la nouvelle saison
-  n'a de résultat (novembre-janvier), le dashboard reste sur la saison précédente. Aucune action au changement d'année.
+- Saison : bornes officielles UCI (`uci.season_bounds` / `season_for`). Intersaison (nouvelle saison commencée sans
+  course WT / Pro / FDJ courue, novembre-janvier) : la saison précédente reste `current`, la nouvelle est aussi
+  collectée et proposée dans le Calendrier. Courses à venir réparties par saison. Aucune action au changement d'année.
 - Gemini seulement pour les étapes des 3 derniers jours ; repli déterministe pour l'historique. Pas de push pour
   un rattrapage (nouveautés de plus de 2 jours).
 
@@ -79,6 +89,8 @@ index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/
   `ResultValue` hétérogène : « +0 »/« +00 »/« s.t. » = même temps que la ligne **précédente**. Pas d'identifiant
   coureur : `rider_id` = slug du nom + date de naissance. Pas de classement par équipes ni de villes d'étape.
   La dernière étape n'a souvent que « Stage Classification » : gc/points/… recopiés du classement final.
+- Classement UCI : `RankingsDiscipline` + `ObjectRankings` (mêmes filtres Kendo obligatoires, 1000 lignes par page,
+  date de naissance présente → rapprochement fiable avec `rider_id`). Recalculé le mardi par l'UCI.
 - Le calendrier prévisionnel d'uci.org passe par une API privée (jeton Bearer dans la page) : **ne pas l'utiliser**.
   cyclingflash.com : challenge Cloudflare sur tout le site (même robots.txt) : écarté. Calendrier à venir =
   Wikipédia (crédit CC BY-SA en pied de page) ; les pages ProSeries / Europe Tour de la saison suivante n'existent
@@ -89,6 +101,9 @@ index.html : page unique (CSS + JS inline), lit data/index.json puis data/races/
 
 ## Interface (`index.html`)
 
-Page autonome sans dépendance (drapeaux flagcdn.com) ; toute donnée insérée passe par `esc()`. Mobile ~390 px.
-`?data=<dossier relatif>` change le dossier de données (`tools/fixtures/data` : jeu fictif). Hash
-`#course/<id>/<étape|F>`. Vérifier le rendu avec `tools/apercu.py` après toute modification.
+Page autonome sans dépendance, thème sombre unique (comme le dashboard des Coupes d'Europe), drapeaux flagcdn.com ;
+toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents · Calendrier (un sous-onglet par saison,
+Résultats / À venir, filtres de catégorie) · Classements (UCI, FDJ Series) · Français (triés par rang UCI, 3
+meilleurs résultats). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
+change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons) ; `?saison=AAAA`. Vérifier le rendu
+avec `tools/apercu.py` (option `--nav` sur les données réelles) après toute modification.
