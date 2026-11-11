@@ -207,8 +207,30 @@ ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessou
   `ranking.json` + `riders.json` de fin de saison, `state.json` `{"complete": true, "top10_checked": {}}`, et
   seulement ensuite supprime `data/races/<id>.json`, `data/index-S.json`, `data/riders-S.json`. Log
   `[ROTATION] saison S -> archives (N courses)`. archives.yml commit `data/` (suppressions incluses).
+- **`data/archives/editions.json`** (écrit par `collector.write_archives_index`, donc à chaque passage d'`archives.yml`, seulement
+  s'il change) : `{"generated_at", "alias", "courses": {<clé>: [{"season", "race_id", "name", "uci_class", "category",
+  "race_type", "start_date", "winner" (RiderRef réduit : id, name, nationality, flag, is_french), "best_french"
+  ({rider, rank, classification} | null)}, …]}}`, saison décroissante ; courses `in_progress` exclues. **Clé d'édition** =
+  `collector.cle_edition(nom, pays)` : nom en minuscules, sans accents, ponctuation (tirets, apostrophes…) remplacée par une
+  espace, sans année (1900-2099) ni numéro d'édition isolé (`107e`, `3rd`), espaces normalisées, + `|PAYS` (ISO3) ; nom ou
+  pays vide : pas de clé. Rapprochement EXACT sur cette clé, jamais flou (« Tour de France » ≠ « Tour de France Saitama
+  Criterium », pays différent = autre course). **`alias_courses.json`** (racine du dépôt, `{}` au départ, édité à la main) :
+  `{"clé source": "clé canonique"}` pour les changements de nom (sponsors) ; un seul niveau (pas de chaînage), jamais
+  deviné ; recopié dans `editions.json.alias`. La page applique la même normalisation (`cleEdition` de index.html, **doit
+  rester alignée** avec `cle_edition`).
+- **`data/archives/carrieres/<lettre>.json`** (lettre = première lettre a-z du `rider_id`, sinon `_`) : `{"<rider_id>": {"name",
+  "nationality", "flag", "birth_date" (saison la plus récente), "seasons": {"<année>": {"team", "stats" (wins, podiums, top10,
+  race_days, races, gc_wins, dnf : ceux présents), "uci_rank" (rang au classement de fin de saison, absent si non classé),
+  "results" (victoires et podiums seulement, récents d'abord : date, race_id, label, classification, rank, + stage_number et
+  race (nom) s'ils existent)}}}}`, saisons décroissantes, calculé à partir des `riders.json` des saisons d'archive.
+  `carrieres/index.json` : `{"alias", "lettres"}` (la page ne demande que les lettres présentes). Rapprochement par `rider_id`
+  exact (slug + date de naissance) ; **`alias_coureurs.json`** (racine, `{}` au départ, manuel) `{"rider_id source": "rider_id
+  canonique"}`, jamais deviné ; si l'alias ferait figurer deux fois le même coureur la même saison, il est ignoré pour cette
+  saison (`[WARN]`, rien n'est fusionné). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
 - La page lit `archives/index.json` (liste des saisons, `complete`) à l'ouverture de l'onglet Archives, puis
   `archives/<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
+  `editions.json` est lu à l'ouverture d'une fiche course (encart « Éditions précédentes »), `carrieres/index.json` puis un
+  seul `carrieres/<lettre>.json` à l'ouverture de l'onglet « Carrière » d'une fiche coureur.
 
 ## 5. Interfaces Python (contrat entre modules)
 
@@ -254,6 +276,14 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
 - Onglet **Archives** (5e) : menu déroulant des saisons archivées (« 2023 (collecte en cours) » si `complete` est faux),
   encart « Classement UCI de fin de saison » (top 10), « Victoires françaises », liste des courses avec les mêmes filtres
   de catégorie que le Calendrier ; fiches course et coureur issues de `archives/<année>/`.
+- Fiche course : encart repliable **Éditions précédentes** (sous le tableau), chargé sans bloquer la fiche, absent s'il n'y a
+  aucune autre édition : éditions archivées (`editions.json`) + courses de même clé des saisons du Calendrier
+  (`index-<année>.json`) ; année, vainqueur et meilleur Français (liens coureur lus dans la saison de l'édition), lien vers la
+  fiche de l'édition.
+- Fiche coureur : onglets **Saison** (fiche de la saison du contexte) et **Carrière** (tableau par saison : équipe, victoires,
+  podiums, top 10, jours de course, rang UCI de fin de saison ; palmarès victoires/podiums replié par saison ; saisons du
+  Calendrier ajoutées en tête si le même `rider_id` figure dans `riders-<année>.json`, leur rang UCI étant marqué `*` : classement
+  le plus récent, pas de fin de saison). Aucune donnée : « Pas d'archives pour ce coureur ».
 - Onglets : **Récents** (cartes `latest` : course, étape, vainqueur, meilleur Français, résumé IA) ·
   **Calendrier** (courses de la saison groupées par mois, filtre par catégorie WT / Pro / FDJ / .1 / .2 / Champ.,
   statut, vainqueur ; à venir en grisé) · **FDJ United Series** (classement + manches) · **Français**

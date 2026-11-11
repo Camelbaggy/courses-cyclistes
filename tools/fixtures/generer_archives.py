@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Génère le jeu d'archives FICTIF (docs/SPEC.md §4.4) dans tools/fixtures/data/archives/.
 
-Deux saisons passées cohérentes avec tools/fixtures/data (saison courante 2026 : N-1 = 2025, donc archives <= 2024) :
+Trois saisons passées cohérentes avec tools/fixtures/data (saison courante 2026 : N-1 = 2025, donc archives <= 2024) :
 - 2024 : complète, avec ranking.json et riders.json ;
-- 2023 : `complete` = false (collecte en cours), sans riders.json ni ranking.json.
+- 2023 : `complete` = false (collecte en cours), sans riders.json ni ranking.json ;
+- 2022 : complète, avec riders.json mais sans ranking.json (classement UCI indisponible).
 Les courses passent par les vraies fonctions du collecteur (`finalize_race`, `compact_race`, `build_index`,
 `riders.build_riders`) : le schéma est celui des archives réelles (clés null absentes). Déterministe (graine fixe).
 Ne touche pas au reste de tools/fixtures/data.
+
+Cohérence éditions / carrières (docs/SPEC.md §4.4) : le « Grand Prix de Test-sur-Mer (fictif) » (FRA) existe en 2022, 2023, 2024 et dans le Calendrier fictif (saison 2026) -> encart « Éditions précédentes » ; le coureur « Paul Épure » (même rider_id que
+dans riders-2026.json) court en 2022, 2024 et dans le Calendrier -> onglet « Carrière » sur trois saisons. `editions.json` et `carrieres/` sont
+produits par `collector.write_archives_index` (mêmes fonctions que la production).
 
     python tools/fixtures/generer_archives.py
 """
@@ -82,9 +87,9 @@ def course_etapes(pel):
     return c
 
 
-def course_un_jour(pel, id_, nom, pays, flag, classe, cat, date, raison, profil, dist, vitesse, nb=None):
+def course_un_jour(pel, id_, nom, pays, flag, classe, cat, date, raison, profil, dist, vitesse, nb=None, forcer=None):
     partants = pel.coureurs[:nb] if nb else pel.coureurs
-    res, t0 = gf.simuler_etape(pel, profil, partants, vitesse, dist)
+    res, t0 = gf.simuler_etape(pel, profil, partants, vitesse, dist, forcer=forcer)
     rows = [gf.ligne(i + 1, None, c, time_s=t0 + g, gap_s=g) for i, (c, g) in enumerate(res)]
     for k, uci in enumerate((125, 80, 50)):
         rows[k]["uci_points"] = uci
@@ -119,19 +124,37 @@ def ecrire_saison(annee, courses, complete, ranking=None):
         collector._dump(str(dossier / "riders.json"), fiches)
 
 
+ID_COMMUN = "epure-paul-19970711"     # présent dans tools/fixtures/data/riders-2026.json (Calendrier fictif)
+
+
+def imposer_coureur_commun(pel):
+    """Donne au premier coureur (leader d'équipe) l'identité du coureur commun à plusieurs saisons."""
+    c = pel.coureurs[0]
+    c["ref"].update(id=ID_COMMUN, name="Paul Épure", nationality="FRA", flag="fr", is_french=True)
+    c["birth"] = "1997-07-11"
+
+
 def main():
     gf.rnd.seed(20240315)
     pel = gf.Peloton(8, 5, forcer_francais=9)
+    imposer_coureur_commun(pel)
     tour = course_etapes(pel)
     classique = course_un_jour(pel, "fx-a24-classique-hc", "Grand Prix de l'Essai (fictif)", "BEL", "be", "1.HC", "Pro",
                                "2024-03-02", "classe", "vallonne", 196, 42)
-    gp_fr = course_un_jour(pel, "fx-a24-gp-fr", "Grand Prix de Maquette-sur-Loire (fictif)", "FRA", "fr", "1.1", ".1",
+    gp_fr = course_un_jour(pel, "fx-a24-gp-fr", "Grand Prix de Test-sur-Mer (fictif)", "FRA", "fr", "1.1", ".1",
                            "2024-04-07", "france", "plat", 181, 43, nb=30)
     pel2 = gf.Peloton(6, 5, forcer_francais=8)
+    imposer_coureur_commun(pel2)
     omloop = course_un_jour(pel2, "fx-a23-omloop", "Omloop de Démonstration (fictif)", "BEL", "be", "1.UWT", "WT",
                             "2023-02-25", "classe", "accidente", 203, 41)
-    gp23 = course_un_jour(pel2, "fx-a23-gp-fr", "Trophée de Brouillon-les-Bains (fictif)", "FRA", "fr", "1.1", ".1",
+    gp23 = course_un_jour(pel2, "fx-a23-gp-fr", "Grand Prix de Test-sur-Mer 2023 (fictif)", "FRA", "fr", "1.1", ".1",
                           "2023-03-19", "france", "plat", 176, 43, nb=28)
+    pel3 = gf.Peloton(6, 5, forcer_francais=7)
+    imposer_coureur_commun(pel3)
+    gp22 = course_un_jour(pel3, "fx-a22-gp-fr", "Grand Prix de Test-sur-Mer (fictif)", "FRA", "fr", "1.1", ".1",
+                          "2022-03-27", "france", "plat", 179, 43, nb=30, forcer=ID_COMMUN)
+    trophee22 = course_un_jour(pel3, "fx-a22-trophee", "Trophée de Brouillon-les-Bains (fictif)", "FRA", "fr", "1.2", ".2",
+                               "2022-05-08", "france", "vallonne", 168, 41, nb=25)
     # classement UCI de fin de saison 2024 : coureurs du peloton 2024, points décroissants
     rows = []
     for k, c in enumerate(sorted(pel.coureurs, key=lambda x: -sum(x["comp"].values()))):
@@ -142,6 +165,7 @@ def main():
     ranking = {"_fixture": True, "name": "UCI World Ranking (fictif)", "date": "2024-10-14", "source": "fixture", "rows": rows}
     ecrire_saison(2024, [tour, classique, gp_fr], True, ranking)
     ecrire_saison(2023, [omloop, gp23], False)
+    ecrire_saison(2022, [gp22, trophee22], True)
     collector.ARCHIVES_DIR = str(SORTIE)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])

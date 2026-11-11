@@ -92,6 +92,12 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   `run_archive`, donc par archives.yml seulement : compactage dans `data/archives/<S>/`, classement de fin de saison,
   riders.json, state complete, puis suppression de `data/races/<id>.json`, `index-<S>.json`, `riders-<S>.json` de S).
   Le contrôle nocturne ne lit que des fichiers (aucune requête). update.yml n'écrit jamais dans `data/archives/`.
+- **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
+  `data/archives/editions.json` (éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
+  ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `data/archives/carrieres/<lettre>.json`
+  + `carrieres/index.json` (saisons d'un coureur, par `rider_id` exact). Alias MANUELS à la racine : `alias_courses.json`
+  (`{"clé": "clé canonique"}`, changements de nom de course) et `alias_coureurs.json` (`{"rider_id": "rider_id canonique"}`), `{}` au
+  départ, jamais devinés. `cleEdition` (index.html) DOIT rester alignée avec `cle_edition` ; tests dans `collector.py --test`.
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
@@ -132,7 +138,8 @@ toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents ·
 `seasons.json.available`, Résultats / À venir, filtres de catégorie) · Classements (UCI, FDJ Series) · Français
 (triés par rang UCI, 3 meilleurs résultats) · Archives (menu déroulant des saisons de `archives/index.json`, lien
 `?archive=AAAA`, chargement paresseux : classement UCI de fin de saison, victoires françaises, liste des courses ;
-fiche course lue dans `archives/<année>/races/`, fiche coureur dans `archives/<année>/riders.json`, jamais de repli
+fiche course lue dans `archives/<année>/races/` (encart repliable « Éditions précédentes » : `editions.json` + saisons du Calendrier), fiche
+  coureur dans `archives/<année>/riders.json` (onglets « Saison » et « Carrière » : `carrieres/<lettre>.json` + `riders-<année>.json` du Calendrier), jamais de repli
 vers une autre saison ; les clés null sont absentes des archives, la page traite absent = null ; anciennes classes
 HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle d'équivalence). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
 change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons + `archives/` fictives, régénérables par `tools/fixtures/generer_archives.py`) ; `?saison=AAAA`. Vérifier le rendu

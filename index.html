@@ -244,6 +244,31 @@ details.nc summary { cursor: pointer; font-size: .8rem; font-weight: 700; color:
 .wins-row .d { color: var(--muted); font-size: .74rem; }
 .wins-row .l { min-width: 0; overflow-wrap: anywhere; }
 .wins-row .l small { display: block; color: var(--muted); font-size: .74rem; }
+.ed-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) 24px; gap: 8px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--border); font-size: .85rem; }
+.ed-row:first-of-type { border-top: none; }
+.ed-y { font-weight: 800; font-variant-numeric: tabular-nums; text-align: left; color: var(--accent); }
+.ed-w { min-width: 0; overflow-wrap: anywhere; }
+.ed-w .nm { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.ed-w small { display: block; color: var(--muted); font-size: .74rem; margin-top: 2px; }
+.ed-go { text-align: center; color: var(--muted); font-size: 1.3rem; line-height: 1; }
+details.ed > summary { cursor: pointer; padding: 11px 12px; font-size: .88rem; font-weight: 700; }
+.rtabs { margin: 0 -2px; }
+.car-row { display: grid; grid-template-columns: 50px minmax(0, 1fr) 22px 26px 28px 28px 38px; gap: 5px; align-items: center; width: 100%; padding: 8px 10px; font-size: .78rem; text-align: left; }
+.car-row > span { min-width: 0; overflow-wrap: anywhere; }
+.car-row .n { text-align: center; font-variant-numeric: tabular-nums; }
+.car-h { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); background: var(--elev); }
+.car-h .n { overflow-wrap: normal; }
+.car-s { border-top: 1px solid var(--border); }
+.car-s:first-of-type { border-top: none; }
+.car-s > summary { list-style: none; cursor: pointer; }
+.car-s > summary::-webkit-details-marker { display: none; }
+.car-s > summary:active { background: var(--elev); }
+.car-s .y { font-weight: 800; font-variant-numeric: tabular-nums; }
+.car-s[open] .chev { transform: rotate(90deg); }
+.chev { display: inline-block; width: 10px; color: var(--muted); transition: transform .15s; }
+.car-s .pal-row { padding-left: 14px; }
+.car-s .pal-row .l small { display: block; color: var(--muted); font-size: .74rem; }
+.car-pal { background: var(--bg); }
 .arch-note { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
 footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
 </style>
@@ -353,8 +378,9 @@ async function charger(chemin) {
 }
 
 /** Nom de coureur cliquable (ouvre la fiche coureur) ; sans identifiant : texte simple. */
-function plink(id, texte) {
-  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}">${esc(texte)}</span>` : esc(texte);
+function plink(id, texte, ctx) {
+  // ctx (optionnel) : saison dont la fiche doit être lue, « a2023 » (archive) ou « c2027 » (Calendrier)
+  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}"${ctx ? ` data-rctx="${esc(ctx)}"` : ""}>${esc(texte)}</span>` : esc(texte);
 }
 
 const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null, calSaison: null, ctxSaison: null,
@@ -363,7 +389,10 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // archives : index (undefined = pas chargé, null = indisponible), saison choisie, index/classements par saison,
   // chemin (année) de chaque course d'archive connue, catégorie filtrée ; courseArchive = année de la fiche ouverte
   archIdx: undefined, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
-  ctxArchive: false, courseArchive: null };
+  ctxArchive: false, courseArchive: null,
+  // fiche coureur : onglet (saison | carriere), saison imposée par un lien d'édition ({archive, saison}), message de saison indisponible ;
+  // éditions précédentes : course pour laquelle l'encart est calculé, sa liste, course dont l'encart est déplié
+  rtab: "saison", rctx: null, rMsg: null, edFor: null, edListe: [], edLoading: null, edOuvert: null };
 
 /* ================== éléments communs ================== */
 const CLASSES_ANCIENNES = {
@@ -936,9 +965,86 @@ function renderFiche() {
     ${renderParcours(stage)}
     ${tabs.length ? `<div class="card table-card">${subtabs}${outils}<div id="table">${renderTable(c, sel, state.sub)}</div></div>`
       : '<div class="card"><div class="empty">Classement non publié</div></div>'}
+    <div id="editions-slot">${state.edFor === c.id ? htmlEditions(state.edListe) : ""}</div>
   </div>`;
+  majEditions(c);
   const ch = document.querySelector("#stage-chips .active");
   if (ch && ch.scrollIntoView) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
+}
+
+/* ================== éditions précédentes (fiche course) ================== */
+/** Clé d'une édition : nom normalisé + « |PAYS ». DOIT RESTER ALIGNÉE avec collector.cle_edition (Python) : minuscules, sans
+ *  accents, ponctuation remplacée par une espace, sans année (1900-2099) ni numéro d'édition isolé (107e, 3rd…). Rapprochement
+ *  exact uniquement ; nom ou pays vide : null. */
+function cleEdition(nom, pays) {
+  const p = String(pays || "").trim().toUpperCase();
+  const t = String(nom || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ");
+  const mots = t.split(" ").filter(m => m && !/^(19|20)\d\d$/.test(m) && !/^\d+(e|er|ere|eme|th|st|nd|rd)$/.test(m));
+  return mots.length && p ? mots.join(" ") + "|" + p : null;
+}
+/** Clé après application des alias manuels (editions.json.alias, copie d'alias_courses.json) ; un seul niveau, jamais deviné. */
+function cleCanon(nom, pays, alias) {
+  const k = cleEdition(nom, pays);
+  return k && Object.prototype.hasOwnProperty.call(alias, k) ? alias[k] : k;
+}
+async function chargerEditionsIdx() {
+  try {
+    const d = await charger("archives/editions.json");
+    return { alias: d.alias || {}, courses: d.courses || {} };
+  } catch (e) {
+    if (e.status === 404) return { alias: {}, courses: {} };
+    throw e;
+  }
+}
+/** Éditions de la même course (même clé, hors la course affichée) : archives (editions.json) + saisons du Calendrier. */
+async function editionsPrecedentes(c) {
+  const E = await chargerEditionsIdx();
+  const cle = cleCanon(c.name, c.country, E.alias);
+  if (!cle) return [];
+  const liste = (E.courses[cle] || []).map(e => ({ ...e, archive: true }));
+  const saisons = (state.saisons && state.saisons.available) || [];
+  const indexes = await Promise.all(saisons.map(async y => {
+    try { return [y, state.indexes[y] || await chargerIndex(y)]; } catch (e) { return [y, null]; }
+  }));
+  for (const [y, ix] of indexes) {
+    for (const r of (ix && ix.races) || []) {
+      if (r.status && r.status !== "finished") continue;
+      if (cleCanon(r.name, r.country, E.alias) !== cle) continue;
+      liste.push({ season: y, race_id: r.id, name: r.name, race_type: r.race_type, start_date: r.start_date, winner: r.winner,
+        best_french: r.best_french, archive: false });
+    }
+  }
+  const vus = new Set();
+  return liste.filter(e => e.race_id !== c.id && !vus.has(e.race_id) && vus.add(e.race_id))
+    .sort((a, b) => b.season - a.season || (b.start_date || "").localeCompare(a.start_date || ""));
+}
+function htmlEditions(liste) {
+  if (!liste.length) return "";
+  const rows = liste.map(e => {
+    if (e.archive) state.archChemins.set(e.race_id, e.season);   // évite un 404 sur races/ à l'ouverture
+    const ctx = (e.archive ? "a" : "c") + e.season, w = e.winner, bf = e.best_french;
+    const vainqueur = w ? `<div class="nm">${flag(w.flag, w.nationality)}<span>${plink(w.id, w.name, ctx)}</span>${w.is_french ? '<span class="badge fr">FR</span>' : ""}</div>`
+      : `<div class="muted">Vainqueur non disponible</div>`;
+    const fr = bf && bf.rider ? `<small>Meilleur Français : ${plink(bf.rider.id, bf.rider.name, ctx)}${bf.rank != null ? ` (${esc(rang(bf.rank))})` : ""}</small>` : "";
+    return `<div class="ed-row"><button class="ed-y" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>
+      <div class="ed-w">${vainqueur}${fr}</div>
+      <button class="ed-go" data-open="${esc(e.race_id)}" data-stage="" aria-label="Voir la fiche de l'édition ${esc(e.season)}">&rsaquo;</button></div>`;
+  }).join("");
+  return `<details class="card table-card ed" id="editions"${state.edOuvert === state.course.id ? " open" : ""}>
+    <summary>Éditions précédentes · ${liste.length}</summary>${rows}</details>`;
+}
+/** Charge l'encart sans bloquer l'affichage de la fiche ; absent si aucune édition ou en cas d'échec. */
+function majEditions(c) {
+  if (state.edFor === c.id || state.edLoading === c.id) return;
+  const id = c.id;
+  state.edLoading = id;
+  editionsPrecedentes(c).then(liste => {
+    if (state.edLoading === id) state.edLoading = null;
+    if (!state.course || state.course.id !== id) return;
+    state.edFor = id; state.edListe = liste;
+    const slot = document.getElementById("editions-slot");
+    if (slot) slot.innerHTML = htmlEditions(liste);
+  }).catch(e => { if (state.edLoading === id) state.edLoading = null; console.warn("Éditions précédentes indisponibles :", e.message); });
 }
 
 /* ================== navigation ================== */
@@ -1018,25 +1124,32 @@ function fermerFiche() {
 function fermerCoureur() {
   const rs = document.getElementById("rsheet");
   rs.classList.remove("open"); rs.setAttribute("aria-hidden", "true");
-  state.coureurOuvert = null;
+  state.coureurOuvert = null; state.rctx = null;
   majScroll();
 }
 
 const CLASSEMENT_LABEL = { stage: "Étape / course", gc: "Général", points: "Points", mountain: "Montagne", youth: "Jeunes" };
 function rangClasse(n) { return n >= 1 && n <= 3 ? ` r${n}` : ""; }
 
+/** Coque de la fiche coureur : onglets « Saison » (fiche de la saison choisie) et « Carrière » (archives + Calendrier). */
 function renderCoureur(id) {
-  const D = state.riders, f = D.riders[id];
-  const body = document.getElementById("rsheet-body");
+  const f = state.riders && state.riders.riders[id];
+  document.getElementById("rsheet-name").textContent = f ? (f.name || "Coureur") : "Coureur";
+  document.getElementById("rsheet-sub").textContent = f ? [f.team, f.age != null ? `${f.age} ans` : ""].filter(Boolean).join(" · ") : "";
+  const tab = (cle, lab) => `<button class="subtab ${state.rtab === cle ? "active" : ""}" data-rtab="${cle}" role="tab" aria-selected="${state.rtab === cle}">${lab}</button>`;
+  document.getElementById("rsheet-body").innerHTML = `<div class="stack"><div class="subtabs rtabs" role="tablist">${tab("saison", "Saison")}${tab("carriere", "Carrière")}</div>
+    <div id="rcontent"></div></div>`;
+  if (state.rtab === "carriere") renderCarriere(id); else renderSaison(id);
+}
+
+function renderSaison(id) {
+  const box = document.getElementById("rcontent");
+  const D = state.riders, f = D && D.riders[id];
   if (!f) {
-    document.getElementById("rsheet-name").textContent = "Coureur";
-    document.getElementById("rsheet-sub").textContent = "";
-    body.innerHTML = `<div class="empty card">Fiche indisponible pour ce coureur.</div>`;
+    box.innerHTML = `<div class="empty card">${state.rMsg ? esc(state.rMsg) : "Fiche indisponible pour ce coureur."}</div>`;
     return;
   }
   const S = f.stats || {}, v = k => S[k] || 0;
-  document.getElementById("rsheet-name").textContent = f.name || "Coureur";
-  document.getElementById("rsheet-sub").textContent = [f.team, f.age != null ? `${f.age} ans` : ""].filter(Boolean).join(" · ");
   const rk = D.ranking;
   const uci = f.uci_rank != null
     ? `<b>${esc(rang(f.uci_rank))}</b><span class="sub">${f.uci_points != null ? esc(num(f.uci_points)) + " pts · " : ""}au ${esc(dateLongue(rk && rk.date))}</span>`
@@ -1072,7 +1185,7 @@ function renderCoureur(id) {
     }).join("");
   }
   const fr = f.is_french ? ' <span class="badge fr">FR</span>' : "";
-  body.innerHTML = `<div class="stack">
+  box.innerHTML = `<div class="stack">
     <div class="rhead">${flag(f.flag, f.nationality)}<h2>${esc(f.name)}${fr}</h2></div>
     ${tuiles}
     <div><div class="sec-title">Palmarès de la saison ${esc(D.season ?? "")}</div><div class="stack" style="gap:8px">${pal}</div>
@@ -1080,33 +1193,130 @@ function renderCoureur(id) {
   </div>`;
 }
 
+/* ---- carrière : archives (archives/carrieres/<lettre>.json) + saisons du Calendrier (riders-<année>.json) ---- */
+async function chargerIndexCarrieres() {
+  try {
+    const d = await charger("archives/carrieres/index.json");
+    return { alias: d.alias || {}, lettres: d.lettres || [] };
+  } catch (e) {
+    if (e.status === 404) return { alias: {}, lettres: [] };
+    throw e;
+  }
+}
+/** Rassemble les saisons d'un coureur : rapprochement par rider_id exact (+ alias manuels), un seul fichier lettre chargé. */
+async function donneesCarriere(id) {
+  const I = await chargerIndexCarrieres();
+  const cid = Object.prototype.hasOwnProperty.call(I.alias, id) ? I.alias[id] : id;
+  const sources = [cid].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid));
+  const lettre = /^[a-z]/.test(cid) ? cid[0] : "_";
+  const saisons = new Map();
+  let arch = null;
+  if (I.lettres.includes(lettre)) {
+    const F = await charger(`archives/carrieres/${lettre}.json`);
+    arch = Object.prototype.hasOwnProperty.call(F, cid) ? F[cid] : null;
+  }
+  if (arch) Object.entries(arch.seasons || {}).forEach(([y, v]) => saisons.set(+y, { ...v, archive: true }));
+  let id0 = arch ? { name: arch.name, nationality: arch.nationality, flag: arch.flag } : null;
+  const cal = (state.saisons && state.saisons.available) || [];
+  const fichiers = await Promise.all(cal.map(async y => {
+    try { return [y, await charger(`riders-${y}.json`)]; }
+    catch (e) {
+      if (y !== state.current) return [y, null];
+      try { return [y, await charger("riders.json")]; } catch (e2) { return [y, null]; }
+    }
+  }));
+  for (const [y, D] of fichiers) {
+    if (!D || (D.season != null && D.season !== y) || !D.riders || saisons.has(y)) continue;
+    const src = sources.find(k => Object.prototype.hasOwnProperty.call(D.riders, k));
+    if (!src) continue;
+    const f = D.riders[src];
+    if (!id0) id0 = { name: f.name, nationality: f.nationality, flag: f.flag };
+    saisons.set(y, { team: f.team, stats: f.stats || {}, uci_rank: f.uci_rank, uci_date: D.ranking && D.ranking.date, archive: false,
+      results: (f.results || []).filter(x => x.rank != null && x.rank <= 3).map(x => ({ ...x, race: (D.races && D.races[x.race_id] || {}).name })) });
+  }
+  return { id0, saisons: [...saisons.entries()].sort((a, b) => b[0] - a[0]) };
+}
+function ligneCarriere(y, s) {
+  const S = s.stats || {}, n = k => S[k] ? esc(S[k]) : "–";
+  const res = s.results || [];
+  const etoile = !s.archive && s.uci_rank != null ? "*" : "";
+  const cellules = `<span class="y">${res.length ? '<i class="chev">&rsaquo;</i>' : '<i class="chev"></i>'}${esc(y)}</span><span>${esc(s.team || "–")}</span>
+    <span class="n">${n("wins")}</span><span class="n">${n("podiums")}</span><span class="n">${n("top10")}</span><span class="n">${n("race_days")}</span>
+    <span class="n">${s.uci_rank != null ? esc(s.uci_rank) + etoile : "–"}</span>`;
+  if (!res.length) return `<div class="car-s"><div class="car-row">${cellules}</div></div>`;
+  const lignes = res.map(x => {
+    const stage = x.classification === "stage" ? (x.stage_number == null ? "" : x.stage_number) : "F";
+    const nom = x.race || x.race_id, detail = x.label && x.label !== "Course" ? x.label : "";
+    return `<button class="pal-row" data-open="${esc(x.race_id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification)}">
+      <span class="d">${esc(dateCourte(x.date))}</span><span class="l">${esc(nom)}${detail ? `<small>${esc(detail)}</small>` : ""}</span><span class="k${rangClasse(x.rank)}">${esc(x.rank)}</span></button>`;
+  }).join("");
+  return `<details class="car-s"><summary class="car-row">${cellules}</summary><div class="car-pal">${lignes}</div></details>`;
+}
+async function renderCarriere(id) {
+  const box = document.getElementById("rcontent");
+  box.innerHTML = `<div class="loading">Chargement…</div>`;
+  const actuel = () => state.coureurOuvert === id && state.rtab === "carriere";
+  let C;
+  try { C = await donneesCarriere(id); }
+  catch (e) {
+    console.warn("Carrière indisponible :", e.message);
+    if (actuel()) box.innerHTML = messageErreur(`Carrière indisponible (${e.message}).`, "retry-car");
+    return;
+  }
+  if (!actuel()) return;
+  if (!C.saisons.length) { box.innerHTML = `<div class="empty card">Pas d'archives pour ce coureur</div>`; return; }
+  const h = C.id0 || {};
+  if (h.name && !(state.riders && state.riders.riders[id])) document.getElementById("rsheet-name").textContent = h.name;
+  const fr = h.nationality === "FRA" ? ' <span class="badge fr">FR</span>' : "";
+  const etoiles = C.saisons.filter(([, s]) => !s.archive && s.uci_rank != null).map(([y, s]) => `${y}${s.uci_date ? ` (au ${dateLongue(s.uci_date)})` : ""}`);
+  box.innerHTML = `<div class="stack">
+    <div class="rhead">${flag(h.flag, h.nationality)}<h2>${esc(h.name || "Coureur")}${fr}</h2></div>
+    <div class="card table-card"><div class="car-row car-h"><span>Saison</span><span>Équipe</span><span class="n" title="Victoires">Vic</span><span class="n" title="Podiums">Pod</span>
+      <span class="n" title="Top 10">T10</span><span class="n" title="Jours de course">Jrs</span><span class="n" title="Rang au classement UCI de fin de saison">UCI</span></div>
+      ${C.saisons.map(([y, s]) => ligneCarriere(y, s)).join("")}</div>
+    <div class="small muted">Vic : victoires d'étapes et de courses d'un jour · Pod : podiums · T10 : top 10 · Jrs : jours de course · UCI : rang au classement UCI de fin de saison.
+      Touchez une saison pour son palmarès (victoires et podiums, y compris les classements finaux). Seules les courses suivies par ce site sont comptées.</div>
+    ${etoiles.length ? `<div class="small muted">* Saison non archivée : rang du classement UCI le plus récent, pas de fin de saison (${esc(etoiles.join(" ; "))}).</div>` : ""}
+  </div>`;
+}
+
 async function ouvrirCoureur(id) {
   const rs = document.getElementById("rsheet"), body = document.getElementById("rsheet-body");
   const nouveau = state.coureurOuvert !== id;
   state.coureurOuvert = id;
+  if (nouveau) { state.rtab = "saison"; state.rMsg = null; }
   rs.classList.add("open"); rs.setAttribute("aria-hidden", "false");
   majScroll();
   if (nouveau) rs.scrollTop = 0;
-  const arch = state.ctxArchive, voulue = state.ctxSaison ?? state.current;
+  const ctx = state.rctx || { archive: state.ctxArchive, saison: state.ctxSaison ?? state.current };
+  const arch = ctx.archive, voulue = ctx.saison;
   const cle = arch ? `archives/${voulue}/riders.json` : `riders-${voulue}.json`;
   if (!state.riders || state.ridersFor !== cle) {
     document.getElementById("rsheet-name").textContent = "Coureur";
     document.getElementById("rsheet-sub").textContent = "";
     body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
-    const indisponible = () => {   // archive : jamais de repli vers les fiches d'une autre saison
+    const indisponible = () => {   // archive : jamais de repli vers les fiches d'une autre saison ; la carrière reste consultable
       state.riders = null; state.ridersFor = null;
-      body.innerHTML = `<div class="empty card">Fiche disponible à la fin de la collecte de la saison ${esc(voulue)}.</div>`;
+      state.rMsg = `Fiche disponible à la fin de la collecte de la saison ${voulue}.`; state.rtab = "carriere";
+      renderCoureur(id);
     };
-    if (arch && state.archIndexes[voulue] && !state.archIndexes[voulue].complete) { indisponible(); return; }
+    if (arch) {   // saison en cours de collecte : pas de riders.json (inutile de le demander)
+      const A = await chargerArchivesIndex(), info = A && A.seasons.find(x => x.season === voulue);
+      if (parseHashCoureur() !== id) return;
+      if ((info && !info.complete) || (state.archIndexes[voulue] && !state.archIndexes[voulue].complete)) { indisponible(); return; }
+    }
     try {
       let d;
       if (arch) d = await charger(cle);
       else {
         try { d = await charger(cle); }
-        catch (e) { d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json"); }
+        catch (e) {   // repli sur riders.json seulement pour la saison en cours
+          if (voulue !== state.current) throw e;
+          d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json");
+        }
       }
       if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
-      state.riders = d; state.ridersFor = cle;
+      state.riders = d; state.ridersFor = cle; state.rMsg = null;
     } catch (e) {
       console.warn("Fiches coureurs indisponibles :", e.message);
       if (parseHashCoureur() !== id) return;
@@ -1127,6 +1337,11 @@ function routeur() {
 }
 window.addEventListener("hashchange", routeur);
 
+/** Saison imposée par un lien coureur (data-rctx « a2023 » / « c2027 ») ; null : contexte courant de la page. */
+function rctxDe(lien) {
+  const m = /^([ac])(\d{4})$/.exec(lien.dataset.rctx || "");
+  return m ? { archive: m[1] === "a", saison: +m[2] } : null;
+}
 function ouvrirCoureurLien(id) {
   state.ouvertParApp = true;
   location.hash = `#coureur/${id}`;
@@ -1143,9 +1358,10 @@ function retour() {
 /* ================== événements (délégation) ================== */
 document.addEventListener("click", e => {
   const lien = e.target.closest("[data-rider]");
-  if (lien) { e.preventDefault(); ouvrirCoureurLien(lien.dataset.rider); return; }
+  if (lien) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); return; }
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
+  if (t.dataset.rtab) { state.rtab = t.dataset.rtab; renderCoureur(state.coureurOuvert); return; }
   if (t.dataset.calsaison) { changerSaisonCal(+t.dataset.calsaison); return; }
   if (t.dataset.tab) { state.tab = t.dataset.tab; archiveDansUrl(); renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
   if (t.dataset.clsub) { state.clSub = t.dataset.clsub; renderMain(); preparerOnglet(); return; }
@@ -1166,6 +1382,7 @@ document.addEventListener("click", e => {
   else if (a === "retry-cal") { delete state.indexes["_err" + state.calSaison]; cache.delete(`index-${state.calSaison}.json`); renderMain(); preparerOnglet(); }
   else if (a === "retry-arch") { delete state.archIndexes["_err" + state.archSaison]; cache.delete(`archives/${state.archSaison}/index.json`); renderMain(); preparerOnglet(); }
   else if (a === "retry") { routeur(); }
+  else if (a === "retry-car") { renderCarriere(state.coureurOuvert); }
   else if (a === "retry-index") { cache.clear(); init(); }
 });
 document.addEventListener("change", e => {
@@ -1179,8 +1396,12 @@ document.addEventListener("input", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && (parseHash() || parseHashCoureur())) retour();
   const lien = e.target.closest && e.target.closest("[data-rider]");
-  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); ouvrirCoureurLien(lien.dataset.rider); }
+  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); }
 });
+// encart « Éditions précédentes » : mémorise s'il est déplié (la fiche est redessinée à chaque changement d'étape)
+document.addEventListener("toggle", e => {
+  if (e.target.id === "editions" && state.course) state.edOuvert = e.target.open ? state.course.id : null;
+}, true);
 
 /* ================== démarrage ================== */
 /* ================== saisons ================== */
