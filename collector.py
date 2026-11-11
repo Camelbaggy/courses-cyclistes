@@ -7,9 +7,12 @@ data/index.json et data/races/<id>.json (voir docs/SPEC.md §4).
 Les fichiers de course sont conservés d'un passage à l'autre : seules les courses nouvelles, en cours ou
 terminées depuis moins de REFRESH_DAYS jours sont recollectées."""
 
+import copy
 import datetime as dt
 import json
 import os
+import subprocess
+import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,9 +21,11 @@ import aso
 import cyclingnews
 import directvelo
 import lnc
+import netutil
 import riders
 import selection
 import uci
+import uci_ranking
 import wikipedia_cal
 
 DATA_DIR = "data"
@@ -33,6 +38,8 @@ SUMMARY_KEYS = ("id", "name", "country", "flag", "uci_class", "category", "race_
                 "end_date", "status", "stages_done", "stages_total", "selection_reason", "winner", "leader",
                 "best_french", "sources")
 TOP10_CLASSES = ("1.1", "2.1", "1.2", "2.2")
+ARCHIVES_DIR = os.path.join(DATA_DIR, "archives")   # saisons passées compactées (data/archives/<année>/…)
+ANNEX_TOP = 30            # archives : lignes conservées dans les classements annexes (hors dernière étape)
 
 
 # --------------------------------------------------------------------------- utilitaires fichiers
@@ -261,7 +268,8 @@ def _stories(race: Dict, idx: int, aso_ref: Optional[Dict], cn_items: List[Dict]
 
 
 def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict], today: dt.date,
-                 cn_items: List[Dict], fetched: Optional[Dict] = None) -> Optional[Dict]:
+                 cn_items: List[Dict], fetched: Optional[Dict] = None, archive: bool = False) -> Optional[Dict]:
+    """`archive` : saison passée (mode archives) : ni ASO, ni récits, ni Gemini ; résumé de repli déterministe."""
     data = fetched if fetched is not None else uci.get_race(comp)
     if not data or not data.get("stages"):
         print(f"[WARN] {comp['name']} : aucun résultat UCI exploitable")
@@ -278,7 +286,7 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
         "final": None if race_type == "one_day" else data.get("final"),
         "riders": data.get("riders") or {}, "_complete": data.get("complete", True),
     }
-    aso_ref = aso.match_race(race["name"], race["start_date"])
+    aso_ref = None if archive else aso.match_race(race["name"], race["start_date"])
     prev_stages = {s.get("number"): s for s in (previous or {}).get("stages") or []}
     for idx, st in enumerate(race["stages"]):
         old = prev_stages.get(st.get("number"))
@@ -299,6 +307,10 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
     for idx, st in enumerate(race["stages"]):
         old = prev_stages.get(st.get("number"))
         # Seuls les résumés Gemini sont conservés ; le repli déterministe est toujours recalculé (gratuit).
+        if archive:
+            txt, src = agents_flash.build_fallback_summary(race, idx), "fallback"
+            st["ai_summary"], st["summary_source"] = (txt, src) if txt else (None, None)
+            continue
         if old and old.get("ai_summary") and old.get("summary_source") == "gemini" \
                 and _stage_fingerprint(old) == _stage_fingerprint(st):
             st["ai_summary"], st["summary_source"] = old["ai_summary"], old.get("summary_source")
@@ -559,3 +571,294 @@ def run(season: Optional[int], today: Optional[dt.date] = None, only: str = "", 
     print(f"[FIN] saison {season} : {len(races_by_season[season])} courses ; saisons dans le calendrier : "
           f"{sorted(indexes, reverse=True)} ; {len(new_items)} nouveauté(s) à notifier")
     return index
+
+
+# --------------------------------------------------------------------------- mode archives (saisons passées)
+
+def _sans_none(d: Dict) -> Dict:
+    return {k: v for k, v in d.items() if v is not None}
+
+
+def _compacter_classements(res: Optional[Dict], tronquer: bool) -> Optional[Dict]:
+    """Classements d'une étape ou du final : lignes sans clé à None ; annexes (hors « stage » et « gc ») tronquées
+    au top ANNEX_TOP si `tronquer`."""
+    if not isinstance(res, dict):
+        return res
+    out = {}
+    for nom, lignes in res.items():
+        if isinstance(lignes, list):
+            if tronquer and nom not in ("stage", "gc"):
+                lignes = lignes[:ANNEX_TOP]
+            lignes = [_sans_none(r) if isinstance(r, dict) else r for r in lignes]
+        out[nom] = lignes
+    return out
+
+
+def compact_race(race: Dict) -> Dict:
+    """Version compacte d'une fiche course pour les archives (copie profonde, `race` n'est pas modifié) : clés à None
+    supprimées (absent = null), classements annexes tronqués à ANNEX_TOP lignes sauf à la dernière étape, `final`
+    complet, clés internes `_aso_done` supprimées. Le schéma reste celui de data/races/<id>.json."""
+    out = copy.deepcopy(race)
+    stages = out.get("stages") or []
+    for i, st in enumerate(stages):
+        st.pop("_aso_done", None)
+        if "results" in st:
+            st["results"] = _compacter_classements(st["results"], tronquer=(i != len(stages) - 1))
+    if out.get("final"):
+        out["final"] = _compacter_classements(out["final"], tronquer=False)
+    out["riders"] = {rid: (_sans_none(r) if isinstance(r, dict) else r) for rid, r in (out.get("riders") or {}).items()}
+    return out
+
+
+def _taille_dossier(dossier: str) -> int:
+    total = 0
+    for racine, _, fichiers in os.walk(dossier):
+        for f in fichiers:
+            try:
+                total += os.path.getsize(os.path.join(racine, f))
+            except OSError:
+                pass
+    return total
+
+
+def _fin_de_saison(annee: int) -> dt.datetime:
+    """Instant de référence d'une saison close : fin officielle UCI de la saison, à défaut le 31/12."""
+    fin = (uci.season_bounds().get(annee) or (None, None))[1]
+    d = _date(fin) or dt.date(annee, 12, 31)
+    return dt.datetime(d.year, d.month, d.day, 23, 59, tzinfo=dt.timezone.utc)
+
+
+def charger_courses_archive(dossier: str) -> List[Dict]:
+    """Fiches de course (compactées) déjà écrites pour une saison d'archive."""
+    rdir = os.path.join(dossier, "races")
+    if not os.path.isdir(rdir):
+        return []
+    sortie = []
+    for f in sorted(os.listdir(rdir)):
+        r = _load(os.path.join(rdir, f), None) if f.endswith(".json") else None
+        if r:
+            sortie.append(r)
+    return sortie
+
+
+def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]] = None) -> Dict[str, Any]:
+    """Fin de saison : classement UCI de fin de saison (World Ranking, à défaut « WorldTour Ranking », groupe 3) dans
+    `ranking.json`, puis fiches coureurs `riders.json` calculées à la date de fin de saison. Aucun classement
+    disponible : pas de ranking.json (rien d'inventé), fiches sans rang UCI."""
+    courses = charger_courses_archive(dossier) if courses is None else courses
+    ranking = None
+    for groupe in (uci_ranking.GROUPE_WORLD_RANKING, 3):
+        try:
+            ranking = uci_ranking.get_ranking(season_year=annee, group_id=groupe)
+        except Exception as e:  # source secondaire : jamais bloquante
+            print(f"[WARN] classement UCI {annee} (groupe {groupe}) indisponible : {e}")
+            ranking = None
+        if ranking and ranking.get("rows"):
+            break
+        ranking = None
+    if ranking:
+        _dump_if_changed(os.path.join(dossier, "ranking.json"), ranking, ignore=())
+        print(f"[ARCHIVES] {annee} : classement « {ranking.get('name')} » ({len(ranking['rows'])} lignes)")
+    else:
+        print(f"[ARCHIVES] {annee} : aucun classement UCI de fin de saison disponible")
+    fiches = riders.build_riders(courses, ranking, now=_fin_de_saison(annee), season=annee)
+    _dump_if_changed(os.path.join(dossier, "riders.json"), fiches, ignore=())
+    return {"ranking": ranking, "riders": fiches}
+
+
+def write_archives_index(now: Optional[str] = None) -> Dict:
+    """data/archives/index.json : récapitulatif des saisons présentes dans data/archives/."""
+    saisons = []
+    if os.path.isdir(ARCHIVES_DIR):
+        for nom in os.listdir(ARCHIVES_DIR):
+            dossier = os.path.join(ARCHIVES_DIR, nom)
+            if not (nom.isdigit() and os.path.isdir(dossier)):
+                continue
+            etat = _load(os.path.join(dossier, "state.json"), {})
+            idx = _load(os.path.join(dossier, "index.json"), {})
+            saisons.append({"season": int(nom), "complete": bool(etat.get("complete")),
+                            "races": len(idx.get("races") or []), "size_bytes": _taille_dossier(dossier)})
+    saisons.sort(key=lambda s: s["season"], reverse=True)
+    data = {"generated_at": now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "seasons": saisons}
+    _dump_if_changed(os.path.join(ARCHIVES_DIR, "index.json"), data)
+    return data
+
+
+def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: float = 40,
+                max_races: int = 0, only: str = "") -> None:
+    """Collecte les saisons passées `years` (de la plus récente à la plus ancienne) dans data/archives/<année>/ :
+    courses compactées, index, et, la saison terminée, classement UCI de fin de saison + fiches coureurs.
+    Sans ASO, récits ni Gemini. Une saison `complete` n'est plus jamais recollectée (aucune requête réseau).
+    Ne touche jamais à data/index*.json, data/races, data/state.json, seasons.json."""
+    today = today or dt.date.today()
+    t0 = time.monotonic()
+    netutil.HOST_DELAYS["dataride.uci.org"] = 2.0   # rythme « archives » : 1 requête / 2 s
+
+    def over_budget() -> bool:
+        return bool(budget_min) and (time.monotonic() - t0) / 60 > budget_min
+
+    stopped = False
+    count = 0
+    limite = False
+    for annee in sorted(set(years), reverse=True):
+        dossier = os.path.join(ARCHIVES_DIR, str(annee))
+        rdir = os.path.join(dossier, "races")
+        spath = os.path.join(dossier, "state.json")
+        state = _load(spath, {})
+        if state.get("complete"):
+            print(f"[ARCHIVES] {annee} : déjà complète, ignorée")
+            continue
+        if stopped or limite:
+            break
+        sid = uci.get_season_id(annee)
+        if sid is None:
+            print(f"[WARN] [ARCHIVES] saison UCI {annee} introuvable : ignorée")
+            continue
+        comps = uci.list_competitions(sid)
+        picked = selection.select(comps, [])
+        picked_ids = {c["competition_id"] for c, _, _ in picked}
+        if only:
+            picked = [p for p in picked if only.lower() in p[0]["name"].lower()]
+        picked.sort(key=lambda p: p[0].get("start_date") or "", reverse=True)
+        top10_cache = dict(state.get("top10_checked") or {})
+        os.makedirs(rdir, exist_ok=True)
+        collectees = sondees = echecs = 0
+
+        def ecrire(comp: Dict, category: str, reason: str, fetched: Optional[Dict] = None) -> bool:
+            race = collect_race(comp, category, reason, None, today, [], fetched, archive=True)
+            if not race:
+                return False
+            race["season"] = annee
+            _dump(os.path.join(rdir, f"uci-{comp['competition_id']}.json"), compact_race(race))
+            return True
+
+        for comp, category, reason in picked:
+            if over_budget():
+                stopped = True
+                break
+            existant = _load(os.path.join(rdir, f"uci-{comp['competition_id']}.json"), None)
+            if existant is not None and existant.get("_complete") is not False:
+                continue
+            print(f"[COURSE] {annee} · {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')})")
+            if ecrire(comp, category, reason):
+                collectees += 1
+            else:
+                echecs += 1
+            count += 1
+            if max_races and count >= max_races:
+                limite = True
+                break
+
+        # .1 / .2 hors de France : retenues si un Français termine dans les 10 premiers (décision mémorisée).
+        if not only and not stopped and not limite:
+            for comp in sorted(comps, key=lambda c: c.get("start_date") or "", reverse=True):
+                if over_budget():
+                    stopped = True
+                    break
+                if comp["competition_id"] in picked_ids or comp.get("uci_class") not in TOP10_CLASSES:
+                    continue
+                cid = str(comp["competition_id"])
+                if top10_cache.get(cid) is False:
+                    continue
+                existant = _load(os.path.join(rdir, f"uci-{cid}.json"), None)
+                if existant is not None and existant.get("_complete") is not False:
+                    continue
+                data = uci.get_race(comp)
+                sondees += 1
+                if not data or not data.get("stages"):
+                    continue
+                probe = {"stages": data["stages"], "final": data.get("final"), "riders": data.get("riders") or {},
+                         "race_type": data.get("race_type")}
+                ok = selection.french_top10(probe)
+                end = _date(comp.get("end_date"))
+                if end and end < today and data.get("complete", True):
+                    top10_cache[cid] = ok
+                if ok:
+                    cat = "." + comp["uci_class"].split(".")[1][0]
+                    print(f"[COURSE] {annee} · {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')}) "
+                          f"· Français dans le top 10")
+                    if ecrire(comp, cat, "francais_top10", fetched=data):
+                        collectees += 1
+                    else:
+                        echecs += 1
+                    count += 1
+                    if max_races and count >= max_races:
+                        limite = True
+                        break
+                # sauvegarde régulière des décisions (reprise après interruption)
+                if sondees % 20 == 0:
+                    _dump_if_changed(spath, {"complete": False, "top10_checked": top10_cache}, ignore=())
+
+        print(f"[ARCHIVES] {annee} : {len(picked)} retenues, {collectees} collectées, {sondees} sondées, "
+              f"{echecs} sans résultat exploitable")
+        courses = charger_courses_archive(dossier)
+        # Saison terminée : tout parcouru sans arrêt (budget, limite, filtre) et saison close à la date du jour
+        fin = (uci.season_bounds().get(annee) or (None, None))[1]
+        close = (fin < today.isoformat()) if fin else annee < today.year   # bornes inconnues : année civile révolue
+        termine = not (stopped or limite or only) and close
+        if not (stopped or limite or only) and not close:
+            print(f"[ARCHIVES] {annee} : saison pas encore close (fin {fin}) : non marquée complète")
+        if termine:
+            finish_archive_season(annee, dossier, courses)
+        idx = build_index(courses, annee, [], None)
+        idx["archive"], idx["complete"] = True, termine
+        _dump_if_changed(os.path.join(dossier, "index.json"), idx)
+        _dump_if_changed(spath, {"complete": termine, "top10_checked": top10_cache}, ignore=())
+
+    recap = write_archives_index()
+    print(f"[ARCHIVES] récapitulatif : {[(s['season'], s['complete'], s['races']) for s in recap['seasons']]}")
+    if stopped:
+        print(f"[BUDGET] budget de {budget_min:.0f} min atteint : collecte interrompue, reprise au prochain passage")
+    print(f"[FIN] archives {sorted(set(years), reverse=True)} : {count} course(s) collectée(s) ce passage")
+
+
+# --------------------------------------------------------------------------- tests locaux
+
+def _tests() -> None:
+    # 1) aucun appel réseau à l'import (sous-processus dont les fonctions réseau lèvent une exception)
+    code = ("import netutil\n"
+            "def _non(*a, **k): raise RuntimeError('appel réseau à l import')\n"
+            "netutil.fetch_text = netutil.fetch_json = netutil.post_form_json = _non\n"
+            "import urllib.request\nurllib.request.urlopen = _non\n"
+            "import collector\n")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                       cwd=os.path.dirname(os.path.abspath(__file__)))
+    assert r.returncode == 0, r.stderr
+    # 2) compact_race
+    def L(n, **extra):
+        return [dict({"rank": i + 1, "rider_id": f"r{i}", "gap_s": None, "status": None, "time_s": i}, **extra) for i in range(n)]
+    race = {
+        "id": "uci-1", "name": "Test", "_complete": True, "season": 2023,
+        "stages": [
+            {"number": 1, "_aso_done": True, "route": None,
+             "results": {"stage": L(100), "gc": L(100), "points": L(80), "kom": L(50), "vide": []}},
+            {"number": 2, "_aso_done": True, "results": {"stage": L(100), "gc": L(100), "points": L(80)}},
+        ],
+        "final": {"gc": L(100), "points": L(80)},
+        "riders": {"r0": {"id": "r0", "name": "A", "bib": None, "is_french": False}},
+    }
+    avant = copy.deepcopy(race)
+    c = compact_race(race)
+    assert race == avant                                              # entrée intacte
+    e1, e2 = c["stages"]
+    assert len(e1["results"]["stage"]) == 100 and len(e1["results"]["gc"]) == 100
+    assert len(e1["results"]["points"]) == ANNEX_TOP and len(e1["results"]["kom"]) == ANNEX_TOP
+    assert e1["results"]["vide"] == []
+    assert len(e2["results"]["points"]) == 80                         # dernière étape : annexes complètes
+    assert len(c["final"]["points"]) == 80 and len(c["final"]["gc"]) == 100
+    assert "_aso_done" not in e1 and "_aso_done" not in e2
+    assert all(None not in r.values() for res in (e1["results"], e2["results"], c["final"]) for lg in res.values() for r in lg)
+    assert "gap_s" not in e1["results"]["stage"][0] and e1["results"]["stage"][0]["time_s"] == 0
+    assert c["riders"]["r0"] == {"id": "r0", "name": "A", "is_french": False}
+    assert c["_complete"] is True and c["season"] == 2023
+    assert "route" in e1 and e1["route"] is None                      # seules les lignes de classement et riders sont nettoyées
+    assert compact_race({"id": "x", "stages": [], "final": None, "riders": {}})["final"] is None
+    print("[OK] collector.py : tests locaux réussis")
+
+
+if __name__ == "__main__":
+    if "--test" in sys.argv:
+        _tests()
+    else:
+        print("usage : python collector.py --test (le collecteur se lance via run_pipeline.py)")

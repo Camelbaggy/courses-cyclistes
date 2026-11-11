@@ -176,6 +176,26 @@ Conventions : temps et écarts **toujours en secondes entières** dans le JSON (
 
 `{"notified": ["uci-76380:F", "uci-76012:3", …], "last_run": "…"}` — clé `<race_id>:<stage_number|F>`.
 
+### 4.4 `data/archives/` (saisons passées, mode archives)
+
+Écrit uniquement par `python run_pipeline.py --archive SAISONS` (`collector.run_archive`, workflow `archives.yml`) ;
+ne touche jamais aux fichiers de 4.1 à 4.3.
+
+- `data/archives/index.json` : `{"generated_at", "seasons": [{"season", "complete", "races", "size_bytes"}]}`, saisons
+  triées par ordre décroissant.
+- `data/archives/<année>/` : `races/uci-<id>.json` (même schéma que 4.2, `season` = année, résumés toujours
+  `summary_source: "fallback"`), `index.json` (même schéma que 4.1, `upcoming` vide, `fdj_united_series` null, plus
+  `"archive": true` et `"complete"`), `riders.json` (schéma des fiches coureurs, calculé à la date de fin de saison),
+  `ranking.json` (classement UCI de fin de saison : World Ranking, à défaut « WorldTour Ranking » ; absent si aucun
+  classement n'est disponible), `state.json` (`{"complete", "top10_checked": {id: bool}}`).
+- **Compactage** (`collector.compact_race`) : toute clé à `null` est supprimée des lignes de classement et des fiches
+  `riders` (la page traite absent = `null`) ; les classements annexes (toutes clés sauf `stage` et `gc`) sont limités
+  aux 30 premières lignes (`ANNEX_TOP`) pour chaque étape sauf la dernière ; `final` reste complet ; les clés internes
+  `_aso_done` sont retirées ; `_complete` est conservé.
+- Une saison `complete` (parcourue entièrement, sans arrêt sur budget, et close selon les bornes UCI) n'est plus
+  jamais recollectée. Sélection : `selection.select(comps, [])` (sans manche FDJ / Coupe de France historique), plus
+  sondage « Français dans le top 10 » des .1 / .2 étrangères.
+
 ## 5. Interfaces Python (contrat entre modules)
 
 Tous les modules utilisent `netutil.py` (`fetch_text`, `fetch_json`, `post_form_json`, pause par hôte, cache

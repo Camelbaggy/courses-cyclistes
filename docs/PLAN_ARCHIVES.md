@@ -45,13 +45,20 @@ Livrable : `docs/recherche/archives_dataride.md` (couverture réelle par époque
 
 ## 3. Adaptations du code
 
+> **État d'avancement du §3** : FAIT (code, tests locaux ; essai réseau `[essai:archives_collecte]` à lancer) :
+> sélection par époque (`1.HC`/`2.HC` -> Pro ; `1.CH`, `2.CH`, `CPE`, `AU1`, `MNM` -> WT), `collector.run_archive`
+> + `compact_race` (annexes top 30, clés null supprimées), `run_pipeline.py --archive`, `archives.yml`, checkout
+> partiel d'`update.yml`, classement UCI de fin de saison (`ranking.json`) et fiches coureurs par saison
+> (`riders.json`). RESTE À FAIRE : Coupe de France historique (liste par année), dépôt dédié au-delà de ~200 Mo,
+> fiches carrière (`carrieres/`), `tools/inspect_data.py --archive`, interface (§4).
+
 ### Sélection par époque (`selection.py`)
 
 | Aujourd'hui | Équivalent historique |
 |---|---|
 | `1.UWT` / `2.UWT` → WT | idem depuis 2011 ; `1.UWT`/`2.UWT` ou codes ProTour (`PT`) avant |
-| `1.Pro` / `2.Pro` → Pro | `1.HC` / `2.HC` avant 2020 (rangées en « Pro », libellé d'origine conservé) |
-| — | 2009-2010 : `1.CH` / `2.CH` (calendrier historique : grands tours, monuments) et classes ProTour (`CPE`, `AU1`, `MNM`) → WT |
+| `1.Pro` / `2.Pro` → Pro | `1.HC` / `2.HC` avant 2020 (rangées en « Pro », libellé d'origine conservé) **[fait]** |
+| — | 2009-2010 : `1.CH` / `2.CH` (calendrier historique : grands tours, monuments) et classes ProTour (`CPE`, `AU1`, `MNM`) → WT **[fait]** |
 | FDJ United Series | Coupe de France (liste par année : LNC si disponible, sinon Wikipédia « Coupe de France de cyclisme sur route {année} ») |
 | .1 / .2, championnats | identiques |
 
@@ -64,7 +71,7 @@ La règle « .1/.2 étrangère avec un Français dans le top 10 » s'applique te
   servent que l'édition en cours ; Cyclingnews/DirectVélo n'ont pas l'historique).
 - Reprise : budget de temps par passage (déjà en place), décisions « top 10 français » mémorisées ; une saison est
   marquée « archivée » une fois complète et n'est plus jamais recollectée.
-- Nouveau workflow `archives.yml` (`workflow_dispatch`, entrée « saisons »), séparé de `update.yml`, même groupe de
+- **[fait]** Nouveau workflow `archives.yml` (`workflow_dispatch`, entrée « saisons »), séparé de `update.yml`, même groupe de
   concurrence pour ne jamais committer en même temps que la mise à jour horaire.
 
 ### Stockage et compactage

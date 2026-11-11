@@ -10,6 +10,20 @@ import netutil
 import notify
 
 
+def parse_saisons(txt: str) -> list:
+    """« 2021-2025 », « 2023 », « 2021,2023 » ou un mélange (« 2016-2018,2021 ») -> [2025, 2024, ...] sans doublon."""
+    annees = set()
+    for morceau in txt.replace(" ", "").split(","):
+        if not morceau:
+            continue
+        a, sep, b = morceau.partition("-")
+        debut, fin = int(a), int(b) if sep else int(a)
+        if fin < debut:
+            debut, fin = fin, debut
+        annees.update(range(debut, fin + 1))
+    return sorted(annees, reverse=True)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Dashboard des courses cyclistes : mise à jour des données")
     p.add_argument("--season", type=int, default=None, help="saison UCI (défaut : saison UCI en cours, déterminée par l'UCI)")
@@ -19,10 +33,17 @@ def main() -> None:
     p.add_argument("--save-raw", default="", help="dossier où sauvegarder les réponses brutes")
     p.add_argument("--budget-min", type=float, default=40,
                    help="durée max de collecte en minutes (0 = illimitée) ; la suite au passage suivant")
+    p.add_argument("--archive", default="", metavar="SAISONS",
+                   help="mode archives : saisons passées (« 2021-2025 », « 2023 », « 2021,2023 ») collectées dans "
+                        "data/archives/, sans notification ni Gemini ; --budget-min, --max-races et --only s'appliquent")
     p.add_argument("--no-notify", action="store_true", help="ne pas envoyer de push ntfy")
     a = p.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
     netutil.set_raw_dir(a.save_raw or None)
+    if a.archive:
+        collector.run_archive(parse_saisons(a.archive), today=today, budget_min=a.budget_min,
+                              max_races=a.max_races, only=a.only)
+        return   # jamais de notification en mode archives
     collector.run(a.season, today=today, only=a.only, max_races=a.max_races,
                   budget_min=a.budget_min)
     if not a.no_notify:
