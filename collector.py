@@ -11,9 +11,11 @@ import copy
 import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
 import time
+import unicodedata
 from typing import Any, Dict, List, Optional, Tuple
 
 import agents_flash
@@ -39,6 +41,9 @@ SUMMARY_KEYS = ("id", "name", "country", "flag", "uci_class", "category", "race_
                 "best_french", "sources")
 TOP10_CLASSES = ("1.1", "2.1", "1.2", "2.2")
 ARCHIVES_DIR = os.path.join(DATA_DIR, "archives")   # saisons passées compactées (data/archives/<année>/…)
+RACINE = os.path.dirname(os.path.abspath(__file__))
+ALIAS_COURSES = os.path.join(RACINE, "alias_courses.json")      # {"clé source": "clé canonique"} : manuel, jamais deviné
+ALIAS_COUREURS = os.path.join(RACINE, "alias_coureurs.json")    # {"rider_id source": "rider_id canonique"} : idem
 ANNEX_TOP = 30            # archives : lignes conservées dans les classements annexes (hors dernière étape)
 
 
@@ -715,6 +720,156 @@ def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]
     return {"ranking": ranking, "riders": fiches}
 
 
+# --------------------------------------------------------------------------- éditions et carrières (archives)
+
+def cle_edition(nom: Optional[str], pays: Optional[str]) -> Optional[str]:
+    """Clé d'une « édition » d'une course : nom normalisé + « |PAYS ». Rapprochement EXACT sur cette clé, jamais flou.
+    Nom en minuscules, sans accents, ponctuation (tirets, apostrophes…) remplacée par une espace, sans année
+    (1900-2099) ni numéro d'édition isolé (« 107e », « 3rd »), espaces normalisées. Nom ou pays vide : None (pas de
+    clé, donc aucun rapprochement). DOIT RESTER ALIGNÉE avec `cleEdition` de index.html."""
+    pays = (pays or "").strip().upper()
+    t = unicodedata.normalize("NFKD", nom or "")
+    t = "".join(ch for ch in t if not unicodedata.combining(ch)).lower()
+    t = re.sub(r"[\W_]+", " ", t)
+    mots = [m for m in t.split() if not (re.fullmatch(r"(19|20)\d\d", m) or re.fullmatch(r"\d+(e|er|ere|eme|th|st|nd|rd)", m))]
+    if not mots or not pays:
+        return None
+    return " ".join(mots) + "|" + pays
+
+
+def charger_alias(chemin: str) -> Dict[str, str]:
+    """Fichier d'alias manuel {source: canonique}. Seules les paires texte -> texte, source != canonique, sont gardées ;
+    pas de chaînage (une cible qui est elle-même une source est ignorée avec un avertissement)."""
+    brut = _load(chemin, {})
+    alias = {k: v for k, v in (brut.items() if isinstance(brut, dict) else [])
+             if isinstance(k, str) and isinstance(v, str) and k and v and k != v}
+    for k, v in list(alias.items()):
+        if v in alias:
+            print(f"[WARN] alias {os.path.basename(chemin)} : « {k} » -> « {v} » ignoré (la cible est elle-même un alias, pas de chaînage)")
+            del alias[k]
+    return alias
+
+
+def _ref_reduit(ref: Optional[Dict]) -> Optional[Dict]:
+    if not ref:
+        return None
+    return {k: ref.get(k) for k in ("id", "name", "nationality", "flag", "is_french") if ref.get(k) is not None}
+
+
+def construire_editions(archives_dir: str, alias: Dict[str, str], now: Optional[str] = None) -> Dict:
+    """editions.json : pour chaque clé d'édition (après alias), les éditions archivées, saison décroissante."""
+    courses: Dict[str, List[Dict]] = {}
+    if os.path.isdir(archives_dir):
+        for nom in os.listdir(archives_dir):
+            ix = _load(os.path.join(archives_dir, nom, "index.json"), None) if nom.isdigit() else None
+            if not ix:
+                continue
+            for r in ix.get("races") or []:
+                if r.get("status") not in (None, "finished"):
+                    continue          # course en cours : pas encore une édition
+                cle = cle_edition(r.get("name"), r.get("country"))
+                if not cle or not r.get("id"):
+                    continue
+                cle = alias.get(cle, cle)
+                bf = r.get("best_french")
+                courses.setdefault(cle, []).append({
+                    "season": int(nom), "race_id": r["id"], "name": r.get("name"), "uci_class": r.get("uci_class"),
+                    "category": r.get("category"), "race_type": r.get("race_type"), "start_date": r.get("start_date"),
+                    "winner": _ref_reduit(r.get("winner")),
+                    "best_french": {"rider": _ref_reduit(bf.get("rider")), "rank": bf.get("rank"),
+                                    "classification": bf.get("classification")} if bf and bf.get("rider") else None})
+    for lst in courses.values():
+        lst.sort(key=lambda e: (-e["season"], e.get("start_date") or "", e["race_id"]))
+    return {"generated_at": now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "alias": alias, "courses": dict(sorted(courses.items()))}
+
+
+def lettre_carriere(rider_id: str) -> str:
+    c = (rider_id or "")[:1]
+    return c if "a" <= c <= "z" else "_"
+
+
+def construire_carrieres(archives_dir: str, alias: Dict[str, str]) -> Dict[str, Dict]:
+    """{lettre: {rider_id: carrière}} d'après les riders.json des saisons d'archive. Rapprochement par rider_id exact
+    (slug du nom + date de naissance) après alias manuel. Un alias qui ferait apparaître deux fois le même coureur la
+    même saison est ignoré pour cette saison (contradiction : la fiche garde son propre identifiant, rien n'est fusionné)."""
+    par_coureur: Dict[str, Dict] = {}
+    annees = sorted(int(n) for n in os.listdir(archives_dir) if n.isdigit()) if os.path.isdir(archives_dir) else []
+    vus: Dict[Tuple[str, int], str] = {}
+    for an in annees:
+        D = _load(os.path.join(archives_dir, str(an), "riders.json"), None)
+        if not D or not isinstance(D.get("riders"), dict):
+            continue
+        noms_courses = D.get("races") or {}
+        # coureurs de la saison dans l'ordre : identifiants canoniques d'abord (alias contradictoires écartés)
+        for rid in sorted(D["riders"], key=lambda k: (k in alias, k)):
+            f = D["riders"][rid]
+            cid = alias.get(rid, rid)
+            if (cid, an) in vus:
+                print(f"[WARN] carrières : alias « {rid} » -> « {cid} » ignoré en {an} (le coureur canonique y figure déjà)")
+                cid = rid
+                if (cid, an) in vus:
+                    continue
+            vus[(cid, an)] = rid
+            c = par_coureur.setdefault(cid, {"seasons": {}})
+            for k in ("name", "nationality", "flag", "birth_date"):    # saisons parcourues par année croissante : la plus récente l'emporte
+                if f.get(k) is not None:
+                    c[k] = f[k]
+            saison: Dict[str, Any] = {}
+            if f.get("team"):
+                saison["team"] = f["team"]
+            stats = {k: v for k, v in (f.get("stats") or {}).items() if v}
+            if stats:
+                saison["stats"] = stats
+            if f.get("uci_rank") is not None:
+                saison["uci_rank"] = f["uci_rank"]
+            res = []
+            for x in sorted(f.get("results") or [], key=lambda x: (x.get("date") or "", x.get("race_id") or ""), reverse=True):
+                if x.get("rank") is None or x["rank"] > 3:
+                    continue
+                e = {"date": x.get("date"), "race_id": x.get("race_id"), "label": x.get("label"),
+                     "classification": x.get("classification"), "rank": x["rank"]}
+                if x.get("stage_number") is not None:
+                    e["stage_number"] = x["stage_number"]
+                nom_course = (noms_courses.get(x.get("race_id")) or {}).get("name")
+                if nom_course:
+                    e["race"] = nom_course
+                res.append(e)
+            if res:
+                saison["results"] = res
+            c["seasons"][str(an)] = saison
+    lettres: Dict[str, Dict] = {}
+    for cid in sorted(par_coureur):
+        c = par_coureur[cid]
+        c["seasons"] = dict(sorted(c["seasons"].items(), reverse=True))
+        lettres.setdefault(lettre_carriere(cid), {})[cid] = c
+    return lettres
+
+
+def write_archives_editions_carrieres(archives_dir: Optional[str] = None, now: Optional[str] = None,
+                                      alias_courses: Optional[Dict[str, str]] = None,
+                                      alias_coureurs: Optional[Dict[str, str]] = None) -> None:
+    """Écrit archives/editions.json, archives/carrieres/<lettre>.json et archives/carrieres/index.json (seulement s'ils
+    changent). Les fichiers de lettre devenus sans coureur sont supprimés (données dérivées)."""
+    archives_dir = archives_dir or ARCHIVES_DIR
+    ac = charger_alias(ALIAS_COURSES) if alias_courses is None else alias_courses
+    ar = charger_alias(ALIAS_COUREURS) if alias_coureurs is None else alias_coureurs
+    ed = construire_editions(archives_dir, ac, now)
+    _dump_if_changed(os.path.join(archives_dir, "editions.json"), ed)
+    dossier = os.path.join(archives_dir, "carrieres")
+    lettres = construire_carrieres(archives_dir, ar)
+    for lettre, contenu in lettres.items():
+        _dump_if_changed(os.path.join(dossier, f"{lettre}.json"), contenu, ignore=())
+    # index.json : alias manuels (copie d'alias_coureurs.json) et lettres présentes (la page ne demande que celles-là : pas de 404)
+    _dump_if_changed(os.path.join(dossier, "index.json"), {"alias": ar, "lettres": sorted(lettres)}, ignore=())
+    if lettres and os.path.isdir(dossier):
+        for f in os.listdir(dossier):
+            if f.endswith(".json") and f != "index.json" and f[:-5] not in lettres:
+                os.remove(os.path.join(dossier, f))
+    print(f"[ARCHIVES] éditions : {sum(len(v) for v in ed['courses'].values())} pour {len(ed['courses'])} course(s) ; "
+          f"carrières : {sum(len(v) for v in lettres.values())} coureur(s) dans {len(lettres)} fichier(s)")
+
+
 def write_archives_index(now: Optional[str] = None) -> Dict:
     """data/archives/index.json : récapitulatif des saisons présentes dans data/archives/."""
     saisons = []
@@ -731,6 +886,7 @@ def write_archives_index(now: Optional[str] = None) -> Dict:
     data = {"generated_at": now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "seasons": saisons}
     _dump_if_changed(os.path.join(ARCHIVES_DIR, "index.json"), data)
+    write_archives_editions_carrieres(ARCHIVES_DIR, now)
     return data
 
 
@@ -929,6 +1085,89 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
 
 # --------------------------------------------------------------------------- tests locaux
 
+def _tests_editions() -> None:
+    """cle_edition, alias, editions.json et carrières sur un dossier temporaire (aucun réseau)."""
+    import tempfile
+    k = cle_edition
+    assert k("Paris - Roubaix", "FRA") == k("Paris-Roubaix", "fra") == "paris roubaix|FRA"
+    assert k("Paris-Roubaix 2023", "FRA") == k("107e Paris-Roubaix", "FRA") == k("Paris–Roubaix", "FRA")
+    assert k("Tour de France", "FRA") != k("Tour de France Saitama Criterium", "FRA")
+    assert k("Tour de France", "FRA") != k("Tour de France", "BEL")
+    assert k("Grand Prix de l'Essai", "BEL") == k("Grand Prix de l’Essai", "BEL") == k("GRAND PRIX DE L'ESSAI (2024)", "BEL")
+    assert k("Liège-Bastogne-Liège", "BEL") == k("Liege - Bastogne - Liege", "BEL")
+    assert k("Tour 2.1", "FRA") == "tour 2 1|FRA"          # un numéro sans suffixe d'ordinal n'est pas retiré
+    assert k("", "FRA") is None and k("2023", "FRA") is None and k("Paris-Roubaix", "") is None
+    with tempfile.TemporaryDirectory() as tmp:
+        arch = os.path.join(tmp, "archives")
+        def race(i, nom, pays, an, gagnant, fr=None, statut="finished"):
+            ref = lambda rid, nm: {"id": rid, "name": nm, "nationality": "FRA", "flag": "fr", "is_french": True, "team": "T"}
+            return {"id": i, "name": nom, "country": pays, "uci_class": "1.UWT", "category": "WT", "race_type": "one_day",
+                    "start_date": f"{an}-04-10", "status": statut, "winner": ref(*gagnant) if gagnant else None,
+                    "best_french": {"rider": ref(*fr), "rank": 2, "classification": "stage"} if fr else None}
+        _dump(os.path.join(arch, "2023", "index.json"), {"races": [
+            race("a", "Paris - Roubaix", "FRA", 2023, ("x-1", "X Un"), ("f-1", "F Un")),
+            race("b", "Tour de France", "FRA", 2023, ("x-1", "X Un")),
+            race("c", "Course en cours", "FRA", 2023, None, statut="in_progress")]})
+        _dump(os.path.join(arch, "2024", "index.json"), {"races": [
+            race("d", "Paris-Roubaix", "FRA", 2024, ("x-2", "X Deux")),
+            race("e", "Roubaix Classique", "FRA", 2024, ("x-1", "X Un"))]})
+        _dump(os.path.join(arch, "2022", "index.json"), {"races": []})
+        ed = construire_editions(arch, {}, "t")
+        assert [e["season"] for e in ed["courses"]["paris roubaix|FRA"]] == [2024, 2023]
+        assert ed["courses"]["paris roubaix|FRA"][1]["best_french"]["rank"] == 2
+        assert ed["courses"]["paris roubaix|FRA"][0]["best_french"] is None
+        assert "course en cours|FRA" not in ed["courses"] and "tour de france|FRA" in ed["courses"]
+        assert set(ed["courses"]["paris roubaix|FRA"][0]["winner"]) == {"id", "name", "nationality", "flag", "is_french"}
+        ed2 = construire_editions(arch, {"roubaix classique|FRA": "paris roubaix|FRA"}, "t")       # alias : changement de nom
+        assert [e["race_id"] for e in ed2["courses"]["paris roubaix|FRA"]] == ["d", "e", "a"] and ed2["alias"]
+        # carrières
+        def fiche(an, **ridrs):
+            return {"season": an, "races": {"a": {"name": "Paris - Roubaix"}}, "riders": ridrs}
+        def r(nom, team, stats, rang=None, results=()):
+            d = {"name": nom, "nationality": "FRA", "flag": "fr", "team": team, "birth_date": "1990-01-01", "stats": stats, "results": list(results)}
+            if rang:
+                d["uci_rank"] = rang
+            return d
+        pod = lambda rk, d="2023-04-10": {"date": d, "race_id": "a", "stage_number": None, "label": "Course", "classification": "stage", "rank": rk}
+        _dump(os.path.join(arch, "2023", "riders.json"), fiche(2023, **{
+            "x-1": r("X Un", "T1", {"wins": 1, "top10": 3, "race_days": 9}, 4, [pod(1), pod(7)]), "z-9": r("Z Neuf", "T9", {"races": 2})}))
+        _dump(os.path.join(arch, "2024", "riders.json"), fiche(2024, **{
+            "x-1": r("X Un", "T2", {"podiums": 2}, None, [pod(3, "2024-04-10")]), "xx-1": r("X Un Bis", "T3", {"wins": 5}),
+            "_bizarre": r("Bizarre", "T4", {})}))
+        car = construire_carrieres(arch, {})
+        assert set(car) == {"x", "z", "_"} and set(car["x"]) == {"x-1", "xx-1"}
+        x = car["x"]["x-1"]
+        assert list(x["seasons"]) == ["2024", "2023"] and x["name"] == "X Un" and x["birth_date"] == "1990-01-01"
+        assert x["seasons"]["2023"] == {"team": "T1", "stats": {"wins": 1, "top10": 3, "race_days": 9}, "uci_rank": 4,
+                                        "results": [{"date": "2023-04-10", "race_id": "a", "label": "Course", "classification": "stage",
+                                                     "rank": 1, "race": "Paris - Roubaix"}]}      # le 7e n'est pas un podium
+        assert "uci_rank" not in x["seasons"]["2024"] and x["seasons"]["2024"]["results"][0]["rank"] == 3
+        # alias coureur : « xx-1 » est « x-1 » ; contradiction en 2024 (x-1 y figure déjà) : ignoré, rien de fusionné
+        car2 = construire_carrieres(arch, {"xx-1": "x-1"})
+        assert "xx-1" in car2["x"] and car2["x"]["x-1"]["seasons"]["2024"]["team"] == "T2"
+        car3 = construire_carrieres(arch, {"z-9": "x-1"})       # x-1 figure déjà en 2023 : z-9 écarté (jamais deux fiches fusionnées)
+        assert "z-9" in car3["z"] and list(car3["x"]["x-1"]["seasons"]) == ["2024", "2023"] and car3["x"]["x-1"]["seasons"]["2023"]["team"] == "T1"
+        car4 = construire_carrieres(arch, {"xx-1": "y-7"})      # alias vers un id sans autre fiche : renommage
+        assert "y-7" in car4["y"] and "xx-1" not in car4["x"] and car4["y"]["y-7"]["seasons"]["2024"]["stats"] == {"wins": 5}
+        assert lettre_carriere("_bizarre") == "_" and lettre_carriere("é-1") == "_" and lettre_carriere("a") == "a"
+        assert charger_alias(os.path.join(tmp, "absent.json")) == {}
+        _dump(os.path.join(tmp, "al.json"), {"a": "b", "b": "c", "d": "d", "e": 3, "f": "g"})
+        assert charger_alias(os.path.join(tmp, "al.json")) == {"b": "c", "f": "g"}      # chaînage a->b->c refusé
+        # écriture : seuls les fichiers qui changent sont réécrits ; lettre devenue vide supprimée
+        write_archives_editions_carrieres(arch, "t1", {}, {})
+        chemins = [os.path.join(arch, "editions.json")] + [os.path.join(arch, "carrieres", f) for f in ("x.json", "z.json", "_.json", "index.json")]
+        assert all(os.path.exists(c) for c in chemins)
+        os.utime(chemins[1], (1, 1))
+        write_archives_editions_carrieres(arch, "t2", {}, {})
+        assert os.path.getmtime(chemins[1]) == 1 and _load(chemins[0], {})["generated_at"] == "t1"
+        os.remove(os.path.join(arch, "2023", "riders.json")); os.remove(os.path.join(arch, "2024", "riders.json"))
+        _dump(os.path.join(arch, "2024", "riders.json"), fiche(2024, **{"x-1": r("X Un", "T2", {"podiums": 2})}))
+        write_archives_editions_carrieres(arch, "t3", {}, {})
+        assert not os.path.exists(chemins[2]) and not os.path.exists(chemins[3]) and os.path.exists(chemins[1])
+        assert _load(chemins[4], {}) == {"alias": {}, "lettres": ["x"]}
+    print("[OK] collector.py : éditions et carrières")
+
+
 def _tests() -> None:
     # 1) aucun appel réseau à l'import (sous-processus dont les fonctions réseau lèvent une exception)
     code = ("import netutil\n"
@@ -1065,6 +1304,7 @@ def _tests() -> None:
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028, 2027]
     finally:
         globals_["DATA_DIR"], globals_["RACES_DIR"], globals_["ARCHIVES_DIR"], globals_["finish_archive_season"], globals_["_ranking_du_jour"] = sauve
+    _tests_editions()
     print("[OK] collector.py : tests locaux réussis")
 
 

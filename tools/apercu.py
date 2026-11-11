@@ -37,7 +37,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await ctx.route('https://flagcdn.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: FLAG_SVG }));
   const page = await ctx.newPage();
   const erreurs = [];
-  page.on('console', m => { if (['error', 'warning'].includes(m.type())) erreurs.push(`[console.${m.type()}] ${m.text()}`); });
+  page.on('console', m => { if (['error', 'warning'].includes(m.type())) erreurs.push(`[console.${m.type()}] ${m.text()} ${m.location().url || ''}`); });
   page.on('pageerror', e => erreurs.push(`[pageerror] ${e.message}`));
   page.on('requestfailed', r => { if (!r.url().includes('flagcdn')) erreurs.push(`[requestfailed] ${r.url()}`); });
   const base = `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}`;
@@ -161,6 +161,51 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await hauteurFiche('20-classique-paves');
   await page.goto(base + '#course/fx-gp-test-sur-mer'); await page.waitForSelector('#sheet.open .card');
   await cap('21-course-1-fr', false);
+  // encart « Éditions précédentes » (course du Calendrier : éditions archivées 2024, 2023 et 2022) puis fiche coureur ouverte depuis une édition
+  await page.waitForSelector('#editions');
+  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
+  await cap('21b-editions-repliees', false);
+  await page.click('#editions > summary'); await page.waitForTimeout(150);
+  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
+  await cap('21c-editions-depliees', false);
+  const nbEd = await page.$$eval('#editions .ed-row', r => r.length);
+  console.log('editions listees (attendu 3) :', nbEd);
+  await page.click('#stage-chips .chip, #subtabs .subtab').catch(() => {});      // un redessin de la fiche garde l'encart déplié
+  console.log('encart toujours deplie apres redessin :', await page.$eval('#editions', d => d.open));
+  // éditions d'une saison sans fiches coureurs (2023 en cours de collecte) : la fiche s'ouvre sur l'onglet Carrière
+  await page.click('#editions .ed-row:nth-of-type(2) .rlink'); await page.waitForSelector('#rsheet.open .subtabs');
+  await cap('21d-editions-coureur-2023', false);
+  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
+  await page.click('#editions .ed-row:nth-of-type(1) .rlink'); await page.waitForSelector('#rsheet.open .tile, #rsheet.open .empty');
+  await cap('21e-editions-coureur-2024', false);
+  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
+  await page.click('#editions .ed-row:nth-of-type(1) .ed-go'); await page.waitForSelector('#sheet-name');
+  await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr') && document.getElementById('sheet-body').querySelector('.card'));
+  await page.waitForSelector('#editions');
+  console.log('fiche archive 2024 : editions =', await page.$$eval('#editions .ed-row', r => r.length), '(attendu 3 : 2026, 2023, 2022)');
+  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
+  await cap('21f-archive-editions', false);
+  await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
+  // fiche d'une course d'archive sans autre édition : pas d'encart
+  const avantD = erreurs.length;   // lien direct : 404 volontaire sur races/ avant la recherche dans les archives
+  await page.goto(base + '#course/fx-a24-tour-hc'); await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(600);
+  console.log('ERREURS_ATTENDUES (404 lien direct, tour)', JSON.stringify(erreurs.splice(avantD).length));
+  console.log('course sans autre edition : encart absent =', !(await page.$('#editions')));
+  // carrière : Paul Épure (archives 2022 et 2024 + Calendrier 2026)
+  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile');
+  await cap('23a-coureur-saison-onglets', false);
+  await page.click('[data-rtab="carriere"]'); await page.waitForSelector('.car-s');
+  await cap('23b-carriere', false);
+  await page.click('.car-s > summary'); await page.waitForTimeout(150);
+  await cap('23c-carriere-palmares', false);
+  await page.click('.car-s .pal-row'); await page.waitForFunction(() => location.hash.startsWith('#course/'));
+  await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(300);
+  console.log('palmares -> fiche course :', await page.evaluate(() => location.hash));
+  // coureur sans aucune archive
+  await page.goto(base + '#coureur/inconnu-x-19900101'); await page.waitForSelector('#rsheet.open .subtabs');
+  await page.click('[data-rtab="carriere"]'); await page.waitForSelector('#rcontent .empty');
+  console.log('sans archives :', await page.$eval('#rcontent', e => e.textContent.trim()));
+  await cap('23d-carriere-vide', false);
   // erreur de chargement
   const avant = erreurs.length;
   await page.goto(base + '#course/inexistante'); await page.waitForSelector('.errbox');
