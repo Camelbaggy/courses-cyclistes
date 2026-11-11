@@ -29,6 +29,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}   # tête de la branche au démarrage, pas le commit déclencheur (déjà dépassé si un passage précédent a commité)
+          # data/archives/ (alimenté par archives.yml) n'est pas utile ici : on ne le télécharge pas à chaque passage.
+          # Le commit ne touche que data/ hors archives ; le pull --rebase fonctionne avec un checkout partiel.
+          sparse-checkout: |
+            /*
+            !/data/archives/
+          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

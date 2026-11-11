@@ -25,6 +25,8 @@ python tools/inspect_data.py data                     # résumé lisible des don
 python uci.py && python selection.py && python wikipedia_cal.py && python riders.py --test   # tests locaux (assert)
 AI_BUDGET_SECONDS=0 python tools/essais/essai_ia.py   # dossier, repli, notification sur tools/fixtures_ia
 python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright)
+python run_pipeline.py --archive 2023 --max-races 5  # mode archives (écrit dans data/archives/ : à supprimer ensuite)
+python collector.py --test                            # tests locaux de compact_race (sans réseau)
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
 
@@ -61,6 +63,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
+run_pipeline.py --archive 2021-2025 ── collector.run_archive (saisons passées -> data/archives/, voir ci-dessous)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
 index.html : page unique (CSS + JS inline)
 ```
@@ -70,6 +73,16 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 (`uci-<CompetitionId>`, communs à toutes les saisons, champ `season`), `riders-<année>.json`, `ranking.json`,
 `state.json` (interne). Tout fichier n'est réécrit que si son contenu change (hors horodatage) : pas de commit vide.
 
+- **Archives** (`data/archives/`, `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` §4.4) : `run_pipeline.py --archive SAISONS`
+  (`collector.run_archive`) collecte les saisons passées de la plus récente à la plus ancienne, sans ASO, récits ni
+  Gemini (résumés de repli), pas de notification, pause de 2 s sur DataRide. Fichiers compactés (`compact_race` :
+  clés null supprimées, annexes limitées au top 30 sauf dernière étape) dans `data/archives/<année>/` (`races/`,
+  `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est plus jamais recollectée
+  (aucune requête). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
+  `ARCHIVES_SAISONS`, défaut 2021-2025, même groupe de concurrence que `update.yml`, commit de `data/archives/`
+  seulement). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
+  écrire ni y committer d'archives. Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
+  en Pro et les classes 2009-2010 (`1.CH`, `2.CH`, `CPE`, `AU1`, `MNM`) en WT (libellé `uci_class` inchangé).
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).

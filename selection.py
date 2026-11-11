@@ -15,7 +15,10 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import netutil
 
 CLASSES_WT = {"1.UWT", "2.UWT"}
-CLASSES_PRO = {"1.Pro", "2.Pro"}
+CLASSES_PRO = {"1.Pro", "2.Pro", "1.HC", "2.HC"}   # 1.HC / 2.HC : ancêtres historiques des Pro (archives)
+# Classes historiques 2009-2010 : calendrier historique (grands tours, monuments) et ProTour -> rangées en « WT »
+# (le libellé d'origine reste dans `uci_class`).
+CLASSES_WT_HISTORIQUES = {"1.CH", "2.CH", "CPE", "AU1", "MNM"}
 CHAMPIONNATS_LIBRES = {"CC", "CM", "WC", "OG", "JO"}  # continentaux, monde, olympiques : toujours suivis
 CHAMPIONNAT_NATIONAL = "CN"                            # seulement si la course est en France
 
@@ -23,7 +26,7 @@ CHAMPIONNAT_NATIONAL = "CN"                            # seulement si la course 
 def categorie_classe(classe: str) -> Optional[str]:
     """Classe UCI -> catégorie « de rang » : WT, Pro, .1, .2 (2.2U, 1.2U, 1.Ncup, 1.2S… inclus), sinon None."""
     c = (classe or "").strip()
-    if c in CLASSES_WT:
+    if c in CLASSES_WT or c in CLASSES_WT_HISTORIQUES:
         return "WT"
     if c in CLASSES_PRO:
         return "Pro"
@@ -143,10 +146,14 @@ def _tests() -> None:
 
     for classe, att in [("1.UWT", "WT"), ("2.UWT", "WT"), ("1.Pro", "Pro"), ("2.Pro", "Pro"), ("1.1", ".1"), ("2.1", ".1"),
                         ("1.2", ".2"), ("2.2", ".2"), ("2.2U", ".2"), ("1.2U", ".2"), ("1.Ncup", ".2"), ("2.Ncup", ".2"),
-                        ("CN", None), ("CC", None), ("CM", None), ("", None), ("1.HC", None)]:
+                        ("CN", None), ("CC", None), ("CM", None), ("", None), ("1.HC", "Pro"), ("2.HC", "Pro"),
+                        ("1.CH", "WT"), ("2.CH", "WT"), ("CPE", "WT"), ("AU1", "WT"), ("MNM", "WT")]:
         assert categorie_classe(classe) == att, classe
     assert select([C("1.UWT", "BEL")])[0][1:] == ("WT", "classe")
     assert select([C("2.Pro", "ITA")])[0][1:] == ("Pro", "classe")
+    assert select([C("1.HC", "BEL")])[0][1:] == ("Pro", "classe")
+    assert select([C("2.CH", "ITA")])[0][1:] == ("WT", "classe")
+    assert select([C("MNM", "BEL")])[0][1:] == ("WT", "classe")
     assert select([C("1.2", "FRA")])[0][1:] == (".2", "france")
     assert select([C("2.2U", "FRA")])[0][1:] == (".2", "france")
     assert select([C("1.Ncup", "FRA")])[0][1:] == (".2", "france")

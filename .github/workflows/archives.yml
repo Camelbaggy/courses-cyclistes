@@ -1,0 +1,54 @@
+name: Archives (saisons passées)
+
+# Collecte des saisons passées dans data/archives/ (docs/PLAN_ARCHIVES.md). Passages nocturnes, hors des créneaux de
+# update.yml ; chaque passage reprend où le précédent s'est arrêté (budget de temps) et une saison complète n'est
+# plus jamais recollectée. Saisons : entrée manuelle, sinon variable de dépôt ARCHIVES_SAISONS, sinon 2021-2025.
+on:
+  schedule:
+    - cron: '23 0-5 * * *'
+  workflow_dispatch:
+    inputs:
+      saisons:
+        description: "Saisons (« 2021-2025 », « 2023 », « 2021,2023 » ; vide = variable ARCHIVES_SAISONS ou 2021-2025)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Collecte des archives
+        env:
+          PYTHONUNBUFFERED: "1"
+          AI_BUDGET_SECONDS: "0"
+          SAISONS_ENTREE: ${{ inputs.saisons }}
+          SAISONS_VAR: ${{ vars.ARCHIVES_SAISONS }}
+        run: |
+          SAISONS="${SAISONS_ENTREE:-${SAISONS_VAR:-2021-2025}}"
+          echo "Saisons : $SAISONS"
+          echo "SAISONS=$SAISONS" >> "$GITHUB_ENV"
+          python run_pipeline.py --archive "$SAISONS" --budget-min 45
+      - name: Commit des archives
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/archives/
+          if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
+          git commit -m "chore: archives ${SAISONS}"
+          # si un autre passage a commité entre-temps (update.yml : data/ hors archives), pas de conflit attendu
+          git pull --rebase -X theirs origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
