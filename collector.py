@@ -664,6 +664,32 @@ def compact_race(race: Dict) -> Dict:
     return out
 
 
+TEMPS_VERSION = 2   # 2 : formats « h ' '' » et « H M S » reconnus (uci.parse_duree) ; marque `_temps_v` des archives écrites
+
+
+def _classement_sans_temps(lignes: Any) -> bool:
+    """Vrai si un classement compacté contient une ligne classée (rang entier, sans statut) sans `time_s`."""
+    for r in lignes if isinstance(lignes, list) else []:
+        if (isinstance(r, dict) and isinstance(r.get("rank"), int) and not isinstance(r.get("rank"), bool)
+                and not r.get("status") and r.get("time_s") is None):
+            return True
+    return False
+
+
+def archive_a_recollecter(race: Dict) -> bool:
+    """Fiche d'archive compactée (clé absente = null) à recollecter parce que des temps manquent : un classement
+    `stage` ou `gc` d'une étape route / contre-la-montre individuel (pas par équipes), ou du classement final, a une
+    ligne classée sans `time_s`. Les fiches déjà recollectées avec le format de temps courant (`_temps_v` >=
+    TEMPS_VERSION) ne le sont pas à nouveau : un format qui reste illisible ne provoque pas de recollecte sans fin."""
+    if not isinstance(race, dict) or (race.get("_temps_v") or 0) >= TEMPS_VERSION:
+        return False
+    classements = [(st.get("results") or {}) for st in race.get("stages") or []
+                   if isinstance(st, dict) and st.get("type", "road") in ("road", "itt")]
+    classements.append(race.get("final") or {})
+    return any(_classement_sans_temps(res.get(cle)) for res in classements if isinstance(res, dict)
+               for cle in ("stage", "gc"))
+
+
 def _taille_dossier(dossier: str) -> int:
     total = 0
     for racine, _, fichiers in os.walk(dossier):
@@ -1000,6 +1026,7 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
             if not race:
                 return False
             race["season"] = annee
+            race["_temps_v"] = TEMPS_VERSION
             _dump(os.path.join(rdir, f"uci-{comp['competition_id']}.json"), compact_race(race))
             return True
 
@@ -1009,7 +1036,9 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
                 break
             existant = _load(os.path.join(rdir, f"uci-{comp['competition_id']}.json"), None)
             if existant is not None and existant.get("_complete") is not False:
-                continue
+                if not archive_a_recollecter(existant):
+                    continue
+                print(f"[ARCHIVES] {annee} · {comp['name']} : temps manquants, recollecte")
             print(f"[COURSE] {annee} · {comp['name']} ({comp.get('uci_class')}, {comp.get('start_date')})")
             if ecrire(comp, category, reason):
                 collectees += 1
@@ -1032,7 +1061,7 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
                 if top10_cache.get(cid) is False:
                     continue
                 existant = _load(os.path.join(rdir, f"uci-{cid}.json"), None)
-                if existant is not None and existant.get("_complete") is not False:
+                if existant is not None and existant.get("_complete") is not False and not archive_a_recollecter(existant):
                     continue
                 data = uci.get_race(comp)
                 sondees += 1
@@ -1178,6 +1207,22 @@ def _tests() -> None:
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                        cwd=os.path.dirname(os.path.abspath(__file__)))
     assert r.returncode == 0, r.stderr
+    # 1b) archive_a_recollecter
+    ok = {"rank": 1, "rider_id": "a", "time_s": 100, "gap_s": 0}
+    sans = {"rank": 2, "rider_id": "b", "gap_s": 5}                       # classé, ni statut ni time_s
+    abandon = {"status": "DNF", "rider_id": "c"}                            # statut : normal sans temps
+    assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"stage": [ok, abandon], "gc": [ok]}}], "final": {"gc": [ok]}})
+    assert archive_a_recollecter({"stages": [{"type": "road", "results": {"stage": [ok, sans]}}]})
+    assert archive_a_recollecter({"stages": [{"type": "itt", "results": {"gc": [ok, sans]}}]})
+    assert archive_a_recollecter({"stages": [{"results": {"gc": [sans]}}]})                       # type absent = route
+    assert not archive_a_recollecter({"stages": [{"type": "ttt", "results": {"stage": [sans], "gc": [sans]}}]})
+    assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"points": [sans], "teams": [sans]}}]})
+    assert archive_a_recollecter({"stages": [], "final": {"gc": [ok, sans]}})
+    assert archive_a_recollecter({"stages": [], "final": {"stage": [sans]}})
+    assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [{"rank": None, "rider_id": "d"}]}}]})
+    assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [sans]}}], "_temps_v": TEMPS_VERSION})
+    assert archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [sans]}}], "_temps_v": TEMPS_VERSION - 1})
+    assert not archive_a_recollecter({}) and not archive_a_recollecter({"stages": None, "final": None})
     # 2) compact_race
     def L(n, **extra):
         return [dict({"rank": i + 1, "rider_id": f"r{i}", "gap_s": None, "status": None, "time_s": i}, **extra) for i in range(n)]

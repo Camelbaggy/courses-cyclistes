@@ -80,7 +80,16 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est plus jamais recollectée
   (aucune requête). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
   `ARCHIVES_SAISONS`, défaut 2021-2025, même groupe de concurrence que `update.yml`, commit de `data/archives/`
-  seulement : désormais `git add data/`, pour inclure les suppressions de la rotation). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
+  seulement : désormais `git add data/`, pour inclure les suppressions de la rotation). **Auto-relance** : après le commit,
+  si une saison demandée n'est pas `complete` (`data/archives/<année>/state.json`), le workflow se relance
+  (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau d'`update.yml`, même groupe de
+  concurrence) et si le passage n'a rien changé (pas de boucle sans progrès) ; le cron n'est qu'une amorce (GitHub le saute
+  souvent). Budget 50 min (timeout 60). **Recollecte ciblée** : `collector.archive_a_recollecter` rouvre une course
+  archivée dont un classement `stage` / `gc` (étape route ou CLM individuel, ou final) a une ligne classée sans `time_s`,
+  une seule fois (marque `_temps_v` = `TEMPS_VERSION` ; l'incrémenter si `parse_duree` reconnaît de nouveaux formats) ;
+  une saison `complete` n'est jamais rouverte. **Formats de temps** (`uci.parse_duree`) : `H:MM:SS`, `MM:SS.cc`, `SS`,
+  `04h54'18''` (apostrophes droites ou ’ ′, `"` ″ pour les secondes), `54'18''`, `18''`, et `H M S` séparés par des
+  espaces (`3 15  6`, minutes et secondes < 60) ; tout autre format reste `None` (compté, une ligne de synthèse par course). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
   écrire ni y committer d'archives. Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
   en Pro et les classes 2009-2010 (`1.CH`, `2.CH`, `CPE`, `AU1`, `MNM`) en WT (libellé `uci_class` inchangé).
 - **Rotation calendrier -> archives** : une saison S quitte le Calendrier (`seasons.json.available`) et passe dans

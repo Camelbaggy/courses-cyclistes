@@ -26,6 +26,7 @@ _HEADERS = {"X-Requested-With": "XMLHttpRequest", "Referer": BASE + "/iframe/Res
 # Journal des libellés d'events rencontrés : (EventName, portée, clé) -> nombre (lu par l'essai et le rapport)
 EVENTS_VUS: Counter = Counter()
 IRM_VUS: Counter = Counter()
+ILLISIBLES: List[str] = []   # ResultValue de temps non reconnus, vidée au début de chaque course (get_race)
 GARDER_BRUT = False  # diagnostic (essais) : ajoute `_rv` (ResultValue brut) à chaque Row ; jamais activé en production
 
 # Code Irm UCI -> statut du schéma (SPEC §4.2). None = pas de statut (le coureur garde son rang).
@@ -147,17 +148,36 @@ def _nombre_propre(x: Optional[float]) -> Optional[Any]:
 _RE_DUREE = re.compile(r"^(\d+(?::\d{1,2}){0,2})(?:[.,](\d+))?$")
 
 
+# Formats DataRide vus en 2025 (grands tours, temps cumulés) : « 04h54'18'' », « 54'18'' », « 18'' » et « 3 15  6 » (H M S).
+_MIN = r"['’′]"                      # apostrophe droite ou typographique : minutes
+_SEC = r"(?:''|’’|′′|[\"″”])"         # deux apostrophes ou guillemet double : secondes
+_RE_HMS_H = re.compile(rf"^(\d+)\s*[hH]\s*(\d{{1,2}})\s*{_MIN}\s*(\d{{1,2}})\s*{_SEC}$")
+_RE_MS = re.compile(rf"^(\d+)\s*{_MIN}\s*(\d{{1,2}})\s*{_SEC}$")
+_RE_S = re.compile(rf"^(\d+)\s*{_SEC}$")
+_RE_HMS_ESPACES = re.compile(r"^(\d+)\s+(\d{1,2})\s+(\d{1,2})$")
+
+
 def parse_duree(texte: str) -> Optional[float]:
-    """« 73:56:26 » -> 266186 ; « 28:16.61 » -> 1696.61 ; « 13 » -> 13 ; « 6:26 » -> 386 (secondes, sans signe)."""
-    m = _RE_DUREE.match((texte or "").strip())
-    if not m:
-        return None
-    total = 0
-    for p in m.group(1).split(":"):
-        total = total * 60 + int(p)
-    if m.group(2):
-        total += float("0." + m.group(2))
-    return float(total)
+    """« 73:56:26 » -> 266186 ; « 28:16.61 » -> 1696.61 ; « 13 » -> 13 ; « 6:26 » -> 386 (secondes, sans signe).
+    Reconnaît aussi « 04h54'18'' », « 54'18'' », « 18'' » (apostrophes droites ou typographiques, " pour les secondes)
+    et « 3 15  6 » (trois groupes H M S séparés par des espaces, minutes et secondes < 60). Autre format : None."""
+    txt = (texte or "").strip()
+    m = _RE_DUREE.match(txt)
+    if m:
+        total = 0
+        for p in m.group(1).split(":"):
+            total = total * 60 + int(p)
+        if m.group(2):
+            total += float("0." + m.group(2))
+        return float(total)
+    for motif, poids in ((_RE_HMS_H, (3600, 60, 1)), (_RE_HMS_ESPACES, (3600, 60, 1)), (_RE_MS, (60, 1)), (_RE_S, (1,))):
+        m = motif.match(txt)
+        if m:
+            vals = [int(g) for g in m.groups()]
+            if any(v >= 60 for v in vals[1:]):
+                return None   # minutes ou secondes hors plage : on ne devine pas
+            return float(sum(v * p for v, p in zip(vals, poids)))
+    return None
 
 
 _MEME_TEMPS = {"s.t.", "st", "s.t", "m.t.", "mt", "m.t", "same time", "id", "id."}
@@ -227,7 +247,7 @@ class _Temps:
         if txt.startswith("+") or txt.startswith("-"):
             d = parse_duree(txt[1:].strip())
             if d is None:
-                print(f"[INFO] UCI : écart illisible {txt!r}")
+                ILLISIBLES.append(txt)
                 return None, None
             ecart = int(d)
             if ecart == 0 and self.prec_ecart is not None:
@@ -236,7 +256,7 @@ class _Temps:
         else:
             d = parse_duree(txt)
             if d is None:
-                print(f"[INFO] UCI : temps illisible {txt!r}")
+                ILLISIBLES.append(txt)
                 return None, None
             t = int(d)
             if self.premier is None:
@@ -521,6 +541,7 @@ def get_race(competition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     un_jour = not autres or (len(autres) == 1 and not final_rec and _numero_etape(autres[0].get("RaceName"))[0] is None)
     riders: Dict[str, Dict[str, Any]] = {}
     complet = [True]
+    ILLISIBLES.clear()
 
     stages: List[Dict[str, Any]] = []
     candidats = autres if autres else final_rec[:1]
@@ -573,6 +594,8 @@ def get_race(competition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if manquantes:
             print(f"[INFO] UCI : {nom_course} / dernière étape : {manquantes} repris du classement final")
 
+    if ILLISIBLES:
+        print(f"[INFO] UCI : {nom_course} : {len(ILLISIBLES)} temps illisibles (ex. {ILLISIBLES[0]!r})")
     return {"stages": stages, "final": final, "riders": riders, "race_type": "one_day" if un_jour else "stage_race",
             "stages_total": None, "complete": complet[0]}
 
@@ -588,6 +611,16 @@ def _tests() -> None:
     assert abs(parse_duree("28:16.61") - 1696.61) < 1e-6
     assert parse_duree("13") == 13 and parse_duree("6:26") == 386 and parse_duree("00") == 0
     assert parse_duree("abc") is None and parse_duree("") is None
+    # Formats « h ' '' » et « H M S » (grands tours 2025)
+    assert parse_duree("04h54'18''") == 4 * 3600 + 54 * 60 + 18 and parse_duree("19h56'53''") == 19 * 3600 + 56 * 60 + 53
+    assert parse_duree("4H05\u203219\u2032\u2032") == 4 * 3600 + 5 * 60 + 19   # H majuscule, apostrophes ′ ′′
+    assert parse_duree("4h05\u201919\u2019\u2019") == 4 * 3600 + 5 * 60 + 19   # apostrophes ’
+    assert parse_duree('4h05\'19"') == 4 * 3600 + 5 * 60 + 19 and parse_duree("4h05'19\u2033") == 4 * 3600 + 5 * 60 + 19
+    assert parse_duree("54'18''") == 54 * 60 + 18 and parse_duree("18''") == 18
+    assert parse_duree("3 15  6") == 3 * 3600 + 15 * 60 + 6 and parse_duree("27 57 10") == 27 * 3600 + 57 * 60 + 10
+    assert parse_duree("27  57   10") == 27 * 3600 + 57 * 60 + 10
+    assert parse_duree("3 15") is None and parse_duree("3 75 10") is None and parse_duree("3 15 61") is None
+    assert parse_duree("04h54'") is None and parse_duree("04h61'18''") is None and parse_duree("1 2 3 4") is None
     # Dates
     assert _date_iso("/Date(1775944800000)/") == "2026-04-12"
     assert _date_iso("/Date(906328800000)/") == "1998-09-21"
@@ -651,6 +684,15 @@ def _tests() -> None:
     # Écarts avec fraction, premier écart sans premier temps
     rows = normalize_rows([L(1, "AAA Bob", "+0:12.5"), L(2, "BBB Cy", "+1:00")], "gc", {})
     assert rows[0]["gap_s"] == 12 and rows[0]["time_s"] is None and rows[1]["gap_s"] == 60
+    # Formats h ' '' et H M S, avec écarts signés ; illisibles comptés sans ligne par valeur
+    ILLISIBLES.clear()
+    rows = normalize_rows([L(1, "AAA Bob", "04h54'18''"), L(2, "BBB Cy", "+0 0 12"), L(3, "CCC Di", "+ 1 2"),
+                           L(4, "DDD Ed", "3 15"), L(5, "EEE Fy", "04h54'30''")], "gc", {})
+    assert [r["time_s"] for r in rows] == [17658, 17670, None, None, 17670] and rows[1]["gap_s"] == 12
+    assert ILLISIBLES == ["+ 1 2", "3 15"], ILLISIBLES
+    ILLISIBLES.clear()
+    rows = normalize_rows([L(1, "AAA Bob", "3 15  6"), L(2, "BBB Cy", "3 16  6")], "gc", {})
+    assert [r["time_s"] for r in rows] == [11706, 11766] and rows[1]["gap_s"] == 60 and not ILLISIBLES
     # Points / montagne
     rows = normalize_rows([L(1, "AAA Bob", "559"), L(2, "BBB Cy", "12.5"), L(3, "CCC Di", None)], "points", {})
     assert [r["points"] for r in rows] == [559, 12.5, None] and rows[0]["time_s"] is None
