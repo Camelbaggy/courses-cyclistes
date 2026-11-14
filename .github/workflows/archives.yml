@@ -2,10 +2,10 @@ name: Archives (saisons passées)
 
 # Collecte des saisons passées dans data/archives/ (docs/PLAN_ARCHIVES.md) et rotation N / N-1 (les saisons < N-1 quittent data/ pour data/archives/). Passages nocturnes, hors des créneaux de
 # update.yml ; chaque passage reprend où le précédent s'est arrêté (budget de temps) et une saison complète n'est
-# plus jamais recollectée. Saisons : entrée manuelle, sinon variable de dépôt ARCHIVES_SAISONS, sinon 2021-2025.
+# révisée que si des fiches ont des temps manquants et un `_temps_v` ancien (collector.TEMPS_VERSION). Saisons : entrée manuelle, sinon variable de dépôt ARCHIVES_SAISONS, sinon 2021-2025.
 # Le cron (que GitHub saute ou retarde souvent) n'est qu'une amorce : après le commit, le workflow se relance lui-même
-# tant qu'une saison demandée n'est pas complète, sauf entre 11 h et 23 h UTC (ne pas bloquer update.yml, même
-# groupe de concurrence, 13 h-22 h UTC) et si le passage n'a rien changé (pas de boucle sans progrès).
+# tant qu'une saison demandée n'est pas complète, sauf entre 11 h et 23 h UTC (créneau d'update.yml, 13 h-22 h UTC :
+# limite la charge sur DataRide pendant les courses ; les deux workflows ont chacun leur groupe de concurrence) et si le passage n'a rien changé (pas de boucle sans progrès).
 on:
   schedule:
     - cron: '23 0-5 * * *'
@@ -21,7 +21,7 @@ permissions:
   actions: write   # relance du workflow (gh workflow run)
 
 concurrency:
-  group: update-data
+  group: archives-data   # groupe propre (update.yml : update-data) : un cron d'archives n'annule plus un passage horaire et inversement
   cancel-in-progress: false
 
 jobs:
@@ -54,9 +54,21 @@ jobs:
           if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
           echo "CHANGED=1" >> "$GITHUB_ENV"
           git commit -m "chore: archives ${SAISONS}"
-          # si un autre passage a commité entre-temps (update.yml : data/ hors archives), pas de conflit attendu
-          git pull --rebase -X theirs origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          # Poussée robuste : update.yml et archives.yml (groupes de concurrence distincts) poussent tous deux sur la
+          # branche ; en cas de course, on rebase (nos fichiers l'emportent) et on réessaie, 5 fois au plus.
+          for ESSAI in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              PUSH_OK=1
+              break
+            fi
+            echo "push refusé (essai ${ESSAI}/5)"
+            git rebase --abort 2>/dev/null || true
+            sleep $((5 + RANDOM % 16))
+          done
+          if [ "${PUSH_OK:-0}" != "1" ]; then
+            echo "::error::échec du push après 5 essais"
+            exit 1
+          fi
       - name: Relance si des saisons restent à collecter
         env:
           GH_TOKEN: ${{ github.token }}

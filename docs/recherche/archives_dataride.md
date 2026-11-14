@@ -178,6 +178,27 @@ Premiers passages réels d'`archives.yml` (saison 2025) : des centaines de ligne
 
 `uci.parse_duree` les reconnaît (h ou H ; apostrophes droites ou typographiques ’ ′, `''` ou `"` ″ pour les secondes ; `MM'SS''` et `SS''` par extension de la même notation, non observés). Garde-fous : minutes ou secondes >= 60, deux groupes seuls ou plus de trois : `None` (rien n'est deviné). La sémantique « H M S » est déduite des valeurs (27 57 10 est un cumul de grand tour) et non d'une documentation DataRide : à confirmer en relisant les écarts recalculés d'un grand tour recollecté. Les archives déjà écrites avec des `time_s` manquants sont recollectées une fois (`collector.archive_a_recollecter`).
 
+### Formats exotiques vus ensuite (nuit du 14/11, 2022-2025)
+
+Après 13 passages d'archives, valeurs encore illisibles. Lues désormais (`TEMPS_VERSION` 3) :
+
+| Forme | Exemples | Lecture retenue |
+|---|---|---|
+| statut dans `ResultValue` (Irm vide) | `DNF` (76 lignes à Silesian Beskid Race), `DNS`, `OTL`, `DSQ`, `LAP` | statut, comme le code Irm ; ni temps ni illisible |
+| `H.MM.SS`, `H,MM,SS`, `H;MM;SS` (un seul séparateur) | `1.14.08`, `6.33.24`, `29,23,52`, `26;31;34` | H M S (MM et SS sur 2 chiffres, < 60) |
+| guillemets / apostrophes parasites | `16:46:00"`, `9:53:00"`, `'03:55:33` | retirés si le reste est un `H:MM:SS` |
+| secondes sans marque finale | `4h35'42`, `3h19'01` | H M S |
+| millièmes | `6'01''620`, `5'14''886` | secondes avec fraction (361,62 s) |
+
+Laissés à `None` (ambigus, rien n'est deviné) : `4::37:02`, `4:16:56::`, `28:26..18`, `+3::15`, `3 13 19  0`, `a 6"`, `+`, `+-09`, `0:44:53:984`, `03:05:12:00`, `00:10:02:66`, `4:57:265`, `03:43:344`. Choix assumé sur le séparateur : `1.14.08` est lu 1 h 14 min 08 s (et non 1 min 14 s 08 centièmes), les trois groupes de deux chiffres étant vus sur des cumuls ; `28.16.61` reste `None` (secondes >= 60).
+
+Les saisons `complete` sont révisées en local : une fiche `_temps_v` < 3 avec temps manquants est recollectée une fois (voir CLAUDE.md). Limite : une fiche dont seuls des statuts écrits dans `ResultValue` étaient mal lus (lignes sans rang ni temps) n'est pas détectable localement et n'est pas révisée.
+
+### Anomalies de source conservées telles quelles
+
+- Écarts non monotones dans 83 classements de 2025 : l'ordre est celui de la source UCI (`SortOrder`), conservé tel quel ; aucun tri ni correction.
+- Tour of Salalah 2025, étape 2 : un classement étiqueté « gc » dont les écarts sont décroissants, probablement un classement par points étiqueté gc par la source. Non corrigé (pas de devinette).
+
 ## Giro d'Italia
 
 Le motif « Giro d.Italia » donne : **2013** présent (2.UWT, ITA, 2013-05-04), **2010** présent (2.CH, ITA, 2010-05-08), **2009** présent (2.CH, ITA, 2009-05-09), une ligne par saison. Les étapes du Giro n'ont pas été lues ; seule la présence dans la liste des courses est établie. 2023 et 2018 : non vérifié (motif absent du premier passage).

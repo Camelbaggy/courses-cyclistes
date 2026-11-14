@@ -77,19 +77,32 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   (`collector.run_archive`) collecte les saisons passées de la plus récente à la plus ancienne, sans ASO, récits ni
   Gemini (résumés de repli), pas de notification, pause de 2 s sur DataRide. Fichiers compactés (`compact_race` :
   clés null supprimées, annexes limitées au top 30 sauf dernière étape) dans `data/archives/<année>/` (`races/`,
-  `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est plus jamais recollectée
-  (aucune requête). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
-  `ARCHIVES_SAISONS`, défaut 2021-2025, même groupe de concurrence que `update.yml`, commit de `data/archives/`
+  `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est jamais recollectée en
+  entier (aucune requête, sauf révision des temps ci-dessous). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
+  `ARCHIVES_SAISONS`, défaut 2021-2025, groupe de concurrence propre `archives-data` (`update.yml` : `update-data`, `cancel-in-progress: false` dans les deux : un cron d'archives n'annule plus un passage horaire), commit de `data/archives/`
   seulement : désormais `git add data/`, pour inclure les suppressions de la rotation). **Auto-relance** : après le commit,
   si une saison demandée n'est pas `complete` (`data/archives/<année>/state.json`), le workflow se relance
-  (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau d'`update.yml`, même groupe de
-  concurrence) et si le passage n'a rien changé (pas de boucle sans progrès) ; le cron n'est qu'une amorce (GitHub le saute
+  (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau d'`update.yml` : limite la charge sur DataRide
+  pendant les courses) et si le passage n'a rien changé (pas de boucle sans progrès) ; le cron n'est qu'une amorce (GitHub le saute
   souvent). Budget 50 min (timeout 60). **Recollecte ciblée** : `collector.archive_a_recollecter` rouvre une course
   archivée dont un classement `stage` / `gc` (étape route ou CLM individuel, ou final) a une ligne classée sans `time_s`,
-  une seule fois (marque `_temps_v` = `TEMPS_VERSION` ; l'incrémenter si `parse_duree` reconnaît de nouveaux formats) ;
-  une saison `complete` n'est jamais rouverte. **Formats de temps** (`uci.parse_duree`) : `H:MM:SS`, `MM:SS.cc`, `SS`,
-  `04h54'18''` (apostrophes droites ou ’ ′, `"` ″ pour les secondes), `54'18''`, `18''`, et `H M S` séparés par des
-  espaces (`3 15  6`, minutes et secondes < 60) ; tout autre format reste `None` (compté, une ligne de synthèse par course). `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
+  une seule fois (marque `_temps_v` = `TEMPS_VERSION`, 3 aujourd'hui ; l'incrémenter si `parse_duree` ou la lecture des
+  statuts change). **Révision des saisons complètes** : `run_archive` parcourt en local les fiches d'une saison `complete`
+  (`a_reviser_saison` : `_temps_v` < `TEMPS_VERSION` ET `archive_a_recollecter`) ; aucune requête s'il n'y en a pas ; sinon
+  chaque fiche est recollectée (`comp_depuis_fiche`, même catégorie / raison / saison, marquée `_temps_v` même si des valeurs
+  restent illisibles : pas de boucle), puis `index.json` réécrit ; `riders.json` / `ranking.json` inchangés, la saison reste
+  `complete` ; budget et `--max-races` respectés ; log `[ARCHIVES] <année> : révision des temps, N course(s) recollectée(s)`.
+  Une recollecte incomplète laisse la fiche telle quelle. La révision ne déclenche pas l'auto-relance (qui ne regarde que
+  les saisons non complètes) : le cron nocturne la poursuit. Les courses du Calendrier (`data/races`) profitent des
+  nouveaux formats par la recollecte normale (≤ 3 jours après la fin) ; l'historique de la saison courante n'est pas recollecté. **Formats de temps** (`uci.parse_duree`) : `H:MM:SS`, `MM:SS.cc`, `SS`,
+  `04h54'18''` (apostrophes droites ou ’ ′, `"` ″ pour les secondes), `54'18''`, `18''`, `H M S` séparés par des
+  espaces (`3 15  6`), `H.MM.SS` / `H,MM,SS` / `H;MM;SS` (un seul séparateur homogène, MM et SS sur 2 chiffres),
+  `4h35'42` (sans marque finale), `6'01''620` (millièmes), guillemets / apostrophes parasites autour d'un `H:MM:SS`
+  (`16:46:00"`, `'03:55:33`) ; minutes et secondes < 60 ; tout autre format (`4::37:02`, `0:44:53:984`, `4:57:265`…) reste `None` (compté, une ligne de synthèse par course). **Statuts dans ResultValue** : si `Irm` est vide et que `ResultValue` vaut
+  (casse et espaces ignorés) un code de `IRM_STATUTS` (DNF, DNS, OTL, DSQ, LAP…), c'est le statut (ni temps ni illisible) ;
+  `REC` / `REL` : rang conservé, pas de temps. **Push** : `update.yml` et `archives.yml` poussent tous deux sur la branche
+  (boucle de 5 essais `pull --rebase -X theirs` + `push`, attente aléatoire 5-20 s, échec explicite) ; pas de
+  recouvrement de fichiers hors rotation. `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
   écrire ni y committer d'archives. Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
   en Pro et les classes 2009-2010 (`1.CH`, `2.CH`, `CPE`, `AU1`, `MNM`) en WT (libellé `uci_class` inchangé).
 - **Rotation calendrier -> archives** : une saison S quitte le Calendrier (`seasons.json.available`) et passe dans
