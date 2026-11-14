@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Essai réseau du mode archives (collector.run_archive), sans rien écrire dans data/ :
+"""Essai réseau du mode archives (collector.run_archive), sans rien écrire dans data/ (la rotation y est lue, jamais modifiée) :
 1) sélection par époque (2023, 2018, 2013, 2010) : nombre de courses retenues par catégorie ; pour 2010, liste des
    courses WT et Pro (grands tours et monuments attendus) ;
 2) run_archive([2023], budget_min=10, max_races=6) dans un dossier temporaire : tailles avant / après compactage,

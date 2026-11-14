@@ -29,12 +29,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}   # tête de la branche au démarrage, pas le commit déclencheur (déjà dépassé si un passage précédent a commité)
-          # data/archives/ (alimenté par archives.yml) n'est pas utile ici : on ne le télécharge pas à chaque passage.
-          # Le commit ne touche que data/ hors archives ; le pull --rebase fonctionne avec un checkout partiel.
-          sparse-checkout: |
-            /*
-            !/data/archives/
-          sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -56,8 +50,8 @@ jobs:
           git add data/
           if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
           git commit -m "chore: mise à jour automatique des résultats"
-          # Poussée robuste : update.yml et archives.yml (groupes de concurrence distincts) poussent tous deux sur la
-          # branche ; en cas de course, on rebase (nos fichiers l'emportent) et on réessaie, 5 fois au plus.
+          # Poussée robuste : en cas de course (autre passage, commit sur la branche), on rebase (nos fichiers
+          # l'emportent) et on réessaie, 5 fois au plus.
           for ESSAI in 1 2 3 4 5; do
             if git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
               PUSH_OK=1

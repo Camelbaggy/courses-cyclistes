@@ -8,6 +8,7 @@ officiels, notification ntfy.
 - **Données** : UCI DataRide (résultats officiels), sites ASO (bonifications, équipes, parcours), LNC (FDJ United
   Series), récits DirectVélo / Cyclingnews (contexte des résumés uniquement, jamais republiés).
 - **Page** : `index.html` (GitHub Pages), lit `data/index.json` puis `data/races/<id>.json`.
+- **Archives** (saisons passées) : dépôt [courses-cyclistes-archives](https://github.com/Camelbaggy/courses-cyclistes-archives), lu à la demande par la page ; son workflow `archives.yml` utilise le code de ce dépôt.
 - **Automatisation** : `.github/workflows/update.yml`, toutes les heures de 13 h à 22 h UTC + 6 h 41 UTC.
 - **Configuration** : secrets `GEMINI_API_KEY`, `NTFY_TOPIC` ; variable `DASHBOARD_URL`.
 

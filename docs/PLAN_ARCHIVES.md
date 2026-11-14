@@ -49,8 +49,9 @@ Livrable : `docs/recherche/archives_dataride.md` (couverture réelle par époque
 > sélection par époque (`1.HC`/`2.HC` -> Pro ; `1.CH`, `2.CH`, `CPE`, `AU1`, `MNM` -> WT), `collector.run_archive`
 > + `compact_race` (annexes top 30, clés null supprimées), `run_pipeline.py --archive`, `archives.yml`, checkout
 > partiel d'`update.yml`, classement UCI de fin de saison (`ranking.json`) et fiches coureurs par saison
-> (`riders.json`), rotation calendrier -> archives (`saisons_a_archiver`, `migrer_saisons_anciennes`). RESTE À FAIRE :
-> Coupe de France historique (liste par année), dépôt dédié au-delà de ~200 Mo, `tools/inspect_data.py --archive`.
+> (`riders.json`), rotation calendrier -> archives (`saisons_a_archiver`, `migrer_saisons_anciennes`), dépôt dédié
+> `courses-cyclistes-archives` (FAIT, voir « Seuil de bascule »). RESTE À FAIRE :
+> Coupe de France historique (liste par année), `tools/inspect_data.py --archive`.
 > **FAIT ensuite** : fiches carrière (`carrieres/`, `alias_coureurs.json`) et éditions précédentes (`editions.json`,
 > `alias_courses.json`), avec l'interface correspondante (§4).
 
@@ -73,26 +74,31 @@ La règle « .1/.2 étrangère avec un Français dans le top 10 » s'applique te
   servent que l'édition en cours ; Cyclingnews/DirectVélo n'ont pas l'historique).
 - Reprise : budget de temps par passage (déjà en place), décisions « top 10 français » mémorisées ; une saison est
   marquée « archivée » une fois complète et n'est plus jamais recollectée.
-- **[fait]** Nouveau workflow `archives.yml` (`workflow_dispatch`, entrée « saisons »), séparé de `update.yml`, même groupe de
-  concurrence pour ne jamais committer en même temps que la mise à jour horaire.
+- **[fait]** Workflow `archives.yml` (`workflow_dispatch`, entrée « saisons »), séparé de `update.yml`, aujourd'hui hébergé dans le
+  dépôt d'archives (groupe de concurrence `archives-data` propre à ce dépôt).
 
 ### Stockage et compactage
 
 Aujourd'hui une saison pèse ~40 Mo (225 fichiers). Sans compactage, 20 saisons feraient ~800 Mo : trop pour un dépôt
 servi par GitHub Pages et cloné à chaque passage horaire.
 
-- **Fichiers d'archive compactés** (`data/archives/<année>/<id>.json`) : classement complet de chaque étape / course
+- **Fichiers d'archive compactés** (`<année>/races/<id>.json`, dépôt d'archives) : classement complet de chaque étape / course
   d'un jour, général complet, mais classements annexes (points, montagne, jeunes) limités au top 30 par étape
   (complets au classement final), clés courtes. Objectif ≤ 10 Mo par saison, ~50 Mo par tranche.
-- **Seuil de bascule** : au-delà de ~200 Mo d'archives (après T2 ou T3), déplacement vers un dépôt dédié
-  `courses-cyclistes-archives` (GitHub Pages propre, lu à la demande par la page). Le dépôt principal reste léger.
-- Classement UCI historique : un instantané de fin de saison par année (`data/archives/<année>/ranking.json`).
+- **Seuil de bascule : FAIT.** Les archives T1 (2021-2025, ~120 Mo, 1040 fichiers) ont quitté le dépôt principal pour le
+  dépôt dédié `Camelbaggy/courses-cyclistes-archives` (GitHub Pages propre, lu à la demande par la page, CORS ouvert),
+  avant de collecter T2. `archives.yml` y vit désormais : il checkout le code du dépôt principal et écrit dans le
+  `data/archives/` du dépôt d'archives (`ARCHIVES_DIR`). La rotation calendrier -> archives est scindée : la migration
+  s'écrit côté archives sans rien supprimer, le dépôt principal retire ses fichiers de la saison quand l'index public des
+  archives la déclare `complete` (CLAUDE.md, SPEC §4.4). **T2 (2016-2020) est en cours** via la plage par défaut
+  `2016-2025` du workflow (run_archive traite de la plus récente à la plus ancienne et ignore les saisons complètes).
+- Classement UCI historique : un instantané de fin de saison par année (`<année>/ranking.json` du dépôt d'archives).
 
 ### Coureurs : de la fiche saison à la fiche carrière
 
 `rider_id` (slug du nom + date de naissance) est stable d'une saison à l'autre :
 
-- **[fait]** `data/archives/carrieres/<lettre>.json` (regroupé par initiale du nom, pour limiter le nombre de fichiers) :
+- **[fait]** `carrieres/<lettre>.json` (dépôt d'archives) (regroupé par initiale du nom, pour limiter le nombre de fichiers) :
   par coureur, saisons courues, équipes successives (déduites des résultats), victoires et podiums par saison,
   rang UCI de fin de saison.
 - Points d'attention : homonymes (la date de naissance les distingue), changement d'orthographe d'un nom entre
@@ -108,7 +114,7 @@ Principe : **la saison en cours reste la porte d'entrée** ; les archives se con
 - **Onglet Archives** (5e onglet principal, à la place de la chip « Archives ▾ » initialement prévue) : menu déroulant
   des saisons (`archives/index.json`), `?archive=AAAA`, vue « Résultats » du Calendrier réutilisée (mêmes filtres de
   catégorie), « Victoires françaises », classement UCI de fin de saison (top 10), fiches course et coureur d'archive,
-  chargement paresseux. **[fait]** (jeu d'essai : `tools/fixtures/data/archives/`, captures `tools/apercu.py`).
+  chargement paresseux. **[fait]** (base des archives : `?archives=` / `?data=` / dépôt d'archives ; jeu d'essai : `tools/fixtures/data/archives/`, captures `tools/apercu.py`).
 - **Fiche course** : encart « Éditions précédentes » (vainqueurs et meilleur Français de chaque édition archivée et des
   saisons du Calendrier), chargé à la demande, rapprochement exact par `cle_edition` + alias manuels. **[fait]**
 - **Fiche coureur** : onglets « Saison » (actuel) et « Carrière » (tableau par saison : équipe, victoires, podiums,
@@ -123,7 +129,7 @@ Principe : **la saison en cours reste la porte d'entrée** ; les archives se con
 
 Pour chaque tranche :
 
-1. **Collecte** : `archives.yml` lancé avec les 5 saisons, 4 à 5 passages par saison (budget 40 min).
+1. **Collecte** : `archives.yml` (dépôt d'archives) lancé avec les 5 saisons, 4 à 5 passages par saison (budget 40 min).
 2. **Validation automatique** (`tools/inspect_data.py --archive`) : nombre de courses par catégorie et par saison,
    classements manquants, coureurs sans date de naissance, tailles de fichiers.
 3. **Contrôle par sondage** : vainqueurs des grands tours, des 5 monuments et du championnat de France de chaque
