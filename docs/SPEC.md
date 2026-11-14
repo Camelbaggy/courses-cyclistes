@@ -176,14 +176,18 @@ Conventions : temps et écarts **toujours en secondes entières** dans le JSON (
 
 `{"notified": ["uci-76380:F", "uci-76012:3", …], "last_run": "…"}` — clé `<race_id>:<stage_number|F>`.
 
-### 4.4 `data/archives/` (saisons passées, mode archives)
+### 4.4 Archives (saisons passées, dépôt `courses-cyclistes-archives`)
 
-Écrit uniquement par `python run_pipeline.py --archive SAISONS` (`collector.run_archive`, workflow `archives.yml`) ;
-ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessous (suppression des fichiers d'une saison migrée).
+Les archives vivent dans le dépôt **Camelbaggy/courses-cyclistes-archives** (GitHub Pages ; fichiers servis sous
+`https://camelbaggy.github.io/courses-cyclistes-archives/data/archives/`), pas dans ce dépôt. Chemins ci-dessous relatifs à
+`data/archives/` de ce dépôt-là (`collector.ARCHIVES_DIR`, variable d'environnement `ARCHIVES_DIR`). Écrites uniquement par
+`python run_pipeline.py --archive SAISONS` (`collector.run_archive`, workflow `archives.yml` du dépôt d'archives, qui
+checkout ce dépôt dans `code/`) ; ne touchent jamais aux fichiers de 4.1 à 4.3 de ce dépôt-ci (la suppression des fichiers
+d'une saison archivée est faite par `update.yml`, voir la rotation ci-dessous).
 
-- `data/archives/index.json` : `{"generated_at", "seasons": [{"season", "complete", "races", "size_bytes"}]}`, saisons
+- `index.json` : `{"generated_at", "seasons": [{"season", "complete", "races", "size_bytes"}]}`, saisons
   triées par ordre décroissant.
-- `data/archives/<année>/` : `races/uci-<id>.json` (même schéma que 4.2, `season` = année, résumés toujours
+- `<année>/` : `races/uci-<id>.json` (même schéma que 4.2, `season` = année, résumés toujours
   `summary_source: "fallback"`), `index.json` (même schéma que 4.1, `upcoming` vide, `fdj_united_series` null, plus
   `"archive": true` et `"complete"`), `riders.json` (schéma des fiches coureurs, calculé à la date de fin de saison),
   `ranking.json` (classement UCI de fin de saison : World Ranking, à défaut « WorldTour Ranking » ; absent si aucun
@@ -199,15 +203,20 @@ ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessou
 - **Rotation calendrier -> archives** : une saison S de `seasons.json.available` est à archiver quand S+1 est
   terminée : date du jour > fin de la dernière course de S+1 + 14 jours (max des `end_date`, à défaut `start_date`, des
   `races` et `upcoming` de `data/index-<S+1>.json`). Course à venir encore future, index de S+1 absent ou vide : pas de
-  rotation. Fonction pure `collector.saisons_a_archiver(seasons_dispo, index_par_saison, today)`. Effets : (1)
-  `write_season_indexes` (update.yml) ne liste plus S dans `seasons.json.available` et ne réécrit plus ses
-  `index-S.json` / `riders-S.json` ; (2) `collector.migrer_saisons_anciennes` (début de `run_archive`, archives.yml
-  seulement, jamais update.yml qui n'a pas `data/archives/`) compacte chaque course de S dans `archives/<S>/races/`
-  (sans écraser une course déjà archivée ; les résumés d'origine sont conservés), écrit `index.json` (archive, complete),
-  `ranking.json` + `riders.json` de fin de saison, `state.json` `{"complete": true, "top10_checked": {}}`, et
-  seulement ensuite supprime `data/races/<id>.json`, `data/index-S.json`, `data/riders-S.json`. Log
-  `[ROTATION] saison S -> archives (N courses)`. archives.yml commit `data/` (suppressions incluses).
-- **`data/archives/editions.json`** (écrit par `collector.write_archives_index`, donc à chaque passage d'`archives.yml`, seulement
+  rotation. Fonction pure `collector.saisons_a_archiver(seasons_dispo, index_par_saison, today)`. Effets, répartis sur les
+  deux dépôts : (1) `write_season_indexes` (update.yml, dépôt principal) ne liste plus S dans
+  `seasons.json.available` et ne réécrit plus ses `index-S.json` / `riders-S.json` ; (2) `collector.migrer_saisons_anciennes`
+  (début de `run_archive`, workflow du dépôt d'archives, qui lit le `data/` du dépôt principal checkouté en lecture seule)
+  compacte chaque course de S dans `<S>/races/` (sans écraser une course déjà archivée ; les résumés d'origine sont
+  conservés), écrit `index.json` (archive, complete), `ranking.json` + `riders.json` de fin de saison, `state.json`
+  `{"complete": true, "top10_checked": {}}` ; **elle ne supprime rien** dans `data/`. Log `[ROTATION] saison S -> archives
+  (N courses)` ; (3) le dépôt principal retire ensuite lui-même ses fichiers : `write_season_indexes` lit, une fois par
+  passage et seulement s'il reste des fichiers de S, l'index public `collector.ARCHIVES_INDEX_URL`
+  (`https://raw.githubusercontent.com/Camelbaggy/courses-cyclistes-archives/main/data/archives/index.json`) ; si S y figure
+  avec `complete: true`, `collector.retirer_saisons_archivees` supprime `data/races/<id>.json` de S, `data/index-S.json`,
+  `data/riders-S.json` (log `[ROTATION] saison S archivée dans courses-cyclistes-archives : fichiers retirés de data/`) ;
+  index illisible ou saison non complète : rien n'est supprimé.
+- **`editions.json`** (écrit par `collector.write_archives_index`, donc à chaque passage d'`archives.yml`, seulement
   s'il change) : `{"generated_at", "alias", "courses": {<clé>: [{"season", "race_id", "name", "uci_class", "category",
   "race_type", "start_date", "winner" (RiderRef réduit : id, name, nationality, flag, is_french), "best_french"
   ({rider, rank, classification} | null)}, …]}}`, saison décroissante ; courses `in_progress` exclues. **Clé d'édition** =
@@ -218,7 +227,7 @@ ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessou
   `{"clé source": "clé canonique"}` pour les changements de nom (sponsors) ; un seul niveau (pas de chaînage), jamais
   deviné ; recopié dans `editions.json.alias`. La page applique la même normalisation (`cleEdition` de index.html, **doit
   rester alignée** avec `cle_edition`).
-- **`data/archives/carrieres/<lettre>.json`** (lettre = première lettre a-z du `rider_id`, sinon `_`) : `{"<rider_id>": {"name",
+- **`carrieres/<lettre>.json`** (lettre = première lettre a-z du `rider_id`, sinon `_`) : `{"<rider_id>": {"name",
   "nationality", "flag", "birth_date" (saison la plus récente), "seasons": {"<année>": {"team", "stats" (wins, podiums, top10,
   race_days, races, gc_wins, dnf : ceux présents), "uci_rank" (rang au classement de fin de saison, absent si non classé),
   "results" (victoires et podiums seulement, récents d'abord : date, race_id, label, classification, rank, + stage_number et
@@ -227,8 +236,8 @@ ne touche jamais aux fichiers de 4.1 à 4.3, sauf la rotation décrite ci-dessou
   exact (slug + date de naissance) ; **`alias_coureurs.json`** (racine, `{}` au départ, manuel) `{"rider_id source": "rider_id
   canonique"}`, jamais deviné ; si l'alias ferait figurer deux fois le même coureur la même saison, il est ignoré pour cette
   saison (`[WARN]`, rien n'est fusionné). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
-- La page lit `archives/index.json` (liste des saisons, `complete`) à l'ouverture de l'onglet Archives, puis
-  `archives/<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
+- La page lit `index.json` du dépôt d'archives (liste des saisons, `complete` ; base `BASE_ARCHIVES` : `?archives=`, sinon `<data>/archives` avec `?data=`, sinon l'URL publique du dépôt d'archives, voir CLAUDE.md) à l'ouverture de l'onglet Archives, puis
+  `<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
   `editions.json` est lu à l'ouverture d'une fiche course (encart « Éditions précédentes »), `carrieres/index.json` puis un
   seul `carrieres/<lettre>.json` à l'ouverture de l'onglet « Carrière » d'une fiche coureur.
 
@@ -275,7 +284,7 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
 
 - Onglet **Archives** (5e) : menu déroulant des saisons archivées (« 2023 (collecte en cours) » si `complete` est faux),
   encart « Classement UCI de fin de saison » (top 10), « Victoires françaises », liste des courses avec les mêmes filtres
-  de catégorie que le Calendrier ; fiches course et coureur issues de `archives/<année>/`.
+  de catégorie que le Calendrier ; fiches course et coureur issues de `<année>/` des archives.
 - Fiche course : encart repliable **Éditions précédentes** (sous le tableau), chargé sans bloquer la fiche, absent s'il n'y a
   aucune autre édition : éditions archivées (`editions.json`) + courses de même clé des saisons du Calendrier
   (`index-<année>.json`) ; année, vainqueur et meilleur Français (liens coureur lus dans la saison de l'édition), lien vers la

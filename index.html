@@ -317,6 +317,16 @@ const BASE = (() => {
   return /^[\w\-./]+$/.test(d) && !d.includes("..") && !d.startsWith("/") ? d.replace(/\/+$/, "") : "data";
 })();
 
+/** Base des archives (saisons passées) : `?archives=<url>` si donné (https ou chemin relatif) ; sinon, avec `?data=` (jeu
+ *  d'essai), `<data>/archives` en local ; sinon le dépôt d'archives (GitHub Pages, CORS ouvert). */
+const BASE_ARCHIVES = (() => {
+  const a = PARAMS.get("archives");
+  if (a && (/^https:\/\/[\w\-.]+(:\d+)?(\/[\w\-./]*)?$/.test(a) || /^[\w\-./]+$/.test(a)) && !a.includes("..") && !a.startsWith("/"))
+    return a.replace(/\/+$/, "");
+  if (PARAMS.get("data")) return `${BASE}/archives`;
+  return "https://camelbaggy.github.io/courses-cyclistes-archives/data/archives";
+})();
+
 const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(v) { return v == null ? "" : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]); }
 
@@ -366,16 +376,28 @@ const TYPES = { itt: "Contre-la-montre", ttt: "CLM par équipes", road: "En lign
 
 /* ================== chargement des données ================== */
 const cache = new Map();
+/** URL d'un fichier : les chemins « archives/… » viennent du dépôt d'archives (BASE_ARCHIVES), le reste de BASE. */
+function urlDonnee(chemin) {
+  return chemin.startsWith("archives/") ? `${BASE_ARCHIVES}/${chemin.slice(9)}` : `${BASE}/${chemin}`;
+}
 async function charger(chemin) {
   if (cache.has(chemin)) return cache.get(chemin);
-  const p = fetch(`${BASE}/${chemin}`, { cache: "no-cache" }).then(r => {
-    if (!r.ok) { const e = new Error(`HTTP ${r.status} pour ${BASE}/${chemin}`); e.status = r.status; throw e; }
+  const url = urlDonnee(chemin);
+  const p = fetch(url, { cache: "no-cache" }).then(r => {
+    if (!r.ok) { const e = new Error(`HTTP ${r.status} pour ${url}`); e.status = r.status; throw e; }
     return r.json();
+  }, err => {   // réseau, CORS, site injoignable (pas de statut HTTP)
+    const e = new Error(chemin.startsWith("archives/")
+      ? `site des archives injoignable (${BASE_ARCHIVES})` : `réseau indisponible (${url})`);
+    e.reseau = true;
+    throw e;
   });
   cache.set(chemin, p);
   p.catch(() => cache.delete(chemin));   // une erreur n'est pas mise en cache
   return p;
 }
+/** Lecture d'un fichier d'archive : `chemin` relatif au dossier des archives (« index.json », « 2024/races/<id>.json »…). */
+function chargerArchive(chemin) { return charger(`archives/${chemin}`); }
 
 /** Nom de coureur cliquable (ouvre la fiche coureur) ; sans identifiant : texte simple. */
 function plink(id, texte, ctx) {
@@ -388,7 +410,7 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   limit: 50, ouvertParApp: false, ranking: undefined, uc: { fr: false, q: "", limit: 100 },
   // archives : index (undefined = pas chargé, null = indisponible), saison choisie, index/classements par saison,
   // chemin (année) de chaque course d'archive connue, catégorie filtrée ; courseArchive = année de la fiche ouverte
-  archIdx: undefined, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
+  archIdx: undefined, archErr: null, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
   ctxArchive: false, courseArchive: null,
   // fiche coureur : onglet (saison | carriere), saison imposée par un lien d'édition ({archive, saison}), message de saison indisponible ;
   // éditions précédentes : course pour laquelle l'encart est calculé, sa liste, course dont l'encart est déplié
@@ -596,8 +618,12 @@ function renderClassements() {
 /* ---- onglet Archives ---- */
 async function chargerArchivesIndex() {
   if (state.archIdx !== undefined) return state.archIdx;
-  try { state.archIdx = await charger("archives/index.json"); }
-  catch (e) { console.warn("Archives indisponibles :", e.message); state.archIdx = null; }
+  try { state.archIdx = await chargerArchive("index.json"); }
+  catch (e) {
+    console.warn("Archives indisponibles :", e.message);
+    state.archIdx = null;
+    state.archErr = e.reseau ? "Le site des archives est injoignable pour le moment." : `Archives indisponibles (${e.message}).`;
+  }
   if (state.archIdx && !Array.isArray(state.archIdx.seasons)) state.archIdx = null;
   if (state.archIdx) state.archIdx.seasons = state.archIdx.seasons.slice().sort((a, b) => b.season - a.season);
   return state.archIdx;
@@ -605,7 +631,7 @@ async function chargerArchivesIndex() {
 /** Index d'une saison d'archive (et mémorisation du chemin de chacune de ses courses) ; lève en cas d'échec. */
 async function chargerIndexArchive(y) {
   if (state.archIndexes[y]) return state.archIndexes[y];
-  const ix = await charger(`archives/${y}/index.json`);
+  const ix = await chargerArchive(`${y}/index.json`);
   (ix.races || []).forEach(r => state.archChemins.set(r.id, y));
   state.archIndexes[y] = ix;
   return ix;
@@ -650,6 +676,7 @@ function renderArchives() {
   const A = state.archIdx;
   if (A === undefined) return `<div class="loading">Chargement…</div>`;
   const saisons = (A && A.seasons) || [];
+  if (!A && state.archErr) return messageErreur(state.archErr, "retry-archidx");
   if (!saisons.length) return `<div class="empty card">Aucune archive disponible pour l'instant.</div>`;
   const y = state.archSaison, ix = state.archIndexes[y];
   const sel = `<select class="sel" id="arch-sel" aria-label="Saison des archives">${saisons.map(s =>
@@ -715,7 +742,7 @@ async function preparerOnglet() {
     try {
       const ix = await chargerIndexArchive(y);
       if (ix.complete && state.archRankings[y] === undefined) {
-        try { state.archRankings[y] = await charger(`archives/${y}/ranking.json`); } catch (e) { state.archRankings[y] = null; }
+        try { state.archRankings[y] = await chargerArchive(`${y}/ranking.json`); } catch (e) { state.archRankings[y] = null; }
       } else if (state.archRankings[y] === undefined) state.archRankings[y] = null;
     } catch (e) { console.error("Archive", y, e); state.archIndexes["_err" + y] = true; }
     if (state.tab === t && state.archSaison === y) renderMain();
@@ -989,7 +1016,7 @@ function cleCanon(nom, pays, alias) {
 }
 async function chargerEditionsIdx() {
   try {
-    const d = await charger("archives/editions.json");
+    const d = await chargerArchive("editions.json");
     return { alias: d.alias || {}, courses: d.courses || {} };
   } catch (e) {
     if (e.status === 404) return { alias: {}, courses: {} };
@@ -1069,13 +1096,13 @@ function setHashEtape(sel) {
  *  (lien direct). Renvoie { d, annee } (annee = année d'archive ou null). */
 async function chargerCourse(id) {
   const an = state.archChemins.get(id);
-  if (an != null) return { d: await charger(`archives/${an}/races/${id}.json`), annee: an };
+  if (an != null) return { d: await chargerArchive(`${an}/races/${id}.json`), annee: an };
   try { return { d: await charger(`races/${id}.json`), annee: null }; }
   catch (e) {
     if (e.status !== 404) throw e;
     const trouve = await chercherArchive(id);
     if (trouve == null) throw e;
-    return { d: await charger(`archives/${trouve}/races/${id}.json`), annee: trouve };
+    return { d: await chargerArchive(`${trouve}/races/${id}.json`), annee: trouve };
   }
 }
 
@@ -1196,7 +1223,7 @@ function renderSaison(id) {
 /* ---- carrière : archives (archives/carrieres/<lettre>.json) + saisons du Calendrier (riders-<année>.json) ---- */
 async function chargerIndexCarrieres() {
   try {
-    const d = await charger("archives/carrieres/index.json");
+    const d = await chargerArchive("carrieres/index.json");
     return { alias: d.alias || {}, lettres: d.lettres || [] };
   } catch (e) {
     if (e.status === 404) return { alias: {}, lettres: [] };
@@ -1212,7 +1239,7 @@ async function donneesCarriere(id) {
   const saisons = new Map();
   let arch = null;
   if (I.lettres.includes(lettre)) {
-    const F = await charger(`archives/carrieres/${lettre}.json`);
+    const F = await chargerArchive(`carrieres/${lettre}.json`);
     arch = Object.prototype.hasOwnProperty.call(F, cid) ? F[cid] : null;
   }
   if (arch) Object.entries(arch.seasons || {}).forEach(([y, v]) => saisons.set(+y, { ...v, archive: true }));
@@ -1380,6 +1407,7 @@ document.addEventListener("click", e => {
   else if (a === "uc-more") { state.uc.limit += 100; majListeUci(); }
   else if (a === "uc-fr") { state.uc.fr = !state.uc.fr; state.uc.limit = 100; t.setAttribute("aria-pressed", state.uc.fr); majListeUci(); }
   else if (a === "retry-cal") { delete state.indexes["_err" + state.calSaison]; cache.delete(`index-${state.calSaison}.json`); renderMain(); preparerOnglet(); }
+  else if (a === "retry-archidx") { state.archIdx = undefined; state.archErr = null; cache.delete("archives/index.json"); renderMain(); preparerOnglet(); }
   else if (a === "retry-arch") { delete state.archIndexes["_err" + state.archSaison]; cache.delete(`archives/${state.archSaison}/index.json`); renderMain(); preparerOnglet(); }
   else if (a === "retry") { routeur(); }
   else if (a === "retry-car") { renderCarriere(state.coureurOuvert); }

@@ -25,7 +25,7 @@ python tools/inspect_data.py data                     # résumé lisible des don
 python uci.py && python selection.py && python wikipedia_cal.py && python riders.py --test   # tests locaux (assert)
 AI_BUDGET_SECONDS=0 python tools/essais/essai_ia.py   # dossier, repli, notification sur tools/fixtures_ia
 python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright), dossier obligatoire
-python run_pipeline.py --archive 2023 --max-races 5  # mode archives (écrit dans data/archives/ : à supprimer ensuite)
+ARCHIVES_DIR=/tmp/arch python run_pipeline.py --archive 2023 --max-races 5  # mode archives (sans ARCHIVES_DIR : data/archives/, à supprimer ensuite)
 python collector.py --test                            # tests locaux de compact_race (sans réseau)
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
@@ -63,7 +63,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
-run_pipeline.py --archive 2021-2025 ── collector.run_archive (rotation calendrier -> archives, puis saisons passées -> data/archives/, voir ci-dessous)
+run_pipeline.py --archive 2016-2025 ── collector.run_archive (lancé depuis le dépôt d'archives : rotation calendrier -> archives, puis saisons passées -> ARCHIVES_DIR, voir ci-dessous)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
 index.html : page unique (CSS + JS inline)
 ```
@@ -73,18 +73,29 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 (`uci-<CompetitionId>`, communs à toutes les saisons, champ `season`), `riders-<année>.json`, `ranking.json`,
 `state.json` (interne). Tout fichier n'est réécrit que si son contenu change (hors horodatage) : pas de commit vide.
 
-- **Archives** (`data/archives/`, `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` §4.4) : `run_pipeline.py --archive SAISONS`
-  (`collector.run_archive`) collecte les saisons passées de la plus récente à la plus ancienne, sans ASO, récits ni
-  Gemini (résumés de repli), pas de notification, pause de 2 s sur DataRide. Fichiers compactés (`compact_race` :
-  clés null supprimées, annexes limitées au top 30 sauf dernière étape) dans `data/archives/<année>/` (`races/`,
-  `index.json`, `riders.json`, `ranking.json`, `state.json`) ; une saison `complete` n'est jamais recollectée en
-  entier (aucune requête, sauf révision des temps ci-dessous). Workflow `archives.yml` (cron nocturne `23 0-5 * * *`, entrée `saisons`, variable
-  `ARCHIVES_SAISONS`, défaut 2021-2025, groupe de concurrence propre `archives-data` (`update.yml` : `update-data`, `cancel-in-progress: false` dans les deux : un cron d'archives n'annule plus un passage horaire), commit de `data/archives/`
-  seulement : désormais `git add data/`, pour inclure les suppressions de la rotation). **Auto-relance** : après le commit,
-  si une saison demandée n'est pas `complete` (`data/archives/<année>/state.json`), le workflow se relance
-  (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau d'`update.yml` : limite la charge sur DataRide
-  pendant les courses) et si le passage n'a rien changé (pas de boucle sans progrès) ; le cron n'est qu'une amorce (GitHub le saute
-  souvent). Budget 50 min (timeout 60). **Recollecte ciblée** : `collector.archive_a_recollecter` rouvre une course
+- **Archives** (dépôt dédié **Camelbaggy/courses-cyclistes-archives**, public, GitHub Pages sur main / racine,
+  `https://camelbaggy.github.io/courses-cyclistes-archives/data/archives/` ; `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` §4.4).
+  Les archives (saisons passées) ne sont plus dans ce dépôt (`data/archives/` n'existe plus ici, hors le jeu fictif
+  `tools/fixtures/data/archives/`). Ce dépôt garde tout le **code** et la doc ; l'autre ne contient que des données
+  générées (son CLAUDE.md le rappelle). `run_pipeline.py --archive SAISONS` (`collector.run_archive`) collecte les saisons
+  passées de la plus récente à la plus ancienne, sans ASO, récits ni Gemini (résumés de repli), pas de notification, pause
+  de 2 s sur DataRide. Fichiers compactés (`compact_race` : clés null supprimées, annexes limitées au top 30 sauf dernière
+  étape) dans `ARCHIVES_DIR/<année>/` (`races/`, `index.json`, `riders.json`, `ranking.json`, `state.json`) ;
+  `collector.ARCHIVES_DIR` = variable d'environnement `ARCHIVES_DIR`, sinon `data/archives/` du dossier courant (essais
+  locaux). Les alias (`alias_courses.json`, `alias_coureurs.json`) se lisent à côté du code (`RACINE`), pas du cwd. Une
+  saison `complete` n'est jamais recollectée en entier (aucune requête, sauf révision des temps ci-dessous).
+  **Workflow `archives.yml` : dans le dépôt d'archives** (plus ici). Cron nocturne `23 0-5 * * *`, entrée `saisons`,
+  variable `ARCHIVES_SAISONS`, défaut **2016-2025** (run_archive ignore les saisons complètes : 2021 se termine, puis T2
+  2016-2020 enchaîne), groupe `archives-data`, `cancel-in-progress: false`. Il checkout le dépôt d'archives dans
+  `archives/` et ce dépôt (main) dans `code/`, puis lance
+  `cd code && ARCHIVES_DIR=$GITHUB_WORKSPACE/archives/data/archives python run_pipeline.py --archive "$SAISONS" --budget-min 50`
+  (le `data/` de `code/` n'est lu que pour la rotation ; le workflow prend le code de `main` : fusionner ici avant de relancer là-bas) et commit `data/` du dépôt d'archives (boucle de 5 essais
+  `pull --rebase -X theirs` + `push`, attente aléatoire 5-20 s, échec explicite). **Auto-relance** : après le commit, si
+  une saison demandée n'est pas `complete` (`archives/data/archives/<année>/state.json`, `parse_saisons` importé de
+  `code/`), le workflow se relance (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau
+  d'`update.yml` : limite la charge sur DataRide pendant les courses) et si le passage n'a rien changé (pas de boucle sans
+  progrès) ; le cron n'est qu'une amorce (GitHub le saute souvent). Budget 50 min (timeout 60). **Recollecte ciblée** :
+  `collector.archive_a_recollecter` rouvre une course
   archivée dont un classement `stage` / `gc` (étape route ou CLM individuel, ou final) a une ligne classée sans `time_s`,
   une seule fois (marque `_temps_v` = `TEMPS_VERSION`, 3 aujourd'hui ; l'incrémenter si `parse_duree` ou la lecture des
   statuts change). **Révision des saisons complètes** : `run_archive` parcourt en local les fiches d'une saison `complete`
@@ -100,26 +111,32 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   `4h35'42` (sans marque finale), `6'01''620` (millièmes), guillemets / apostrophes parasites autour d'un `H:MM:SS`
   (`16:46:00"`, `'03:55:33`) ; minutes et secondes < 60 ; tout autre format (`4::37:02`, `0:44:53:984`, `4:57:265`…) reste `None` (compté, une ligne de synthèse par course). **Statuts dans ResultValue** : si `Irm` est vide et que `ResultValue` vaut
   (casse et espaces ignorés) un code de `IRM_STATUTS` (DNF, DNS, OTL, DSQ, LAP…), c'est le statut (ni temps ni illisible) ;
-  `REC` / `REL` : rang conservé, pas de temps. **Push** : `update.yml` et `archives.yml` poussent tous deux sur la branche
-  (boucle de 5 essais `pull --rebase -X theirs` + `push`, attente aléatoire 5-20 s, échec explicite) ; pas de
-  recouvrement de fichiers hors rotation. `update.yml` fait un checkout partiel (sparse-checkout non-cone sans `data/archives/`) : ne jamais y
-  écrire ni y committer d'archives. Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
+  `REC` / `REL` : rang conservé, pas de temps. **Push d'`update.yml`** : boucle de 5 essais `pull --rebase -X theirs` +
+  `push`, attente aléatoire 5-20 s, échec explicite ; checkout complet (plus de sparse-checkout : ce dépôt n'a plus
+  d'archives). Essai réseau : `[essai:archives_collecte]`. `selection.py` range `1.HC`/`2.HC`
   en Pro et les classes 2009-2010 (`1.CH`, `2.CH`, `CPE`, `AU1`, `MNM`) en WT (libellé `uci_class` inchangé).
-- **Rotation calendrier -> archives** : une saison S quitte le Calendrier (`seasons.json.available`) et passe dans
-  `data/archives/<S>/` quand S+1 est terminée, soit quand la date du jour dépasse de plus de 14 jours la fin de la
+- **Rotation calendrier -> archives** (scindée entre les deux dépôts) : une saison S quitte le Calendrier
+  (`seasons.json.available`) quand S+1 est terminée, soit quand la date du jour dépasse de plus de 14 jours la fin de la
   dernière course (`end_date`, à défaut `start_date`, des courses et des `upcoming` de `data/index-<S+1>.json`) ; une
   course à venir future, un index de S+1 absent ou vide : pas de rotation (exemple : 2026 part ~2 semaines après la
-  dernière course de 2027). Règle pure `collector.saisons_a_archiver`, utilisée par `write_season_indexes` (update.yml :
-  la saison n'est plus listée ni réécrite) et par `collector.migrer_saisons_anciennes` (appelée au début de
-  `run_archive`, donc par archives.yml seulement : compactage dans `data/archives/<S>/`, classement de fin de saison,
-  riders.json, state complete, puis suppression de `data/races/<id>.json`, `index-<S>.json`, `riders-<S>.json` de S).
-  Le contrôle nocturne ne lit que des fichiers (aucune requête). update.yml n'écrit jamais dans `data/archives/`.
+  dernière course de 2027). Règle pure `collector.saisons_a_archiver`, utilisée par les deux côtés :
+  (a) **dépôt d'archives** : `collector.migrer_saisons_anciennes` (début de `run_archive`, donc par archives.yml, qui lit le
+  `data/` de `code/` en lecture seule) écrit l'archive de S (courses compactées, `index.json`, classement de fin de saison,
+  `riders.json`, `state.json` complete) et **ne supprime plus rien** dans `data/` (une suppression faite là-bas ne serait
+  jamais poussée) ; une saison déjà migrée est ignorée ensuite ; (b) **ce dépôt** : `write_season_indexes` (update.yml)
+  ne liste plus S ni ne la réécrit, puis, s'il reste des fichiers de S, lit **une fois par passage** l'index public
+  `collector.ARCHIVES_INDEX_URL` (`https://raw.githubusercontent.com/Camelbaggy/courses-cyclistes-archives/main/data/archives/index.json`,
+  `charger_index_archives`, échec réseau = rien supprimé) et `collector.retirer_saisons_archivees` supprime
+  `data/races/<id>.json`, `data/index-<S>.json`, `data/riders-<S>.json` seulement si S y figure avec `complete: true`
+  (log `[ROTATION] saison S archivée dans courses-cyclistes-archives : fichiers retirés de data/`). Tests sans réseau
+  (index injecté) dans `collector.py --test`. Une saison reste donc quelques passages dans `data/` après sa sortie du
+  Calendrier, le temps que l'archive soit publiée.
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
-  `data/archives/editions.json` (éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
-  ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `data/archives/carrieres/<lettre>.json`
-  + `carrieres/index.json` (saisons d'un coureur, par `rider_id` exact). Alias MANUELS à la racine : `alias_courses.json`
+  `editions.json` (dans `ARCHIVES_DIR` ; éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
+  ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`
+  + `carrieres/index.json` (saisons d'un coureur, par `rider_id` exact). Alias MANUELS à la racine de CE dépôt (code) : `alias_courses.json`
   (`{"clé": "clé canonique"}`, changements de nom de course) et `alias_coureurs.json` (`{"rider_id": "rider_id canonique"}`), `{}` au
-  départ, jamais devinés. `cleEdition` (index.html) DOIT rester alignée avec `cle_edition` ; tests dans `collector.py --test`.
+  départ, jamais devinés (une modification se publie au passage d'archives.yml suivant). `cleEdition` (index.html) DOIT rester alignée avec `cle_edition` ; tests dans `collector.py --test`.
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
@@ -158,11 +175,11 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 Page autonome sans dépendance, thème sombre unique (comme le dashboard des Coupes d'Europe), drapeaux flagcdn.com ;
 toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents · Calendrier (un sous-onglet par saison de
 `seasons.json.available`, Résultats / À venir, filtres de catégorie) · Classements (UCI, FDJ Series) · Français
-(triés par rang UCI, 3 meilleurs résultats) · Archives (menu déroulant des saisons de `archives/index.json`, lien
+(triés par rang UCI, 3 meilleurs résultats) · Archives (menu déroulant des saisons de `index.json` du dépôt d'archives, lien
 `?archive=AAAA`, chargement paresseux : classement UCI de fin de saison, victoires françaises, liste des courses ;
-fiche course lue dans `archives/<année>/races/` (encart repliable « Éditions précédentes » : `editions.json` + saisons du Calendrier), fiche
-  coureur dans `archives/<année>/riders.json` (onglets « Saison » et « Carrière » : `carrieres/<lettre>.json` + `riders-<année>.json` du Calendrier), jamais de repli
+fiche course lue dans `<année>/races/` des archives (encart repliable « Éditions précédentes » : `editions.json` + saisons du Calendrier), fiche
+  coureur dans `<année>/riders.json` des archives (onglets « Saison » et « Carrière » : `carrieres/<lettre>.json` + `riders-<année>.json` du Calendrier), jamais de repli
 vers une autre saison ; les clés null sont absentes des archives, la page traite absent = null ; anciennes classes
 HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle d'équivalence). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
-change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons + `archives/` fictives, régénérables par `tools/fixtures/generer_archives.py`) ; `?saison=AAAA`. Vérifier le rendu
+change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons + `archives/` fictives, régénérables par `tools/fixtures/generer_archives.py`) ; `?saison=AAAA`. **Base des archives** (`BASE_ARCHIVES`) : `?archives=<url https ou dossier relatif>` s'il est donné ; sinon, si `?data=` est donné (jeu d'essai), `<data>/archives` en local ; sinon `https://camelbaggy.github.io/courses-cyclistes-archives/data/archives` (GitHub Pages, `Access-Control-Allow-Origin: *`, fetch cross-origin, `cache: no-cache`). Toute lecture d'archive passe par `chargerArchive(chemin)` (chemin relatif aux archives ; `charger` route aussi les chemins `archives/…`) ; site injoignable : message « Le site des archives est injoignable » + bouton Réessayer. Vérifier le rendu
 avec `tools/apercu.py` (option `--nav` sur les données réelles) après toute modification.

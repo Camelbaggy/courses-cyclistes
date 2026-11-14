@@ -40,8 +40,13 @@ SUMMARY_KEYS = ("id", "name", "country", "flag", "uci_class", "category", "race_
                 "end_date", "status", "stages_done", "stages_total", "selection_reason", "winner", "leader",
                 "best_french", "sources")
 TOP10_CLASSES = ("1.1", "2.1", "1.2", "2.2")
-ARCHIVES_DIR = os.path.join(DATA_DIR, "archives")   # saisons passées compactées (data/archives/<année>/…)
 RACINE = os.path.dirname(os.path.abspath(__file__))
+# Saisons passées compactées (<année>/…) : dépôt Camelbaggy/courses-cyclistes-archives, où le workflow archives.yml
+# fixe ARCHIVES_DIR sur son data/archives/ ; à défaut (essais locaux), data/archives/ du dossier courant.
+ARCHIVES_DIR = os.environ.get("ARCHIVES_DIR") or os.path.join(DATA_DIR, "archives")
+# Index public des archives (dépôt d'archives) : le dépôt principal n'efface les fichiers d'une saison archivée
+# qu'après y avoir lu `complete: true` (retirer_saisons_archivees).
+ARCHIVES_INDEX_URL = "https://raw.githubusercontent.com/Camelbaggy/courses-cyclistes-archives/main/data/archives/index.json"
 ALIAS_COURSES = os.path.join(RACINE, "alias_courses.json")      # {"clé source": "clé canonique"} : manuel, jamais deviné
 ALIAS_COUREURS = os.path.join(RACINE, "alias_coureurs.json")    # {"rider_id source": "rider_id canonique"} : idem
 ANNEX_TOP = 30            # archives : lignes conservées dans les classements annexes (hors dernière étape)
@@ -155,16 +160,19 @@ def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optiona
     Les saisons calculées ce passage (`computed`, dont la courante et, pendant l'intersaison, la suivante) sont écrites
     telles quelles ; les saisons passées sont reconstruites depuis leurs fichiers de course (conservés), sans
     calendrier à venir, en gardant leur dernier classement FDJ connu. Les saisons à archiver (`saisons_a_archiver`) ne
-    sont plus listées (`seasons.json.available`) ni réécrites : elles rejoignent les archives
-    (`migrer_saisons_anciennes`), leurs fichiers restent en place jusqu'à la migration."""
+    sont plus listées (`seasons.json.available`) ni réécrites : elles rejoignent le dépôt d'archives
+    (`migrer_saisons_anciennes`, lancée par le workflow de ce dépôt-là) ; leurs fichiers restent en place ici jusqu'à
+    ce que l'index public des archives les déclare `complete` (`retirer_saisons_archivees`, appelée en fin de passage)."""
     if not isinstance(computed, dict) or "races" in computed:   # compatibilité : un seul index (saison courante)
         computed = {current: computed}
     by_season: Dict[int, List[Dict]] = {}
+    noms_par_saison: Dict[int, List[str]] = {}
     for fname in os.listdir(RACES_DIR):
         if fname.endswith(".json"):
             r = _load(os.path.join(RACES_DIR, fname), None)
             if r and isinstance(r.get("season"), int):
                 by_season.setdefault(r["season"], []).append(r)
+                noms_par_saison.setdefault(r["season"], []).append(fname)
     candidates = sorted({y for y in by_season if y <= current} | set(computed), reverse=True)
     today = today or dt.date.today()
     indexes: Dict[int, Dict] = {}
@@ -175,7 +183,7 @@ def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optiona
             old = _load(os.path.join(DATA_DIR, f"index-{y}.json"), {})
             indexes[y] = build_index(by_season.get(y, []), y, [], old.get("fdj_united_series"))
     # Rotation : une saison S quitte le calendrier quand S+1 est terminée depuis plus de 14 jours (voir
-    # saisons_a_archiver) ; ses fichiers restent en place jusqu'à la migration (migrer_saisons_anciennes).
+    # saisons_a_archiver) ; ses fichiers restent en place jusqu'à ce que le dépôt d'archives la publie (complete).
     for y in range(min(candidates, default=current), current + 2):   # S+1 d'une saison présente
         if y not in indexes:
             ix = _load(os.path.join(DATA_DIR, f"index-{y}.json"), None)
@@ -187,6 +195,49 @@ def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optiona
         _dump_if_changed(os.path.join(DATA_DIR, f"index-{y}.json"), indexes[y])
     write_riders_files(seasons, current, by_season, today)
     _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"), {"current": current, "available": seasons}, ignore=())
+    a_retirer = [y for y in sorted(a_archiver)
+                 if noms_par_saison.get(y) or any(os.path.exists(os.path.join(DATA_DIR, f"{pre}-{y}.json"))
+                                                  for pre in ("index", "riders"))]
+    if a_retirer:   # une seule lecture réseau par passage, et seulement s'il reste des fichiers à retirer
+        retirer_saisons_archivees(a_retirer, charger_index_archives(), noms_par_saison)
+
+
+def charger_index_archives() -> Optional[Dict]:
+    """Index public du dépôt d'archives (ARCHIVES_INDEX_URL) ; None si injoignable ou invalide (rien ne sera supprimé)."""
+    try:
+        ix = netutil.fetch_json(ARCHIVES_INDEX_URL)
+    except Exception as e:   # jamais bloquant
+        print(f"[WARN] [ROTATION] index des archives illisible : {e}")
+        return None
+    return ix if isinstance(ix, dict) and isinstance(ix.get("seasons"), list) else None
+
+
+def retirer_saisons_archivees(saisons: List[int], index_archives: Optional[Dict],
+                              noms_par_saison: Dict[int, List[str]]) -> List[int]:
+    """Retire de data/ (races/<id>.json, index-<S>.json, riders-<S>.json) les saisons S de `saisons` (saisons à
+    archiver) que `index_archives` (index public des archives) déclare `complete: true`. `index_archives` absent ou
+    invalide (None) : rien n'est supprimé. Renvoie les saisons retirées."""
+    if not isinstance(index_archives, dict):
+        return []
+    completes = {s.get("season") for s in index_archives.get("seasons") or []
+                 if isinstance(s, dict) and s.get("complete") is True}
+    retirees = []
+    for annee in saisons:
+        if annee not in completes:
+            continue
+        for fname in noms_par_saison.get(annee, []):
+            try:
+                os.remove(os.path.join(RACES_DIR, fname))
+            except FileNotFoundError:
+                pass
+        for nom in (f"index-{annee}.json", f"riders-{annee}.json"):
+            try:
+                os.remove(os.path.join(DATA_DIR, nom))
+            except FileNotFoundError:
+                pass
+        print(f"[ROTATION] saison {annee} archivée dans courses-cyclistes-archives : fichiers retirés de data/")
+        retirees.append(annee)
+    return retirees
 
 
 def race_path(race_id: str) -> str:
@@ -900,7 +951,7 @@ def write_archives_editions_carrieres(archives_dir: Optional[str] = None, now: O
 
 
 def write_archives_index(now: Optional[str] = None) -> Dict:
-    """data/archives/index.json : récapitulatif des saisons présentes dans data/archives/."""
+    """index.json de ARCHIVES_DIR : récapitulatif des saisons présentes dans les archives."""
     saisons = []
     if os.path.isdir(ARCHIVES_DIR):
         for nom in os.listdir(ARCHIVES_DIR):
@@ -921,14 +972,15 @@ def write_archives_index(now: Optional[str] = None) -> Dict:
 
 def migrer_saisons_anciennes(today: Optional[dt.date] = None) -> List[int]:
     """Rotation du calendrier vers les archives : les saisons désignées par `saisons_a_archiver` (S+1 terminée depuis
-    plus de 14 jours d'après data/index-<S+1>.json ; seules les saisons < `current` de data/seasons.json) sont
-    déplacées de data/ vers data/archives/<année>/ : courses compactées (une course déjà présente en archive n'est
-    jamais écrasée), index (archive, complete), classement UCI de fin de saison + riders.json
-    (`finish_archive_season`), state complete. Les fichiers de data/ (races/<id>.json, index-<année>.json,
-    riders-<année>.json) ne sont supprimés qu'après l'écriture réussie de toute la saison. Pas de seasons.json ou
-    index de S+1 absent / vide : ne fait rien. Aucune requête réseau pour décider (lecture de fichiers). Appelée par
-    run_archive seulement (archives.yml a un checkout complet ; update.yml n'a pas data/archives/). Renvoie les
-    saisons migrées."""
+    plus de 14 jours d'après data/index-<S+1>.json ; seules les saisons < `current` de data/seasons.json) sont copiées
+    de data/ vers ARCHIVES_DIR/<année>/ : courses compactées (une course déjà présente en archive n'est jamais
+    écrasée), index (archive, complete), classement UCI de fin de saison + riders.json (`finish_archive_season`),
+    state complete. Ne supprime RIEN dans data/ : le workflow du dépôt d'archives lit le data/ du dépôt principal en
+    lecture seule ; c'est le dépôt principal qui retire ses fichiers (`retirer_saisons_archivees`) une fois l'archive
+    publiée. Une saison déjà migrée (state complete, index, riders et toutes les fiches présents) est ignorée : pas de
+    nouvelle requête de classement à chaque passage tant que le dépôt principal n'a pas fait le ménage. Pas de
+    seasons.json ou index de S+1 absent / vide : ne fait rien. Aucune requête réseau pour décider (lecture de
+    fichiers). Appelée par run_archive seulement. Renvoie les saisons migrées pendant cet appel."""
     today = today or dt.date.today()
     sj = _load(os.path.join(DATA_DIR, "seasons.json"), None)
     current = sj.get("current") if isinstance(sj, dict) else None
@@ -947,9 +999,13 @@ def migrer_saisons_anciennes(today: Optional[dt.date] = None) -> List[int]:
     par_saison = {y: tous[y] for y in a_archiver if y in tous}
     migrees = []
     for annee in sorted(par_saison, reverse=True):
+        dossier = os.path.join(ARCHIVES_DIR, str(annee))
+        rdir = os.path.join(dossier, "races")
+        if (_load(os.path.join(dossier, "state.json"), {}).get("complete") is True
+                and all(os.path.exists(os.path.join(dossier, n)) for n in ("index.json", "riders.json"))
+                and all(os.path.exists(os.path.join(rdir, f)) for f, _ in par_saison[annee])):
+            continue   # déjà migrée : en attente du ménage côté dépôt principal
         try:
-            dossier = os.path.join(ARCHIVES_DIR, str(annee))
-            rdir = os.path.join(dossier, "races")
             os.makedirs(rdir, exist_ok=True)
             for fname, r in par_saison[annee]:
                 dest = os.path.join(rdir, fname)
@@ -964,19 +1020,12 @@ def migrer_saisons_anciennes(today: Optional[dt.date] = None) -> List[int]:
             manquants = [f for f, _ in par_saison[annee] if not os.path.exists(os.path.join(rdir, f))]
             manquants += [n for n in ("index.json", "riders.json", "state.json")
                           if not os.path.exists(os.path.join(dossier, n))]
-        except Exception as e:   # rien n'est supprimé : la saison reste dans data/ et sera retentée
+        except Exception as e:   # la saison reste dans data/ et sera retentée
             print(f"[WARN] [ROTATION] saison {annee} non migrée : {e}")
             continue
         if manquants:
             print(f"[WARN] [ROTATION] saison {annee} non migrée, fichiers manquants : {manquants}")
             continue
-        for fname, _ in par_saison[annee]:
-            os.remove(os.path.join(RACES_DIR, fname))
-        for nom in (f"index-{annee}.json", f"riders-{annee}.json"):
-            try:
-                os.remove(os.path.join(DATA_DIR, nom))
-            except FileNotFoundError:
-                pass
         print(f"[ROTATION] saison {annee} -> archives ({len(par_saison[annee])} courses)")
         migrees.append(annee)
     return migrees
@@ -1008,12 +1057,12 @@ def comp_depuis_fiche(fiche: Dict) -> Optional[Dict]:
 
 def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: float = 40,
                 max_races: int = 0, only: str = "") -> None:
-    """Collecte les saisons passées `years` (de la plus récente à la plus ancienne) dans data/archives/<année>/ :
+    """Collecte les saisons passées `years` (de la plus récente à la plus ancienne) dans ARCHIVES_DIR/<année>/ :
     courses compactées, index, et, la saison terminée, classement UCI de fin de saison + fiches coureurs.
     Sans ASO, récits ni Gemini. Une saison `complete` n'est plus recollectée qu'au titre de la révision des temps (fiches `_temps_v` < TEMPS_VERSION
     avec temps manquants) ; sans fiche à réviser, aucune requête réseau.
-    Commence par la rotation du calendrier (`migrer_saisons_anciennes`, seule écriture hors data/archives/ : suppression
-    des fichiers des saisons migrées). Ne touche pas aux autres saisons, à data/state.json ni à seasons.json."""
+    Commence par la rotation du calendrier (`migrer_saisons_anciennes` : copie vers les archives, data/ n'est jamais
+    modifié). Ne touche pas aux autres saisons, à data/state.json ni à seasons.json."""
     today = today or dt.date.today()
     t0 = time.monotonic()
     migrer_saisons_anciennes(today)
@@ -1318,6 +1367,7 @@ def _tests() -> None:
     # 3) rotation N / N-1 sur un dossier temporaire (aucun réseau : classement UCI et fin de saison remplacés)
     import tempfile
     sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, finish_archive_season, _ranking_du_jour)
+    sauve_ix = charger_index_archives
     globals_ = globals()
     try:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1369,10 +1419,9 @@ def _tests() -> None:
             _dump(os.path.join(ARCHIVES_DIR, "2026", "races", "uci-4.json"), {"id": "uci-4", "marque": "existante", "season": 2026,
                                                                               "name": "X", "race_type": "one_day", "stages": [], "riders": {}})
             assert migrer_saisons_anciennes(auj) == [2026]               # 2027 terminée ; 2028 non -> 2027 reste
-            assert not os.path.exists(os.path.join(RACES_DIR, "uci-3.json")) and not os.path.exists(os.path.join(RACES_DIR, "uci-4.json"))
-            assert os.path.exists(os.path.join(RACES_DIR, "uci-1.json")) and os.path.exists(os.path.join(RACES_DIR, "uci-2.json"))
-            assert not os.path.exists(os.path.join(tmp, "index-2026.json")) and not os.path.exists(os.path.join(tmp, "riders-2026.json"))
-            assert os.path.exists(os.path.join(tmp, "index-2027.json")) and os.path.exists(os.path.join(tmp, "riders-2028.json"))
+            # la migration ne supprime plus rien dans data/ (c'est retirer_saisons_archivees, côté dépôt principal)
+            assert all(os.path.exists(os.path.join(RACES_DIR, f"uci-{i}.json")) for i in (1, 2, 3, 4))
+            assert os.path.exists(os.path.join(tmp, "index-2026.json")) and os.path.exists(os.path.join(tmp, "riders-2026.json"))
             a26 = os.path.join(ARCHIVES_DIR, "2026")
             assert _load(os.path.join(a26, "races", "uci-4.json"), {}).get("marque") == "existante"
             assert _load(os.path.join(a26, "races", "uci-3.json"), {})["riders"]["a-b-19900101"].get("team", "absent") == "absent"   # compacté
@@ -1380,7 +1429,20 @@ def _tests() -> None:
             assert ix["archive"] is True and ix["complete"] is True and ix["season"] == 2026
             assert _load(os.path.join(a26, "state.json"), {}) == {"complete": True, "top10_checked": {}}
             assert os.path.exists(os.path.join(a26, "riders.json"))
-            assert migrer_saisons_anciennes(auj) == []                   # idempotent
+            assert migrer_saisons_anciennes(auj) == []                   # déjà migrée : ignorée (pas de nouvelle requête)
+            # retirer_saisons_archivees (index public injecté, aucun réseau)
+            noms = {2026: ["uci-3.json", "uci-4.json"]}
+            assert retirer_saisons_archivees([2026], None, noms) == []                                     # index injoignable
+            assert retirer_saisons_archivees([2026], {"seasons": "x"}, noms) == []
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": False}]}, noms) == []   # pas complète
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2025, "complete": True}]}, noms) == []    # absente
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-3.json")) and os.path.exists(os.path.join(tmp, "index-2026.json"))
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": True}]}, noms) == [2026]
+            assert not os.path.exists(os.path.join(RACES_DIR, "uci-3.json")) and not os.path.exists(os.path.join(RACES_DIR, "uci-4.json"))
+            assert not os.path.exists(os.path.join(tmp, "index-2026.json")) and not os.path.exists(os.path.join(tmp, "riders-2026.json"))
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-1.json")) and os.path.exists(os.path.join(RACES_DIR, "uci-2.json"))
+            assert os.path.exists(os.path.join(tmp, "index-2027.json")) and os.path.exists(os.path.join(tmp, "riders-2028.json"))
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": True}]}, noms) == [2026]   # idempotent
             # 2028 terminée depuis plus de 14 jours -> 2027 part aussi ; échec de la fin de saison : rien n'est supprimé
             idx(2028, "2028-10-25")
             def echec(annee, dossier, courses=None):
@@ -1390,20 +1452,32 @@ def _tests() -> None:
             assert migrer_saisons_anciennes(dt.date(2028, 11, 9)) == [] and os.path.exists(os.path.join(RACES_DIR, "uci-2.json"))   # panne
             globals_["finish_archive_season"] = bouchon_fin
             assert migrer_saisons_anciennes(dt.date(2028, 11, 9)) == [2027]
-            assert not os.path.exists(os.path.join(RACES_DIR, "uci-2.json")) and os.path.exists(os.path.join(ARCHIVES_DIR, "2027", "races", "uci-2.json"))
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-2.json")) and os.path.exists(os.path.join(ARCHIVES_DIR, "2027", "races", "uci-2.json"))
             recap = write_archives_index("2028-01-01T00:00:00Z")
             assert [s["season"] for s in recap["seasons"]] == [2027, 2026] and all(s["complete"] for s in recap["seasons"])
             # write_season_indexes : une saison dont la suivante est terminée n'est plus listée
             _dump(os.path.join(RACES_DIR, "uci-6.json"), course("uci-6", 2026))
             _dump(os.path.join(RACES_DIR, "uci-7.json"), course("uci-7", 2027))
             futur = {"name": "U", "start_date": "2028-09-01", "end_date": "2028-09-01"}
+            globals_["charger_index_archives"] = lambda: None        # archives injoignables : rien n'est supprimé
             cal = {2028: build_index([course("uci-1", 2028)], 2028, [futur], None)}
             write_season_indexes(2028, cal, auj)
             assert _load(os.path.join(tmp, "seasons.json"), {}) == {"current": 2028, "available": [2028, 2027]}   # 2027 terminée -> 2026 sortie
-            assert not os.path.exists(os.path.join(tmp, "riders-2026.json"))
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-6.json"))           # ... mais ses fichiers restent
+            globals_["charger_index_archives"] = lambda: {"seasons": [{"season": 2026, "complete": True}, {"season": 2027, "complete": False}]}
+            write_season_indexes(2028, cal, auj)
+            assert not os.path.exists(os.path.join(RACES_DIR, "uci-6.json")) and not os.path.exists(os.path.join(tmp, "riders-2026.json"))
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-7.json"))           # 2027 : pas complète côté archives
             cal = {2028: build_index([course("uci-1", 2028)], 2028, [], None)}
             write_season_indexes(2028, cal, dt.date(2028, 6, 1))    # 2028 sans course à venir, terminée depuis le 2028-03-01
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028]   # 2027 sortie à son tour
+            assert os.path.exists(os.path.join(RACES_DIR, "uci-7.json"))
+            globals_["charger_index_archives"] = lambda: {"seasons": [{"season": 2027, "complete": True}]}
+            write_season_indexes(2028, cal, dt.date(2028, 6, 1))
+            assert not os.path.exists(os.path.join(RACES_DIR, "uci-7.json")) and not os.path.exists(os.path.join(tmp, "index-2027.json"))
+            _dump(os.path.join(RACES_DIR, "uci-7.json"), course("uci-7", 2027))
+            _dump(os.path.join(tmp, "index-2027.json"), {"season": 2027, "races": [{"id": "x", "start_date": "2027-03-01", "end_date": "2027-10-20"}], "upcoming": []})
+            globals_["charger_index_archives"] = lambda: None
             write_season_indexes(2028, cal, dt.date(2028, 3, 10))   # moins de 14 jours après la dernière course de 2028
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028, 2027]
             # intersaison : la saison suivante (calculée) reste listée
@@ -1412,6 +1486,7 @@ def _tests() -> None:
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028, 2027]
     finally:
         globals_["DATA_DIR"], globals_["RACES_DIR"], globals_["ARCHIVES_DIR"], globals_["finish_archive_season"], globals_["_ranking_du_jour"] = sauve
+        globals_["charger_index_archives"] = sauve_ix
     # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
     import tempfile as _tf
     sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds)

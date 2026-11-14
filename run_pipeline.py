@@ -35,7 +35,7 @@ def main() -> None:
                    help="durée max de collecte en minutes (0 = illimitée) ; la suite au passage suivant")
     p.add_argument("--archive", default="", metavar="SAISONS",
                    help="mode archives : saisons passées (« 2021-2025 », « 2023 », « 2021,2023 ») collectées dans "
-                        "data/archives/, sans notification ni Gemini ; --budget-min, --max-races et --only s'appliquent")
+                        "ARCHIVES_DIR (data/archives/ par défaut ; dépôt d'archives en production), sans notification ni Gemini ; --budget-min, --max-races et --only s'appliquent")
     p.add_argument("--no-notify", action="store_true", help="ne pas envoyer de push ntfy")
     a = p.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
