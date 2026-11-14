@@ -167,6 +167,17 @@ Observations (aucune ligne sans statut ni valeur n'est apparue dans les autres c
 - Les lignes de `combativity` avec rang 1 et `_rv` vide sont des **classements d'un seul coureur** (prix de la combativité) : ce n'est pas un abandon ; le code doit les distinguer.
 - Pour 2023 et 2018, ce décompte n'a pas été mesuré par ce passage.
 
+## Formats de `ResultValue` vus en 2025 (grands tours, temps cumulés)
+
+Premiers passages réels d'`archives.yml` (saison 2025) : des centaines de lignes « temps illisible » dans les classements de grands tours. Formats observés en plus de `H:MM:SS`, `+M:SS`, `s.t.` :
+
+| Forme | Exemples | Lecture retenue |
+|---|---|---|
+| `H h MM ' SS ''` | `04h54'18''`, `19h56'53''` | 4:54:18, 19:56:53 |
+| trois groupes séparés par des espaces (largeur variable) | `3 15  6`, `27 57 10` | H M S : 3:15:06, 27:57:10 |
+
+`uci.parse_duree` les reconnaît (h ou H ; apostrophes droites ou typographiques ’ ′, `''` ou `"` ″ pour les secondes ; `MM'SS''` et `SS''` par extension de la même notation, non observés). Garde-fous : minutes ou secondes >= 60, deux groupes seuls ou plus de trois : `None` (rien n'est deviné). La sémantique « H M S » est déduite des valeurs (27 57 10 est un cumul de grand tour) et non d'une documentation DataRide : à confirmer en relisant les écarts recalculés d'un grand tour recollecté. Les archives déjà écrites avec des `time_s` manquants sont recollectées une fois (`collector.archive_a_recollecter`).
+
 ## Giro d'Italia
 
 Le motif « Giro d.Italia » donne : **2013** présent (2.UWT, ITA, 2013-05-04), **2010** présent (2.CH, ITA, 2010-05-08), **2009** présent (2.CH, ITA, 2009-05-09), une ligne par saison. Les étapes du Giro n'ont pas été lues ; seule la présence dans la liste des courses est établie. 2023 et 2018 : non vérifié (motif absent du premier passage).
