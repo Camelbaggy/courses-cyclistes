@@ -155,13 +155,29 @@ _RE_HMS_H = re.compile(rf"^(\d+)\s*[hH]\s*(\d{{1,2}})\s*{_MIN}\s*(\d{{1,2}})\s*{
 _RE_MS = re.compile(rf"^(\d+)\s*{_MIN}\s*(\d{{1,2}})\s*{_SEC}$")
 _RE_S = re.compile(rf"^(\d+)\s*{_SEC}$")
 _RE_HMS_ESPACES = re.compile(r"^(\d+)\s+(\d{1,2})\s+(\d{1,2})$")
+_RE_HMS_SEP = re.compile(r"^(\d+)([.,;])(\d{2})\2(\d{2})$")                      # « 1.14.08 », « 29,23,52 », « 26;31;34 »
+_RE_HMS_H_SANS_FIN = re.compile(rf"^(\d+)\s*[hH]\s*(\d{{1,2}})\s*{_MIN}\s*(\d{{1,2}})$")   # « 4h35'42 » (pas de marque finale)
+_RE_MS_MILLIEMES = re.compile(rf"^(\d+)\s*{_MIN}\s*(\d{{1,2}})\s*{_SEC}\s*(\d{{3}})$")   # « 6'01''620 »
+_PARASITES = "'\"’′″”‘“"                                                           # guillemets / apostrophes en trop
 
 
 def parse_duree(texte: str) -> Optional[float]:
     """« 73:56:26 » -> 266186 ; « 28:16.61 » -> 1696.61 ; « 13 » -> 13 ; « 6:26 » -> 386 (secondes, sans signe).
-    Reconnaît aussi « 04h54'18'' », « 54'18'' », « 18'' » (apostrophes droites ou typographiques, " pour les secondes)
-    et « 3 15  6 » (trois groupes H M S séparés par des espaces, minutes et secondes < 60). Autre format : None."""
+    Reconnaît aussi « 04h54'18'' », « 54'18'' », « 18'' » (apostrophes droites ou typographiques, " pour les secondes),
+    « 4h35'42 » (sans marque finale), « 6'01''620 » (millièmes), « 3 15  6 » (H M S séparés par des espaces) et
+    « 1.14.08 » / « 29,23,52 » / « 26;31;34 » (séparateur unique homogène, MM et SS sur 2 chiffres) ; minutes et
+    secondes < 60. Guillemets / apostrophes parasites en tête ou en fin d'une valeur « H:MM:SS » (`16:46:00"`) ignorés.
+    Autre format (ambigu) : None."""
     txt = (texte or "").strip()
+    r = _parse_duree_stricte(txt)
+    if r is None:
+        net = txt.strip(_PARASITES)
+        if net != txt and ":" in net and _RE_DUREE.match(net):
+            r = _parse_duree_stricte(net)
+    return r
+
+
+def _parse_duree_stricte(txt: str) -> Optional[float]:
     m = _RE_DUREE.match(txt)
     if m:
         total = 0
@@ -170,7 +186,16 @@ def parse_duree(texte: str) -> Optional[float]:
         if m.group(2):
             total += float("0." + m.group(2))
         return float(total)
-    for motif, poids in ((_RE_HMS_H, (3600, 60, 1)), (_RE_HMS_ESPACES, (3600, 60, 1)), (_RE_MS, (60, 1)), (_RE_S, (1,))):
+    m = _RE_MS_MILLIEMES.match(txt)
+    if m:
+        mn, sec = int(m.group(1)), int(m.group(2))
+        return None if sec >= 60 else float(mn * 60 + sec) + float("0." + m.group(3))
+    m = _RE_HMS_SEP.match(txt)
+    if m:
+        vals = [int(m.group(1)), int(m.group(3)), int(m.group(4))]
+        return None if vals[1] >= 60 or vals[2] >= 60 else float(vals[0] * 3600 + vals[1] * 60 + vals[2])
+    for motif, poids in ((_RE_HMS_H, (3600, 60, 1)), (_RE_HMS_H_SANS_FIN, (3600, 60, 1)),
+                         (_RE_HMS_ESPACES, (3600, 60, 1)), (_RE_MS, (60, 1)), (_RE_S, (1,))):
         m = motif.match(txt)
         if m:
             vals = [int(g) for g in m.groups()]
@@ -201,8 +226,16 @@ def rider_ref(ligne: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
     return rid, ref
 
 
+def _code_dans_valeur(ligne: Dict[str, Any]) -> str:
+    """Code de statut écrit dans ResultValue (« DNF », « dns », « O T L »…) quand Irm est vide, sinon « »."""
+    if str(ligne.get("Irm") or "").strip():
+        return ""
+    code = "".join(str(ligne.get("ResultValue") or "").split()).upper()
+    return code if code in IRM_STATUTS or code in IRM_SANS_STATUT else ""
+
+
 def _statut(ligne: Dict[str, Any]) -> Optional[str]:
-    irm = str(ligne.get("Irm") or "").strip().upper()
+    irm = str(ligne.get("Irm") or "").strip().upper() or _code_dans_valeur(ligne)
     if not irm:
         return None
     IRM_VUS[irm] += 1
@@ -289,7 +322,7 @@ def normalize_rows(lignes: List[Dict[str, Any]], cle: str, riders: Dict[str, Dic
         if isinstance(pcr, (int, float)) and pcr:
             row["uci_points"] = _nombre_propre(float(pcr))
         valeur = lg.get("ResultValue")
-        if statut is None:
+        if statut is None and not _code_dans_valeur(lg):   # « REC » / « REL » dans ResultValue : pas un temps
             if cle in CLES_POINTS:
                 row["points"] = _nombre_propre(_nombre(valeur))
             else:
@@ -309,7 +342,7 @@ def normalize_team_rows(lignes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not nom:
             continue
         statut = _statut(lg)
-        t, g = (None, None) if statut else temps.convertir(lg.get("ResultValue"))
+        t, g = (None, None) if statut or _code_dans_valeur(lg) else temps.convertir(lg.get("ResultValue"))
         sortie.append({"rank": None if statut else _rang(lg), "team": nom, "nationality": _nation(lg.get("NationName")),
                        "time_s": t, "gap_s": g})
     return sortie
@@ -620,6 +653,18 @@ def _tests() -> None:
     assert parse_duree("3 15  6") == 3 * 3600 + 15 * 60 + 6 and parse_duree("27 57 10") == 27 * 3600 + 57 * 60 + 10
     assert parse_duree("27  57   10") == 27 * 3600 + 57 * 60 + 10
     assert parse_duree("3 15") is None and parse_duree("3 75 10") is None and parse_duree("3 15 61") is None
+    assert parse_duree("1.14.08") == 4448 and parse_duree("6.33.24") == 6 * 3600 + 33 * 60 + 24
+    assert parse_duree("29,23,52") == 29 * 3600 + 23 * 60 + 52 and parse_duree("26;31;34") == 26 * 3600 + 31 * 60 + 34
+    assert parse_duree("1.75.08") is None and parse_duree("1.14,08") is None and parse_duree("1.4.08") is None
+    assert parse_duree('16:46:00"') == 16 * 3600 + 46 * 60 and parse_duree('9:53:00"') == 9 * 3600 + 53 * 60
+    assert parse_duree("'03:55:33") == 3 * 3600 + 55 * 60 + 33
+    assert parse_duree("4h35'42") == 4 * 3600 + 35 * 60 + 42 and parse_duree("3h19'01") == 3 * 3600 + 19 * 60 + 1
+    assert parse_duree("3h61'01") is None
+    assert abs(parse_duree("6'01''620") - 361.62) < 1e-9 and abs(parse_duree("5'14''886") - 314.886) < 1e-9
+    assert parse_duree("6'61''620") is None and parse_duree("3'") is None and parse_duree("3'\"") is None
+    for ambigu in ("4::37:02", "4:16:56::", "28:26..18", "+3::15", "3 13 19  0", 'a 6"', "+", "+-09", "0:44:53:984",
+                   "03:05:12:00", "00:10:02:66", "4:57:265", "03:43:344"):
+        assert parse_duree(ambigu) is None and parse_duree(ambigu.lstrip("+")) is None, ambigu
     assert parse_duree("04h54'") is None and parse_duree("04h61'18''") is None and parse_duree("1 2 3 4") is None
     # Dates
     assert _date_iso("/Date(1775944800000)/") == "2026-04-12"
@@ -693,6 +738,21 @@ def _tests() -> None:
     ILLISIBLES.clear()
     rows = normalize_rows([L(1, "AAA Bob", "3 15  6"), L(2, "BBB Cy", "3 16  6")], "gc", {})
     assert [r["time_s"] for r in rows] == [11706, 11766] and rows[1]["gap_s"] == 60 and not ILLISIBLES
+    # Statuts écrits dans ResultValue (Irm vide) : même traitement que le code Irm, pas comptés illisibles
+    ILLISIBLES.clear()
+    rows = normalize_rows([L(1, "AAA Bob", "4:00:00", so=1), L(None, "BBB Cy", "DNF", so=2), L(None, "CCC Di", " dns ", so=3),
+                           L(None, "DDD Ed", "OTL", so=4), L(None, "EEE Fy", "dsq", so=5), L(None, "FFF Gi", "LAP", so=6),
+                           L(7, "GGG Hu", "REL", so=7), L(2, "HHH Iv", "+12", so=8)], "stage", {})
+    assert [r["status"] for r in rows] == [None, "DNF", "DNS", "OTL", "DSQ", "OTL", None, None]
+    assert rows[1]["rank"] is None and rows[6]["rank"] == 7 and rows[6]["time_s"] is None and rows[7]["gap_s"] == 12
+    assert not ILLISIBLES, ILLISIBLES
+    rows = normalize_rows([L(None, "AAA Bob", "DNF", irm="DNS")], "stage", {})   # Irm prioritaire
+    assert rows[0]["status"] == "DNS"
+    rows = normalize_rows([L(1, "AAA Bob", "12"), L(None, "BBB Cy", "DNF", so=5)], "points", {})
+    assert rows[1]["status"] == "DNF" and rows[1]["points"] is None
+    eq = normalize_team_rows([{"Rank": "1", "RankNumber": 1, "SortOrder": 1, "TeamName": "A", "ResultValue": "3:00:00"},
+                              {"Rank": "", "SortOrder": 2, "TeamName": "B", "ResultValue": "DNF"}])
+    assert eq[1]["rank"] is None and eq[1]["time_s"] is None and not ILLISIBLES
     # Points / montagne
     rows = normalize_rows([L(1, "AAA Bob", "559"), L(2, "BBB Cy", "12.5"), L(3, "CCC Di", None)], "points", {})
     assert [r["points"] for r in rows] == [559, 12.5, None] and rows[0]["time_s"] is None

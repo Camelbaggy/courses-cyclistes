@@ -56,6 +56,18 @@ jobs:
           git add data/
           if git diff --cached --quiet; then echo "Aucun changement"; exit 0; fi
           git commit -m "chore: mise à jour automatique des résultats"
-          # si un autre passage a commité entre-temps, nos données (plus récentes) l'emportent
-          git pull --rebase -X theirs origin "${GITHUB_REF_NAME}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          # Poussée robuste : update.yml et archives.yml (groupes de concurrence distincts) poussent tous deux sur la
+          # branche ; en cas de course, on rebase (nos fichiers l'emportent) et on réessaie, 5 fois au plus.
+          for ESSAI in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              PUSH_OK=1
+              break
+            fi
+            echo "push refusé (essai ${ESSAI}/5)"
+            git rebase --abort 2>/dev/null || true
+            sleep $((5 + RANDOM % 16))
+          done
+          if [ "${PUSH_OK:-0}" != "1" ]; then
+            echo "::error::échec du push après 5 essais"
+            exit 1
+          fi

@@ -664,7 +664,10 @@ def compact_race(race: Dict) -> Dict:
     return out
 
 
-TEMPS_VERSION = 2   # 2 : formats « h ' '' » et « H M S » reconnus (uci.parse_duree) ; marque `_temps_v` des archives écrites
+# Version du lecteur de temps (uci.parse_duree, statuts dans ResultValue) ; marque `_temps_v` des archives écrites.
+# 2 : formats « h ' '' » et « H M S » ; 3 : « H.MM.SS » (. , ;), guillemets parasites, « 4h35'42 », « 6'01''620 », statuts
+# (DNF, DNS, OTL, DSQ, LAP…) lus dans ResultValue quand Irm est vide.
+TEMPS_VERSION = 3
 
 
 def _classement_sans_temps(lignes: Any) -> bool:
@@ -979,11 +982,36 @@ def migrer_saisons_anciennes(today: Optional[dt.date] = None) -> List[int]:
     return migrees
 
 
+def a_reviser_saison(rdir: str, only: str = "") -> List[Dict]:
+    """Fiches d'une saison archivée à réviser (lecture locale) : `_temps_v` < TEMPS_VERSION ET temps manquants
+    (`archive_a_recollecter`). `only` : filtre sur le nom de la course. Les plus récentes d'abord."""
+    fiches = []
+    if os.path.isdir(rdir):
+        for f in sorted(os.listdir(rdir)):
+            r = _load(os.path.join(rdir, f), None) if f.endswith(".json") else None
+            if (isinstance(r, dict) and r.get("id") and (r.get("_temps_v") or 0) < TEMPS_VERSION
+                    and archive_a_recollecter(r) and (not only or only.lower() in str(r.get("name") or "").lower())):
+                fiches.append(r)
+    fiches.sort(key=lambda r: r.get("start_date") or "", reverse=True)
+    return fiches
+
+
+def comp_depuis_fiche(fiche: Dict) -> Optional[Dict]:
+    """Description de compétition (celle de `uci.list_competitions`) reconstituée depuis une fiche d'archive."""
+    cid = str(fiche.get("id") or "").replace("uci-", "", 1)
+    if not cid.isdigit():
+        return None
+    return {"competition_id": int(cid), "name": fiche.get("name"), "country": fiche.get("country"),
+            "flag": fiche.get("flag"), "uci_class": fiche.get("uci_class"),
+            "start_date": fiche.get("start_date"), "end_date": fiche.get("end_date")}
+
+
 def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: float = 40,
                 max_races: int = 0, only: str = "") -> None:
     """Collecte les saisons passées `years` (de la plus récente à la plus ancienne) dans data/archives/<année>/ :
     courses compactées, index, et, la saison terminée, classement UCI de fin de saison + fiches coureurs.
-    Sans ASO, récits ni Gemini. Une saison `complete` n'est plus jamais recollectée (aucune requête réseau).
+    Sans ASO, récits ni Gemini. Une saison `complete` n'est plus recollectée qu'au titre de la révision des temps (fiches `_temps_v` < TEMPS_VERSION
+    avec temps manquants) ; sans fiche à réviser, aucune requête réseau.
     Commence par la rotation du calendrier (`migrer_saisons_anciennes`, seule écriture hors data/archives/ : suppression
     des fichiers des saisons migrées). Ne touche pas aux autres saisons, à data/state.json ni à seasons.json."""
     today = today or dt.date.today()
@@ -1003,7 +1031,41 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
         spath = os.path.join(dossier, "state.json")
         state = _load(spath, {})
         if state.get("complete"):
-            print(f"[ARCHIVES] {annee} : déjà complète, ignorée")
+            # Saison complète : jamais recollectée en entier. Révision locale des fiches dont les temps manquent
+            # (lecteur de temps amélioré depuis leur collecte) ; aucune requête s'il n'y a rien à réviser.
+            if stopped or limite:
+                continue
+            a_reviser = a_reviser_saison(rdir, only)
+            if not a_reviser:
+                print(f"[ARCHIVES] {annee} : déjà complète, rien à réviser")
+                continue
+            n = 0
+            for fiche in a_reviser:
+                if over_budget():
+                    stopped = True
+                    break
+                comp = comp_depuis_fiche(fiche)
+                if comp is None:
+                    continue
+                print(f"[ARCHIVES] {annee} · {fiche.get('name')} : temps manquants, révision")
+                count += 1
+                race = collect_race(comp, fiche.get("category"), fiche.get("selection_reason"), None, today, [],
+                                    None, archive=True)
+                if race and race.get("_complete") is not False:
+                    race["season"] = annee
+                    race["_temps_v"] = TEMPS_VERSION   # même si des valeurs restent illisibles : pas de boucle
+                    _dump(os.path.join(rdir, f"{fiche['id']}.json"), compact_race(race))
+                    n += 1
+                else:
+                    print(f"[WARN] [ARCHIVES] {annee} · {fiche.get('name')} : révision sans résultat complet, fiche conservée")
+                if max_races and count >= max_races:
+                    limite = True
+                    break
+            print(f"[ARCHIVES] {annee} : révision des temps, {n} course(s) recollectée(s)")
+            if n:
+                idx = build_index(charger_courses_archive(dossier), annee, [], None)
+                idx["archive"], idx["complete"] = True, True
+                _dump_if_changed(os.path.join(dossier, "index.json"), idx)
             continue
         if stopped or limite:
             break
@@ -1222,6 +1284,7 @@ def _tests() -> None:
     assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [{"rank": None, "rider_id": "d"}]}}]})
     assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [sans]}}], "_temps_v": TEMPS_VERSION})
     assert archive_a_recollecter({"stages": [{"type": "road", "results": {"gc": [sans]}}], "_temps_v": TEMPS_VERSION - 1})
+    assert not archive_a_recollecter({"stages": [{"type": "road", "results": {"stage": [ok, {"rank": None, "status": "DNF", "rider_id": "e"}]}}]})
     assert not archive_a_recollecter({}) and not archive_a_recollecter({"stages": None, "final": None})
     # 2) compact_race
     def L(n, **extra):
@@ -1349,6 +1412,73 @@ def _tests() -> None:
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028, 2027]
     finally:
         globals_["DATA_DIR"], globals_["RACES_DIR"], globals_["ARCHIVES_DIR"], globals_["finish_archive_season"], globals_["_ranking_du_jour"] = sauve
+    # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
+    import tempfile as _tf
+    sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds)
+    try:
+        with _tf.TemporaryDirectory() as tmp:
+            globals()["DATA_DIR"], globals()["RACES_DIR"] = tmp, os.path.join(tmp, "races")
+            globals()["ARCHIVES_DIR"] = os.path.join(tmp, "archives")
+            rid = "a-b-19900101"
+            def fiche(cid, annee, tv, classe=True):
+                ligne = {"rank": 2, "rider_id": "c-d-19910202"} if classe else {"status": "DNF", "rider_id": "c-d-19910202"}
+                return {"id": f"uci-{cid}", "name": f"Course {cid}", "country": "FRA", "flag": "fr", "uci_class": "1.Pro",
+                        "category": "Pro", "selection_reason": "france", "race_type": "one_day", "season": annee,
+                        "start_date": f"{annee}-03-0{cid}", "end_date": f"{annee}-03-0{cid}", "_complete": True,
+                        **({"_temps_v": tv} if tv is not None else {}),
+                        "stages": [{"date": f"{annee}-03-0{cid}", "name": "Course",
+                                    "results": {"stage": [{"rank": 1, "rider_id": rid, "time_s": 100}, ligne]}}],
+                        "riders": {rid: {"id": rid, "name": "A B", "nationality": "FRA", "is_french": True}}}
+            d24 = os.path.join(ARCHIVES_DIR, "2024")
+            _dump(os.path.join(d24, "races", "uci-1.json"), fiche(1, 2024, 2))                 # à réviser
+            _dump(os.path.join(d24, "races", "uci-2.json"), fiche(2, 2024, 2, classe=False))   # statut : rien à faire
+            _dump(os.path.join(d24, "races", "uci-3.json"), fiche(3, 2024, TEMPS_VERSION))      # déjà à la version courante
+            _dump(os.path.join(d24, "races", "uci-4.json"), fiche(4, 2024, None))               # sans marque, à réviser
+            _dump(os.path.join(d24, "state.json"), {"complete": True, "top10_checked": {}})
+            _dump(os.path.join(d24, "riders.json"), {"season": 2024, "riders": {}})
+            _dump(os.path.join(d24, "ranking.json"), {"season": 2024, "ranking": [1]})
+            assert [f["id"] for f in a_reviser_saison(os.path.join(d24, "races"))] == ["uci-4", "uci-1"]
+            assert [f["id"] for f in a_reviser_saison(os.path.join(d24, "races"), "course 1")] == ["uci-1"]
+            assert comp_depuis_fiche({"id": "uci-12", "name": "N"})["competition_id"] == 12 and comp_depuis_fiche({"id": "x"}) is None
+            appels: List[int] = []
+            def get_race_bouchon(comp):
+                appels.append(comp["competition_id"])
+                if comp["competition_id"] == 4:   # une valeur reste illisible : la fiche est marquée quand même
+                    ligne = {"rank": 2, "rider_id": "c-d-19910202"}
+                else:
+                    ligne = {"rank": 2, "rider_id": "c-d-19910202", "time_s": 130, "gap_s": 30}
+                return {"stages": [{"number": None, "date": comp["start_date"], "name": "Course",
+                                    "results": {"stage": [{"rank": 1, "status": None, "bib": None, "rider_id": rid, "time_s": 100}, ligne]}}],
+                        "final": None, "race_type": "one_day", "stages_total": None, "complete": True,
+                        "riders": {rid: {"id": rid, "name": "A B", "nationality": "FRA", "is_french": True},
+                                   "c-d-19910202": {"id": "c-d-19910202", "name": "C D", "nationality": "BEL", "is_french": False}}}
+            uci.get_race = get_race_bouchon
+            uci.get_season_id = uci.list_competitions = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("réseau"))
+            uci.season_bounds = lambda: {}
+            ref_riders = open(os.path.join(d24, "riders.json"), "rb").read()
+            run_archive([2024], today=dt.date(2026, 11, 14), budget_min=0)
+            assert sorted(appels) == [1, 4], appels
+            f1 = _load(os.path.join(d24, "races", "uci-1.json"), {})
+            assert f1["_temps_v"] == TEMPS_VERSION and f1["stages"][0]["results"]["stage"][1]["time_s"] == 130 and f1["season"] == 2024
+            assert f1["category"] == "Pro" and f1["selection_reason"] == "france" and f1["_complete"] is True
+            assert _load(os.path.join(d24, "races", "uci-4.json"), {})["_temps_v"] == TEMPS_VERSION   # illisible mais marquée
+            assert _load(os.path.join(d24, "races", "uci-2.json"), {}).get("_temps_v") == 2           # intacte
+            assert _load(os.path.join(d24, "state.json"), {})["complete"] is True
+            assert open(os.path.join(d24, "riders.json"), "rb").read() == ref_riders                   # riders / ranking inchangés
+            assert _load(os.path.join(d24, "ranking.json"), {}) == {"season": 2024, "ranking": [1]}
+            ix = _load(os.path.join(d24, "index.json"), {})
+            assert ix["complete"] is True and ix["archive"] is True and ix["season"] == 2024
+            appels.clear()
+            run_archive([2024], today=dt.date(2026, 11, 14), budget_min=0)                               # second appel : rien à faire
+            assert appels == []
+            # max_races limite les révisions
+            _dump(os.path.join(d24, "races", "uci-5.json"), fiche(5, 2024, 1))
+            _dump(os.path.join(d24, "races", "uci-6.json"), fiche(6, 2024, 1))
+            run_archive([2024], today=dt.date(2026, 11, 14), budget_min=0, max_races=1)
+            assert appels == [6], appels
+    finally:
+        globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"] = sauve[:3]
+        uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds = sauve[3:]
     _tests_editions()
     print("[OK] collector.py : tests locaux réussis")
 
