@@ -104,7 +104,7 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 
 | Étape | Contenu | Livrable |
 |---|---|---|
-| E0 | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
+| E0 (fait) | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
 | E1 | Socle : génération des fichiers d'entités + index de recherche + fusion des identités coureurs | fichiers `entites/`, tests |
 | E2 | Pages coureur + recherche globale | captures 390 px |
 | E3 | Pages course (série) et édition enrichie | captures |
