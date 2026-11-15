@@ -33,6 +33,9 @@ SORTIE = Path(__file__).resolve().parent / "data" / "archives"
 AUJOURDHUI = dt.date(2026, 11, 11)
 
 
+ID_COMMUN = "epure-paul-19970711"     # présent dans tools/fixtures/data/riders-2026.json (Calendrier fictif)
+
+
 def etape(pel, partants, profil, date, num, nom, dist, vitesse, start, finish, typ="road"):
     res, t0 = gf.simuler_etape(pel, profil, partants, vitesse, dist)
     rows = [gf.ligne(i + 1, None, c, time_s=t0 + g, gap_s=g) for i, (c, g) in enumerate(res)]
@@ -84,8 +87,19 @@ def course_etapes(pel):
     c["final"] = {k: [dict(r) for r in v] for k, v in dernier.items() if k != "stage"}
     c["stages"] = stages
     c["riders"] = {k: v for k, v in pel.riders_dict().items()}
+    selection_nationale(c)
     c["updated_at"] = "2024-03-15T19:00:00Z"
     return c
+
+
+def selection_nationale(c, nb=5):
+    """Sélection nationale FICTIVE : dans CETTE course seulement, `nb` coureurs français (hors coureur commun) courent sous le libellé
+    « France » (un libellé égal au nom d'un pays dont tous les coureurs de la saison ont cette nationalité : `encyclopedie._est_nationale`).
+    Les fiches des autres courses gardent leurs équipes de marque."""
+    francais = [r for rid, r in sorted(c["riders"].items()) if r["nationality"] == "FRA" and rid != ID_COMMUN][:nb]
+    assert len(francais) == nb, "pas assez de Français pour la sélection nationale fictive"
+    for r in francais:
+        r["team"] = "France"
 
 
 def course_un_jour(pel, id_, nom, pays, flag, classe, cat, date, raison, profil, dist, vitesse, nb=None, forcer=None):
@@ -125,7 +139,6 @@ def ecrire_saison(annee, courses, complete, ranking=None):
         collector._dump(str(dossier / "riders.json"), fiches)
 
 
-ID_COMMUN = "epure-paul-19970711"     # présent dans tools/fixtures/data/riders-2026.json (Calendrier fictif)
 
 
 def imposer_coureur_commun(pel):
@@ -209,7 +222,7 @@ def main():
     classique = course_un_jour(pel, "fx-a24-classique-hc", "Grand Prix de l'Essai (fictif)", "BEL", "be", "1.HC", "Pro",
                                "2024-03-02", "classe", "vallonne", 196, 42)
     gp_fr = course_un_jour(pel, "fx-a24-gp-fr", "Grand Prix de Test-sur-Mer (fictif)", "FRA", "fr", "1.1", ".1",
-                           "2024-04-07", "france", "plat", 181, 43, nb=30)
+                           "2024-04-07", "france", "plat", 181, 43, nb=30, forcer=ID_COMMUN)
     pel2 = gf.Peloton(6, 5, forcer_francais=8)
     imposer_coureur_commun(pel2)
     omloop = course_un_jour(pel2, "fx-a23-omloop", "Omloop de Démonstration (fictif)", "BEL", "be", "1.UWT", "WT",
@@ -218,7 +231,8 @@ def main():
                           "2023-03-19", "france", "plat", 176, 43, nb=28)
     pel3 = gf.Peloton(6, 5, forcer_francais=7)
     imposer_coureur_commun(pel3)
-    gp22 = course_un_jour(pel3, "fx-a22-gp-fr", "Grand Prix de Test-sur-Mer (fictif)", "FRA", "fr", "1.1", ".1",
+    # 2022 : ancienne classe 1.HC (rangée en Pro) -> historique des classes de l'épreuve (page « épreuve », onglet Historique)
+    gp22 = course_un_jour(pel3, "fx-a22-gp-fr", "Grand Prix de Test-sur-Mer (fictif)", "FRA", "fr", "1.HC", "Pro",
                           "2022-03-27", "france", "plat", 179, 43, nb=30, forcer=ID_COMMUN)
     trophee22 = course_un_jour(pel3, "fx-a22-trophee", "Trophée de Brouillon-les-Bains (fictif)", "FRA", "fr", "1.2", ".2",
                                "2022-05-08", "france", "vallonne", 168, 41, nb=25)

@@ -109,7 +109,7 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 | E1b (fait côté code, non testé en réel) | `TeamCode` conservé dans `ranking.json` (relecture unique des saisons archivées), `code_uci` des équipes-saisons ; `wikidata.py` : QID des coureurs (nom + date de naissance exacte + occupation cycliste), images Commons sous licence, lignées d'équipes (code + période + nom), `alias_equipes.json` ; cache `entites/wikidata/`, workflow dédié `--wikidata` | lignées, correspondances (à mesurer au premier remplissage : taux de rapprochement coureurs / équipes) |
 | E1c (fait côté code pour l'historique, non testé en réel ; audit des doublons restant) | Historique du classement UCI : `uci_ranking.list_moments` / `get_ranking_moment` / `choisir_instantanes`, `collector.collecter_classements` (appelé par `run_archive`), champs `historique_uci` (coureur) et `instantanes_uci` (saison) | `entites/classements/<année>/…` (SPEC §4.5), essai `[essai:classement_historique]` |
 | E2 (fait) | Pages coureur + recherche globale + première couche du design (jetons, composants : voir CLAUDE.md « Design et composants ») | captures 390 px et 1024 px (`tools/apercu.py`) |
-| E3 | Pages course (série) et édition enrichie | captures |
+| E3 (fait) | Page épreuve (`#epreuve/<clé>` : palmarès, records, historique) et fiche d'édition enrichie (podium, navigation, participants, pays) | captures 390 px et 1024 px (`tools/apercu.py`) |
 | E4 | Pages équipe (selon les lignées établies en E0) | captures |
 | E5 | Saison, classement UCI avec historique, pays | captures |
 | E6 | Portail d'accueil | captures |

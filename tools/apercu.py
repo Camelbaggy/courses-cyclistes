@@ -42,10 +42,11 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   page.on('requestfailed', r => { if (!r.url().includes('flagcdn')) erreurs.push(`[requestfailed] ${r.url()}`); });
   const base = `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}`;
   const sortie = conf.sortie, suf = conf.suffixe;
+  const EP = '#epreuve/' + encodeURIComponent('grand prix de test sur mer fictif|FRA');
   const debord = [];
   async function verifie(nom) {
     const r = await page.evaluate(() => {
-      const sheet = ['search', 'rsheet', 'sheet'].map(i => document.getElementById(i)).find(e => e.classList.contains('open')) || document.getElementById('sheet');
+      const sheet = ['search', 'rsheet', 'esheet', 'sheet'].map(i => document.getElementById(i)).find(e => e.classList.contains('open')) || document.getElementById('sheet');
       const ouvert = sheet.classList.contains('open');
       const el = ouvert ? sheet : document.documentElement;
       const pires = [];
@@ -75,6 +76,18 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     await page.setViewportSize({ width: vp.width, height: Math.min(Math.max(h, 844), 4000) });
     await cap(nom);
     await page.setViewportSize(vp);
+  }
+  async function hauteurEsheet(nom) {
+    // page épreuve : même principe sur #esheet
+    const vp = page.viewportSize();
+    const h = await page.evaluate(() => document.getElementById('esheet-body').scrollHeight + 70);
+    await page.setViewportSize({ width: vp.width, height: Math.min(Math.max(h, 844), 4000) });
+    await cap(nom);
+    await page.setViewportSize(vp);
+  }
+  async function ouvreOngletEp(k) {
+    const b = await page.$(`#etabs [data-etab="${k}"]`);
+    if (b) { await b.click(); await page.waitForTimeout(120); }
   }
   async function hauteurFiche(nom) {
     // la fiche défile dans #sheet : on agrandit temporairement la fenêtre pour une capture complète
@@ -176,36 +189,82 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await hauteurFiche('20-classique-paves');
   await page.goto(base + '#course/fx-gp-test-sur-mer'); await page.waitForSelector('#sheet.open .card');
   await cap('21-course-1-fr', false);
-  // encart « Éditions précédentes » (course du Calendrier : éditions archivées 2024, 2023 et 2022) puis fiche coureur ouverte depuis une édition
-  await page.waitForSelector('#editions');
-  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
-  await cap('21b-editions-repliees', false);
-  await page.click('#editions > summary'); await page.waitForTimeout(150);
-  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
-  await cap('21c-editions-depliees', false);
-  const nbEd = await page.$$eval('#editions .ed-row', r => r.length);
-  console.log('editions listees (attendu 3) :', nbEd);
-  await page.click('#stage-chips .chip, #subtabs .subtab').catch(() => {});      // un redessin de la fiche garde l'encart déplié
-  console.log('encart toujours deplie apres redessin :', await page.$eval('#editions', d => d.open));
-  // éditions d'une saison sans fiches coureurs (2023 en cours de collecte) : la fiche s'ouvre sur l'onglet Carrière
-  await page.click('#editions .ed-row:nth-of-type(2) .rlink'); await page.waitForSelector('#rsheet.open .hero, #rsheet.open .vide');
-  await cap('21d-editions-coureur-2023', false);
-  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
-  await page.click('#editions .ed-row:nth-of-type(1) .rlink'); await page.waitForSelector('#rsheet.open .tile, #rsheet.open .vide');
-  await cap('21e-editions-coureur-2024', false);
-  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
-  await page.click('#editions .ed-row:nth-of-type(1) .ed-go'); await page.waitForSelector('#sheet-name');
-  await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr') && document.getElementById('sheet-body').querySelector('.card'));
-  await page.waitForSelector('#editions');
-  console.log('fiche archive 2024 : editions =', await page.$$eval('#editions .ed-row', r => r.length), '(attendu 3 : 2026, 2023, 2022)');
-  await page.evaluate(() => document.getElementById('editions').scrollIntoView());
-  await cap('21f-archive-editions', false);
+  // E3 : fiche d'édition (Calendrier : GP Test-sur-Mer 2026) avec podium et navigation vers l'édition précédente
+  await page.waitForSelector('#ednav-slot .ednav');
+  await cap('21b-edition-entete', false);
+  console.log('navigation fiche 2026 : precedente =', await page.$eval('#ednav-slot .prev', e => e.dataset.open), ', suivante =', !!(await page.$('#ednav-slot .next')), '(attendu : fx-a24-gp-fr, false)');
+  console.log('podium (3 attendus) :', await page.$$eval('#sheet-body .pod', l => l.length));
+  await page.click('#ednav-slot .prev'); await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr') && document.querySelector('#sheet-body .pod'));
+  await page.waitForSelector('#ednav-slot .ednav');
+  console.log('fiche 2024 : precedente =', await page.$eval('#ednav-slot .prev', e => e.dataset.open), ', suivante =', await page.$eval('#ednav-slot .next', e => e.dataset.open), '(attendu : fx-a23-gp-fr, fx-gp-test-sur-mer)');
+  await cap('21c-edition-2024-entete', false);
+  await hauteurFiche('21d-edition-2024-complete');
+  // onglets Participants / Pays d'une course d'un jour
+  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('21e-participants-un-jour', false);
+  await page.click('[data-action="fronly"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('21f-participants-francais', false);
+  console.log('participants francais seulement : lignes non francaises =', await page.$$eval('.team-card .row:not(.fr)', l => l.length), '(attendu 0)');
+  await page.click('[data-action="fronly"]');
+  await page.click('[data-sub="pays"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('21g-pays-un-jour', false);
+  // lien « Toutes les éditions » -> page épreuve ; retour
+  await page.evaluate(() => document.getElementById('sheet').scrollTo(0, 0));
+  await page.click('#ednav-slot .all'); await page.waitForSelector('#esheet.open .hero'); await page.waitForSelector('#esheet.open .tbl');
+  console.log('toutes les editions ->', await page.evaluate(() => decodeURIComponent(location.hash)));
+  await cap('21h-epreuve-depuis-edition', false);
+  await page.goBack(); await page.waitForFunction(() => location.hash.startsWith('#course/')); await page.waitForTimeout(300);
+  console.log('retour : fiche edition ouverte, epreuve fermee =', await page.evaluate(() => document.getElementById('sheet').classList.contains('open') && !document.getElementById('esheet').classList.contains('open')));
+  // course par étapes d'archive avec sélection nationale : Participants et Pays (ouverture depuis l'onglet Archives : pas de 404)
+  await page.goto(base); await page.waitForSelector('.card');
+  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel'); await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
+  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .pod');
+  await cap('26a-tour-entete-podium', false);
+  await page.waitForTimeout(400);
+  console.log('tour 2024 : navigation (attendu absente) =', !(await page.$('#ednav-slot .ednav')));
+  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card');
+  await page.waitForFunction(() => document.querySelector('.team-head .badge')); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('26b-participants-tour', false);
+  console.log('selection nationale signalee :', await page.$$eval('.team-head', l => l.filter(x => x.querySelector('.badge')).map(x => x.querySelector('.tn').textContent)));
+  await hauteurFiche('26c-participants-tour-complet');
+  await page.click('[data-action="fronly"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('26d-participants-tour-francais', false);
+  console.log('tour : lignes non francaises avec filtre =', await page.$$eval('.team-card .row:not(.fr)', l => l.length), '(attendu 0)');
+  await page.click('[data-action="fronly"]');
+  await page.click('[data-sub="pays"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('26e-pays-tour', false);
   await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
-  // fiche d'une course d'archive sans autre édition : pas d'encart
-  const avantD = erreurs.length;   // lien direct : 404 volontaire sur races/ avant la recherche dans les archives
-  await page.goto(base + '#course/fx-a24-tour-hc'); await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(600);
-  console.log('ERREURS_ATTENDUES (404 lien direct, tour)', JSON.stringify(erreurs.splice(avantD).length));
-  console.log('course sans autre edition : encart absent =', !(await page.$('#editions')));
+  // page épreuve (Grand Prix de Test-sur-Mer : 4 éditions, records, noms et classes qui changent) : chaque onglet
+  await page.goto(base + EP); await page.waitForSelector('#esheet.open .hero'); await page.waitForSelector('#esheet.open .tbl');
+  await cap('27a-epreuve-palmares', false);
+  await hauteurEsheet('27b-epreuve-palmares-complet');
+  console.log('onglets epreuve :', (await page.$$eval('#etabs .subtab', b => b.map(x => x.dataset.etab))).join(','));
+  await ouvreOngletEp('records'); await hauteurEsheet('27c-epreuve-records');
+  await ouvreOngletEp('historique'); await hauteurEsheet('27d-epreuve-historique');
+  await ouvreOngletEp('palmares');
+  console.log('tuiles epreuve :', JSON.stringify(await page.$$eval('#esheet .kpis .tile', l => l.map(x => x.textContent.replace(/\s+/g, ' ').trim()))));
+  // année -> fiche d'édition (l'épreuve se ferme) ; retour ; nom de coureur -> fiche coureur ; retour conserve l'épreuve
+  await page.click('#econtent .tbl button.cell[data-open="fx-a24-gp-fr"]'); await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr')); await page.waitForSelector('#sheet.open .pod');
+  console.log('annee -> edition, epreuve fermee =', await page.evaluate(() => !document.getElementById('esheet').classList.contains('open')));
+  await page.goBack(); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(300);
+  await page.click('#econtent .tbl .rlink'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
+  await cap('27e-epreuve-vers-coureur', false);
+  await page.goBack(); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(250);
+  console.log('retour : epreuve ouverte, coureur ferme =', await page.evaluate(() => document.getElementById('esheet').classList.contains('open') && !document.getElementById('rsheet').classList.contains('open')));
+  // épreuve inconnue et épreuve à une seule édition (sans onglet Records ni Historique)
+  await page.goto(base + '#epreuve/' + encodeURIComponent('grand prix inconnu fictif|FRA')); await page.waitForSelector('#esheet.open .vide');
+  await cap('27f-epreuve-inconnue', false);
+  await page.goto(base + '#epreuve/' + encodeURIComponent('tour des maquettes fictif|FRA')); await page.waitForSelector('#esheet.open .tbl');
+  console.log('epreuve a une edition : onglets =', (await page.$$eval('#etabs .subtab', b => b.map(x => x.dataset.etab))).join(','));
+  await cap('27g-epreuve-une-edition', false);
+  // lien secondaire depuis le palmarès d'un coureur
+  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile');
+  await ouvreOnglet('palmares'); await page.waitForSelector('#rcontent .res-ep');
+  await page.evaluate(() => document.querySelector('#rcontent .res-ep').scrollIntoView({ block: 'center' }));
+  await cap('27h-coureur-palmares-lien-epreuve', false);
+  console.log('liens epreuve dans le palmares :', await page.$$eval('#rcontent .res-ep', l => l.length));
+  await page.click('#rcontent .res-ep'); await page.waitForSelector('#esheet.open .tbl');
+  console.log('coureur -> epreuve :', await page.evaluate(() => decodeURIComponent(location.hash)));
   // fiche coureur E2 : Paul Épure (archives 2022-2024 + Calendrier 2026-2027, Wikidata fictif, grands tours fictifs)
   await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .hero');
   await page.waitForSelector('#rsheet.open .tile');
@@ -265,8 +324,8 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   console.log('retour -> recherche conservee :', await page.$eval('#sr-q', e => e.value), await page.evaluate(() => location.hash));
   // course : dernière édition
   await page.fill('#sr-q', 'omloop'); await page.waitForSelector('#sr-body .sr-item.nav');
-  await page.click('#sr-body .sr-item.nav'); await page.waitForFunction(() => location.hash.startsWith('#course/')); await page.waitForSelector('#sheet.open .card');
-  console.log('course -> ', await page.evaluate(() => location.hash));
+  await page.click('#sr-body .sr-item.nav'); await page.waitForFunction(() => location.hash.startsWith('#epreuve/')); await page.waitForSelector('#esheet.open .tbl');
+  console.log('course -> ', await page.evaluate(() => decodeURIComponent(location.hash)));
   // lien direct #recherche/<texte>, puis fermeture
   await page.goto(base + '#recherche/ebauche'); await page.waitForSelector('#search.open #sr-body .sr-item');
   console.log('lien direct recherche, saisie :', await page.$eval('#sr-q', e => e.value));
@@ -279,6 +338,16 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await cap('40a-large-coureur', false);
   await ouvreOnglet('saisons'); await cap('40b-large-saisons', false);
   await ouvreOnglet('uci'); await cap('40c-large-uci', false);
+  await page.goto(base + EP); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(250);
+  await cap('40f-large-epreuve', false);
+  await ouvreOngletEp('records'); await cap('40g-large-epreuve-records', false);
+  await page.goto(base); await page.waitForSelector('.card');
+  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel'); await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
+  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .pod');
+  await cap('40h-large-edition-entete', false);
+  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card'); await page.waitForTimeout(250);
+  await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
+  await cap('40i-large-participants', false);
   await page.goto(base); await page.waitForSelector('.card'); await page.click('#open-search'); await page.fill('#sr-q', 'test'); await page.waitForSelector('#sr-body .sr-item');
   await cap('40d-large-recherche', false);
   await page.goto(base); await page.waitForSelector('.card'); await cap('40e-large-recents', false);
