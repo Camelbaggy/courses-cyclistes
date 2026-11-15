@@ -12,6 +12,7 @@ import datetime as dt
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -836,6 +837,107 @@ def relire_classement(annee: int, dossier: str, spath: str, state: Dict[str, Any
     return ecrit
 
 
+# --------------------------------------------------------------------------- historique du classement UCI (instantanés, E1c)
+
+CLASSEMENTS_ETAT = "etat.json"
+CLASSEMENTS_JOURS_CLOS = 7           # saison close depuis plus de N jours (courses de source complète) : instantanés définitifs
+CLASSEMENTS_JOURS_CLOS_CALENDRIER = 30   # idem quand la liste des courses vient du Calendrier (collecte parfois en retard)
+
+
+def dossier_classements(annee: int) -> str:
+    return os.path.join(ARCHIVES_DIR, "entites", "classements", str(annee))
+
+
+def courses_wt_saison(annee: int) -> Tuple[List[Dict], str]:
+    """Courses de la saison (clés `name`, `uci_class`, `start_date`, `end_date`) pour choisir les instantanés, et leur source :
+    index d'archive COMPLET, sinon index du Calendrier (`data/index-<année>.json`), sinon liste DataRide (requêtes)."""
+    idx = _load(os.path.join(ARCHIVES_DIR, str(annee), "index.json"), None)
+    if isinstance(idx, dict) and idx.get("complete") and idx.get("races"):
+        return list(idx["races"]), "archive"
+    idx = _load(os.path.join(DATA_DIR, f"index-{annee}.json"), None)
+    if isinstance(idx, dict) and idx.get("races"):
+        return list(idx["races"]), "calendrier"
+    sid = uci.get_season_id(annee)
+    return (uci.list_competitions(sid) if sid is not None else []), "dataride"
+
+
+def _ecrire_index_classements(dossier: str, choix: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """index.json = [{date, raisons, fichier}] des instantanés PRÉSENTS sur disque (raisons à jour pour ceux du choix courant)."""
+    index = {e["date"]: e for e in (_load(os.path.join(dossier, "index.json"), []) or []) if isinstance(e, dict) and e.get("date")}
+    for c in choix:
+        index[c["date"]] = {"date": c["date"], "raisons": c["raisons"], "fichier": f"{c['date']}.json"}
+    liste = [index[d] for d in sorted(index) if os.path.exists(os.path.join(dossier, f"{d}.json"))]
+    _dump_if_changed(os.path.join(dossier, "index.json"), liste, ignore=())
+    return liste
+
+
+def collecter_classements(annees: List[int], today: dt.date, over_budget: Any = lambda: False) -> Dict[str, Any]:
+    """Historique du classement UCI : un instantané par fin de mois et par course WorldTour (`uci_ranking.choisir_instantanes`),
+    dans `ARCHIVES_DIR/entites/classements/<année>/<AAAA-MM-JJ>.json` + `index.json`, de la saison la plus récente à la plus ancienne,
+    instantanés récents d'abord. Un instantané écrit est IMMUABLE (jamais relu ni réécrit). Saison close dont tout est écrit :
+    `etat.json` {complet: true} -> plus aucune requête. Aucune exception ne sort (WARN) ; budget respecté entre deux instantanés.
+    Journal `[CLASSEMENT] <année> : N instantanés écrits, M restants`. Retourne {"ecrits", "restants", "interrompu"}."""
+    total_ecrits = total_restants = 0
+    interrompu = False
+    for annee in sorted(set(annees), reverse=True):
+        dossier = dossier_classements(annee)
+        etat = _load(os.path.join(dossier, CLASSEMENTS_ETAT), {}) or {}
+        if etat.get("complet"):
+            continue
+        if over_budget():
+            interrompu = True
+            break
+        try:
+            ctx = uci_ranking.contexte_classement(annee)
+            moments = uci_ranking.list_moments(ctx["season_id"], ctx["ranking_id"]) if ctx else []
+            moments = [m for m in moments if m["date"] <= today.isoformat()]      # jamais de moment « futur »
+            if not moments:
+                print(f"[WARN] [CLASSEMENT] {annee} : classement ou moments indisponibles, retenté au prochain passage")
+                continue
+            courses, source = courses_wt_saison(annee)
+            fin = (uci.season_bounds().get(annee) or (None, None))[1]
+            fin_d = _date(fin)
+            close = (fin_d < today) if fin_d else annee < today.year
+            choix = uci_ranking.choisir_instantanes(moments, courses, None if close else today)
+            ecrits = echecs = 0
+            for c in sorted(choix, key=lambda x: x["date"], reverse=True):
+                chemin = os.path.join(dossier, f"{c['date']}.json")
+                if os.path.exists(chemin):
+                    continue                      # immuable : jamais relu
+                if over_budget():
+                    interrompu = True
+                    break
+                rk = uci_ranking.get_ranking_moment(annee, c["moment_id"], ctx["group_id"])
+                if not rk or not rk.get("rows"):
+                    echecs += 1
+                    continue
+                _dump(chemin, {"date": c["date"], "nom": rk["name"], "moment_id": c["moment_id"], "raisons": c["raisons"],
+                               "lignes": uci_ranking.lignes_instantane(rk["rows"])})
+                ecrits += 1
+            restants = sum(1 for c in choix if not os.path.exists(os.path.join(dossier, f"{c['date']}.json")))
+            _ecrire_index_classements(dossier, choix)
+            jours = CLASSEMENTS_JOURS_CLOS_CALENDRIER if source == "calendrier" else CLASSEMENTS_JOURS_CLOS
+            definitif = bool(fin_d) and (today - fin_d).days > jours and restants == 0 and not interrompu
+            if definitif:
+                _dump_if_changed(os.path.join(dossier, CLASSEMENTS_ETAT),
+                                 {"complet": True, "groupe": ctx["group_id"], "source": source}, ignore=())
+            print(f"[CLASSEMENT] {annee} : {ecrits} instantanés écrits, {restants} restants"
+                  + (f" ({echecs} échec(s) de lecture)" if echecs else ""))
+            total_ecrits += ecrits
+            total_restants += restants
+        except Exception as e:  # noqa: BLE001 - source secondaire : jamais bloquante
+            print(f"[WARN] [CLASSEMENT] {annee} : échec ({type(e).__name__} : {e})")
+        if interrompu:
+            break
+    return {"ecrits": total_ecrits, "restants": total_restants, "interrompu": interrompu}
+
+
+def saisons_calendrier() -> List[int]:
+    """Saisons du Calendrier (data/seasons.json : current + available), vide si le fichier est absent."""
+    sj = _load(os.path.join(DATA_DIR, "seasons.json"), {}) or {}
+    return sorted({int(a) for a in list(sj.get("available") or []) + [sj.get("current")] if isinstance(a, (int, str)) and str(a).isdigit()})
+
+
 # --------------------------------------------------------------------------- éditions et carrières (archives)
 
 def cle_edition(nom: Optional[str], pays: Optional[str]) -> Optional[str]:
@@ -1270,6 +1372,10 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
         _dump_if_changed(os.path.join(dossier, "index.json"), idx)
         _dump_if_changed(spath, {"complete": termine, "top10_checked": top10_cache}, ignore=())
 
+    if not only and not stopped:
+        # historique du classement UCI (E1c) : budget restant ; saisons demandées + saisons du Calendrier (courante comprise)
+        r = collecter_classements(sorted(set(years) | set(saisons_calendrier())), today, over_budget)
+        stopped = stopped or r["interrompu"]
     recap = write_archives_index()
     print(f"[ARCHIVES] récapitulatif : {[(s['season'], s['complete'], s['races']) for s in recap['seasons']]}")
     if stopped:
@@ -1362,7 +1468,114 @@ def _tests_editions() -> None:
     print("[OK] collector.py : éditions et carrières")
 
 
+def _tests_classements() -> None:
+    """Historique du classement UCI : choix, écriture, immuabilité, reprise sur budget, saison en cours (réponses simulées)."""
+    import tempfile as _tf
+    sauve = (DATA_DIR, ARCHIVES_DIR, uci.get_season_id, uci.season_bounds, uci_ranking.contexte_classement,
+             uci_ranking.list_moments, uci_ranking.get_ranking_moment)
+    appels: List[Any] = []
+    mardis = [(dt.date(2025, 2, 4) + dt.timedelta(days=7 * k)).isoformat() for k in range(10)]    # 04/02 -> 08/04/2025
+    moments = [{"moment_id": 500 + k, "date": d} for k, d in enumerate(mardis)]
+
+    def contexte(annee, groupes=(1, 3)):
+        return {"season": annee, "season_id": 90 + annee % 100, "group_id": 1, "ranking_id": 1, "name": "UCI World Ranking"}
+
+    def lire_moment(annee, moment_id, group_id=1, taille=None):
+        appels.append(moment_id)
+        rows = [{"rank": k + 1, "rider": f"NOM{k} Pre", "birth_date": "1990-01-02", "points": 1000 - k, "team_code": "AAA",
+                 "nationality": "FRA" if k % 400 == 399 else "BEL"} for k in range(800)]
+        return {"name": "UCI World Ranking", "date": None, "moment_id": moment_id, "group_id": 1, "rows": rows}
+
+    try:
+        with _tf.TemporaryDirectory() as tmp:
+            globals()["DATA_DIR"], globals()["ARCHIVES_DIR"] = os.path.join(tmp, "data"), os.path.join(tmp, "arch")
+            uci.get_season_id = lambda annee: 90 + annee % 100
+            uci.season_bounds = lambda: {2025: ("2024-10-15", "2025-10-14"), 2026: ("2025-10-15", "2026-10-18"), 2027: ("2026-10-19", "2027-10-18")}
+            uci_ranking.contexte_classement = contexte
+            uci_ranking.list_moments = lambda sid, rid: [dict(m) for m in moments]
+            uci_ranking.get_ranking_moment = lire_moment
+            wt = [{"name": "Course A", "uci_class": "1.UWT", "start_date": "2025-03-02", "end_date": "2025-03-02"},
+                  {"name": "Course B", "uci_class": "2.UWT", "start_date": "2025-03-20", "end_date": "2025-03-25"},
+                  {"name": "Course Pro", "uci_class": "1.Pro", "start_date": "2025-03-09", "end_date": "2025-03-09"}]
+            _dump(os.path.join(ARCHIVES_DIR, "2025", "index.json"), {"season": 2025, "complete": True, "archive": True, "races": wt})
+            d25 = dossier_classements(2025)
+            r = collecter_classements([2025], dt.date(2026, 11, 14))
+            assert r == {"ecrits": 5, "restants": 0, "interrompu": False}, r
+            index = _load(os.path.join(d25, "index.json"), None)
+            assert [e["date"] for e in index] == ["2025-02-25", "2025-03-04", "2025-03-25", "2025-04-01", "2025-04-08"], index
+            assert index[1] == {"date": "2025-03-04", "raisons": ["après Course A"], "fichier": "2025-03-04.json"}
+            assert index[3]["raisons"] == ["après Course B"] and index[2]["raisons"] == ["fin de mois"]
+            f = _load(os.path.join(d25, "2025-03-04.json"), None)
+            assert f["date"] == "2025-03-04" and f["nom"] == "UCI World Ranking" and f["moment_id"] == 504 and f["raisons"] == ["après Course A"]
+            assert len(f["lignes"]) == 500 + 1 and f["lignes"][0] == [1, "nom0-pre-19900102", 1000, "AAA"], len(f["lignes"])   # 500 premières + 1 Français au-delà (rang 800)
+            assert _load(os.path.join(d25, CLASSEMENTS_ETAT), {}) == {"complet": True, "groupe": 1, "source": "archive"}
+            assert len(appels) == 5
+            appels.clear()
+            assert collecter_classements([2025], dt.date(2026, 11, 14))["ecrits"] == 0 and appels == []       # saison complète : aucune requête
+            uci_ranking.contexte_classement = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("aucune requête attendue"))
+            assert collecter_classements([2025], dt.date(2026, 11, 14))["ecrits"] == 0
+            uci_ranking.contexte_classement = contexte
+
+            # immuabilité : un instantané écrit n'est jamais relu ni réécrit, même si ses raisons changent (seul index.json suit)
+            d24 = dossier_classements(2024)
+            _dump(os.path.join(d24, "2025-03-04.json"), {"date": "2025-03-04", "sentinelle": True})
+            _dump(os.path.join(ARCHIVES_DIR, "2024", "index.json"), {"season": 2024, "complete": True, "races": wt})
+            r = collecter_classements([2024], dt.date(2025, 4, 20))
+            assert r["ecrits"] == 4 and 504 not in appels and _load(os.path.join(d24, "2025-03-04.json"), {}).get("sentinelle") is True
+            assert [e["date"] for e in _load(os.path.join(d24, "index.json"), [])][1] == "2025-03-04"
+            assert not os.path.exists(os.path.join(d24, CLASSEMENTS_ETAT))      # bornes de saison inconnues : jamais déclarée définitive
+            appels.clear()
+
+            # reprise sur budget : 2 instantanés puis arrêt, le passage suivant complète sans rien relire
+            shutil.rmtree(d25)
+            compte = {"n": 0}
+
+            def budget():
+                return compte["n"] >= 2
+            lire_ref = uci_ranking.get_ranking_moment
+
+            def lire_compte(*a, **k):
+                compte["n"] += 1
+                return lire_ref(*a, **k)
+            uci_ranking.get_ranking_moment = lire_compte
+            r = collecter_classements([2025], dt.date(2026, 11, 14), budget)
+            assert r == {"ecrits": 2, "restants": 3, "interrompu": True}, r
+            assert appels == [509, 508], appels                                  # les plus récents d'abord
+            assert not os.path.exists(os.path.join(d25, CLASSEMENTS_ETAT))
+            assert len(_load(os.path.join(d25, "index.json"), [])) == 2
+            appels.clear()
+            uci_ranking.get_ranking_moment = lire_moment
+            r = collecter_classements([2025], dt.date(2026, 11, 14))
+            assert r["ecrits"] == 3 and r["restants"] == 0 and sorted(appels) == [503, 504, 507] and len(_load(os.path.join(d25, "index.json"), [])) == 5
+            assert _load(os.path.join(d25, CLASSEMENTS_ETAT), {}).get("complet") is True
+
+            # saison en cours (index du Calendrier) : mois non finis exclus, nouveaux instantanés ajoutés au fil des semaines
+            _dump(os.path.join(DATA_DIR, "index-2025.json"), {"season": 2025, "races": wt})
+            shutil.rmtree(os.path.join(ARCHIVES_DIR, "2025"))
+            shutil.rmtree(d25)
+            appels.clear()
+            r = collecter_classements([2025], dt.date(2025, 3, 20))              # saison 2025 « en cours » au 20/03/2025
+            assert sorted(e["date"] for e in _load(os.path.join(d25, "index.json"), [])) == ["2025-02-25", "2025-03-04"], r
+            assert not os.path.exists(os.path.join(d25, CLASSEMENTS_ETAT))
+            appels.clear()
+            r = collecter_classements([2025], dt.date(2025, 4, 3))               # mars fini (25/03) + après Course B (01/04)
+            assert sorted(appels) == [507, 508], appels
+            assert [e["date"] for e in _load(os.path.join(d25, "index.json"), [])] == ["2025-02-25", "2025-03-04", "2025-03-25", "2025-04-01"]
+            # moments illisibles : WARN, rien d'écrit, aucune exception
+            uci_ranking.list_moments = lambda sid, rid: []
+            assert collecter_classements([2023], dt.date(2026, 11, 14)) == {"ecrits": 0, "restants": 0, "interrompu": False}
+            # saisons du Calendrier
+            _dump(os.path.join(DATA_DIR, "seasons.json"), {"current": 2026, "available": [2026, 2027]})
+            assert saisons_calendrier() == [2026, 2027]
+    finally:
+        (globals()["DATA_DIR"], globals()["ARCHIVES_DIR"], uci.get_season_id, uci.season_bounds, uci_ranking.contexte_classement,
+         uci_ranking.list_moments, uci_ranking.get_ranking_moment) = sauve
+
+
 def _tests() -> None:
+    _reel_classements = globals()["collecter_classements"]
+    _appels_cl: List[Any] = []
+    globals()["collecter_classements"] = lambda *a, **k: _appels_cl.append(a[0]) or {"ecrits": 0, "restants": 0, "interrompu": False}   # pas de réseau via run_archive
     # 1) aucun appel réseau à l'import (sous-processus dont les fonctions réseau lèvent une exception)
     code = ("import netutil\n"
             "def _non(*a, **k): raise RuntimeError('appel réseau à l import')\n"
@@ -1651,6 +1864,9 @@ def _tests() -> None:
                 globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"], uci.get_race, uci.season_bounds = sauve2
     finally:
         globals()["lire_classement_fin_saison"] = sauve_lc
+    globals()["collecter_classements"] = _reel_classements
+    assert _appels_cl and all(2023 in a or 2024 in a for a in _appels_cl), _appels_cl      # run_archive appelle l'historique du classement
+    _tests_classements()
     _tests_editions()
     print("[OK] collector.py : tests locaux réussis")
 

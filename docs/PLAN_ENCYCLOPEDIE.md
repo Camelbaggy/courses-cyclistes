@@ -107,13 +107,33 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 | E0 (fait) | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
 | E1a (fait) | Socle de données sans réseau : `encyclopedie.py` génère `entites/` (coureurs, équipes-saisons, courses, saisons, pays, recherche, index) à partir des archives + Calendrier, alias coureurs / courses appliqués | fichiers `entites/` (schéma : SPEC §4.5), tests, mesures |
 | E1b (fait côté code, non testé en réel) | `TeamCode` conservé dans `ranking.json` (relecture unique des saisons archivées), `code_uci` des équipes-saisons ; `wikidata.py` : QID des coureurs (nom + date de naissance exacte + occupation cycliste), images Commons sous licence, lignées d'équipes (code + période + nom), `alias_equipes.json` ; cache `entites/wikidata/`, workflow dédié `--wikidata` | lignées, correspondances (à mesurer au premier remplissage : taux de rapprochement coureurs / équipes) |
-| E1c | Historique du classement UCI (instantanés), audit des doublons | `entites/classement/…` |
+| E1c (fait côté code pour l'historique, non testé en réel ; audit des doublons restant) | Historique du classement UCI : `uci_ranking.list_moments` / `get_ranking_moment` / `choisir_instantanes`, `collector.collecter_classements` (appelé par `run_archive`), champs `historique_uci` (coureur) et `instantanes_uci` (saison) | `entites/classements/<année>/…` (SPEC §4.5), essai `[essai:classement_historique]` |
 | E2 | Pages coureur + recherche globale | captures 390 px |
 | E3 | Pages course (série) et édition enrichie | captures |
 | E4 | Pages équipe (selon les lignées établies en E0) | captures |
 | E5 | Saison, classement UCI avec historique, pays | captures |
 | E6 | Portail d'accueil | captures |
 | E7 | Enrichissements externes validés (Wikidata, Wikipédia, photos) | captures, crédits |
+
+### Historique du classement UCI : estimations (E1c)
+
+Hypothèses : classement complet de ~3 400 lignes pour un World Ranking moderne (4 pages de 1 000), ~250 pour un « WorldTour Ranking » ancien (1 page) ;
+~35 courses WorldTour par saison moderne, dont plusieurs se terminent la même semaine ; 12 fins de mois ; pause DataRide de 2 s.
+
+| | Saison moderne (World Ranking) | Saison ancienne (WorldTour Ranking) |
+|---|---|---|
+| Instantanés (fins de mois + après chaque course WT, dédoublonnés) | ~30-35 | ~25 |
+| Requêtes | 3 de cadrage (saison, classements, moments) + 4 par instantané, soit ~130-145 | 3 + 1 par instantané, soit ~30 |
+| Durée à 2 s / requête | ~4-5 min | ~1 min |
+| Lignes gardées par instantané | ~600 (500 + ~100 Français au-delà) | ~250 |
+| Taille d'un instantané compact (~48 octets / ligne) | ~29 Ko | ~12 Ko |
+| Taille par saison | ~1 Mo | ~0,3 Mo |
+
+Premier remplissage 2011-2027 (≈ 10 saisons modernes à confirmer : le World Ranking existe depuis 2016 environ, les saisons antérieures utilisent le
+WorldTour Ranking) : ~1 600 requêtes, ~55 min de DataRide, ~12 Mo ; réparti sur 2 passages nocturnes de 50 min en tenant compte des courses. Régime
+établi : ~3 requêtes de cadrage + 4 par nouvel instantané par saison en cours (deux saisons du Calendrier), soit ~15 requêtes par nuit, quelques centaines d'octets
+à 30 Ko écrits. `historique_uci` ajoute ~20 octets par point (≈ 180 000 points sur toutes les saisons) : ~+3 à 4 Mo dans `coureurs/*.json` (10,6 Mo aujourd'hui) et ~25 Mo
+de mémoire transitoire dans `encyclopedie.construire`. Les estimations sont à confronter à la mesure du premier passage réel (journal `[CLASSEMENT]`).
 
 Chaque étape : PR vérifiée (tests, captures), fusionnée, puis bilan.
 

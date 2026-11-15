@@ -9,6 +9,7 @@ Lire ensuite les logs du job « Essais réseau ».
 ## Essais disponibles
 
 - `archives`, `archives_collecte`, `pages_archives` : saisons passées (DataRide) et archives.
+- `classement_historique` (E1c) : moments du classement UCI (forme brute), choix des instantanés, un instantané complet (2027 et 2018).
 - `calendrier`, `classement`, `collecte`, `enrich`, `fiches`, `ia`, `uci` : modules du collecteur.
 - `encyclopedie` (étape E0 de `docs/PLAN_ENCYCLOPEDIE.md`) : `TeamCode` DataRide sur plusieurs saisons, classements par
   équipes, ligne brute de `Results`, délai de publication du classement UCI, couverture Wikidata (40 coureurs,

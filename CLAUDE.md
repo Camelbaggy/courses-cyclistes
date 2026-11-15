@@ -65,7 +65,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ encyclopedie.py entités de l'encyclopédie (coureurs, équipes-saisons, courses, saisons, pays, recherche) -> ARCHIVES_DIR/entites/
                                  ├ wikidata.py   Wikidata + Commons (QID coureurs, lignées d'équipes, images sous licence) -> ARCHIVES_DIR/entites/wikidata/ (cache)
                                  ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
-                                 ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
+                                 ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour ; moments et instantanés historiques, E1c)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
 run_pipeline.py --archive 2011-2025 ── collector.run_archive (lancé depuis le dépôt d'archives : rotation calendrier -> archives, puis saisons passées -> ARCHIVES_DIR, voir ci-dessous)
@@ -172,6 +172,22 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   toutes les 5 min + synthèse avec requêtes/min ; licences sans lien (« Public domain ») conservées (`licence` sans `licence_url`).
   `encyclopedie.construire` lit le cache (champ `wikidata` des coureurs, `lignee` des équipes-saisons, `equipes/lignees.json`, entrées de recherche
   `t: "l"`). Jeu fictif : `tools/fixtures/generer_archives.py` (`entites/wikidata/`). Non testé en réel : voir PLAN_ENCYCLOPEDIE (E1b).
+- **Encyclopédie, historique du classement UCI (E1c, `uci_ranking` + `collector.collecter_classements`)** : `run_archive` appelle, APRÈS la collecte
+  des courses et avec le budget restant (pas avec `--only`), `collecter_classements(saisons demandées + saisons du Calendrier `data/seasons.json`)`, de
+  la plus récente à la plus ancienne. Par saison : `uci_ranking.contexte_classement` (World Ranking, à défaut « WorldTour Ranking » groupe 3 : saisons
+  anciennes), `list_moments` (`GetRankingMoments`, entrée « Most Recent » Id 0 ignorée, moments postérieurs à aujourd'hui écartés), puis
+  `choisir_instantanes` (fonction PURE : dernier moment de chaque mois civil FINI + premier moment STRICTEMENT postérieur à la fin de chaque course
+  WorldTour, `selection.categorie_classe == "WT"` ; dimanche -> mardi suivant, mardi -> mardi d'après ; raisons « fin de mois » / « après <course> »).
+  Liste des courses : `<année>/index.json` d'archive COMPLET, sinon `data/index-<année>.json`, sinon DataRide. Stockage
+  `ARCHIVES_DIR/entites/classements/<année>/<AAAA-MM-JJ>.json` = `{date, nom, moment_id, raisons, lignes: [[rang, rider_id, points, team_code]]}` (500 premières
+  lignes + tous les FRA au-delà ; `rider_id` = `uci_ranking.rider_key`, null sans date de naissance) + `index.json` `[{date, raisons, fichier}]` (liste des
+  fichiers présents ; seul lui suit les raisons si elles changent) + `etat.json` `{complet: true}` (saison close depuis > 7 j, liste des courses d'archive
+  ou DataRide, ou > 30 j via le Calendrier, tout écrit : plus AUCUNE requête). **Un instantané écrit n'est jamais relu ni réécrit** (instantanés récents
+  d'abord, budget vérifié avant chaque lecture, reprise au passage suivant). Journal `[CLASSEMENT] <année> : N instantanés écrits, M restants`. Une saison
+  en cours coûte ~3 requêtes de cadrage + 4 par nouvel instantané ; le premier remplissage (~1 600 requêtes, ~12 Mo) s'étale sur plusieurs passages nocturnes
+  (l'auto-relance d'archives.yml ne regarde que les saisons non `complete` : le cron nocturne termine l'historique). `encyclopedie.construire` lit ces
+  fichiers (jamais ne les écrit) : champ `historique_uci` `[[date, rang]]` trié des coureurs (alias appliqués saison par saison) et `instantanes_uci` des
+  `saisons/<année>.json`. Essai réseau : `[essai:classement_historique]` (forme exacte de `GetRankingMoments` à confirmer au premier passage réel).
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
   `editions.json` (dans `ARCHIVES_DIR` ; éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
   ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`

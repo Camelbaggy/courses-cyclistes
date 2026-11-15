@@ -160,6 +160,28 @@ def ecrire_cache_wikidata(codes):
         "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]}})
 
 
+def ecrire_classements(rows):
+    """Trois instantanés FICTIFS du classement UCI 2024 (entites/classements/2024/, format de collector.collecter_classements) : mêmes coureurs que
+    le classement de fin de saison, rangs et points décalés d'un instantané à l'autre (déterministe)."""
+    import uci_ranking
+    dossier = SORTIE / "entites" / "classements" / "2024"
+    shutil.rmtree(dossier, ignore_errors=True)
+    instantanes = [("2024-03-26", 1001, ["fin de mois"]), ("2024-06-25", 1002, ["fin de mois", "après Course de démonstration (fictive)"]),
+                   ("2024-10-15", 1003, ["fin de mois"])]
+    index = []
+    for n, (date, moment, raisons) in enumerate(instantanes):
+        k = len(rows)
+        ordre = list(range(k))
+        if n < 2:                                                  # petites permutations de rang ; le dernier instantané = classement final
+            ordre[n], ordre[n + 1] = ordre[n + 1], ordre[n]
+        lignes = [dict(rows[i], rank=r + 1, points=max(rows[i]["points"] - (2 - n) * 40 - i, 1), team_code=rows[i]["team_code"])
+                  for r, i in enumerate(ordre)]
+        collector._dump(str(dossier / f"{date}.json"), {"date": date, "nom": "UCI World Ranking (fictif)", "moment_id": moment, "raisons": raisons,
+                                                       "lignes": uci_ranking.lignes_instantane(lignes)})
+        index.append({"date": date, "raisons": raisons, "fichier": f"{date}.json"})
+    collector._dump(str(dossier / "index.json"), index)
+
+
 def main():
     gf.rnd.seed(20240315)
     pel = gf.Peloton(8, 5, forcer_francais=9)
@@ -195,6 +217,7 @@ def main():
     ecrire_saison(2022, [gp22, trophee22], True)
     collector.ARCHIVES_DIR = str(SORTIE)
     ecrire_cache_wikidata(CODES_EQUIPES)
+    ecrire_classements(rows)
     collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])
