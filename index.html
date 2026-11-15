@@ -144,8 +144,9 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 .errbox button { margin-top: 8px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--bad); font-weight: 600; color: var(--bad); }
 
 /* ---------- fiche course ---------- */
-#sheet, #rsheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
-#sheet.open, #rsheet.open { display: block; }
+#sheet, #esheet, #rsheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
+#sheet.open, #esheet.open, #rsheet.open { display: block; }
+#esheet { z-index: 55; }
 #rsheet { z-index: 60; }
 .sheet-bar {
   position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
@@ -253,14 +254,6 @@ details.nc summary { cursor: pointer; font-size: .8rem; font-weight: 700; color:
 .wins-row .d { color: var(--muted); font-size: .74rem; }
 .wins-row .l { min-width: 0; overflow-wrap: anywhere; }
 .wins-row .l small { display: block; color: var(--muted); font-size: .74rem; }
-.ed-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) 24px; gap: 8px; align-items: center; padding: 9px 12px; border-top: 1px solid var(--border); font-size: .85rem; }
-.ed-row:first-of-type { border-top: none; }
-.ed-y { font-weight: 800; font-variant-numeric: tabular-nums; text-align: left; color: var(--accent); }
-.ed-w { min-width: 0; overflow-wrap: anywhere; }
-.ed-w .nm { display: flex; align-items: center; gap: 6px; font-weight: 600; }
-.ed-w small { display: block; color: var(--muted); font-size: .74rem; margin-top: 2px; }
-.ed-go { text-align: center; color: var(--muted); font-size: 1.3rem; line-height: 1; }
-details.ed > summary { cursor: pointer; padding: 11px 12px; font-size: .88rem; font-weight: 700; }
 .rtabs { margin: 0 -2px; }
 .car-row { display: grid; grid-template-columns: 50px minmax(0, 1fr) 22px 26px 28px 28px 38px; gap: 5px; align-items: center; width: 100%; padding: 8px 10px; font-size: .78rem; text-align: left; }
 .car-row > span { min-width: 0; overflow-wrap: anywhere; }
@@ -316,6 +309,7 @@ h2.h-sec { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--sp2); }
 .kpis .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .tile { border-radius: var(--r2); box-shadow: var(--sh1); }
 .tile b { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+.tile b.txt { font-size: 1.05rem; line-height: 1.25; letter-spacing: 0; overflow-wrap: anywhere; padding: 3px 0; }
 
 /* onglets de sous-pages : défilables et collants */
 .subtabs.sticky { position: sticky; top: var(--bar-h); z-index: 4; background: var(--bg); margin: 0 calc(var(--sp4) * -1); padding: 0 var(--sp4); }
@@ -331,6 +325,8 @@ table.tbl { border-collapse: separate; border-spacing: 0; width: 100%; font-size
 .tbl th:first-child { background: var(--s2); }
 .tbl td.tl, .tbl th.tl { text-align: left; }
 .tbl td.dim { color: var(--tx3); }
+.tbl td.wrap { white-space: normal; min-width: 150px; }
+.table-card .tbl-wrap { border: none; border-radius: 0; }
 .tbl a.cell, .tbl button.cell { color: var(--accent); font-weight: 700; }
 .tbl-note { font-size: .74rem; color: var(--tx3); margin-top: var(--sp2); }
 
@@ -366,7 +362,7 @@ button.res:active { background: var(--s3); }
 .src-note { font-size: .72rem; color: var(--tx3); }
 
 /* ================== fiche coureur (E2) ================== */
-#rsheet .sheet-body { max-width: 1040px; }
+#rsheet .sheet-body, #esheet .sheet-body { max-width: 1040px; }
 .rpage { display: flex; flex-direction: column; gap: var(--sp3); }
 .rmain { display: flex; flex-direction: column; gap: var(--sp3); min-width: 0; }
 .rside { min-width: 0; }
@@ -391,6 +387,30 @@ button.res:active { background: var(--s3); }
   .kpis .tile:last-child:nth-child(odd) { grid-column: auto; }
   .res { grid-template-columns: 38px minmax(0, 1fr) auto; }
 }
+
+/* ================== pages épreuve et édition (E3) ================== */
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp2); margin-top: var(--sp3); }
+.pod { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r1); padding: var(--sp2); min-width: 0; text-align: center; }
+.pod.r1 { border-color: var(--jaune); }
+.pod .pk { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; height: 24px; padding: 0 6px; border-radius: var(--r1); font-weight: 800; font-size: .85rem; background: var(--s3); font-variant-numeric: tabular-nums; }
+.pod .pk.r1 { background: var(--jaune); color: #111827; } .pod .pk.r2 { background: var(--argent); color: #111827; } .pod .pk.r3 { background: var(--bronze); color: #111827; }
+.pod .nm { font-weight: 700; font-size: .82rem; line-height: 1.2; margin-top: var(--sp2); overflow-wrap: anywhere; }
+.pod .nm .flag { display: block; margin: 0 auto 4px; }
+.pod .tm { font-size: .68rem; color: var(--tx3); margin-top: 2px; overflow-wrap: anywhere; line-height: 1.2; }
+.ednav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--sp2); align-items: center; margin-top: var(--sp3); }
+.ednav button { font-size: .82rem; font-weight: 700; padding: 8px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--s2); color: var(--tx); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ednav button:active, .ednav button:hover { background: var(--s3); }
+.ednav .all { color: var(--accent); }
+.ednav .prev { justify-self: start; } .ednav .next { justify-self: end; }
+.ednav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.team-card { border: 1px solid var(--line); border-radius: var(--r1); background: var(--s1); overflow: hidden; margin: var(--sp2); }
+.team-head { display: flex; align-items: center; gap: var(--sp2); flex-wrap: wrap; padding: 8px 10px; background: var(--s2); border-bottom: 1px solid var(--line); }
+.team-head .tn { font-weight: 700; font-size: .88rem; min-width: 0; overflow-wrap: anywhere; }
+.team-head .small { margin-left: auto; text-align: right; }
+.team-card .row:last-child { border-bottom: none; }
+.res-box { display: flex; flex-direction: column; gap: 2px; }
+.res-ep { align-self: flex-end; font-size: .72rem; font-weight: 600; color: var(--accent); padding: 2px 6px; border-radius: 99px; }
+.res-ep:hover, .res-ep:focus-visible { background: var(--accent-soft); outline: none; }
 
 /* ================== recherche globale (E2) ================== */
 #search { position: fixed; inset: 0; z-index: 70; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
@@ -435,6 +455,14 @@ button.res:active { background: var(--s3); }
     <div class="sheet-title"><b id="sheet-name"></b><span id="sheet-sub"></span></div>
   </div>
   <div class="sheet-body" id="sheet-body"></div>
+</section>
+
+<section id="esheet" aria-label="Fiche épreuve" aria-hidden="true">
+  <div class="sheet-bar">
+    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
+    <div class="sheet-title"><b id="esheet-name"></b><span id="esheet-sub"></span></div>
+  </div>
+  <div class="sheet-body" id="esheet-body"></div>
 </section>
 
 <section id="rsheet" aria-label="Fiche coureur" aria-hidden="true">
@@ -562,8 +590,10 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {},
   sr: { q: "", res: null, sel: -1, tout: {}, token: 0, msg: "" },
   // fiche coureur : onglet courant, saison imposée par un lien d'édition ({archive, saison}) ;
-  // éditions précédentes : course pour laquelle l'encart est calculé, sa liste, course dont l'encart est déplié
-  rtab: "apercu", rctx: null, edFor: null, edListe: [], edLoading: null, edOuvert: null };
+  rtab: "apercu", rctx: null,
+  // fiche d'édition (E3) : navigation précédente / suivante ({id, nav} ; nav null = inconnue), équipes de la saison (sélections nationales),
+  // participants mémorisés ; page épreuve : données assemblées, onglet par épreuve, épreuve ouverte
+  nav: null, navLoading: null, eqSaison: {}, partMemo: null, ep: null, etab: "palmares", etabs: {}, epreuveOuverte: null };
 
 /* ================== éléments communs ================== */
 const CLASSES_ANCIENNES = {
@@ -1005,6 +1035,7 @@ function onglets(c, sel) {
   const defs = [["stage", un ? "Classement" : "Étape"], ["gc", "Général"], ["points", "Points"], ["mountain", "Montagne"], ["youth", "Jeunes"], ["teams", "Équipes"], ["combativity", "Combatif"]];
   const out = defs.filter(([cle]) => (k[cle] || []).length).map(([cle, lab]) => ({ cle, lab }));
   if (abandons(c, sel).length) out.push({ cle: "abandons", lab: "Abandons" });
+  if (participantsCourse(c).length) out.push({ cle: "participants", lab: "Participants" }, { cle: "pays", lab: "Pays" });
   return out;
 }
 
@@ -1081,6 +1112,8 @@ function renderTable(c, sel, sub) {
     });
     return html || `<div class="empty">${frOnly ? "Aucun Français parmi les abandons." : "Aucun abandon."}</div>`;
   }
+  if (sub === "participants") return htmlParticipants(c);
+  if (sub === "pays") return htmlPays(c);
   let rows = k[sub] || [];
   if (!rows.length) return `<div class="empty">Classement non publié</div>`;
   // mouvements au général : comparaison avec l'étape précédente
@@ -1127,12 +1160,19 @@ function renderFiche() {
     : sel === "F" ? `<div class="stage-head"><h2>Classements finaux</h2><div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div></div>` : "";
   const tp = c.race_type === "stage_race" ? `<span class="badge ${c.status === "in_progress" ? "live" : ""}">${c.status === "in_progress" ? "en cours" : "terminée"}</span>` : "";
   const subtabs = tabs.length ? `<div class="subtabs" id="subtabs">${tabs.map(t => `<button class="subtab ${t.cle === state.sub ? "active" : ""}" data-sub="${esc(t.cle)}">${esc(t.lab)}</button>`).join("")}</div>` : "";
-  const outils = tabs.length ? `<div class="table-tools"><button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>
-      <span class="small muted">${(cls(c, sel)[state.sub] || []).length || ""}</span></div>` : "";
+  const nPart = state.sub === "participants" ? participantsCourse(c).filter(x => !state.frOnly || (x.ref && x.ref.is_french)).length : 0;
+  const compte = state.sub === "participants" ? `${nPart} coureur${nPart > 1 ? "s" : ""}` : state.sub === "pays" ? "" : ((cls(c, sel)[state.sub] || []).length || "");
+  const outils = tabs.length ? `<div class="table-tools">${state.sub === "pays" ? "<span></span>" : `<button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>`}
+      <span class="small muted">${esc(compte)}</span></div>` : "";
+  const hero = htmlHeroGen({
+    titre: c.name,
+    sub: `${flag(c.flag, c.country)}<span id="ed-pays">${esc(nomPays(c.country))}</span><span>·</span><span>${esc(plage(c.start_date, c.end_date))}</span>`,
+    pills: `${catBadge(c.category, c.uci_class)}${tp}`,
+    credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "",
+    extra: `${htmlPodium(c)}<div id="ednav-slot">${state.nav && state.nav.id === c.id ? htmlNavEdition(state.nav.nav) : ""}</div>`,
+  });
   body.innerHTML = `<div class="stack">
-    <div class="card-head" style="margin:0">${flag(c.flag, c.country)}${catBadge(c.category, c.uci_class)}${tp}
-      <span class="small muted">${esc(plage(c.start_date, c.end_date))}${c.country ? " · " + esc(c.country) : ""}</span></div>
-    ${equivClasse(c.uci_class) ? `<div class="small muted">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : ""}
+    ${hero}
     ${chips}
     ${entete}
     ${c.race_type === "stage_race" ? renderMaillots(c, sel) : ""}
@@ -1141,14 +1181,14 @@ function renderFiche() {
     ${renderParcours(stage)}
     ${tabs.length ? `<div class="card table-card">${subtabs}${outils}<div id="table">${renderTable(c, sel, state.sub)}</div></div>`
       : '<div class="card"><div class="empty">Classement non publié</div></div>'}
-    <div id="editions-slot">${state.edFor === c.id ? htmlEditions(state.edListe) : ""}</div>
   </div>`;
-  majEditions(c);
+  majNavEdition(c);
+  if (state.pays === undefined) chargerPays().then(() => { const el = document.getElementById("ed-pays"); if (el && state.course === c) el.textContent = nomPays(c.country); });
   const ch = document.querySelector("#stage-chips .active");
   if (ch && ch.scrollIntoView) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
 }
 
-/* ================== éditions précédentes (fiche course) ================== */
+/* ================== clés d'édition, navigation entre éditions, podium, participants (E3) ================== */
 /** Clé d'une édition : nom normalisé + « |PAYS ». DOIT RESTER ALIGNÉE avec collector.cle_edition (Python) : minuscules, sans
  *  accents, ponctuation remplacée par une espace, sans année (1900-2099) ni numéro d'édition isolé (107e, 3rd…). Rapprochement
  *  exact uniquement ; nom ou pays vide : null. */
@@ -1172,55 +1212,196 @@ async function chargerEditionsIdx() {
     throw e;
   }
 }
-/** Éditions de la même course (même clé, hors la course affichée) : archives (editions.json) + saisons du Calendrier. */
-async function editionsPrecedentes(c) {
-  const E = await chargerEditionsIdx();
-  const cle = cleCanon(c.name, c.country, E.alias);
-  if (!cle) return [];
-  const liste = (E.courses[cle] || []).map(e => ({ ...e, archive: true }));
-  const saisons = (state.saisons && state.saisons.available) || [];
-  const indexes = await Promise.all(saisons.map(async y => {
-    try { return [y, state.indexes[y] || await chargerIndex(y)]; } catch (e) { return [y, null]; }
-  }));
-  for (const [y, ix] of indexes) {
-    for (const r of (ix && ix.races) || []) {
-      if (r.status && r.status !== "finished") continue;
-      if (cleCanon(r.name, r.country, E.alias) !== cle) continue;
-      liste.push({ season: y, race_id: r.id, name: r.name, race_type: r.race_type, start_date: r.start_date, winner: r.winner,
-        best_french: r.best_french, archive: false });
-    }
-  }
-  const vus = new Set();
-  return liste.filter(e => e.race_id !== c.id && !vus.has(e.race_id) && vus.add(e.race_id))
-    .sort((a, b) => b.season - a.season || (b.start_date || "").localeCompare(a.start_date || ""));
+
+/** Catégorie « de rang » d'une classe UCI (miroir de selection.categorie_classe, hors FDJ qui dépend de la course) : WT, Pro, .1, .2, Champ., sinon null. */
+const CLASSES_CAT_WT = ["1.UWT", "2.UWT", "1.CH", "2.CH", "CPE", "AU1", "MNM"], CLASSES_CAT_PRO = ["1.Pro", "2.Pro", "1.HC", "2.HC"], CLASSES_CAT_CHAMP = ["CC", "CM", "WC", "OG", "JO", "CN"];
+function categorieClasse(cl) {
+  const c = String(cl || "").trim();
+  if (CLASSES_CAT_WT.includes(c)) return "WT";
+  if (CLASSES_CAT_PRO.includes(c)) return "Pro";
+  if (CLASSES_CAT_CHAMP.includes(c)) return "Champ.";
+  const m = /^[12]\.(.+)$/.exec(c);
+  if (!m) return null;
+  return m[1].startsWith("1") ? ".1" : m[1].startsWith("2") || m[1].toLowerCase().startsWith("ncup") ? ".2" : null;
 }
-function htmlEditions(liste) {
-  if (!liste.length) return "";
-  const rows = liste.map(e => {
-    if (e.archive) state.archChemins.set(e.race_id, e.season);   // évite un 404 sur races/ à l'ouverture
-    const ctx = (e.archive ? "a" : "c") + e.season, w = e.winner, bf = e.best_french;
-    const vainqueur = w ? `<div class="nm">${flag(w.flag, w.nationality)}<span>${plink(w.id, w.name, ctx)}</span>${w.is_french ? '<span class="badge fr">FR</span>' : ""}</div>`
-      : `<div class="muted">Vainqueur non disponible</div>`;
-    const fr = bf && bf.rider ? `<small>Meilleur Français : ${plink(bf.rider.id, bf.rider.name, ctx)}${bf.rank != null ? ` (${esc(rang(bf.rank))})` : ""}</small>` : "";
-    return `<div class="ed-row"><button class="ed-y" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>
-      <div class="ed-w">${vainqueur}${fr}</div>
-      <button class="ed-go" data-open="${esc(e.race_id)}" data-stage="" aria-label="Voir la fiche de l'édition ${esc(e.season)}">&rsaquo;</button></div>`;
-  }).join("");
-  return `<details class="card table-card ed" id="editions"${state.edOuvert === state.course.id ? " open" : ""}>
-    <summary>Éditions précédentes · ${liste.length}</summary>${rows}</details>`;
+/** Fichier entites/courses/<lettre>.json (mémorisé) ; {} si absent (404), exception pour une erreur réseau (rien n'est mémorisé). */
+async function fichierCourses(l) {
+  if (state.coursesEnt[l] !== undefined) return state.coursesEnt[l];
+  try { state.coursesEnt[l] = await chargerArchive(`entites/courses/${l}.json`); }
+  catch (e) { if (e.status === 404) state.coursesEnt[l] = {}; else throw e; }
+  return state.coursesEnt[l];
 }
-/** Charge l'encart sans bloquer l'affichage de la fiche ; absent si aucune édition ou en cas d'échec. */
-function majEditions(c) {
-  if (state.edFor === c.id || state.edLoading === c.id) return;
+function saisonCourse(c) { return c.season != null ? c.season : ((pd(c.start_date) || {}).y ?? null); }
+/** Saison d'une édition : « c<année> » (Calendrier) ou « a<année> » (archive), pour que la fiche coureur lise la bonne saison. */
+function ctxSaison(y) { return ((state.saisons && state.saisons.available) || []).includes(y) ? `c${y}` : `a${y}`; }
+/** Une édition d'une saison absente du Calendrier vient des archives : on mémorise son chemin (évite un 404 sur races/ à l'ouverture). */
+function noterChemin(e) {
+  const dispo = (state.saisons && state.saisons.available) || [];
+  if (e && e.race_id && e.season != null && !dispo.includes(e.season)) state.archChemins.set(e.race_id, e.season);
+}
+/** Épreuve (entité de entites/courses/) d'une fiche de course : clé d'édition exacte, sinon clé canonique par alias manuel
+ *  (editions.json, lu seulement si la clé brute n'a pas d'entité). null si inconnue. */
+async function epreuveDeCourse(c) {
+  const cle0 = cleEdition(c.name, c.country);
+  if (!cle0) return null;
+  let F = await fichierCourses(lettreId(cle0));
+  if (aPropre(F, cle0)) return { cle: cle0, C: F[cle0] };
+  let alias = {};
+  try { alias = (await chargerEditionsIdx()).alias; } catch (e) { return null; }
+  const cle = cleCanon(c.name, c.country, alias);
+  if (!cle || cle === cle0) return null;
+  F = await fichierCourses(lettreId(cle));
+  return aPropre(F, cle) ? { cle, C: F[cle] } : null;
+}
+function ordreEdition(a, b) {
+  return (a.season - b.season) || String(a.start_date || "").localeCompare(String(b.start_date || "")) || String(a.race_id || "").localeCompare(String(b.race_id || ""));
+}
+/** Édition précédente / suivante (hors la fiche affichée) d'après entites/courses ; null si l'épreuve est inconnue ou n'a pas d'autre édition. */
+async function navigationEdition(c) {
+  const E = await epreuveDeCourse(c);
+  if (!E) return null;
+  const cur = { season: saisonCourse(c), start_date: c.start_date, race_id: c.id };
+  const autres = (E.C.editions || []).filter(e => e.race_id !== c.id && e.season != null);
+  const avant = autres.filter(e => ordreEdition(e, cur) < 0).sort((a, b) => ordreEdition(b, a));
+  const apres = autres.filter(e => ordreEdition(e, cur) > 0).sort(ordreEdition);
+  const prev = avant[0] || null, next = apres[0] || null;
+  if (!prev && !next) return null;
+  noterChemin(prev); noterChemin(next);
+  return { cle: E.cle, prev, next };
+}
+function htmlNavEdition(nav) {
+  if (!nav) return "";
+  const b = (e, cl, txt, lib) => e ? `<button class="${cl}" data-open="${esc(e.race_id)}" data-stage="" aria-label="${esc(lib)} : ${esc(e.season)}">${txt}</button>` : "<span></span>";
+  return `<nav class="ednav" aria-label="Éditions de l'épreuve">${b(nav.prev, "prev", `&lsaquo; ${esc(nav.prev && nav.prev.season)}`, "Édition précédente")}
+    <button class="all" data-epreuve="${esc(nav.cle)}">Toutes les éditions</button>${b(nav.next, "next", `${esc(nav.next && nav.next.season)} &rsaquo;`, "Édition suivante")}</nav>`;
+}
+/** Charge la navigation sans bloquer la fiche ; absente si l'épreuve est inconnue ou en cas d'échec. */
+function majNavEdition(c) {
+  if ((state.nav && state.nav.id === c.id) || state.navLoading === c.id) return;
   const id = c.id;
-  state.edLoading = id;
-  editionsPrecedentes(c).then(liste => {
-    if (state.edLoading === id) state.edLoading = null;
+  state.navLoading = id;
+  navigationEdition(c).then(nav => {
+    if (state.navLoading === id) state.navLoading = null;
+    state.nav = { id, nav };
     if (!state.course || state.course.id !== id) return;
-    state.edFor = id; state.edListe = liste;
-    const slot = document.getElementById("editions-slot");
-    if (slot) slot.innerHTML = htmlEditions(liste);
-  }).catch(e => { if (state.edLoading === id) state.edLoading = null; console.warn("Éditions précédentes indisponibles :", e.message); });
+    const slot = document.getElementById("ednav-slot");
+    if (slot) slot.innerHTML = htmlNavEdition(nav);
+  }).catch(e => { if (state.navLoading === id) state.navLoading = null; console.warn("Navigation entre éditions indisponible :", e.message); });
+}
+
+/** Lignes du classement qui désigne le résultat de la course : classement de la course (un jour), général final (par étapes),
+ *  à défaut général de la dernière étape qui en a un (course en cours : provisoire). */
+function classementGeneral(c) {
+  if (c.race_type !== "stage_race") return cls(c, "").stage || [];
+  if (c.final && (c.final.gc || []).length) return c.final.gc;
+  const E = etapes(c);
+  for (let i = E.length - 1; i >= 0; i--) { const g = (E[i].results || {}).gc; if (g && g.length) return g; }
+  return [];
+}
+/** Rangs 1 à 3 (sans statut) d'une course terminée ; rien tant qu'elle est en cours. */
+function podiumCourse(c) {
+  if (c.status != null && c.status !== "finished") return [];
+  return classementGeneral(c).filter(r => r.rider_id && r.rank != null && !r.status && r.rank >= 1 && r.rank <= 3)
+    .sort((a, b) => a.rank - b.rank).slice(0, 3);
+}
+function htmlPodium(c) {
+  const P = podiumCourse(c);
+  if (!P.length) return "";
+  return `<div class="sec-title" style="margin:var(--sp3) 0 0">Podium</div><div class="podium">${P.map(r => {
+    const ref = c.riders[r.rider_id];
+    return `<div class="pod"><span class="pk r${r.rank}">${esc(r.rank)}</span>
+      <div class="nm">${ref ? flag(ref.flag, ref.nationality) : ""}${ref ? plink(r.rider_id, ref.name) : esc(r.bib ? "Dossard " + r.bib : "Coureur inconnu")}</div>
+      ${ref && ref.team ? `<div class="tm">${esc(ref.team)}</div>` : ""}</div>`;
+  }).join("")}</div>`;
+}
+
+/** Coureurs présents dans les classements de la fiche (les autres n'existent pas pour nous) : id, dossard, rang final (général ou course),
+ *  statut (abandon constaté) et fiche coureur de la course. Mémorisé par fiche. */
+function participantsCourse(c) {
+  if (state.partMemo && state.partMemo.c === c) return state.partMemo.l;
+  const par = {}, refs = c.riders || {};
+  const lire = L => (Array.isArray(L) ? L : []).forEach(r => {
+    if (!r || !r.rider_id) return;
+    const p = par[r.rider_id] || (par[r.rider_id] = { id: r.rider_id, bib: null, rang: null, statut: null });
+    if (p.bib == null && r.bib != null) p.bib = r.bib;
+  });
+  etapes(c).forEach(s => Object.values(s.results || {}).forEach(lire));
+  Object.values(c.final || {}).forEach(lire);
+  classementGeneral(c).forEach(r => {
+    const p = r.rider_id && par[r.rider_id];
+    if (!p) return;
+    if (r.rank != null && !r.status) p.rang = r.rank; else if (r.status && !p.statut) p.statut = r.status;
+  });
+  abandons(c, c.race_type === "stage_race" ? "F" : "").forEach(r => {
+    const p = par[r.rider_id];
+    if (p && p.rang == null && !p.statut) p.statut = r.status;
+  });
+  const l = Object.values(par).map(p => ({ ...p, ref: refs[p.id] || null }));
+  state.partMemo = { c, l };
+  return l;
+}
+/** Équipes de la saison (entites/equipes/<année>.json) : seule source du caractère « sélection nationale » (règle de encyclopedie._est_nationale). */
+function demanderEquipes(c) {
+  const y = saisonCourse(c);
+  if (y == null || state.eqSaison[y] !== undefined) return;
+  state.eqSaison[y] = null;   // demandé
+  chargerArchive(`entites/equipes/${y}.json`).then(d => d, () => ({})).then(d => {
+    state.eqSaison[y] = d || {};
+    if (state.course === c && state.sub === "participants") { const t = document.getElementById("table"); if (t) t.innerHTML = renderTable(c, state.sel, state.sub); }
+  });
+}
+function selectionNationale(c, libelle) {
+  const E = state.eqSaison[saisonCourse(c)];
+  const e = E && libelle ? E[`${normIdx(libelle).replace(/ /g, "-")}-${saisonCourse(c)}`] : null;
+  return e && e.nationale ? e : null;
+}
+const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
+function htmlParticipants(c) {
+  let L = participantsCourse(c);
+  if (!L.length) return htmlVide("Aucun coureur dans les classements de cette fiche.");
+  demanderEquipes(c);
+  if (state.frOnly) L = L.filter(x => x.ref && x.ref.is_french);
+  if (!L.length) return `<div class="empty">Aucun Français parmi les participants.</div>`;
+  const G = new Map();
+  L.forEach(x => { const t = (x.ref && x.ref.team) || ""; if (!G.has(t)) G.set(t, []); G.get(t).push(x); });
+  const ordre = (a, b) => (a.rang == null) - (b.rang == null) || (a.rang ?? 0) - (b.rang ?? 0) || (STATUT_ORDRE[a.statut] || 9) - (STATUT_ORDRE[b.statut] || 9)
+    || (a.bib ?? 1e9) - (b.bib ?? 1e9) || String(a.ref ? a.ref.name : "").localeCompare(b.ref ? b.ref.name : "", "fr");
+  const equipes = [...G.entries()].map(([nom, l]) => { l.sort(ordre); return { nom, l, best: l.length && l[0].rang != null ? l[0].rang : null }; })
+    .sort((a, b) => (a.nom === "") - (b.nom === "") || (a.best == null) - (b.best == null) || (a.best ?? 0) - (b.best ?? 0) || a.nom.localeCompare(b.nom, "fr"));
+  const html = equipes.map(t => {
+    const nat = selectionNationale(c, t.nom);
+    const rows = t.l.map(x => {
+      const ref = x.ref, fr = ref && ref.is_french;
+      return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${x.rang != null ? esc(x.rang) : "–"}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
+        <div class="mid"><div class="nm">${ref ? plink(x.id, ref.name) : esc(x.bib != null ? "Dossard " + x.bib : "Coureur inconnu")}</div><div class="tm">${x.bib != null ? "Dossard " + esc(x.bib) : ""}</div></div>
+        <div class="val gap">${esc(x.statut || "")}</div></div>`;
+    }).join("");
+    return `<div class="team-card"><div class="team-head"><span class="tn">${esc(t.nom || "Équipe non renseignée")}</span>
+      ${nat ? `<span class="badge fr" title="Sélection nationale (libellé égal au nom du pays)">Sélection nationale</span>` : ""}
+      <span class="small muted">${t.l.length} coureur${t.l.length > 1 ? "s" : ""}${t.best != null ? ` · meilleur : ${esc(rang(t.best))}` : ""}</span></div><div class="rows">${rows}</div></div>`;
+  }).join("");
+  const prov = c.race_type === "stage_race" && c.status === "in_progress";
+  return html + `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">Rang : ${c.race_type === "stage_race" ? `classement général${prov ? " provisoire" : " final"}` : "classement de la course"} ;
+    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.</div>`;
+}
+function htmlPays(c) {
+  const L = participantsCourse(c);
+  if (!L.length) return htmlVide("Aucun coureur dans les classements de cette fiche.");
+  const P = {};
+  let sans = 0;
+  L.forEach(x => {
+    const iso = x.ref && x.ref.nationality;
+    if (!iso) { sans++; return; }
+    const p = P[iso] || (P[iso] = { iso, flag: x.ref.flag, n: 0, classes: 0, ab: 0, best: null });
+    p.n++;
+    if (x.rang != null) { p.classes++; if (p.best == null || x.rang < p.best) p.best = x.rang; }
+    if (["DNF", "OTL", "DSQ"].includes(x.statut)) p.ab++;
+  });
+  const l = Object.values(P).sort((a, b) => b.n - a.n || nomPays(a.iso).localeCompare(nomPays(b.iso), "fr"));
+  const rows = l.map(p => [`${flag(p.flag, nomPays(p.iso))} ${esc(nomPays(p.iso))}`, esc(p.n), esc(p.classes), p.ab ? esc(p.ab) : "–", p.best != null ? esc(rang(p.best)) : "–"]);
+  return htmlTableau([{ l: "Pays", tl: true }, { l: "Coureurs" }, { l: "Classés", t: "Coureurs classés au classement final" },
+    { l: "Abandons", t: "DNF, hors délai (OTL) et disqualifiés (DSQ)" }, { l: "Meilleur", t: "Meilleur rang du pays" }], rows) +
+    `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">${l.length} pays · classés : coureurs avec un rang final ; abandons : DNF, hors délai et disqualifiés (les non-partants ne sont pas comptés).${sans ? ` ${sans} coureur${sans > 1 ? "s" : ""} sans nationalité renseignée non compté${sans > 1 ? "s" : ""}.` : ""}</div>`;
 }
 
 /* ================== navigation ================== */
@@ -1229,7 +1410,7 @@ function parseHashCoureur() {
   return m ? m[1] : null;
 }
 function majScroll() {
-  const ouvert = ["sheet", "rsheet", "search"].some(i => document.getElementById(i).classList.contains("open"));
+  const ouvert = ["sheet", "esheet", "rsheet", "search"].some(i => document.getElementById(i).classList.contains("open"));
   document.body.style.overflow = ouvert ? "hidden" : "";
 }
 function parseHash() {
@@ -1356,11 +1537,7 @@ async function chargerPays() {
 function nomPays(iso) { const p = state.pays && state.pays[iso]; return (p && p.nom) || iso || ""; }
 
 async function chargerCoursesEnt(l) {
-  if (state.coursesEnt[l] !== undefined) return state.coursesEnt[l];
-  let d = {};
-  try { d = await chargerArchive(`entites/courses/${l}.json`); } catch (e) { console.warn("Courses (entités) indisponibles :", e.message); }
-  state.coursesEnt[l] = d;
-  return d;
+  try { return await fichierCourses(l); } catch (e) { console.warn("Courses (entités) indisponibles :", e.message); return {}; }
 }
 /** Nom d'une course (clé d'édition) la saison donnée : variante de nom portée cette saison-là, sinon la première connue. */
 function nomCourse(cle, saison) {
@@ -1478,20 +1655,20 @@ function squeletteCoureur() {
     <div class="rmain"><div class="kpis"><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div>
     <div class="sk sk-line" style="height:36px"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div></div>`;
 }
-/** Tuiles de chiffres clés (2 colonnes à 390 px) : [{lab, val, sub}] ; une valeur absente = pas de tuile. */
+/** Tuiles de chiffres clés (2 colonnes à 390 px) : [{lab, val, sub, txt}] ; une valeur absente = pas de tuile ; `txt` : valeur textuelle (nom), en plus petit. */
 function htmlTuiles(liste) {
   const t = liste.filter(x => x && x.val != null && x.val !== "");
-  return t.length ? `<div class="kpis">${t.map(x => `<div class="tile"><small>${esc(x.lab)}</small><b>${esc(x.val)}</b>${x.sub ? `<span class="sub">${esc(x.sub)}</span>` : ""}</div>`).join("")}</div>` : "";
+  return t.length ? `<div class="kpis">${t.map(x => `<div class="tile"><small>${esc(x.lab)}</small><b${x.txt ? ' class="txt"' : ""}>${esc(x.val)}</b>${x.sub ? `<span class="sub">${esc(x.sub)}</span>` : ""}</div>`).join("")}</div>` : "";
 }
 /** Onglets de sous-pages, défilables et collants ; `attr` : nom de l'attribut data-… porté par chaque bouton. */
 function htmlOnglets(defs, actif, attr, id) {
   return `<div class="subtabs sticky" ${id ? `id="${id}"` : ""} role="tablist">${defs.map(d =>
     `<button class="subtab ${d.k === actif ? "active" : ""}" role="tab" aria-selected="${d.k === actif}" data-${attr}="${esc(d.k)}">${esc(d.l)}</button>`).join("")}</div>`;
 }
-/** Tableau compact : `cols` [{l, t (titre), tl (aligné à gauche)}], `rows` listes de cellules HTML déjà échappées ; 1re colonne figée. */
+/** Tableau compact : `cols` [{l, t (titre), tl (aligné à gauche), w (aligné à gauche, texte qui passe à la ligne)}], `rows` listes de cellules HTML déjà échappées ; 1re colonne figée. */
 function htmlTableau(cols, rows) {
-  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${cols.map(c => `<th${c.tl ? ' class="tl"' : ""}${c.t ? ` title="${esc(c.t)}"` : ""} scope="col">${esc(c.l)}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${cols[i] && cols[i].tl ? ' class="tl"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${cols.map(c => `<th${c.tl || c.w ? ' class="tl"' : ""}${c.t ? ` title="${esc(c.t)}"` : ""} scope="col">${esc(c.l)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map((c, i) => { const k = cols[i] || {}, cl = [k.tl || k.w ? "tl" : "", k.w ? "wrap" : ""].filter(Boolean).join(" "); return `<td${cl ? ` class="${cl}"` : ""}>${c}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function htmlVide(txt) { return `<div class="vide">${esc(txt)}</div>`; }
 /** Mini-graphique en ligne de l'évolution du rang : axe inversé (rang 1 en haut), abscisse proportionnelle au temps. pts : [[date, rang]]. */
@@ -1545,6 +1722,14 @@ function tuilesCoureur(cr) {
     gt.length ? { lab: "Grands tours terminés", val: fini.length, sub: ab ? `${ab} abandon${ab > 1 ? "s" : ""}` : "" } : null,
   ]);
 }
+/** Bandeau de fiche (coureur, épreuve, édition) : `photo` (HTML du rond, absent = pas de photo), `titre`, `sub` (HTML), `pills` (HTML), `credit`,
+ *  `faits` [[libellé, valeur]], `extra` (HTML ajouté en bas : podium, navigation). Tout texte doit déjà être échappé SAUF `titre` et `faits`. */
+function htmlHeroGen(o) {
+  return `<div class="hero"><div class="hero-top">${o.photo || ""}<div class="hero-id"><h1 class="h-title">${esc(o.titre)}</h1>
+    ${o.sub ? `<div class="hero-sub">${o.sub}</div>` : ""}</div></div>
+    ${o.pills ? `<div class="hero-pills">${o.pills}</div>` : ""}${o.credit || ""}
+    ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
+}
 function htmlHero(cr) {
   const h = identite(cr), wd = h.wd, im = wd && wd.image, src = im && urlMedia(im.url), page = im && urlMedia(im.page);
   const ini = h.name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
@@ -1563,10 +1748,7 @@ function htmlHero(cr) {
     eq ? [eq.y != null && state.current != null && eq.y < state.current ? "Dernière équipe" : "Équipe", eq.y != null && state.current != null && eq.y < state.current ? `${eq.team} (${eq.y})` : eq.team] : null,
     ys.length ? ["Dans nos données", ys.length > 1 ? `${ys[ys.length - 1]} → ${ys[0]}` : String(ys[0])] : null,
   ].filter(Boolean);
-  return `<div class="hero"><div class="hero-top">${photo}<div class="hero-id"><h1 class="h-title">${esc(h.name || "Coureur")}</h1>
-    <div class="hero-sub">${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span></div></div></div>
-    ${pills ? `<div class="hero-pills">${pills}</div>` : ""}${credit}
-    ${faits.length ? `<dl class="facts">${faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}</div>`;
+  return htmlHeroGen({ photo, titre: h.name || "Coureur", sub: `${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span>`, pills, credit, faits });
 }
 function ongletsCoureur(cr) {
   const E = cr.ent, out = [];
@@ -1581,13 +1763,18 @@ function ongletsCoureur(cr) {
   if (cr.fiche && identite(cr).name) out.push({ k: "saison", l: !cr.ctx.archive && cr.ctx.saison === state.current ? "Saison en cours" : `Saison ${cr.ctx.saison}` });
   return out;
 }
-function carteResultat(x) {
+/** Carte d'un résultat (ouvre l'édition) ; `ep` : ajoute, sous la carte, un lien discret vers l'épreuve si elle compte au moins deux éditions. */
+function carteResultat(x, ep) {
   const lab = x.label && x.label !== "Course" ? x.label : "";
   const stage = x.classification === "stage" ? "" : "F";
-  return `<button class="res" data-open="${esc(x.race_id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification || "")}">
+  const nom = x._nom || nomCoursePalmares(x);
+  const carte = `<button class="res" data-open="${esc(x.race_id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification || "")}">
     <span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
-    <span class="t"><b>${esc(x._nom || nomCoursePalmares(x))}</b><small>${x.category ? catBadge(x.category, x.uci_class) + " " : ""}${esc(lab)}</small></span>
+    <span class="t"><b>${esc(nom)}</b><small>${x.category ? catBadge(x.category, x.uci_class) + " " : ""}${esc(lab)}</small></span>
     <span class="d">${esc(dateCourte(x.date))}<br>${esc((pd(x.date) || {}).y || "")}</span></button>`;
+  const C = ep && x.course && (state.coursesEnt[lettreId(x.course)] || {})[x.course];
+  if (!C || (C.editions || []).length < 2) return carte;
+  return `<div class="res-box">${carte}<button class="res-ep" data-epreuve="${esc(x.course)}" aria-label="Toutes les éditions : ${esc(nom)}">Toutes les éditions &rsaquo;</button></div>`;
 }
 function lienWikipedia(lang, titre) {
   if (!/^[a-z]{2,3}$/.test(lang) || typeof titre !== "string" || !titre) return "";
@@ -1602,7 +1789,7 @@ function htmlApercu(cr) {
     ["Top 10", aSomme(E, "top10")], ["Abandons", aSomme(E, "dnf")],
   ].filter(([, v]) => v > 0);
   const liens = Object.entries(wd.wikipedia || {}).sort((a, b) => (a[0] === "fr" ? -1 : b[0] === "fr" ? 1 : a[0].localeCompare(b[0]))).map(([l, t]) => lienWikipedia(l, t)).filter(Boolean);
-  return `${P.length ? `<div><div class="grp-title" style="margin-top:0">Derniers résultats marquants</div><div class="res-list">${P.slice(0, 5).map(carteResultat).join("")}</div>
+  return `${P.length ? `<div><div class="grp-title" style="margin-top:0">Derniers résultats marquants</div><div class="res-list">${P.slice(0, 5).map(x => carteResultat(x)).join("")}</div>
       ${P.length > 5 ? `<button class="more" data-rtab="palmares">Tout le palmarès (${P.length})</button>` : ""}</div>` : ""}
     ${chiffres.length ? `<div class="card"><h2 class="h-sec">En chiffres</h2><dl class="facts" style="margin:0;padding:0;border:0">${chiffres.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(num(v))}</dd>`).join("")}</dl>
       <div class="tbl-note">Seules les courses suivies par ce site sont comptées.</div></div>` : ""}
@@ -1617,7 +1804,7 @@ function htmlPalmares(cr) {
   const groupes = [];
   L.forEach(x => { const g = groupes[groupes.length - 1]; if (g && g.y === x.season) g.l.push(x); else groupes.push({ y: x.season, l: [x] }); });
   return `${chips}${outil}${groupes.length ? groupes.map(g => `<div><div class="grp-title" style="margin-top:0">${esc(g.y)}<span>${g.l.length} résultat${g.l.length > 1 ? "s" : ""}</span></div>
-    <div class="res-list">${g.l.map(carteResultat).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
+    <div class="res-list">${g.l.map(x => carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
     <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.</div>`;
 }
 function htmlSaisons(cr) {
@@ -1789,6 +1976,181 @@ async function ouvrirCoureur(id) {
   renderCoureur();
 }
 
+/* ================== page épreuve (E3) ================== */
+/* Une épreuve = une course à travers ses éditions (clé d'édition `nom normalisé|PAYS`) ; données : entites/courses/<lettre>.json.
+   Route `#epreuve/<clé encodée>` ; l'édition reste `#course/<race_id>`. Valeur absente : ligne / tuile absente. */
+const TYPES_EPREUVE = { one_day: "Course d'un jour", stage_race: "Course par étapes" };
+function parseHashEpreuve() {
+  const m = /^#epreuve\/(.+)$/.exec(location.hash);
+  if (!m) return null;
+  let k;
+  try { k = decodeURIComponent(m[1]); } catch (e) { return null; }
+  return k.length <= 200 && k.includes("|") ? k : null;
+}
+function fermerEpreuve() {
+  const es = document.getElementById("esheet");
+  es.classList.remove("open"); es.setAttribute("aria-hidden", "true");
+  state.epreuveOuverte = null;
+  majScroll();
+}
+/** Nom de l'épreuve la saison la plus récente ; à défaut, la clé mise en forme. */
+function nomRecent(C, cle) {
+  let best = null;
+  for (const [nom, ys] of Object.entries((C && C.noms) || {})) {
+    const m = (ys || []).length ? Math.max(...ys) : -1;
+    if (!best || m > best.m || (m === best.m && nom < best.nom)) best = { nom, m };
+  }
+  if (best) return best.nom;
+  const brut = String(cle || "").split("|")[0];
+  return brut ? brut.charAt(0).toUpperCase() + brut.slice(1) : "Épreuve";
+}
+function classeActuelle(C) {
+  const ys = Object.keys((C && C.classes) || {}).sort();
+  return ys.length ? C.classes[ys[ys.length - 1]] : null;
+}
+async function construireEpreuve(cle) {
+  const [F] = await Promise.all([fichierCourses(lettreId(cle)), chargerPays()]);
+  const C = aPropre(F, cle) ? F[cle] : null;
+  if (C) (C.editions || []).forEach(noterChemin);
+  return { cle, C };
+}
+function ongletsEpreuve(ep) {
+  const C = ep.C, E = C.editions || [], R = C.records || {}, out = [];
+  if (E.length) out.push({ k: "palmares", l: "Palmarès" });
+  if (E.length > 1 && ((R.victoires_par_coureur || []).length || Object.keys(R.victoires_par_pays || {}).length)) out.push({ k: "records", l: "Records" });
+  if (new Set(Object.keys(C.noms || {})).size > 1 || new Set(Object.values(C.classes || {})).size > 1) out.push({ k: "historique", l: "Historique" });
+  return out;
+}
+function listeNoms(noms) { return noms.length <= 3 ? noms.join(", ") : `${noms.length}`; }
+function tuilesEpreuve(ep) {
+  const C = ep.C, E = C.editions || [], R = C.records || {}, ys = E.map(e => e.season);
+  const vc = (R.victoires_par_coureur || []).filter(x => x.name), top = vc.length ? Math.max(...vc.map(x => x.wins)) : 0, tops = vc.filter(x => x.wins === top);
+  const vp = Object.entries(R.victoires_par_pays || {}), topP = vp.length ? Math.max(...vp.map(x => x[1])) : 0, topsP = vp.filter(x => x[1] === topP).map(x => x[0]).sort();
+  const connus = E.filter(e => (e.podium || []).some(p => p.rank === 1)).length, fra = (R.victoires_par_pays || {}).FRA || 0;
+  return htmlTuiles([
+    E.length ? { lab: "Éditions", val: E.length, sub: ys.length > 1 ? `${Math.min(...ys)} → ${Math.max(...ys)}` : String(ys[0]) } : null,
+    top >= 2 ? (tops.length === 1 ? { lab: "Coureur le plus titré", val: tops[0].name, txt: true, sub: `${top} victoires` }
+      : tops.length <= 3 ? { lab: "Coureurs les plus titrés", val: tops.map(x => x.name).join(", "), txt: true, sub: `${top} victoires chacun` }
+      : { lab: "Coureurs les plus titrés", val: `${tops.length} coureurs`, sub: `${top} victoires chacun` }) : null,
+    topP >= 2 ? (topsP.length <= 3 ? { lab: topsP.length === 1 ? "Pays le plus titré" : "Pays les plus titrés", val: topsP.map(nomPays).join(", "), txt: true, sub: `${topP} victoires${topsP.length > 1 ? " chacun" : ""}` }
+      : { lab: "Pays les plus titrés", val: `${topsP.length} pays`, sub: `${topP} victoires chacun` }) : null,
+    connus ? { lab: "Victoires françaises", val: fra, sub: `sur ${connus} édition${connus > 1 ? "s" : ""} avec vainqueur connu` } : null,
+  ]);
+}
+function htmlHeroEpreuve(ep) {
+  const C = ep.C, cl = classeActuelle(C), ys = (C.editions || []).map(e => e.season), n = ys.length;
+  const pills = [cl ? catBadge(categorieClasse(cl), cl) : "", C.type && TYPES_EPREUVE[C.type] ? `<span class="pill">${esc(TYPES_EPREUVE[C.type])}</span>` : ""].join("");
+  const faits = n ? [["Dans nos données", `${n} édition${n > 1 ? "s" : ""}${n > 1 ? ` · ${Math.min(...ys)} → ${Math.max(...ys)}` : ` · ${ys[0]}`}`]] : [];
+  return htmlHeroGen({ titre: nomRecent(C, ep.cle), sub: `${flag(C.flag, nomPays(C.pays))}<span>${esc(nomPays(C.pays))}</span>`, pills,
+    credit: cl && equivClasse(cl) ? `<div class="credit">Classe ${esc(cl)} : ${esc(equivClasse(cl))}</div>` : "", faits });
+}
+function cellePodium(e, p) {
+  return p ? `${flag(p.flag, p.nat)} ${plink(p.id, p.name || "Coureur", ctxSaison(e.season))}` : '<span class="muted">–</span>';
+}
+function htmlPalmaresEpreuve(ep) {
+  const E = ep.C.editions || [];
+  const rows = E.map(e => {
+    const P = e.podium || [], g = r => P.find(p => p.rank === r), bf = e.best_french;
+    return [`<button class="cell" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>`,
+      cellePodium(e, g(1)), cellePodium(e, g(2)), cellePodium(e, g(3)),
+      bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : '<span class="muted">–</span>'];
+  });
+  return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true }, { l: "2e", tl: true }, { l: "3e", tl: true }, { l: "Meilleur Français", tl: true }], rows)}
+    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions terminées seulement ; l'année ouvre la fiche de l'édition.</div>`;
+}
+function htmlRecordsEpreuve(ep) {
+  const C = ep.C, E = C.editions || [], R = C.records || {}, vc = R.victoires_par_coureur || [], vp = Object.entries(R.victoires_par_pays || {});
+  const gagnant = (e, id) => (e.podium || []).find(p => p.rank === 1 && p.id === id);
+  const rc = vc.map(x => {
+    const eds = E.filter(e => gagnant(e, x.id)), p = eds.length ? gagnant(eds[0], x.id) : null;
+    return [`${p ? flag(p.flag, p.nat) + " " : ""}${plink(x.id, x.name || "Coureur", "c" + state.current)}`, esc(x.wins), esc(eds.map(e => e.season).join(", "))];
+  });
+  const rp = vp.sort((a, b) => b[1] - a[1] || nomPays(a[0]).localeCompare(nomPays(b[0]), "fr")).map(([iso, n]) =>
+    [`${drapeauIso3(iso)} ${esc(nomPays(iso))}`, esc(n), esc(E.filter(e => (e.podium || []).some(p => p.rank === 1 && p.nat === iso)).map(e => e.season).join(", "))]);
+  return `${rc.length ? `<div><h2 class="h-sec">Victoires par coureur</h2>${htmlTableau([{ l: "Coureur", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rc)}
+      <div class="tbl-note">Coureurs avec au moins deux victoires dans nos données.</div></div>` : ""}
+    ${rp.length ? `<div><h2 class="h-sec">Victoires par pays</h2>${htmlTableau([{ l: "Pays", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rp)}</div>` : ""}`
+    || htmlVide("Aucun record pour l'instant.");
+}
+function htmlHistoriqueEpreuve(ep) {
+  const C = ep.C, parSaison = {};
+  for (const [nom, ys] of Object.entries(C.noms || {})) (ys || []).forEach(y => { (parSaison[y] = parSaison[y] || []).push(nom); });
+  const ans = [...new Set(Object.keys(parSaison).concat(Object.keys(C.classes || {})).map(Number))].sort((a, b) => b - a);
+  const rows = ans.map(y => {
+    const cl = (C.classes || {})[y];
+    return [esc(y), parSaison[y] ? esc(parSaison[y].sort().join(" / ")) : '<span class="muted">–</span>', cl ? catBadge(categorieClasse(cl), cl) : '<span class="muted">–</span>'];
+  });
+  return `${htmlTableau([{ l: "Saison" }, { l: "Nom", w: true }, { l: "Classe", tl: true }], rows)}
+    <div class="tbl-note">Nom et classe UCI portés par l'épreuve chaque saison (rapprochement exact des noms, sans année ni numéro d'édition).</div>`;
+}
+const ONGLET_EPREUVE = { palmares: htmlPalmaresEpreuve, records: htmlRecordsEpreuve, historique: htmlHistoriqueEpreuve };
+function renderEpreuve() {
+  const ep = state.ep, body = document.getElementById("esheet-body");
+  if (!ep) return;
+  if (!ep.C) {
+    document.getElementById("esheet-name").textContent = "Épreuve";
+    document.getElementById("esheet-sub").textContent = "";
+    body.innerHTML = `<div class="stack"><div class="vide">Épreuve introuvable dans les archives.</div></div>`;
+    return;
+  }
+  const C = ep.C, cl = classeActuelle(C);
+  document.getElementById("esheet-name").textContent = nomRecent(C, ep.cle);
+  document.getElementById("esheet-sub").textContent = [cl, nomPays(C.pays)].filter(Boolean).join(" · ");
+  const defs = ongletsEpreuve(ep);
+  if (!defs.length) { body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHeroEpreuve(ep)}</aside><div class="rmain">${htmlVide("Aucune édition terminée dans nos données.")}</div></div>`; return; }
+  if (!defs.some(d => d.k === state.etab)) state.etab = defs[0].k;
+  body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHeroEpreuve(ep)}</aside>
+    <div class="rmain">${tuilesEpreuve(ep)}${htmlOnglets(defs, state.etab, "etab", "etabs")}<div class="tabcontent" id="econtent" role="tabpanel"></div>
+    <div class="foot-credits">Résultats : UCI DataRide. Les éditions comptées sont celles de nos données (courses suivies par ce site).</div></div></div>`;
+  majContenuEpreuve();
+}
+function majContenuEpreuve() {
+  const ep = state.ep, box = document.getElementById("econtent");
+  if (!ep || !ep.C || !box) return;
+  document.querySelectorAll("#etabs .subtab").forEach(b => { const a = b.dataset.etab === state.etab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); });
+  const f = ONGLET_EPREUVE[state.etab];
+  box.innerHTML = f ? f(ep) : "";
+}
+function choisirOngletEpreuve(k) {
+  state.etab = k; state.etabs[state.epreuveOuverte] = k;
+  majContenuEpreuve();
+  const es = document.getElementById("esheet"), tabs = document.getElementById("etabs"), ec = document.getElementById("econtent");
+  if (tabs && ec) {   // le contenu commence sous les onglets collants : on remonte si on a défilé plus bas
+    const limite = tabs.getBoundingClientRect().bottom, haut = ec.getBoundingClientRect().top;
+    if (haut < limite) es.scrollTop += haut - limite - 8;
+  }
+}
+async function ouvrirEpreuve(cle) {
+  const es = document.getElementById("esheet"), body = document.getElementById("esheet-body");
+  const nouveau = state.epreuveOuverte !== cle;
+  state.epreuveOuverte = cle;
+  if (nouveau) state.etab = state.etabs[cle] || "palmares";
+  es.classList.add("open"); es.setAttribute("aria-hidden", "false");
+  majScroll();
+  if (nouveau) es.scrollTop = 0;
+  if (!state.ep || state.ep.cle !== cle) {
+    state.ep = null;
+    document.getElementById("esheet-name").textContent = "Épreuve";
+    document.getElementById("esheet-sub").textContent = "";
+    body.innerHTML = squeletteCoureur();
+    let ep;
+    try { ep = await construireEpreuve(cle); }
+    catch (e) {
+      console.warn("Épreuve indisponible :", e.message);
+      if (parseHashEpreuve() !== cle) return;
+      body.innerHTML = messageErreur(`Épreuve indisponible (${e.message}).`, "retry");
+      return;
+    }
+    if (parseHashEpreuve() !== cle) return;   // l'utilisateur est parti entre-temps
+    state.ep = ep;
+  }
+  renderEpreuve();
+}
+function ouvrirEpreuveLien(cle) {
+  state.ouvertParApp = true;
+  location.hash = `#epreuve/${encodeURIComponent(cle)}`;
+}
+
 /* ================== recherche globale (E2) ================== */
 /** Même normalisation que netutil.normalize (Python) : ASCII minuscule sans ponctuation, espaces simples. */
 function normIdx(t) { return String(t || "").normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
@@ -1865,15 +2227,7 @@ async function choisirResultat(el) {
   if (!el) return;
   const t = el.dataset.sr, id = el.dataset.id, S = state.sr;
   if (t === "c") { state.rctx = { archive: false, saison: state.current }; ouvrirCoureurLien(id); return; }
-  if (t === "r") {
-    // E3 : une page « série » (toutes les éditions) remplacera cette redirection ; en attendant, la dernière édition
-    try {
-      const F = await chargerArchive(`entites/courses/${lettreId(id)}.json`), C = F[id], ed = C && C.editions && C.editions[0];
-      if (ed && ed.race_id) { ouvrir(ed.race_id, ""); return; }
-      S.msg = "Aucune édition disponible pour cette course.";
-    } catch (e) { S.msg = `Course indisponible (${e.message}).`; }
-    const m = document.getElementById("sr-msg"); if (m) m.textContent = S.msg;
-  }
+  if (t === "r") ouvrirEpreuveLien(id);
 }
 function ouvrirRecherche(q) {
   const el = document.getElementById("search"), inp = document.getElementById("sr-q"), S = state.sr;
@@ -1895,11 +2249,13 @@ function lancerRecherche() {   // depuis l'icône de l'en-tête
 }
 
 function routeur() {
-  const rid = parseHashCoureur(), h = parseHash(), q = parseHashRecherche();
-  if (q !== null) { fermerCoureur(); fermerFiche(); ouvrirRecherche(q); return; }
+  const rid = parseHashCoureur(), h = parseHash(), q = parseHashRecherche(), ep = parseHashEpreuve();
+  if (q !== null) { fermerCoureur(); fermerEpreuve(); fermerFiche(); ouvrirRecherche(q); return; }
   fermerRecherche();
-  if (rid) { ouvrirCoureur(rid); return; }      // la fiche course éventuelle reste ouverte dessous
+  if (rid) { ouvrirCoureur(rid); return; }      // la fiche course ou épreuve éventuelle reste ouverte dessous
   fermerCoureur();
+  if (ep) { ouvrirEpreuve(ep); return; }        // la fiche d'édition éventuelle reste ouverte dessous
+  fermerEpreuve();
   if (h) ouvrirCourse(h.id, h.etape); else fermerFiche();
 }
 window.addEventListener("hashchange", routeur);
@@ -1919,7 +2275,7 @@ function ouvrir(id, etape) {
 }
 function retour() {
   if (state.ouvertParApp && history.length > 1) history.back();
-  else { history.replaceState(null, "", location.pathname + location.search); fermerRecherche(); fermerCoureur(); fermerFiche(); }
+  else { history.replaceState(null, "", location.pathname + location.search); fermerRecherche(); fermerCoureur(); fermerEpreuve(); fermerFiche(); }
 }
 
 /* ================== événements (délégation) ================== */
@@ -1929,6 +2285,8 @@ document.addEventListener("click", e => {
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
   if (t.dataset.rtab) { choisirOngletCoureur(t.dataset.rtab); return; }
+  if (t.dataset.etab) { choisirOngletEpreuve(t.dataset.etab); return; }
+  if (t.dataset.epreuve) { ouvrirEpreuveLien(t.dataset.epreuve); return; }
   if (t.dataset.pcat) { state.rpal.cat = t.dataset.pcat; majContenuCoureur(); return; }
   if (t.dataset.calsaison) { changerSaisonCal(+t.dataset.calsaison); return; }
   if (t.dataset.tab) { state.tab = t.dataset.tab; archiveDansUrl(); renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
@@ -1978,15 +2336,10 @@ document.addEventListener("keydown", e => {
     if (e.key === "ArrowUp") { e.preventDefault(); selectionnerResultat(state.sr.sel < 0 ? -1 : state.sr.sel - 1); return; }
     if (e.key === "Enter") { e.preventDefault(); const L = itemsNav(); choisirResultat(L[state.sr.sel >= 0 ? state.sr.sel : 0]); return; }
   }
-  if (e.key === "Escape" && (parseHash() || parseHashCoureur() || parseHashRecherche() !== null)) retour();
+  if (e.key === "Escape" && (parseHash() || parseHashCoureur() || parseHashEpreuve() || parseHashRecherche() !== null)) retour();
   const lien = e.target.closest && e.target.closest("[data-rider]");
   if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); }
 });
-// encart « Éditions précédentes » : mémorise s'il est déplié (la fiche est redessinée à chaque changement d'étape)
-document.addEventListener("toggle", e => {
-  if (e.target.id === "editions" && state.course) state.edOuvert = e.target.open ? state.course.id : null;
-}, true);
-
 /* ================== démarrage ================== */
 /* ================== saisons ================== */
 async function chargerAvecRepli(chemin, repli) {

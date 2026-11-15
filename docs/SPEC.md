@@ -365,10 +365,13 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
 - Onglet **Archives** (5e) : menu déroulant des saisons archivées (« 2023 (collecte en cours) » si `complete` est faux),
   encart « Classement UCI de fin de saison » (top 10), « Victoires françaises », liste des courses avec les mêmes filtres
   de catégorie que le Calendrier ; fiches course et coureur issues de `<année>/` des archives.
-- Fiche course : encart repliable **Éditions précédentes** (sous le tableau), chargé sans bloquer la fiche, absent s'il n'y a
-  aucune autre édition : éditions archivées (`editions.json`) + courses de même clé des saisons du Calendrier
-  (`index-<année>.json`) ; année, vainqueur et meilleur Français (liens coureur lus dans la saison de l'édition), lien vers la
-  fiche de l'édition.
+- Fiche course (édition, `#course/<id>`) : en-tête (hero) avec classe, pays, dates, **podium** (rangs 1-3 du classement final de la fiche, course terminée) et navigation
+  **édition précédente / suivante** + « Toutes les éditions » (d'après `entites/courses/`, chargée sans bloquer la fiche, masquée si l'épreuve est inconnue ou n'a pas d'autre édition) ;
+  onglets supplémentaires **Participants** (cartes par équipe, dossard, rang final ou statut, filtre « Français seulement », « Sélection nationale » d'après `entites/equipes/<saison>.json`)
+  et **Pays** (coureurs, classés, abandons, meilleur rang), calculés sur les classements de la fiche.
+- Page épreuve `#epreuve/<clé d'édition encodée>` (E3) : lue dans `entites/courses/<lettre>.json` (§4.5) ; hero (nom le plus récent, pays, classe actuelle, type, éditions dans nos données),
+  tuiles (éditions, coureur le plus titré si >= 2 victoires, pays le plus titré, victoires françaises), onglets Palmarès (année, vainqueur, 2e, 3e, meilleur Français) · Records · Historique
+  (noms et classes par saison, si plusieurs). La recherche mène à cette page ; le palmarès d'un coureur propose un lien discret « Toutes les éditions ».
 - Fiche coureur `#coureur/<id>` (E2) : en-tête (photo Wikimedia si licence lisible, drapeau, âge, lieu, taille, équipe), tuiles (victoires, podiums,
   victoires au général, meilleur rang UCI, grands tours terminés) et onglets Aperçu · Palmarès · Saisons · Grands tours · Classement UCI · Parcours · Saison en cours,
   lus dans `entites/coureurs/<lettre>.json` (§4.5) + `riders-<année>.json` du Calendrier si plus récents (rang UCI marqué `*`). Valeur absente : ligne absente.
