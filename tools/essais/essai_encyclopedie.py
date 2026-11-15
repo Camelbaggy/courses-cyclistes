@@ -465,7 +465,8 @@ CANDIDATES: Dict[str, str] = {}      # propriétés d'identifiant trouvées par 
 
 def api(url_base: str, **params: Any) -> Optional[Any]:
     params.setdefault("format", "json")
-    params.setdefault("maxlag", "5")
+    # Lecture seule : pas de maxlag (paramètre destiné aux robots qui écrivent ; le retard de réplication de
+    # Wikidata dépasse souvent 5 s et bloquait toutes les lectures). Rythme : 1 requête/s au plus (netutil).
     url = url_base + "?" + urllib.parse.urlencode(params)
     for _ in range(2):
         rep = netutil.fetch_json(url, retries=1)

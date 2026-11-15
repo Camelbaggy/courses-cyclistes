@@ -29,7 +29,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, ".")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import netutil  # noqa: E402
+import netutil
+import uci  # noqa: E402
 import essai_encyclopedie as e1  # noqa: E402  (accès DataRide, client MediaWiki, échantillon, lignées)
 
 FIN_GLOBAL = time.time() + 14 * 60
@@ -354,7 +355,7 @@ def partieB() -> None:
         lg = par_uid.get(str(uid))
         if lg:
             dans_classement += 1
-            nai = str(lg.get("BirthDate") or "")[:10]
+            nai = uci._date_iso(lg.get("BirthDate")) or ""
             if nai and nai != naiss:
                 print(f"   [WARN] {nom} : date de naissance du classement {nai} != échantillon {naiss}")
         riders.append(dict(nom=nom, naiss=naiss, uid=str(uid), nat=nat, rang=rang, groupe=groupe, aff=nom_affichage(nom)))
