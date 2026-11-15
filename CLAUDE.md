@@ -63,7 +63,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
-run_pipeline.py --archive 2016-2025 ── collector.run_archive (lancé depuis le dépôt d'archives : rotation calendrier -> archives, puis saisons passées -> ARCHIVES_DIR, voir ci-dessous)
+run_pipeline.py --archive 2011-2025 ── collector.run_archive (lancé depuis le dépôt d'archives : rotation calendrier -> archives, puis saisons passées -> ARCHIVES_DIR, voir ci-dessous)
 netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
 index.html : page unique (CSS + JS inline)
 ```
@@ -85,8 +85,8 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   locaux). Les alias (`alias_courses.json`, `alias_coureurs.json`) se lisent à côté du code (`RACINE`), pas du cwd. Une
   saison `complete` n'est jamais recollectée en entier (aucune requête, sauf révision des temps ci-dessous).
   **Workflow `archives.yml` : dans le dépôt d'archives** (plus ici). Cron nocturne `23 0-5 * * *`, entrée `saisons`,
-  variable `ARCHIVES_SAISONS`, défaut **2016-2025** (run_archive ignore les saisons complètes : 2021 se termine, puis T2
-  2016-2020 enchaîne), groupe `archives-data`, `cancel-in-progress: false`. Il checkout le dépôt d'archives dans
+  variable `ARCHIVES_SAISONS`, défaut **2011-2025** (run_archive ignore les saisons complètes : T2 2016-2020 se termine, puis T3
+  2011-2015 enchaîne ; une relance automatique sans saisons saisies repart du défaut), groupe `archives-data`, `cancel-in-progress: false`. Il checkout le dépôt d'archives dans
   `archives/` et ce dépôt (main) dans `code/`, puis lance
   `cd code && ARCHIVES_DIR=$GITHUB_WORKSPACE/archives/data/archives python run_pipeline.py --archive "$SAISONS" --budget-min 50`
   (le `data/` de `code/` n'est lu que pour la rotation ; le workflow prend le code de `main` : fusionner ici avant de relancer là-bas) et commit `data/` du dépôt d'archives (boucle de 5 essais

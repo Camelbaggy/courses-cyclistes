@@ -90,8 +90,8 @@ servi par GitHub Pages et cloné à chaque passage horaire.
   avant de collecter T2. `archives.yml` y vit désormais : il checkout le code du dépôt principal et écrit dans le
   `data/archives/` du dépôt d'archives (`ARCHIVES_DIR`). La rotation calendrier -> archives est scindée : la migration
   s'écrit côté archives sans rien supprimer, le dépôt principal retire ses fichiers de la saison quand l'index public des
-  archives la déclare `complete` (CLAUDE.md, SPEC §4.4). **T2 (2016-2020) est en cours** via la plage par défaut
-  `2016-2025` du workflow (run_archive traite de la plus récente à la plus ancienne et ignore les saisons complètes).
+  archives la déclare `complete` (CLAUDE.md, SPEC §4.4). **T2 (2016-2020) est en cours, T3 (2011-2015) enchaîne automatiquement** via la plage par
+  défaut `2011-2025` du workflow (run_archive traite de la plus récente à la plus ancienne et ignore les saisons complètes).
 - Classement UCI historique : un instantané de fin de saison par année (`<année>/ranking.json` du dépôt d'archives).
 
 ### Coureurs : de la fiche saison à la fiche carrière
