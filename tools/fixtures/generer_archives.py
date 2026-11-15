@@ -135,6 +135,31 @@ def imposer_coureur_commun(pel):
     c["birth"] = "1997-07-11"
 
 
+def ecrire_cache_wikidata(codes):
+    """Petit cache Wikidata FICTIF (entites/wikidata/) cohérent avec les entités : un coureur rapproché (identifiants Q99900…, fictifs),
+    une lignée portant l'équipe-saison « Alpha Racing 2024 ». Image factice locale (SVG), jamais d'URL réseau."""
+    dossier = SORTIE / "entites" / "wikidata"
+    shutil.rmtree(dossier, ignore_errors=True)
+    (dossier / "fictif").mkdir(parents=True)
+    (dossier / "fictif" / "photo.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="320" height="320" fill="#2b3a55"/>'
+        '<circle cx="160" cy="120" r="56" fill="#8fa3c7"/><rect x="80" y="196" width="160" height="110" rx="50" fill="#8fa3c7"/></svg>', encoding="utf-8")
+    v = "2026-11-10"
+    photo = {"url": "entites/wikidata/fictif/photo.svg", "page": "entites/wikidata/fictif/photo.svg", "auteur": "Image fictive", "licence": "CC0",
+             "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/", "verifie": v}
+    collector._dump(str(dossier / "coureurs.json"), {ID_COMMUN: {
+        "qid": "Q99900001", "verifie": v, "lieu": {"qid": "Q99900002", "libelle": "Test-sur-Mer (fictif)"}, "taille": 1.78, "image": "Photo fictive.svg",
+        "sitelinks": {"fr": "Paul Épure (fictif)"},
+        "equipes": [{"qid": "Q99900100", "libelle": "Alpha Racing (fictif)", "debut": "2022", "precision_debut": "annee"}]}})
+    collector._dump(str(dossier / "images.json"), {"Photo fictive.svg": photo, "Logo fictif.svg": dict(photo, auteur="Logo fictif")})
+    collector._dump(str(dossier / "equipes.json"), {"alpha-racing-2024": {"qid": "Q99900100", "preuve": f"P1998 {codes['Alpha Racing']} [fictif]", "verifie": v}})
+    collector._dump(str(dossier / "lignees.json"), {"Q99900100": {
+        "libelle": "Alpha Racing (fictif)", "verifie": v, "logo": "Logo fictif.svg", "pays": {"qid": "Q99900003", "libelle": "France (fictif)"},
+        "classes": ["équipe cycliste (fictif)"], "sitelinks": {"fr": "Alpha Racing (fictif)"},
+        "noms": [{"nom": "Alpha Cycling (fictif)", "debut": "2018", "fin": "2021"}, {"nom": "Alpha Racing (fictif)", "debut": "2022"}],
+        "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]}})
+
+
 def main():
     gf.rnd.seed(20240315)
     pel = gf.Peloton(8, 5, forcer_francais=9)
@@ -158,16 +183,18 @@ def main():
                                "2022-05-08", "france", "vallonne", 168, 41, nb=25)
     # classement UCI de fin de saison 2024 : coureurs du peloton 2024, points décroissants
     rows = []
+    CODES_EQUIPES = {t: f"FX{i + 1}" for i, t in enumerate(sorted({c["ref"]["team"] for c in pel.coureurs}))}   # codes fictifs
     for k, c in enumerate(sorted(pel.coureurs, key=lambda x: -sum(x["comp"].values()))):
         ref = c["ref"]
         rows.append({"rank": k + 1, "previous_rank": k + 2 if k % 3 else k, "rider": ref["name"].split()[-1].upper() + " " + ref["name"].split()[0],
                      "name": ref["name"], "birth_date": c["birth"], "nationality": ref["nationality"], "team": ref["team"],
-                     "points": 3400 - k * 71, "rider_id": ref["id"], "uci_id": 20000000 + k})
+                     "points": 3400 - k * 71, "rider_id": ref["id"], "uci_id": 20000000 + k, "team_code": CODES_EQUIPES[ref["team"]]})
     ranking = {"_fixture": True, "name": "UCI World Ranking (fictif)", "date": "2024-10-14", "source": "fixture", "rows": rows}
     ecrire_saison(2024, [tour, classique, gp_fr], True, ranking)
     ecrire_saison(2023, [omloop, gp23], False)
     ecrire_saison(2022, [gp22, trophee22], True)
     collector.ARCHIVES_DIR = str(SORTIE)
+    ecrire_cache_wikidata(CODES_EQUIPES)
     collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])

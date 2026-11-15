@@ -28,6 +28,8 @@ python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # cap
 ARCHIVES_DIR=/tmp/arch python run_pipeline.py --archive 2023 --max-races 5  # mode archives (sans ARCHIVES_DIR : data/archives/, à supprimer ensuite)
 python collector.py --test                            # tests locaux de compact_race (sans réseau)
 python encyclopedie.py --test                         # tests locaux des fichiers entites/ (sans réseau)
+python wikidata.py --test                             # tests locaux Wikidata / Commons (réponses simulées)
+python run_pipeline.py --wikidata --budget-min 300    # cache Wikidata (ARCHIVES_DIR/entites/wikidata/ SEUL) ; --entites reconstruit entites/ à la main
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
 
@@ -61,6 +63,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ cyclingnews.py récits (RSS, ~3 jours de profondeur)
                                  ├ wikipedia_cal.py calendrier à venir (Wikipédia EN + FR « UCI ProSeries {année} »…, fusionnés) + LNC
                                  ├ encyclopedie.py entités de l'encyclopédie (coureurs, équipes-saisons, courses, saisons, pays, recherche) -> ARCHIVES_DIR/entites/
+                                 ├ wikidata.py   Wikidata + Commons (QID coureurs, lignées d'équipes, images sous licence) -> ARCHIVES_DIR/entites/wikidata/ (cache)
                                  ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
@@ -144,9 +147,24 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   une révision des temps : `rapport["coherence"]`) ; équipe-saison = `<slug du libellé>-<année>` (casse / accents / ponctuation fusionnés) ;
   sélection nationale = libellé égal au nom d'un pays (`PAYS_NOMS`) ET tous ses coureurs de la saison de ce pays (`_est_nationale`) ;
   équipe principale d'un coureur = équipe de marque aux plus nombreux jours de course ; grands tours = clés d'édition EXACTES
-  (`GRANDS_TOURS`, `CLASSES_GRAND_TOUR`), jamais de motif flou ; `code_uci` et `lignee` des équipes absents (E1b). Tests :
+  (`GRANDS_TOURS`, `CLASSES_GRAND_TOUR`), jamais de motif flou ; `code_uci` d'une équipe-saison = `TeamCode` unique des coureurs classés de la saison au même libellé (slug), plusieurs codes : absent + anomalie `code_uci_multiple`. Tests :
   `python encyclopedie.py --test` ; génération manuelle : `python encyclopedie.py <archives_dir> <data_dir> [--sortie DIR]` (jamais dans un
   dépôt de données hors workflow). Le jeu fictif `tools/fixtures/data/archives/entites/` est produit par `generer_archives.py`.
+- **Encyclopédie, Wikidata (E1b, `wikidata.py`)** : `uci_ranking._normaliser` conserve `team_code` ; `run_archive` relit UNE FOIS le classement de fin
+  de chaque saison `complete` dont `ranking.json` n'a aucune clé `team_code` (`collector.relire_classement`, ranking.json seul réécrit, riders.json
+  intact, `team_code_relu` dans state.json, log `[ARCHIVES] <année> : classement relu (codes d'équipe)`, budget respecté).
+  `python run_pipeline.py --wikidata --budget-min N` (workflow DÉDIÉ du dépôt d'archives, ~300 min au premier remplissage puis hebdomadaire) lance
+  `wikidata.run_wikidata` : équipes (≤ 50 % du budget), lignées, puis coureurs du plus notable au moins notable ; n'écrit QUE
+  `ARCHIVES_DIR/entites/wikidata/` (`coureurs`, `equipes`, `lignees`, `images`, `libelles` .json, cache écrit tous les 200 coureurs et à chaque lot
+  d'équipes : un timeout ne perd rien, reprise immédiate) et n'appelle PAS `write_entites` (`--entites` le fait à la main ; sinon c'est le passage
+  nocturne d'archives.yml qui reconstruit `entites/` en lisant le cache). 1 requête/s par hôte (wikidata.org, commons.wikimedia.org), 1 recherche par
+  coureur + `wbgetentities` / Commons par lots de 50, pas de `maxlag`, abandon de l'hôte sur 403/429 (`HoteAbandonne`, cache conservé). Règles de
+  rapprochement (strictes, voir la docstring) : coureur = UN SEUL candidat vérifié (date de naissance P569 à précision jour ÉGALE + nom concordant
+  + occupation cycliste P106 = Q2309784 ou sous-classe P279), sans date de naissance jamais rapproché ; équipe-saison = code P1998 daté contenant la
+  saison + nom P1448 daté ou élément saison de l'année concordant + un seul parent ; sinon `null` (re-tenté après 60 jours ; correspondances
+  re-vérifiées après 180 jours) ou `alias_equipes.json` (manuel, `{"id équipe-saison": "QID"}`). Image : licence Commons lisible obligatoire.
+  `encyclopedie.construire` lit le cache (champ `wikidata` des coureurs, `lignee` des équipes-saisons, `equipes/lignees.json`, entrées de recherche
+  `t: "l"`). Jeu fictif : `tools/fixtures/generer_archives.py` (`entites/wikidata/`). Non testé en réel : voir PLAN_ENCYCLOPEDIE (E1b).
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
   `editions.json` (dans `ARCHIVES_DIR` ; éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
   ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`

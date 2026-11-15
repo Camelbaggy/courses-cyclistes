@@ -41,3 +41,15 @@ naissance : ne pas en dépendre.
 5. **Classement UCI historique** : instantané du mardi suivant chaque course WT et du dernier mardi du mois ;
    rattrapage possible pour les saisons archivées (les moments passés sont listés par `GetRankingMoments`) ; stockage
    compact (rang, points, `rider_id`).
+
+## Précisions apportées en E1b (code `wikidata.py`)
+
+- **Occupation** : l'essai n'utilisait que `haswbstatement:P106=Q2309784` (correspondance directe, pas de sous-classes). Le code garde cette recherche
+  (une seule requête par coureur) mais vérifie l'occupation du candidat par P106 = Q2309784 OU sous-classe (P279, 4 niveaux, mémorisé) ; au lancement
+  il contrôle que Q2309784 porte bien un libellé « cycl… » (sinon les coureurs sont ignorés). Limite : un cycliste dont la SEULE occupation est une
+  sous-classe n'est pas trouvé par la recherche filtrée (`FALLBACK_LIBRE`, désactivé : une requête de plus par coureur obscur).
+- **« Un seul candidat »** = un seul candidat VÉRIFIÉ (date + nom + occupation) parmi les résultats ; deux candidats vérifiés (homonymes de même date) : rien.
+- **Noms composés** : seconde recherche (sans le dernier jeton) uniquement pour les noms de 3 jetons ou plus (« Jonas Vingegaard Hansen » -> « Jonas
+  Vingegaard ») ; l'inclusion de jetons exige au moins 2 jetons côté Wikidata.
+- **Équipes** : une déclaration P1998 sans période (ni P580 ni P582) ne prouve rien et est refusée ; idem pour un nom P1448 sans période (la preuve par
+  le libellé d'un élément « saison » contenant l'année reste possible). Saison UCI = année de fin de saison (2023 = 2023).

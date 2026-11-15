@@ -272,9 +272,15 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   `<slug du libellé>-<année>` (`netutil.slugify` : sans accents, ponctuation et casse), le libellé est celui de la fiche de course où le
   coureur a couru (pas le dernier de la saison). **Sélection nationale** (`_est_nationale`) : libellé normalisé égal au nom d'un pays de
   `PAYS_NOMS` (anglais UCI, français, graphies connues) ET tous les coureurs qui le portent cette saison ont la nationalité de ce pays ; un club
-  qui aligne d'autres nationalités ou dont le nom n'est pas dans la table reste une équipe de marque. **Absents** : `code_uci` (le `TeamCode` du
-  classement UCI n'est pas conservé dans `ranking.json`) et `lignee` (E1b). `equipes/index.json` : liste `[{"id", "name", "season", "wins",
-  "riders", "nationale"?}]` triée saison décroissante puis nom.
+  qui aligne d'autres nationalités ou dont le nom n'est pas dans la table reste une équipe de marque. **`code_uci`** (E1b) : `TeamCode` UNIQUE des
+  coureurs classés de la saison (`ranking.json`, clé `team_code`) dont le libellé d'équipe a le même slug que l'id ; plusieurs codes : absent
+  (anomalie `code_uci_multiple`) ; jamais pour une sélection nationale. **`lignee`** (QID Wikidata) : si `wikidata/equipes.json` la prouve
+  (voir ci-dessous). `equipes/index.json` : liste `[{"id", "name", "season", "wins",
+  "riders", "nationale"?, "lignee"?}]` triée saison décroissante puis nom. **`equipes/lignees.json`** : `{QID: {"libelle", "noms": [{"nom", "debut",
+  "fin"}] (P1448, datés à la précision de la source : année, mois ou jour), "codes": [{"code", "debut", "fin"}] (P1998), "pays": {"qid", "libelle"},
+  "classes": [libellés P31], "sitelinks": {fr, en, es, it, nl, de: titre}, "logo": {"url", "page", "auteur", "licence", "licence_url"} (seulement avec
+  licence lisible), "equipes": [ids d'équipes-saisons, récentes d'abord], "saisons": [première, dernière]}}`, uniquement les lignées portant au moins
+  une équipe-saison rapprochée.
 - **`courses/<lettre>.json`** (lettre = 1re lettre a-z de la clé, sinon `_`) : `{clé d'édition: {"noms": {variante: [saisons]}, "pays", "flag",
   "classes": {année: uci_class}, "type", "editions": [{"season", "race_id", "start_date", "end_date", "podium": [{"rank", "id", "name", "nat",
   "flag", "team"}] (rangs 1-3 du général final, ou du classement d'un jour), "best_french": {"id", "name", "flag", "rank", "classification"}}]
@@ -291,6 +297,18 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   présentes sous la 1re lettre normalisée (a-z, sinon `_`) de CHAQUE mot du libellé d'au moins 2 lettres (recherche par mot).
 - **`index.json`** : `{"generated_at", "compteurs": {coureurs, equipes_saisons, equipes_nationales, courses, editions, saisons, pays}, "saisons",
   "saisons_archives", "saisons_calendrier", "grands_tours_par_saison", "sources", "limites"}`.
+- **Champ `wikidata` d'un coureur** (E1b, absent sans rapprochement strict) : `{"qid", "lieu": {"qid", "libelle"}, "taille" (m), "image": {"url"
+  (vignette 320 px Commons), "page", "auteur"?, "licence", "licence_url"?} (absente sans licence lisible), "wikipedia": {langue: titre}, "equipes_wd": [{"qid",
+  "libelle"?, "debut"?, "fin"?, "precision_debut"?, "precision_fin"? ("annee" | "mois" | "jour")}] (P54, début tel que Wikidata le donne)}`. `index.json`
+  gagne les compteurs `lignees` et `coureurs_wikidata`.
+- **Cache Wikidata** `entites/wikidata/` (écrit par `wikidata.run_wikidata` seul, jamais par `construire`) : `coureurs.json` `{rider_id canonique:
+  {"qid": QID|null, "verifie": AAAA-MM-JJ, "raison"? (null : aucune | ambigu), "lieu", "taille", "image" (nom de fichier Commons), "sitelinks", "equipes"}}` ;
+  `images.json` `{fichier: {"url", "page", "auteur"?, "licence", "licence_url"?, "verifie"} | {"url": null, "raison": absent | licence, "verifie"}}` ;
+  `equipes.json` `{id d'équipe-saison: {"qid", "preuve", "verifie"} | {"qid": null, "raison", "verifie"}}` (`preuve` = « P1998 <code> [période] ; P1448 « nom »
+  » ou « saison « libellé » », ou `alias`) ; `lignees.json` `{QID: {libelle, noms, codes, pays, classes, sitelinks, logo (nom de fichier), verifie}}` ;
+  `libelles.json` `{QID: libellé fr, sinon en}`. Rapprochement coureur : un seul candidat vérifié (P569 jour égale, nom concordant, occupation P106 =
+  Q2309784 ou sous-classe) ; équipe : P1998 daté contenant la saison + nom officiel P1448 daté (ou élément saison de l'année) concordant + un seul
+  parent ; `alias_equipes.json` (racine du code) `{"id équipe-saison": "QID"}` pour le reste. Re-vérification 180 jours, `null` re-tenté après 60.
 - Mesure (archives 2019-2025 + Calendrier 2026-2027, 15 nov. 2026) : 13 180 coureurs, 2 310 équipes-saisons, 524 courses, 1 503 éditions ;
   18,9 Mo (coureurs 10,6 ; équipes 4,1 ; recherche 3,1 ; courses 1,0) ; ~8 s, ~120 Mo de mémoire.
 
