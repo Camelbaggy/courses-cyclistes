@@ -1016,7 +1016,7 @@ def _tests() -> None:
             durand: {"qid": None, "verifie": "2026-11-01", "raison": "aucune"}})
         collector._dump(os.path.join(wdc, "images.json"), {
             "A.jpg": {"url": "https://x.example/a.jpg", "page": "https://x.example/p", "auteur": "Auteur", "licence": "CC0", "verifie": "2026-11-01"},
-            "L.svg": {"url": None, "raison": "licence", "verifie": "2026-11-01"}})
+            "L.svg": {"url": "https://x.example/l.svg", "page": "https://x.example/lp", "licence": "Public domain", "verifie": "2026-11-01"}})   # licence sans lien
         collector._dump(os.path.join(wdc, "equipes.json"), {
             "equipe-a-2024": {"qid": "Q8001", "preuve": "p", "verifie": "2026-11-01"}, "equipe-a-2025": {"qid": "Q8001", "preuve": "p", "verifie": "2026-11-01"},
             "belgium-2025": {"qid": None, "raison": "aucune", "verifie": "2026-11-01"}})
@@ -1068,7 +1068,8 @@ def _tests() -> None:
         assert e24["equipe-a-2024"]["lignee"] == "Q8001" and e25["equipe-a-2025"]["lignee"] == "Q8001" and "lignee" not in e25["belgium-2025"]
         lg = L("equipes/lignees.json")
         assert lg == {"Q8001": {"libelle": "Équipe Alpha (lignée)", "noms": [{"nom": "Equipe A", "debut": "2019"}],
-                                "equipes": ["equipe-a-2025", "equipe-a-2024"], "saisons": [2024, 2025]}}, lg
+                                "equipes": ["equipe-a-2025", "equipe-a-2024"], "saisons": [2024, 2025],
+                                "logo": {"url": "https://x.example/l.svg", "page": "https://x.example/lp", "licence": "Public domain"}}}, lg   # sans licence_url
         wd = cd[dup]["wikidata"]
         assert wd["qid"] == "Q9001" and wd["lieu"]["libelle"] == "Test-sur-Mer" and wd["taille"] == 1.8 and wd["wikipedia"] == {"fr": "Jean Dupont"}
         assert wd["image"] == {"url": "https://x.example/a.jpg", "page": "https://x.example/p", "auteur": "Auteur", "licence": "CC0"}

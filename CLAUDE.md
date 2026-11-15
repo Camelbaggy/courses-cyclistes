@@ -163,6 +163,13 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   + occupation cycliste P106 = Q2309784 ou sous-classe P279), sans date de naissance jamais rapproché ; équipe-saison = code P1998 daté contenant la
   saison + nom P1448 daté ou élément saison de l'année concordant + un seul parent ; sinon `null` (re-tenté après 60 jours ; correspondances
   re-vérifiées après 180 jours) ou `alias_equipes.json` (manuel, `{"id équipe-saison": "QID"}`). Image : licence Commons lisible obligatoire.
+  **Précisions du 1er passage réel** : le cache coureurs garde `naissance` (P569, AAAA-MM-JJ ; les anciennes entrées sans ce champ restent valides) ;
+  équipes : filtre des classes P31 féminines (women / féminin / femmes), puis désambiguïsation « développement / réserve / U23 / continental »
+  seulement si exactement un parent de premier niveau (WorldTeam / ProTeam) reste, sinon `ambigu` ; `preuve` = `code+nom` (+ `detail` lisible) ou
+  `code+periode` (plus faible : UN SEUL parent porte le code sur une période à borne explicite, nom non concordant ; jamais utilisée si plusieurs
+  parents `code+nom` restent) ; `regle` = `REGLE_EQUIPES` (2) dans chaque entrée : une entrée `null` sans `regle` ou de version plus ancienne est
+  re-tentée au passage suivant (incrémenter `REGLE_EQUIPES` quand les règles changent) ; journal `[WIKIDATA] en cours : X/Y coureurs, Z requêtes, T min`
+  toutes les 5 min + synthèse avec requêtes/min ; licences sans lien (« Public domain ») conservées (`licence` sans `licence_url`).
   `encyclopedie.construire` lit le cache (champ `wikidata` des coureurs, `lignee` des équipes-saisons, `equipes/lignees.json`, entrées de recherche
   `t: "l"`). Jeu fictif : `tools/fixtures/generer_archives.py` (`entites/wikidata/`). Non testé en réel : voir PLAN_ENCYCLOPEDIE (E1b).
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :

@@ -53,3 +53,13 @@ naissance : ne pas en dépendre.
   Vingegaard ») ; l'inclusion de jetons exige au moins 2 jetons côté Wikidata.
 - **Équipes** : une déclaration P1998 sans période (ni P580 ni P582) ne prouve rien et est refusée ; idem pour un nom P1448 sans période (la preuve par
   le libellé d'un élément « saison » contenant l'année reste possible). Saison UCI = année de fin de saison (2023 = 2023).
+- **Premier passage réel (10 min : 273/280 coureurs, 634 équipes-saisons)** : (1) `naissance` (P569) est conservée dans `coureurs.json` pour
+  un contrôle a posteriori ; les entrées plus anciennes sans ce champ ne sont pas re-vérifiées. (2) 21 équipes « ambigu » (Movistar, Lidl-Trek,
+  Visma…) : l'équipe féminine ou la réserve porte le même code UCI. Les parents dont une classe P31 a un libellé fr/en féminin (women, féminin,
+  femmes…) sont écartés ; si plusieurs parents restent prouvés, les équipes de développement (development, devo, U23, réserve, continental) sont
+  écartées seulement si EXACTEMENT un parent de premier niveau (WorldTeam, ProTeam, Professional Continental) reste ; sinon « ambigu ». (3) 89 équipes
+  « aucune » (libellé UCI différent du nom Wikidata, ex. 7Eleven) : preuve plus faible `code+periode`, acceptée seulement si UN SEUL parent (après
+  filtre féminin) a une déclaration P1998 du code dont la période, avec au moins une borne explicite (P580 ou P582), contient la saison ; elle
+  n'intervient que si aucun parent n'est prouvé par `code+nom` (qui reste prioritaire), et jamais pour départager plusieurs `code+nom`. L'interface
+  peut la nuancer grâce à `preuve`. Les entrées `null` des règles antérieures sont re-tentées (champ `regle`, `REGLE_EQUIPES`). (4) Journal de
+  progression toutes les ~5 min et rythme en synthèse. (5) Une licence Commons sans URL (« Public domain ») est conservée (`licence` seule).
