@@ -241,6 +241,59 @@ d'une saison archivée est faite par `update.yml`, voir la rotation ci-dessous).
   `editions.json` est lu à l'ouverture d'une fiche course (encart « Éditions précédentes »), `carrieres/index.json` puis un
   seul `carrieres/<lettre>.json` à l'ouverture de l'onglet « Carrière » d'une fiche coureur.
 
+### 4.5 Entités de l'encyclopédie (`entites/`, dépôt d'archives)
+
+Générées par `encyclopedie.construire(archives_dir, data_dir)` (appelée à la fin de `collector.write_archives_index`, donc à chaque
+passage d'archives.yml) dans `<archives_dir>/entites/`. Elles couvrent TOUTES les saisons : archives (`<année>/races/`,
+`riders.json`, `ranking.json`) et Calendrier (`data/races/*.json` classées par `season`, `riders-<année>.json`, `ranking.json` si son
+champ `season` désigne la saison). Une course présente dans les deux est lue dans les archives. Identités : `rider_id` exact +
+`alias_coureurs.json` (règle de contradiction de `construire_carrieres`), courses : `cle_edition` + `alias_courses.json`. Clés à
+`null` absentes ; JSON compact, trié ; écriture seulement si le contenu change ; fichiers devenus inutiles supprimés.
+
+- **`coureurs/<lettre>.json`** (lettre = 1re lettre a-z du `rider_id` canonique, sinon `_`) : `{rider_id: {"name", "nationality",
+  "flag", "birth_date" (saison la plus récente), "saisons": {"<année>" (décroissantes): {"team" (nom de l'équipe-saison principale :
+  équipe de marque aux plus nombreux jours de course ; une sélection nationale seulement si c'est la seule), "equipe" (id d'équipe-saison),
+  "equipes" (tous les ids de la saison, par ordre d'apparition, si plusieurs), "stats" (wins, podiums, top10, race_days, races, gc_wins, dnf :
+  ceux non nuls ; définitions de riders.py), "uci_rank", "uci_points" (de `riders*.json`, à défaut rapprochement avec `ranking.json`)}},
+  "palmares": [victoires et podiums (rang 1-3) des classements d'étape / de course d'un jour et des classements finaux, récents d'abord :
+  {"date", "season", "race_id", "course" (clé d'édition), "label", "classification" (stage|gc|points|mountain|youth), "rank", "category",
+  "uci_class"}], "grands_tours": [{"season", "course": "tour"|"giro"|"vuelta", "race_id", "rank"} ou {…, "status": "DNF"|"OTL"|"DSQ"} (abandon
+  constaté sur une étape, absent du général final)], "totaux": {"wins", "podiums", "gc_wins", "seasons"}}}`. `palmares` et `grands_tours`
+  absents si vides. Les étapes d'une course en cours comptent (comme `riders.json`) ; ses classements généraux provisoires non.
+- **Grands tours** (`encyclopedie.GRANDS_TOURS`) : clés d'édition EXACTES `tour de france|FRA`, `giro d italia|ITA`, `la vuelta ciclista a
+  espana|ESP` (+ graphies `vuelta a espana|ESP`, `la vuelta a espana|ESP`, absentes des données actuelles), course par étapes terminée de
+  classe 2.UWT / 2.WT / 2.HC / 2.HIS / 2.CH ; jamais de motif flou (« Tour de France Saitama Criterium », « Giro Ciclistico d'Italia »,
+  « Tour de France Femmes » ne sont pas des grands tours). Trois par saison complète (vérifié 2019-2026).
+- **`equipes/<année>.json`** : `{id: {"name" (libellé le plus fréquent), "season", "nationale": true + "pays" (ISO3) pour une sélection nationale,
+  "effectif": [{"rider_id", "name", "flag", "jours" (jours de course, définition de `race_days`), "wins"}] (jours décroissants),
+  "victoires": [{"date", "race_id", "course", "label", "classification" (stage|gc), "rider_id"}] (récentes d'abord),
+  "grands_tours": {"tour"|"giro"|"vuelta": {"rank", "rider_id", "race_id"}} (meilleur classement final de l'équipe), "totaux": {"wins" (étapes et
+  courses d'un jour), "gc_wins", "riders", "jours"}, "libelles": [variantes fusionnées, si plusieurs]}}`. **Équipe-saison** : id =
+  `<slug du libellé>-<année>` (`netutil.slugify` : sans accents, ponctuation et casse), le libellé est celui de la fiche de course où le
+  coureur a couru (pas le dernier de la saison). **Sélection nationale** (`_est_nationale`) : libellé normalisé égal au nom d'un pays de
+  `PAYS_NOMS` (anglais UCI, français, graphies connues) ET tous les coureurs qui le portent cette saison ont la nationalité de ce pays ; un club
+  qui aligne d'autres nationalités ou dont le nom n'est pas dans la table reste une équipe de marque. **Absents** : `code_uci` (le `TeamCode` du
+  classement UCI n'est pas conservé dans `ranking.json`) et `lignee` (E1b). `equipes/index.json` : liste `[{"id", "name", "season", "wins",
+  "riders", "nationale"?}]` triée saison décroissante puis nom.
+- **`courses/<lettre>.json`** (lettre = 1re lettre a-z de la clé, sinon `_`) : `{clé d'édition: {"noms": {variante: [saisons]}, "pays", "flag",
+  "classes": {année: uci_class}, "type", "editions": [{"season", "race_id", "start_date", "end_date", "podium": [{"rank", "id", "name", "nat",
+  "flag", "team"}] (rangs 1-3 du général final, ou du classement d'un jour), "best_french": {"id", "name", "flag", "rank", "classification"}}]
+  (saison décroissante ; courses en cours exclues), "records": {"victoires_par_coureur": [{"id", "name", "wins"}] (≥ 2), "victoires_par_pays":
+  {ISO3: n}}}}` ; victoire = rang 1 du podium. Une course sans nom ou sans pays n'a pas de clé : absente (comptée dans les anomalies).
+- **`saisons/<année>.json`** : `{"season", "courses": {"total" (terminées), "par_categorie", "en_cours"?}, "victoires_par_pays" (étapes et courses
+  d'un jour, par nationalité du vainqueur), "victoires_par_equipe" (top 30), "coureurs_victorieux" (top 30 : id, name, nat, wins),
+  "victoires_francaises" (nombre de victoires de coureurs FRA), "classement_uci": {"present", "name", "date", "final" (archive complète), "classes"},
+  "complete"?, "source": "archives"|"calendrier"}`.
+- **`pays.json`** : `{ISO3: {"nom" (français, si dans `PAYS_NOMS`), "flag", "saisons": {année: {"coureurs", "victoires", "podiums"}}, "meilleurs": [{"id",
+  "name", "wins"}] (top 10 sur toutes les saisons)}}`.
+- **`recherche/<lettre>.json`** : liste triée d'entrées `{"n" (libellé), "t": "c" (coureur) | "e" (équipe, regroupée par libellé : id = la saison la
+  plus récente) | "r" (course : id = clé d'édition), "id", "f" (drapeau), "y": [première, dernière saison], "nat"?: true (sélection nationale)}`,
+  présentes sous la 1re lettre normalisée (a-z, sinon `_`) de CHAQUE mot du libellé d'au moins 2 lettres (recherche par mot).
+- **`index.json`** : `{"generated_at", "compteurs": {coureurs, equipes_saisons, equipes_nationales, courses, editions, saisons, pays}, "saisons",
+  "saisons_archives", "saisons_calendrier", "grands_tours_par_saison", "sources", "limites"}`.
+- Mesure (archives 2019-2025 + Calendrier 2026-2027, 15 nov. 2026) : 13 180 coureurs, 2 310 équipes-saisons, 524 courses, 1 503 éditions ;
+  18,9 Mo (coureurs 10,6 ; équipes 4,1 ; recherche 3,1 ; courses 1,0) ; ~8 s, ~120 Mo de mémoire.
+
 ## 5. Interfaces Python (contrat entre modules)
 
 Tous les modules utilisent `netutil.py` (`fetch_text`, `fetch_json`, `post_form_json`, pause par hôte, cache

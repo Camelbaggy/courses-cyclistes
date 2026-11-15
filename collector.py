@@ -967,7 +967,20 @@ def write_archives_index(now: Optional[str] = None) -> Dict:
             "seasons": saisons}
     _dump_if_changed(os.path.join(ARCHIVES_DIR, "index.json"), data)
     write_archives_editions_carrieres(ARCHIVES_DIR, now)
+    write_entites(now)
     return data
+
+
+def write_entites(now: Optional[str] = None) -> None:
+    """Fichiers d'entités de l'encyclopédie (ARCHIVES_DIR/entites/, module encyclopedie) : toutes les saisons d'archive +
+    celles du Calendrier (DATA_DIR). Donnée dérivée et secondaire : un échec est journalisé sans bloquer les archives."""
+    try:
+        import encyclopedie
+        encyclopedie.construire(ARCHIVES_DIR, DATA_DIR, now=now)
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print(f"[WARN] encyclopédie : génération des entités impossible ({type(e).__name__} : {e})")
 
 
 def migrer_saisons_anciennes(today: Optional[dt.date] = None) -> List[int]:
