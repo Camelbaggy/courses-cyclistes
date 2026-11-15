@@ -106,7 +106,7 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 |---|---|---|
 | E0 (fait) | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
 | E1a (fait) | Socle de données sans réseau : `encyclopedie.py` génère `entites/` (coureurs, équipes-saisons, courses, saisons, pays, recherche, index) à partir des archives + Calendrier, alias coureurs / courses appliqués | fichiers `entites/` (schéma : SPEC §4.5), tests, mesures |
-| E1b | Wikidata (QID des coureurs, lignées d'équipes, `code_uci` des équipes : `TeamCode` à conserver dans `ranking.json`), `alias_equipes.json` | lignées, correspondances |
+| E1b (fait côté code, non testé en réel) | `TeamCode` conservé dans `ranking.json` (relecture unique des saisons archivées), `code_uci` des équipes-saisons ; `wikidata.py` : QID des coureurs (nom + date de naissance exacte + occupation cycliste), images Commons sous licence, lignées d'équipes (code + période + nom), `alias_equipes.json` ; cache `entites/wikidata/`, workflow dédié `--wikidata` | lignées, correspondances (à mesurer au premier remplissage : taux de rapprochement coureurs / équipes) |
 | E1c | Historique du classement UCI (instantanés), audit des doublons | `entites/classement/…` |
 | E2 | Pages coureur + recherche globale | captures 390 px |
 | E3 | Pages course (série) et édition enrichie | captures |

@@ -49,6 +49,7 @@ ARCHIVES_DIR = os.environ.get("ARCHIVES_DIR") or os.path.join(DATA_DIR, "archive
 ARCHIVES_INDEX_URL = "https://raw.githubusercontent.com/Camelbaggy/courses-cyclistes-archives/main/data/archives/index.json"
 ALIAS_COURSES = os.path.join(RACINE, "alias_courses.json")      # {"clé source": "clé canonique"} : manuel, jamais deviné
 ALIAS_COUREURS = os.path.join(RACINE, "alias_coureurs.json")    # {"rider_id source": "rider_id canonique"} : idem
+ALIAS_EQUIPES = os.path.join(RACINE, "alias_equipes.json")      # {"id équipe-saison": "QID Wikidata"} : manuel, jamais deviné
 ANNEX_TOP = 30            # archives : lignes conservées dans les classements annexes (hors dernière étape)
 
 
@@ -775,12 +776,8 @@ def charger_courses_archive(dossier: str) -> List[Dict]:
     return sortie
 
 
-def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]] = None) -> Dict[str, Any]:
-    """Fin de saison : classement UCI de fin de saison (World Ranking, à défaut « WorldTour Ranking », groupe 3) dans
-    `ranking.json`, puis fiches coureurs `riders.json` calculées à la date de fin de saison. Aucun classement
-    disponible : pas de ranking.json (rien d'inventé), fiches sans rang UCI."""
-    courses = charger_courses_archive(dossier) if courses is None else courses
-    ranking = None
+def lire_classement_fin_saison(annee: int) -> Optional[Dict[str, Any]]:
+    """Classement UCI de fin de saison (World Ranking, à défaut « WorldTour Ranking », groupe 3) ou None. Jamais d'exception."""
     for groupe in (uci_ranking.GROUPE_WORLD_RANKING, 3):
         try:
             ranking = uci_ranking.get_ranking(season_year=annee, group_id=groupe)
@@ -788,8 +785,16 @@ def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]
             print(f"[WARN] classement UCI {annee} (groupe {groupe}) indisponible : {e}")
             ranking = None
         if ranking and ranking.get("rows"):
-            break
-        ranking = None
+            return ranking
+    return None
+
+
+def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]] = None) -> Dict[str, Any]:
+    """Fin de saison : classement UCI de fin de saison (`lire_classement_fin_saison`) dans
+    `ranking.json`, puis fiches coureurs `riders.json` calculées à la date de fin de saison. Aucun classement
+    disponible : pas de ranking.json (rien d'inventé), fiches sans rang UCI."""
+    courses = charger_courses_archive(dossier) if courses is None else courses
+    ranking = lire_classement_fin_saison(annee)
     if ranking:
         _dump_if_changed(os.path.join(dossier, "ranking.json"), ranking, ignore=())
         print(f"[ARCHIVES] {annee} : classement « {ranking.get('name')} » ({len(ranking['rows'])} lignes)")
@@ -798,6 +803,37 @@ def finish_archive_season(annee: int, dossier: str, courses: Optional[List[Dict]
     fiches = riders.build_riders(courses, ranking, now=_fin_de_saison(annee), season=annee)
     _dump_if_changed(os.path.join(dossier, "riders.json"), fiches, ignore=())
     return {"ranking": ranking, "riders": fiches}
+
+
+def classement_a_relire(dossier: str, state: Dict[str, Any]) -> bool:
+    """Saison complète dont le ranking.json (présent) n'a aucune ligne avec la clé `team_code` (écrit avant la conservation
+    du TeamCode) et qui n'a pas déjà été relue (`team_code_relu` dans state.json)."""
+    if state.get("team_code_relu"):
+        return False
+    rk = _load(os.path.join(dossier, "ranking.json"), None)
+    rows = rk.get("rows") if isinstance(rk, dict) else None
+    return bool(rows) and not any(isinstance(r, dict) and "team_code" in r for r in rows)
+
+
+def relire_classement(annee: int, dossier: str, spath: str, state: Dict[str, Any]) -> bool:
+    """Relit le classement de fin de saison pour récupérer les codes d'équipe et réécrit ranking.json SEUL (riders.json n'est pas
+    recalculé). Le nouveau classement n'est retenu que s'il porte le même nom que l'ancien (même groupe UCI). Une fois par saison :
+    `team_code_relu` est posé dans state.json sauf si la lecture a échoué (retentée au passage suivant). Renvoie True si ranking.json a été réécrit."""
+    ancien = _load(os.path.join(dossier, "ranking.json"), {}) or {}
+    nouveau = lire_classement_fin_saison(annee)
+    if not nouveau:
+        print(f"[WARN] [ARCHIVES] {annee} : classement indisponible, codes d'équipe retentés au prochain passage")
+        return False
+    ecrit = False
+    if nouveau.get("name") == ancien.get("name"):
+        if nouveau.get("date") != ancien.get("date"):
+            print(f"[WARN] [ARCHIVES] {annee} : date du classement relu différente ({ancien.get('date')} -> {nouveau.get('date')})")
+        ecrit = _dump_if_changed(os.path.join(dossier, "ranking.json"), nouveau, ignore=())
+        print(f"[ARCHIVES] {annee} : classement relu (codes d'équipe)")
+    else:
+        print(f"[WARN] [ARCHIVES] {annee} : classement relu « {nouveau.get('name')} » != « {ancien.get('name')} » : ranking.json conservé")
+    _dump_if_changed(spath, dict(state, team_code_relu=True), ignore=())
+    return ecrit
 
 
 # --------------------------------------------------------------------------- éditions et carrières (archives)
@@ -1097,6 +1133,11 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
             # (lecteur de temps amélioré depuis leur collecte) ; aucune requête s'il n'y a rien à réviser.
             if stopped or limite:
                 continue
+            if not only and classement_a_relire(dossier, state):
+                if over_budget():
+                    stopped = True
+                    continue
+                relire_classement(annee, dossier, spath, state)
             a_reviser = a_reviser_saison(rdir, only)
             if not a_reviser:
                 print(f"[ARCHIVES] {annee} : déjà complète, rien à réviser")
@@ -1567,6 +1608,49 @@ def _tests() -> None:
     finally:
         globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"] = sauve[:3]
         uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds = sauve[3:]
+    # 5) relecture des codes d'équipe (TeamCode) d'un classement archivé sans la clé `team_code`
+    sauve_lc = lire_classement_fin_saison
+    try:
+        with _tf.TemporaryDirectory() as tmp:
+            d = os.path.join(tmp, "2024")
+            sp = os.path.join(d, "state.json")
+            ancien = {"name": "UCI World Ranking", "date": "2024-10-14", "season": 2024, "rows": [{"rank": 1, "rider": "A B", "team": "X"}]}
+            _dump(os.path.join(d, "ranking.json"), ancien)
+            etat = {"complete": True, "top10_checked": {}}
+            _dump(sp, etat)
+            assert classement_a_relire(d, etat) and not classement_a_relire(os.path.join(tmp, "absent"), etat)
+            assert not classement_a_relire(d, dict(etat, team_code_relu=True))
+            globals()["lire_classement_fin_saison"] = lambda annee: None          # lecture impossible : rien n'est posé, retenté
+            assert relire_classement(2024, d, sp, etat) is False and "team_code_relu" not in _load(sp, {})
+            neuf = dict(ancien, rows=[{"rank": 1, "rider": "A B", "team": "X", "team_code": "XXX"}])
+            globals()["lire_classement_fin_saison"] = lambda annee: dict(neuf, name="Autre classement")
+            assert relire_classement(2024, d, sp, etat) is False                   # autre groupe UCI : ranking.json conservé
+            assert _load(os.path.join(d, "ranking.json"), {}) == ancien and _load(sp, {})["team_code_relu"] is True
+            _dump(sp, etat)
+            globals()["lire_classement_fin_saison"] = lambda annee: neuf
+            assert relire_classement(2024, d, sp, etat) is True
+            assert _load(os.path.join(d, "ranking.json"), {})["rows"][0]["team_code"] == "XXX"
+            assert not classement_a_relire(d, _load(sp, {}))                       # une fois par saison
+            # intégré à run_archive : saison complète, budget respecté, aucune requête de course
+            sauve2 = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, uci.get_race, uci.season_bounds)
+            try:
+                globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"] = tmp, os.path.join(tmp, "races"), os.path.join(tmp, "arch")
+                da = os.path.join(ARCHIVES_DIR, "2023")
+                _dump(os.path.join(da, "ranking.json"), ancien)
+                _dump(os.path.join(da, "state.json"), {"complete": True, "top10_checked": {}})
+                _dump(os.path.join(da, "riders.json"), {"season": 2023, "riders": {}})
+                appels_lc: List[int] = []
+                globals()["lire_classement_fin_saison"] = lambda annee: appels_lc.append(annee) or neuf
+                uci.season_bounds = lambda: {}
+                run_archive([2023], today=dt.date(2026, 11, 14), budget_min=0)
+                assert appels_lc == [2023] and _load(os.path.join(da, "ranking.json"), {})["rows"][0]["team_code"] == "XXX"
+                assert _load(os.path.join(da, "riders.json"), {}) == {"season": 2023, "riders": {}}   # riders.json non recalculé
+                run_archive([2023], today=dt.date(2026, 11, 14), budget_min=0)
+                assert appels_lc == [2023]                                          # pas de seconde relecture
+            finally:
+                globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"], uci.get_race, uci.season_bounds = sauve2
+    finally:
+        globals()["lire_classement_fin_saison"] = sauve_lc
     _tests_editions()
     print("[OK] collector.py : tests locaux réussis")
 

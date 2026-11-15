@@ -49,7 +49,9 @@ def _normaliser(lg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return {"rank": rang, "rider": brut, "name": uci.display_name(brut), "birth_date": naissance,
             "nationality": uci._nation(lg.get("NationName")), "team": uci.team_name(lg.get("TeamName")),
             "points": uci._nombre_propre(uci._nombre(lg.get("Points"))), "rider_id": rid,
-            "uci_id": lg.get("UciId"), "previous_rank": lg.get("PrecedingRank")}
+            "uci_id": lg.get("UciId"), "previous_rank": lg.get("PrecedingRank"),
+            # TeamCode : code UCI de l'équipe À CETTE SAISON (change avec le sponsor, peut être réattribué : jamais une identité seule)
+            "team_code": (str(lg.get("TeamCode") or "").strip() or None)}
 
 
 def list_rankings(season_id: int) -> List[Dict[str, Any]]:
@@ -106,4 +108,6 @@ def get_ranking(season_year: Optional[int] = None, group_id: int = GROUPE_WORLD_
 if __name__ == "__main__":
     assert rider_key("POGAČAR Tadej", "1998-09-21") == uci.rider_ref({"DisplayName": "POGAČAR Tadej", "BirthDate": "/Date(906328800000)/"})[0]
     assert rider_key("POGAČAR Tadej", None) is None
+    lg = {"DisplayName": "POGAČAR Tadej", "Rank": 1, "TeamName": "UAE Team Emirates", "TeamCode": " UEX "}
+    assert _normaliser(lg)["team_code"] == "UEX" and _normaliser(dict(lg, TeamCode=""))["team_code"] is None and "team_code" in _normaliser(dict(lg, TeamCode=None))
     print("tests locaux uci_ranking OK")

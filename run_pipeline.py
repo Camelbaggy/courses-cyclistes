@@ -36,10 +36,22 @@ def main() -> None:
     p.add_argument("--archive", default="", metavar="SAISONS",
                    help="mode archives : saisons passées (« 2021-2025 », « 2023 », « 2021,2023 ») collectées dans "
                         "ARCHIVES_DIR (data/archives/ par défaut ; dépôt d'archives en production), sans notification ni Gemini ; --budget-min, --max-races et --only s'appliquent")
+    p.add_argument("--wikidata", action="store_true",
+                   help="alimente le cache Wikidata / Commons (ARCHIVES_DIR/entites/wikidata/ SEUL : n'écrit pas les entités ; --budget-min en minutes, "
+                        "0 = illimité) ; workflow dédié du dépôt d'archives")
+    p.add_argument("--entites", action="store_true",
+                   help="reconstruit ARCHIVES_DIR/entites/ à la main (collector.write_entites, lit le cache Wikidata) ; normalement fait par le passage d'archives")
     p.add_argument("--no-notify", action="store_true", help="ne pas envoyer de push ntfy")
     a = p.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
     netutil.set_raw_dir(a.save_raw or None)
+    if a.wikidata or a.entites:
+        if a.wikidata:
+            import wikidata
+            wikidata.run_wikidata(a.budget_min)   # cache seul : jamais write_entites (évite les conflits de commit avec archives.yml)
+        if a.entites:
+            collector.write_entites()
+        return
     if a.archive:
         collector.run_archive(parse_saisons(a.archive), today=today, budget_min=a.budget_min,
                               max_races=a.max_races, only=a.only)
