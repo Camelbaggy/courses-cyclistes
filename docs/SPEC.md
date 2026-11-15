@@ -258,7 +258,8 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   "palmares": [victoires et podiums (rang 1-3) des classements d'étape / de course d'un jour et des classements finaux, récents d'abord :
   {"date", "season", "race_id", "course" (clé d'édition), "label", "classification" (stage|gc|points|mountain|youth), "rank", "category",
   "uci_class"}], "grands_tours": [{"season", "course": "tour"|"giro"|"vuelta", "race_id", "rank"} ou {…, "status": "DNF"|"OTL"|"DSQ"} (abandon
-  constaté sur une étape, absent du général final)], "totaux": {"wins", "podiums", "gc_wins", "seasons"}}}`. `palmares` et `grands_tours`
+  constaté sur une étape, absent du général final)], "totaux": {"wins", "podiums", "gc_wins", "seasons"}, "historique_uci"? [[date, rang]] (E1c, trié par date, tous les instantanés où le coureur
+  figure ; absent sans instantané)}}`. `palmares` et `grands_tours`
   absents si vides. Les étapes d'une course en cours comptent (comme `riders.json`) ; ses classements généraux provisoires non.
 - **Grands tours** (`encyclopedie.GRANDS_TOURS`) : clés d'édition EXACTES `tour de france|FRA`, `giro d italia|ITA`, `la vuelta ciclista a
   espana|ESP` (+ graphies `vuelta a espana|ESP`, `la vuelta a espana|ESP`, absentes des données actuelles), course par étapes terminée de
@@ -289,7 +290,15 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
 - **`saisons/<année>.json`** : `{"season", "courses": {"total" (terminées), "par_categorie", "en_cours"?}, "victoires_par_pays" (étapes et courses
   d'un jour, par nationalité du vainqueur), "victoires_par_equipe" (top 30), "coureurs_victorieux" (top 30 : id, name, nat, wins),
   "victoires_francaises" (nombre de victoires de coureurs FRA), "classement_uci": {"present", "name", "date", "final" (archive complète), "classes"},
-  "complete"?, "source": "archives"|"calendrier"}`.
+  "instantanes_uci"? [{"date", "raisons"}] (instantanés du classement UCI disponibles, voir ci-dessous), "complete"?, "source": "archives"|"calendrier"}`.
+- **`classements/<année>/`** (E1c, écrit par `collector.collecter_classements`, JAMAIS par `encyclopedie.construire`, qui le lit) : historique du classement
+  UCI individuel (World Ranking, à défaut « WorldTour Ranking » des saisons anciennes). `<AAAA-MM-JJ>.json` : `{"date", "nom", "moment_id", "raisons": ["fin de
+  mois" | "après <nom de course>"], "lignes": [[rang, rider_id | null, points | null, team_code | null]]}` (top 500 + tous les coureurs FRA au-delà ; les ex aequo
+  partagent le rang ; `rider_id` = nom UCI + date de naissance, null sans date) ; **immuable** (jamais relu ni réécrit). `index.json` : `[{"date", "raisons",
+  "fichier"}]` des instantanés présents (les raisons y sont tenues à jour). `etat.json` : `{"complet": true, "groupe", "source"}` quand la saison est close et
+  intégralement collectée. Choix : dernier moment de chaque mois civil fini + premier moment strictement postérieur à la fin de chaque course WorldTour
+  (délai de publication : le classement est calculé le mardi). Estimations (docs/PLAN_ENCYCLOPEDIE.md §7) : ~30-35 instantanés, ~1 Mo et ~140 requêtes par saison
+  moderne ; ~25 instantanés, ~0,3 Mo et ~30 requêtes par saison ancienne (WorldTour Ranking, ~250 lignes).
 - **`pays.json`** : `{ISO3: {"nom" (français, si dans `PAYS_NOMS`), "flag", "saisons": {année: {"coureurs", "victoires", "podiums"}}, "meilleurs": [{"id",
   "name", "wins"}] (top 10 sur toutes les saisons)}}`.
 - **`recherche/<lettre>.json`** : liste triée d'entrées `{"n" (libellé), "t": "c" (coureur) | "e" (équipe, regroupée par libellé : id = la saison la

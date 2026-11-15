@@ -475,6 +475,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     rapport: Dict[str, Any] = {"saisons": annees, "inconnues": inconnues}
     gt_par_saison: Dict[int, List[str]] = {}
     coherence = {"coureurs_compares": 0, "ecarts": 0, "exemples": []}
+    HISTORIQUE: Dict[str, Dict[str, int]] = {}      # rider_id canonique -> {date: rang UCI} (instantanés E1c)
     equipes_ecrites: Set[str] = set()
     saisons_ecrites: Set[str] = set()
     equipes_total = 0
@@ -506,6 +507,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         uci_res, uci_meta, rj = _uci_saison(S, src)
         codes_saison = _codes_equipes(src)
         cm = lambda rid: mapping.get(rid, rid)   # noqa: E731
+        instantanes = _lire_instantanes(archives_dir, an, lambda rid, d, rang: HISTORIQUE.setdefault(cm(rid), {}).__setitem__(d, rang))
 
         # cohérence avec riders.json (mêmes définitions : stats identiques attendues)
         if rj and isinstance(rj.get("riders"), dict):
@@ -698,6 +700,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                                                 "date": (uci_meta or {}).get("date"),
                                                 "final": True if (src["archive"] and uci_meta and src.get("etat", {}).get("complete")) else None,
                                                 "classes": len(uci_res) or None}),
+                  "instantanes_uci": instantanes or None,
                   "complete": True if src.get("etat", {}).get("complete") else None,
                   "source": "archives" if src["archive"] else "calendrier"}
         saison = _sans_vide(saison)
@@ -724,6 +727,9 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         for k in ("palmares", "grands_tours"):
             if not c[k]:
                 del c[k]
+        hist = HISTORIQUE.get(cid)
+        if hist:
+            c["historique_uci"] = [[d, hist[d]] for d in sorted(hist)]
         wd = wikidata.fiche_wikidata(WD["coureurs"].get(cid), WD["images"])
         if wd:
             c["wikidata"] = wd
@@ -862,6 +868,26 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
 def _drapeau_pays(S: _Saison, code: str) -> Optional[str]:
     c = collections.Counter(a.get("flag") for a in S.coureurs.values() if a.get("nationality") == code and a.get("flag"))
     return sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[0][0] if c else netutil.flag_code(code)
+
+
+def _lire_instantanes(archives_dir: str, annee: int, ajouter: Any) -> List[Dict[str, Any]]:
+    """Instantanés du classement UCI d'une saison (`<archives_dir>/entites/classements/<année>/`, écrits par
+    `collector.collecter_classements`, jamais par `construire`). Appelle `ajouter(rider_id brut, date, rang)` pour chaque ligne portant
+    un rider_id et renvoie la liste [{date, raisons}] des instantanés lus (celle de index.json, restreinte aux fichiers lisibles)."""
+    dossier = os.path.join(archives_dir, "entites", "classements", str(annee))
+    index = collector._load(os.path.join(dossier, "index.json"), None)
+    if not isinstance(index, list):
+        return []
+    lus = []
+    for e in index:
+        fiche = collector._load(os.path.join(dossier, str(e.get("fichier") or "")), None) if isinstance(e, dict) else None
+        if not isinstance(fiche, dict) or not fiche.get("date"):
+            continue
+        for lg in fiche.get("lignes") or []:
+            if isinstance(lg, list) and len(lg) >= 2 and lg[1] and isinstance(lg[0], int):
+                ajouter(lg[1], fiche["date"], lg[0])
+        lus.append({"date": fiche["date"], "raisons": e.get("raisons") or fiche.get("raisons") or []})
+    return sorted(lus, key=lambda x: x["date"])
 
 
 def _ecrire_si_change(chemin: str, data: Any, ignore: Tuple[str, ...] = ()) -> bool:
@@ -1022,6 +1048,18 @@ def _tests() -> None:
             "belgium-2025": {"qid": None, "raison": "aucune", "verifie": "2026-11-01"}})
         collector._dump(os.path.join(wdc, "lignees.json"), {"Q8001": {"libelle": "Équipe Alpha (lignée)", "noms": [{"nom": "Equipe A", "debut": "2019"}],
                                                                    "logo": "L.svg", "verifie": "2026-11-01"}})
+        # historique du classement UCI (E1c) : instantanés écrits par collector.collecter_classements ; alias appliqués saison par saison
+        cl = os.path.join(A, "entites", "classements")
+        collector._dump(os.path.join(cl, "2023", "2023-06-06.json"), {"date": "2023-06-06", "nom": "UCI World Ranking", "moment_id": 1, "raisons": ["après Tour"],
+                                                                      "lignes": [[3, brut, 120.5, "EQA"], [8, durand, 80, None], [9, None, 70, None]]})
+        collector._dump(os.path.join(cl, "2023", "index.json"), [{"date": "2023-06-06", "raisons": ["fin de mois", "après Tour"], "fichier": "2023-06-06.json"},
+                                                                 {"date": "2023-07-04", "raisons": ["fin de mois"], "fichier": "2023-07-04.json"}])   # fichier absent : ignoré
+        collector._dump(os.path.join(cl, "2024", "2024-03-05.json"), {"date": "2024-03-05", "nom": "UCI World Ranking", "moment_id": 2, "raisons": ["fin de mois"],
+                                                                      "lignes": [[5, dup, 100, "EQA"], [9, durand, 60, None], [12, "inconnu-zz-19900101", 50, None]]})
+        collector._dump(os.path.join(cl, "2024", "2024-02-06.json"), {"date": "2024-02-06", "nom": "UCI World Ranking", "moment_id": 3, "raisons": ["fin de mois"],
+                                                                      "lignes": [[7, dup, 90, "EQA"], [4, brut, 95, None]]})
+        collector._dump(os.path.join(cl, "2024", "index.json"), [{"date": "2024-02-06", "raisons": ["fin de mois"], "fichier": "2024-02-06.json"},
+                                                                 {"date": "2024-03-05", "raisons": ["fin de mois"], "fichier": "2024-03-05.json"}])
         rap = construire(A, D, OUT, now="2026-01-01T00:00:00Z", alias_coureurs=alias_cr, alias_courses={}, verbose=False)
         L = lambda p: collector._load(os.path.join(OUT, p), None)   # noqa: E731
         assert rap["saisons"] == [2023, 2024, 2025] and rap["inconnues"] == 0
@@ -1032,6 +1070,12 @@ def _tests() -> None:
         cd = L("coureurs/d.json")
         assert dup in cd
         d = cd[dup]
+        assert d["historique_uci"] == [["2023-06-06", 3], ["2024-02-06", 7], ["2024-03-05", 5]], d["historique_uci"]   # trié ; 2023 : brut -> canonique
+        assert cd[brut]["historique_uci"] == [["2024-02-06", 4]]                                                         # 2024 : contradiction, rien fusionné
+        assert L("coureurs/d.json")[durand]["historique_uci"] == [["2023-06-06", 8], ["2024-03-05", 9]]
+        assert "historique_uci" not in L("coureurs/m.json")[next(iter(L("coureurs/m.json")))]       # coureur sans instantané : champ absent
+        assert L("saisons/2023.json")["instantanes_uci"] == [{"date": "2023-06-06", "raisons": ["fin de mois", "après Tour"]}]
+        assert [e["date"] for e in L("saisons/2024.json")["instantanes_uci"]] == ["2024-02-06", "2024-03-05"] and "instantanes_uci" not in L("saisons/2025.json")
         assert set(d["saisons"]) == {"2025", "2024", "2023"} and list(d["saisons"]) == ["2025", "2024", "2023"]
         assert brut in cd and list(cd[brut]["saisons"]) == ["2024"]       # contradiction 2024 : identifiant brut non fusionné
         assert any("ignoré en 2024" in w for w in rap["anomalies"]["alias_ignores"])
