@@ -235,8 +235,25 @@ toute donnée insérée passe par `esc()`. Mobile ~390 px. Onglets : Récents ·
 (triés par rang UCI, 3 meilleurs résultats) · Archives (menu déroulant des saisons de `index.json` du dépôt d'archives, lien
 `?archive=AAAA`, chargement paresseux : classement UCI de fin de saison, victoires françaises, liste des courses ;
 fiche course lue dans `<année>/races/` des archives (encart repliable « Éditions précédentes » : `editions.json` + saisons du Calendrier), fiche
-  coureur dans `<année>/riders.json` des archives (onglets « Saison » et « Carrière » : `carrieres/<lettre>.json` + `riders-<année>.json` du Calendrier), jamais de repli
-vers une autre saison ; les clés null sont absentes des archives, la page traite absent = null ; anciennes classes
-HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle d'équivalence). Fiches course `#course/<id>/<étape|F>` et coureur `#coureur/<id>`. `?data=<dossier relatif>`
+  coureur : nouvelle fiche E2, voir ci-dessous ; jamais de repli
+vers une autre saison d'archive pour l'onglet Saison ; les clés null sont absentes des archives, la page traite absent = null ; anciennes classes
+HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle d'équivalence). Routes : fiche course `#course/<id>/<étape|F>`, coureur `#coureur/<id>`, recherche `#recherche/<texte>` (les `#equipe`, `#saison`… viendront avec E3-E5). `?data=<dossier relatif>`
 change le dossier de données (`tools/fixtures/data` : jeu fictif, deux saisons + `archives/` fictives, régénérables par `tools/fixtures/generer_archives.py`) ; `?saison=AAAA`. **Base des archives** (`BASE_ARCHIVES`) : `?archives=<url https ou dossier relatif>` s'il est donné ; sinon, si `?data=` est donné (jeu d'essai), `<data>/archives` en local ; sinon `https://camelbaggy.github.io/courses-cyclistes-archives/data/archives` (GitHub Pages, `Access-Control-Allow-Origin: *`, fetch cross-origin, `cache: no-cache`). Toute lecture d'archive passe par `chargerArchive(chemin)` (chemin relatif aux archives ; `charger` route aussi les chemins `archives/…`) ; site injoignable : message « Le site des archives est injoignable » + bouton Réessayer. Vérifier le rendu
 avec `tools/apercu.py` (option `--nav` sur les données réelles) après toute modification.
+
+### Design et composants (E2, plan encyclopédie)
+
+Jetons CSS sur `:root` (thème sombre unique, ne pas coder de couleur en dur) : surfaces `--bg` / `--s1` / `--s2` / `--s3`, bordure `--line`, texte `--tx` / `--tx2` / `--tx3`,
+accent `--accent`, catégories `--c-wt` / `--c-pro` / `--c-fdj` / `--c-1` / `--c-2` / `--c-ch` (badges `cat-WT`, `cat-1`…, texte blanc, contraste AA), maillots `--jaune`…, espacements `--sp1..6`
+(4/8/12/16/24/32), rayons `--r1` 8 / `--r2` 14, ombres `--sh1/2`, `--bar-h` (barre des fiches). Les anciens noms (`--card`, `--elev`, `--border`, `--muted`…) sont des alias. Chiffres tabulaires dans les tableaux.
+Composants (fonctions JS + classes) : `htmlHero` / `.hero` (photo ronde ou initiales, crédit, puces, `.facts`), `htmlTuiles` / `.kpis` (2 colonnes à 390 px, une valeur absente = pas de tuile),
+`htmlOnglets` / `.subtabs.sticky` (défilables, collants sous la barre), `htmlTableau` / `.tbl-wrap` (défilement horizontal, 1re colonne figée), `.res` (résultat en carte), `sparkRang` (SVG, rang 1 en haut),
+`squeletteCoureur` / `.sk` (chargement), `htmlVide` / `.vide`, badges `catBadge`. À 880 px et plus, la fiche coureur passe en deux colonnes (infobox `.rside` à droite, collante).
+**Recherche globale** : icône dans l'en-tête, panneau plein écran `#search`, route `#recherche/<texte>` (la saisie met le hash à jour par `replaceState`) ; `normIdx` = `netutil.normalize` (à garder alignée),
+fichier `entites/recherche/<lettre>.json` de la 1re lettre du mot le plus long, mis en cache ; chaque mot saisi doit être préfixe d'un mot du libellé ; groupes Coureurs / Équipes et lignées / Courses
+(8 par groupe) ; flèches + Entrée ; coureur -> `#coureur/<id>`, course -> dernière édition `#course/<race_id>` (E3 : page série) ; équipes et lignées : texte non cliquable (E4).
+**Fiche coureur** (`construireCoureur`) : `entites/coureurs/<lettre>.json` (alias de `carrieres/index.json` si l'id est un alias), `riders-<année>.json` du Calendrier fusionnés par `fusionCalendrier`
+(seulement si plus récents que `entites/index.json.generated_at`, ou saison absente : rang UCI marqué `*`), `entites/pays.json`, `entites/courses/<lettre>.json` (noms des courses du palmarès) et la fiche
+de la saison du contexte (`data-rctx`, onglet « Saison en cours » / « Saison AAAA », absent si non publiée). Onglets affichés seulement s'ils ont des données : Aperçu · Palmarès · Saisons ·
+Grands tours · Classement UCI · Parcours (équipes de nos données + frise Wikidata P54 à la précision de la source) · Saison. Photo : `wikidata.image` avec auteur / licence liés à la page Commons ;
+aucune ligne pour une valeur absente. `tools/apercu.py` couvre fiche (chaque onglet), recherche, 1024 px.

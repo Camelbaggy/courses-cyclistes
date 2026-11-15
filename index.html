@@ -6,32 +6,38 @@
 <meta name="color-scheme" content="light dark" />
 <title>Courses cyclistes</title>
 <style>
+/* ---------- jetons de design (thème sombre unique) ----------
+   fond / surfaces étagées / bordure / texte ; une couleur d'accent ; catégories ; maillots ; espacements 4-8-12-16-24-32 ; rayons 8 / 14 */
 :root {
-  /* thème sombre unique, comme le dashboard des Coupes d'Europe */
-  --bg: #0b0f17;
-  --card: #151c28;
-  --elev: #1f2a3c;
-  --border: #28344a;
-  --text: #eef2f8;
-  --muted: #93a1b8;
-  --accent: #60a5fa;
-  --accent-soft: rgba(96, 165, 250, .16);
-  --fr: #60a5fa;
-  --fr-bg: rgba(96, 165, 250, .12);
-  --ok: #34d399;
-  --warn: #fbbf24;
-  --bad: #f87171;
-  --shadow: none;
-  --jaune: #facc15;
-  --vert: #22c55e;
-  --blanc: #f8fafc;
-  --pois: #ef4444;
+  --bg: #0a0e15;       /* fond de page */
+  --s1: #111722;       /* surface : cartes */
+  --s2: #18202e;       /* surface relevée : en-têtes de tableau, puces, champs */
+  --s3: #222c3e;       /* surface active / survol */
+  --line: #2a3548;     /* bordures */
+  --tx: #f1f4f9;       /* texte principal (contraste AA sur toutes les surfaces) */
+  --tx2: #b3bfd3;      /* texte secondaire */
+  --tx3: #93a1b8;      /* texte atténué (≥ 5,5:1 sur --s1) */
+  --accent: #6aa9ff;
+  --accent-soft: rgba(106, 169, 255, .16);
+  --ok: #34d399; --warn: #fbbf24; --bad: #f87171;
+  /* catégories de course (texte blanc, contraste ≥ 5:1) */
+  --c-wt: #1d4ed8; --c-pro: #7c3aed; --c-fdj: #2563eb; --c-1: #0f766e; --c-2: #b45309; --c-ch: #be185d;
+  /* maillots / médailles */
+  --jaune: #facc15; --vert: #22c55e; --blanc: #f8fafc; --pois: #ef4444; --argent: #cbd5e1; --bronze: #d6945a;
+  /* espacements, rayons, ombres */
+  --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px; --sp5: 24px; --sp6: 32px;
+  --r1: 8px; --r2: 14px;
+  --sh1: 0 1px 2px rgba(0, 0, 0, .35); --sh2: 0 8px 24px rgba(0, 0, 0, .45);
+  --bar-h: 57px;       /* hauteur de la barre des fiches (onglets collants dessous) */
+  /* noms historiques conservés (pages existantes) */
+  --card: var(--s1); --elev: var(--s2); --border: var(--line); --text: var(--tx); --muted: var(--tx3);
+  --fr: var(--accent); --fr-bg: rgba(106, 169, 255, .12); --shadow: var(--sh1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { color-scheme: dark; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
-  background: var(--bg); color: var(--text); line-height: 1.4; font-size: 15px;
+  background: var(--bg); color: var(--text); line-height: 1.45; font-size: 15px;
   overflow-x: hidden; padding-bottom: 40px;
 }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
@@ -58,7 +64,7 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 
 /* ---------- cartes ---------- */
 .card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--r2); padding: 12px 14px;
   box-shadow: var(--shadow);
 }
 .card.click { cursor: pointer; width: 100%; text-align: left; display: block; }
@@ -75,9 +81,12 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
   display: inline-block; font-size: .68rem; font-weight: 700; padding: 1px 7px; border-radius: 99px;
   background: var(--elev); color: var(--muted); border: 1px solid var(--border); white-space: nowrap;
 }
-.badge.cat-WT { color: #fff; background: #1d4ed8; border-color: #1d4ed8; }
-.badge.cat-Pro { color: #fff; background: #7c3aed; border-color: #7c3aed; }
-.badge.cat-FDJ { color: #fff; background: #2563eb; border-color: #2563eb; }
+.badge.cat-WT { color: #fff; background: var(--c-wt); border-color: var(--c-wt); }
+.badge.cat-Pro { color: #fff; background: var(--c-pro); border-color: var(--c-pro); }
+.badge.cat-FDJ { color: #fff; background: var(--c-fdj); border-color: var(--c-fdj); }
+.badge.cat-1 { color: #fff; background: var(--c-1); border-color: var(--c-1); }
+.badge.cat-2 { color: #fff; background: var(--c-2); border-color: var(--c-2); }
+.badge.cat-Champ { color: #fff; background: var(--c-ch); border-color: var(--c-ch); }
 .badge.live { color: var(--ok); border-color: var(--ok); background: transparent; }
 .badge.fr { color: var(--fr); border-color: var(--fr); background: var(--fr-bg); }
 .flag { width: 20px; height: 14px; border-radius: 2px; object-fit: cover; flex: none; background: var(--elev); vertical-align: -2px; }
@@ -271,6 +280,134 @@ details.ed > summary { cursor: pointer; padding: 11px 12px; font-size: .88rem; f
 .car-pal { background: var(--bg); }
 .arch-note { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
 footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
+
+/* ================== composants réutilisables (E2) ================== */
+.tnum, .tbl, .row .val { font-variant-numeric: tabular-nums; }
+h1.h-title { font-size: 1.55rem; line-height: 1.15; letter-spacing: -.02em; font-weight: 800; overflow-wrap: anywhere; }
+h2.h-sec { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--sp2); }
+.btn-ico { width: 40px; height: 40px; border-radius: var(--r1); display: inline-flex; align-items: center; justify-content: center; color: var(--tx2); flex: none; }
+.btn-ico:active, .btn-ico:hover { background: var(--s2); color: var(--tx); }
+.btn-ico svg { width: 22px; height: 22px; }
+.btn-ico:focus-visible, .tab:focus-visible, .subtab:focus-visible, .chip:focus-visible, .back:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.top-row { align-items: center; }
+.top-row .app-sub { margin-right: -8px; }
+
+/* en-tête de fiche (« hero ») */
+.hero { background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--line); border-radius: var(--r2); padding: var(--sp4); box-shadow: var(--sh1); }
+.hero-top { display: flex; gap: var(--sp4); align-items: center; }
+.hero-photo { position: relative; width: 84px; height: 84px; border-radius: 50%; flex: none; overflow: hidden; background: var(--s3); border: 2px solid var(--line);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.6rem; color: var(--tx3); letter-spacing: .02em; }
+.hero-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hero-photo img.noimg { display: none; }
+.hero-id { min-width: 0; }
+.hero-sub { display: flex; align-items: center; gap: var(--sp2); color: var(--tx2); font-size: .88rem; margin-top: var(--sp1); flex-wrap: wrap; }
+.hero-sub .flag { width: 22px; height: 15px; }
+.hero-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--sp3); }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--s3); color: var(--tx2); border: 1px solid var(--line); }
+.pill.fr { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+.credit { font-size: .68rem; color: var(--tx3); margin-top: var(--sp2); line-height: 1.3; }
+.credit a { color: var(--tx2); }
+.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px var(--sp3); margin-top: var(--sp3); padding-top: var(--sp3); border-top: 1px solid var(--line); font-size: .86rem; }
+.facts dt { color: var(--tx3); }
+.facts dd { font-weight: 600; text-align: right; overflow-wrap: anywhere; }
+
+/* tuiles de chiffres clés */
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp2); }
+.kpis .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.tile { border-radius: var(--r2); box-shadow: var(--sh1); }
+.tile b { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
+
+/* onglets de sous-pages : défilables et collants */
+.subtabs.sticky { position: sticky; top: var(--bar-h); z-index: 4; background: var(--bg); margin: 0 calc(var(--sp4) * -1); padding: 0 var(--sp4); }
+.subtabs.sticky::after { content: ""; flex: none; width: 1px; }
+
+/* tableaux compacts, défilement horizontal, première colonne figée */
+.tbl-wrap { overflow-x: auto; border-radius: var(--r2); border: 1px solid var(--line); background: var(--s1); }
+table.tbl { border-collapse: separate; border-spacing: 0; width: 100%; font-size: .84rem; }
+.tbl th, .tbl td { padding: 9px 10px; white-space: nowrap; text-align: right; border-bottom: 1px solid var(--line); }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl th { font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; color: var(--tx3); background: var(--s2); font-weight: 700; }
+.tbl th:first-child, .tbl td:first-child { position: sticky; left: 0; text-align: left; background: var(--s1); font-weight: 700; z-index: 1; box-shadow: 1px 0 0 var(--line); }
+.tbl th:first-child { background: var(--s2); }
+.tbl td.tl, .tbl th.tl { text-align: left; }
+.tbl td.dim { color: var(--tx3); }
+.tbl a.cell, .tbl button.cell { color: var(--accent); font-weight: 700; }
+.tbl-note { font-size: .74rem; color: var(--tx3); margin-top: var(--sp2); }
+
+/* résultats en cartes (mobile) */
+.res-list { display: flex; flex-direction: column; gap: var(--sp2); }
+.res { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: var(--sp3); align-items: center; width: 100%; text-align: left;
+  background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); padding: 10px var(--sp3); box-shadow: var(--sh1); }
+button.res:active { background: var(--s3); }
+.res .rk { height: 32px; border-radius: var(--r1); background: var(--s3); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.res .rk.r1 { background: var(--jaune); color: #111827; } .res .rk.r2 { background: var(--argent); color: #111827; } .res .rk.r3 { background: var(--bronze); color: #111827; }
+.res .t { min-width: 0; }
+.res .t b { display: block; font-size: .9rem; line-height: 1.25; overflow-wrap: anywhere; }
+.res .t small { display: block; color: var(--tx3); font-size: .74rem; margin-top: 2px; }
+.res .d { font-size: .74rem; color: var(--tx3); text-align: right; white-space: nowrap; }
+.grp-title { display: flex; align-items: baseline; justify-content: space-between; margin: var(--sp4) 0 var(--sp2); font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--tx2); }
+.grp-title span { font-weight: 600; color: var(--tx3); letter-spacing: 0; text-transform: none; }
+
+/* mini-graphique en ligne */
+.spark { display: block; width: 100%; height: auto; }
+.spark .ax { stroke: var(--line); stroke-width: 1; }
+.spark .gl { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+.spark .ln { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
+.spark .pt { fill: var(--s1); stroke: var(--accent); stroke-width: 2; }
+.spark .pt.last { fill: var(--accent); }
+.spark text { fill: var(--tx3); font-size: 11px; font-family: inherit; }
+
+/* squelettes de chargement, état vide */
+.sk { background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; border-radius: var(--r1); }
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .sk, .loading::before { animation: none; } }
+.sk-line { height: 14px; margin: 8px 0; } .sk-tile { height: 74px; border-radius: var(--r2); } .sk-circle { width: 84px; height: 84px; border-radius: 50%; flex: none; }
+.vide { text-align: center; color: var(--tx3); font-size: .9rem; padding: var(--sp5) var(--sp4); border: 1px dashed var(--line); border-radius: var(--r2); }
+.src-note { font-size: .72rem; color: var(--tx3); }
+
+/* ================== fiche coureur (E2) ================== */
+#rsheet .sheet-body { max-width: 1040px; }
+.rpage { display: flex; flex-direction: column; gap: var(--sp3); }
+.rmain { display: flex; flex-direction: column; gap: var(--sp3); min-width: 0; }
+.rside { min-width: 0; }
+.tabcontent { display: flex; flex-direction: column; gap: var(--sp3); min-width: 0; }
+.foot-credits { font-size: .72rem; color: var(--tx3); border-top: 1px solid var(--line); padding-top: var(--sp3); line-height: 1.5; }
+.foot-credits a { color: var(--tx2); }
+.frise { list-style: none; position: relative; margin-left: 6px; border-left: 2px solid var(--line); }
+.frise li { position: relative; padding: 0 0 var(--sp3) var(--sp4); }
+.frise li::before { content: ""; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--s1); border: 2px solid var(--accent); }
+.frise b { display: block; font-size: .92rem; }
+.frise span { font-size: .78rem; color: var(--tx3); }
+.chart-card { padding: var(--sp3); }
+.wiki-links { display: flex; flex-wrap: wrap; gap: var(--sp2); }
+.wiki-links a { text-decoration: none; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--s2); color: var(--tx); font-size: .82rem; font-weight: 600; }
+.wiki-links a:hover { border-color: var(--accent); }
+.mv-up { color: var(--ok); } .mv-down { color: var(--bad); }
+@media (min-width: 880px) {
+  .rpage { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--sp4) var(--sp5); align-items: start; }
+  .rside { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--bar-h) + var(--sp3)); }
+  .rmain { grid-column: 1; grid-row: 1; }
+  .kpis { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .kpis .tile:last-child:nth-child(odd) { grid-column: auto; }
+  .res { grid-template-columns: 38px minmax(0, 1fr) auto; }
+}
+
+/* ================== recherche globale (E2) ================== */
+#search { position: fixed; inset: 0; z-index: 70; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
+#search.open { display: block; }
+.sr-input { flex: 1; min-width: 0; font-size: 1rem; padding: 10px 12px; border-radius: 99px; }
+.sr-body { max-width: 680px; margin: 0 auto; padding: var(--sp3) var(--sp4) var(--sp6); }
+.sr-grp { margin-bottom: var(--sp4); }
+.sr-list { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+.sr-item { display: flex; align-items: center; gap: var(--sp3); width: 100%; text-align: left; padding: 11px var(--sp3); border-top: 1px solid var(--line); min-height: 48px; }
+.sr-item:first-child { border-top: none; }
+.sr-item.nav { cursor: pointer; }
+.sr-item.nav:hover, .sr-item.sel { background: var(--s3); }
+.sr-item .nm { font-weight: 600; min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.sr-item .yr { font-size: .74rem; color: var(--tx3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sr-item.off .nm { color: var(--tx2); font-weight: 500; }
+.sr-hint { color: var(--tx3); text-align: center; padding: var(--sp6) var(--sp4); font-size: .9rem; }
+.sr-more { display: block; width: 100%; padding: 10px; font-size: .82rem; font-weight: 700; color: var(--accent); border-top: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -278,7 +415,8 @@ footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px
 <header class="top">
   <div class="top-row">
     <div class="app-title">Courses cyclistes</div>
-    <div class="app-sub"><span id="maj"></span></div>
+    <div class="app-sub"><span id="maj"></span>
+      <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
   <nav class="tabs" id="tabs" role="tablist">
     <button class="tab active" role="tab" data-tab="recents">Récents</button>
@@ -305,6 +443,14 @@ footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px
     <div class="sheet-title"><b id="rsheet-name"></b><span id="rsheet-sub"></span></div>
   </div>
   <div class="sheet-body" id="rsheet-body"></div>
+</section>
+
+<section id="search" aria-label="Recherche" aria-hidden="true">
+  <div class="sheet-bar">
+    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
+    <input class="search sr-input" id="sr-q" type="search" placeholder="Coureur, équipe, course…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Rechercher" role="combobox" aria-expanded="true" aria-controls="sr-body">
+  </div>
+  <div class="sr-body" id="sr-body" role="listbox" aria-label="Résultats"></div>
 </section>
 
 <script>
@@ -412,9 +558,12 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // chemin (année) de chaque course d'archive connue, catégorie filtrée ; courseArchive = année de la fiche ouverte
   archIdx: undefined, archErr: null, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
   ctxArchive: false, courseArchive: null,
-  // fiche coureur : onglet (saison | carriere), saison imposée par un lien d'édition ({archive, saison}), message de saison indisponible ;
+  // fiche coureur (E2) : données assemblées, onglet par coureur, filtres du palmarès, pays et noms de courses (entités) ; recherche globale
+  cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {},
+  sr: { q: "", res: null, sel: -1, tout: {}, token: 0, msg: "" },
+  // fiche coureur : onglet courant, saison imposée par un lien d'édition ({archive, saison}) ;
   // éditions précédentes : course pour laquelle l'encart est calculé, sa liste, course dont l'encart est déplié
-  rtab: "saison", rctx: null, rMsg: null, edFor: null, edListe: [], edLoading: null, edOuvert: null };
+  rtab: "apercu", rctx: null, edFor: null, edListe: [], edLoading: null, edOuvert: null };
 
 /* ================== éléments communs ================== */
 const CLASSES_ANCIENNES = {
@@ -1080,7 +1229,7 @@ function parseHashCoureur() {
   return m ? m[1] : null;
 }
 function majScroll() {
-  const ouvert = document.getElementById("sheet").classList.contains("open") || document.getElementById("rsheet").classList.contains("open");
+  const ouvert = ["sheet", "rsheet", "search"].some(i => document.getElementById(i).classList.contains("open"));
   document.body.style.overflow = ouvert ? "hidden" : "";
 }
 function parseHash() {
@@ -1147,7 +1296,19 @@ function fermerFiche() {
   majScroll(); majContexte();
 }
 
-/* ================== fiche coureur ================== */
+/** Alias manuels de coureurs (carrieres/index.json, copie d'alias_coureurs.json) ; absent : aucun. */
+async function chargerIndexCarrieres() {
+  try {
+    const d = await chargerArchive("carrieres/index.json");
+    return { alias: d.alias || {}, lettres: d.lettres || [] };
+  } catch (e) {
+    if (e.status === 404) return { alias: {}, lettres: [] };
+    throw e;
+  }
+}
+/* ================== fiche coureur (E2) ================== */
+/* Données : entites/coureurs/<lettre>.json (archives) + riders-<année>.json du Calendrier (fusionnés si plus récents) +
+   fiche de la saison du contexte (onglet « Saison »). Toute valeur absente : la ligne n'est pas affichée. */
 function fermerCoureur() {
   const rs = document.getElementById("rsheet");
   rs.classList.remove("open"); rs.setAttribute("aria-hidden", "true");
@@ -1156,28 +1317,371 @@ function fermerCoureur() {
 }
 
 const CLASSEMENT_LABEL = { stage: "Étape / course", gc: "Général", points: "Points", mountain: "Montagne", youth: "Jeunes" };
+const LANGUES = { fr: "Français", en: "English", es: "Español", it: "Italiano", nl: "Nederlands", de: "Deutsch", pt: "Português", ca: "Català" };
+const STATUTS_GT = { DNF: "Abandon", OTL: "Hors délai", DSQ: "Disqualifié", DNS: "Non-partant" };
+const GT_COLONNES = [["giro", "Giro"], ["tour", "Tour"], ["vuelta", "Vuelta"]];
 function rangClasse(n) { return n >= 1 && n <= 3 ? ` r${n}` : ""; }
+const aPropre = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+function lettreId(id) { return /^[a-z]/.test(id || "") ? id[0] : "_"; }
+/** URL d'un média (photo, page Commons) : https, ou chemin relatif sûr du jeu d'essai (relatif aux archives) ; sinon null. */
+function urlMedia(u) {
+  if (typeof u !== "string") return null;
+  if (/^https:\/\/[\w\-.]+(:\d+)?\/[^\s"'<>]*$/.test(u)) return u;
+  if (/^[\w\-./%]+$/.test(u) && !u.includes("..") && !u.startsWith("/")) return `${BASE_ARCHIVES}/${u}`;
+  return null;
+}
+function ageDe(iso) {
+  const p = pd(iso); if (!p) return null;
+  const n = new Date(); let a = n.getFullYear() - p.y;
+  if (n.getMonth() + 1 < p.m || (n.getMonth() + 1 === p.m && n.getDate() < p.d)) a--;
+  return a >= 0 && a < 100 ? a : null;
+}
+/** Date Wikidata à la précision de la source (année, mois ou jour). */
+function dateWd(d, prec) {
+  const m = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/.exec(d || "");
+  if (!m) return "";
+  if (prec === "annee" || !m[2]) return m[1];
+  if (prec === "mois" || !m[3]) return `${MOIS[+m[2] - 1]} ${m[1]}`;
+  return dateLongue(d);
+}
+function sansVide(o) { const r = {}; Object.entries(o).forEach(([k, v]) => { if (v != null) r[k] = v; }); return r; }
+function saisonsTriees(E) { return Object.entries((E && E.saisons) || {}).map(([y, s]) => [+y, s]).sort((a, b) => b[0] - a[0]); }
+function aSomme(E, k) { return saisonsTriees(E).reduce((t, [, s]) => t + ((s.stats || {})[k] || 0), 0); }
 
-/** Coque de la fiche coureur : onglets « Saison » (fiche de la saison choisie) et « Carrière » (archives + Calendrier). */
-function renderCoureur(id) {
-  const f = state.riders && state.riders.riders[id];
-  document.getElementById("rsheet-name").textContent = f ? (f.name || "Coureur") : "Coureur";
-  document.getElementById("rsheet-sub").textContent = f ? [f.team, f.age != null ? `${f.age} ans` : ""].filter(Boolean).join(" · ") : "";
-  const tab = (cle, lab) => `<button class="subtab ${state.rtab === cle ? "active" : ""}" data-rtab="${cle}" role="tab" aria-selected="${state.rtab === cle}">${lab}</button>`;
-  document.getElementById("rsheet-body").innerHTML = `<div class="stack"><div class="subtabs rtabs" role="tablist">${tab("saison", "Saison")}${tab("carriere", "Carrière")}</div>
-    <div id="rcontent"></div></div>`;
-  if (state.rtab === "carriere") renderCarriere(id); else renderSaison(id);
+async function chargerPays() {
+  if (state.pays !== undefined) return state.pays;
+  try { state.pays = await chargerArchive("entites/pays.json"); } catch (e) { state.pays = null; }
+  return state.pays;
+}
+function nomPays(iso) { const p = state.pays && state.pays[iso]; return (p && p.nom) || iso || ""; }
+
+async function chargerCoursesEnt(l) {
+  if (state.coursesEnt[l] !== undefined) return state.coursesEnt[l];
+  let d = {};
+  try { d = await chargerArchive(`entites/courses/${l}.json`); } catch (e) { console.warn("Courses (entités) indisponibles :", e.message); }
+  state.coursesEnt[l] = d;
+  return d;
+}
+/** Nom d'une course (clé d'édition) la saison donnée : variante de nom portée cette saison-là, sinon la première connue. */
+function nomCourse(cle, saison) {
+  const C = cle && (state.coursesEnt[lettreId(cle)] || {})[cle];
+  if (!C || !C.noms) return null;
+  let premier = null;
+  for (const [nom, ys] of Object.entries(C.noms)) { if ((ys || []).includes(saison)) return nom; if (!premier) premier = nom; }
+  return premier;
+}
+function nomCoursePalmares(x) {
+  const n = nomCourse(x.course, x.season) || (courseParId(x.race_id) || {}).name;
+  if (n) return n;
+  const brut = String(x.course || "").split("|")[0];
+  return brut ? brut.charAt(0).toUpperCase() + brut.slice(1) : x.race_id;
 }
 
-function renderSaison(id) {
-  const box = document.getElementById("rcontent");
-  const D = state.riders, f = D && D.riders[id];
-  if (!f) {
-    box.innerHTML = `<div class="empty card">${state.rMsg ? esc(state.rMsg) : "Fiche indisponible pour ce coureur."}</div>`;
-    return;
+/** Entité coureur (entites/coureurs/<lettre>.json) : id exact, sinon alias manuel (carrieres/index.json). `ent` null si absente. */
+async function chargerEntiteCoureur(id, I) {
+  const lire = async l => { try { return await chargerArchive(`entites/coureurs/${l}.json`); } catch (e) { if (e.status === 404) return null; throw e; } };
+  let F = await lire(lettreId(id));
+  if (F && aPropre(F, id)) return { cid: id, ent: F[id] };
+  const cid = aPropre(I.alias, id) ? I.alias[id] : null;
+  if (cid && cid !== id) {
+    F = await lire(lettreId(cid));
+    if (F && aPropre(F, cid)) return { cid, ent: F[cid] };
   }
-  const S = f.stats || {}, v = k => S[k] || 0;
-  const rk = D.ranking;
+  return { cid: cid || id, ent: null };
+}
+/** Fiches des saisons du Calendrier (riders-<année>.json) où figure ce coureur (rapprochement par rider_id exact + alias). */
+async function fichesCalendrier(sources) {
+  const cal = (state.saisons && state.saisons.available) || [];
+  const res = await Promise.all(cal.map(async y => {
+    let D = null;
+    try { D = await charger(`riders-${y}.json`); }
+    catch (e) { if (y === state.current) { try { D = await charger("riders.json"); } catch (e2) { D = null; } } }
+    if (!D || (D.season != null && D.season !== y) || !D.riders) return null;
+    const src = sources.find(k => aPropre(D.riders, k));
+    return src ? { y, D, f: D.riders[src] } : null;
+  }));
+  return res.filter(Boolean);
+}
+/** Entité (copie) enrichie des saisons du Calendrier plus récentes que le fichier d'entités (ou absentes de celui-ci). */
+function fusionCalendrier(ent, cals, genere) {
+  if (!ent && !cals.length) return null;
+  const E = ent ? JSON.parse(JSON.stringify(ent)) : { saisons: {} };
+  let modifie = false;
+  for (const { y, D, f } of cals) {
+    const plusRecent = !(E.saisons && E.saisons[y]) || (genere && D.generated_at && D.generated_at > genere);
+    if (!plusRecent) continue;
+    E.saisons = E.saisons || {};
+    E.saisons[y] = sansVide({ team: f.team, stats: f.stats || {}, uci_rank: f.uci_rank, uci_points: f.uci_points, cal: true, uci_date: D.ranking && D.ranking.date });
+    const P = E.palmares = E.palmares || [];
+    (f.results || []).filter(x => x.rank != null && x.rank <= 3).forEach(x => {
+      if (P.some(p => p.race_id === x.race_id && p.classification === x.classification && p.label === x.label && p.date === x.date)) return;
+      const c = (D.races && D.races[x.race_id]) || {};
+      P.push(sansVide({ date: x.date, season: y, race_id: x.race_id, course: cleEdition(c.name, c.country), label: x.label, classification: x.classification,
+        rank: x.rank, category: c.category, uci_class: c.uci_class, _nom: c.name }));
+    });
+    P.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    modifie = true;
+  }
+  if (modifie || !E.totaux) {
+    const sm = k => aSomme(E, k);
+    E.totaux = { wins: sm("wins"), podiums: sm("podiums"), gc_wins: sm("gc_wins"), seasons: saisonsTriees(E).length };
+  }
+  return E;
+}
+/** Tout ce que la fiche affiche : entité fusionnée, fiche de la saison du contexte, noms de pays et de courses. */
+async function construireCoureur(id, ctx, cle) {
+  let I = { alias: {}, lettres: [] };
+  try { I = await chargerIndexCarrieres(); } catch (e) { /* alias facultatifs */ }
+  const [R, fs, , idx] = await Promise.all([chargerEntiteCoureur(id, I), chargerFicheSaison(id, ctx), chargerPays(),
+    chargerArchive("entites/index.json").catch(() => null)]);
+  const cid = R.cid;
+  const sources = [cid, id].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid)).filter((v, i, t) => t.indexOf(v) === i);
+  const cals = await fichesCalendrier(sources);
+  const ent = fusionCalendrier(R.ent, cals, idx && idx.generated_at);
+  const lettres = [...new Set(((ent && ent.palmares) || []).map(x => lettreId(x.course)).filter(Boolean))];
+  await Promise.all(lettres.map(chargerCoursesEnt));
+  return { id, cid, cle, ctx, ent, fiche: fs.d, msg: fs.msg, err: fs.err };
+}
+/** Fiche de la saison du contexte (onglet « Saison ») : archive ou Calendrier ; jamais de repli vers une autre saison d'archive. */
+async function chargerFicheSaison(id, ctx) {
+  const arch = ctx.archive, voulue = ctx.saison;
+  const cle = arch ? `archives/${voulue}/riders.json` : `riders-${voulue}.json`;
+  const indispo = `Fiche disponible à la fin de la collecte de la saison ${voulue}.`;
+  if (state.riders && state.ridersFor === cle) return { d: state.riders, msg: null };
+  if (arch) {   // saison en cours de collecte : pas de riders.json (inutile de le demander)
+    const A = await chargerArchivesIndex(), info = A && A.seasons.find(x => x.season === voulue);
+    if ((info && !info.complete) || (state.archIndexes[voulue] && !state.archIndexes[voulue].complete)) return { d: null, msg: indispo };
+  }
+  try {
+    let d;
+    if (arch) d = await charger(cle);
+    else {
+      try { d = await charger(cle); }
+      catch (e) {   // repli sur riders.json seulement pour la saison en cours
+        if (voulue !== state.current) throw e;
+        d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json");
+      }
+    }
+    state.riders = d; state.ridersFor = cle;
+    return { d, msg: null };
+  } catch (e) {
+    console.warn("Fiches coureurs indisponibles :", e.message);
+    return { d: null, msg: arch && e.status === 404 ? indispo : "Fiche de la saison indisponible.", err: e };
+  }
+}
+
+/* ---- composants ---- */
+function squeletteCoureur() {
+  return `<div class="rpage" aria-busy="true"><aside class="rside"><div class="hero"><div class="hero-top"><div class="sk sk-circle"></div>
+    <div style="flex:1"><div class="sk sk-line" style="width:80%;height:22px"></div><div class="sk sk-line" style="width:50%"></div></div></div>
+    <div class="sk sk-line" style="margin-top:16px"></div><div class="sk sk-line" style="width:70%"></div></div></aside>
+    <div class="rmain"><div class="kpis"><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div>
+    <div class="sk sk-line" style="height:36px"></div><div class="sk sk-tile"></div><div class="sk sk-tile"></div></div></div>`;
+}
+/** Tuiles de chiffres clés (2 colonnes à 390 px) : [{lab, val, sub}] ; une valeur absente = pas de tuile. */
+function htmlTuiles(liste) {
+  const t = liste.filter(x => x && x.val != null && x.val !== "");
+  return t.length ? `<div class="kpis">${t.map(x => `<div class="tile"><small>${esc(x.lab)}</small><b>${esc(x.val)}</b>${x.sub ? `<span class="sub">${esc(x.sub)}</span>` : ""}</div>`).join("")}</div>` : "";
+}
+/** Onglets de sous-pages, défilables et collants ; `attr` : nom de l'attribut data-… porté par chaque bouton. */
+function htmlOnglets(defs, actif, attr, id) {
+  return `<div class="subtabs sticky" ${id ? `id="${id}"` : ""} role="tablist">${defs.map(d =>
+    `<button class="subtab ${d.k === actif ? "active" : ""}" role="tab" aria-selected="${d.k === actif}" data-${attr}="${esc(d.k)}">${esc(d.l)}</button>`).join("")}</div>`;
+}
+/** Tableau compact : `cols` [{l, t (titre), tl (aligné à gauche)}], `rows` listes de cellules HTML déjà échappées ; 1re colonne figée. */
+function htmlTableau(cols, rows) {
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${cols.map(c => `<th${c.tl ? ' class="tl"' : ""}${c.t ? ` title="${esc(c.t)}"` : ""} scope="col">${esc(c.l)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${cols[i] && cols[i].tl ? ' class="tl"' : ""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function htmlVide(txt) { return `<div class="vide">${esc(txt)}</div>`; }
+/** Mini-graphique en ligne de l'évolution du rang : axe inversé (rang 1 en haut), abscisse proportionnelle au temps. pts : [[date, rang]]. */
+function sparkRang(pts) {
+  const W = 360, H = 150, L = 36, Rr = 14, T = 14, B = 26;
+  const t = d => Date.parse(d + "T00:00:00Z");
+  const xs = pts.map(p => t(p[0])), rs = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), rmax = Math.max(...rs), rmin = Math.min(...rs);
+  const haut = Math.max(rmax + Math.max(2, Math.ceil(rmax * .15)), rmin + 4);
+  const X = v => L + (x1 === x0 ? (W - L - Rr) / 2 : (v - x0) / (x1 - x0) * (W - L - Rr));
+  const Y = r => T + (r - 1) / (haut - 1) * (H - T - B);
+  const ticks = [...new Set([1, Math.round((1 + haut) / 2), Math.round(haut)])];
+  const grille = ticks.map(r => `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${Y(r).toFixed(1)}" y2="${Y(r).toFixed(1)}"/><text x="${L - 6}" y="${(Y(r) + 4).toFixed(1)}" text-anchor="end">${r}</text>`).join("");
+  const c = pts.map((p, i) => [X(xs[i]), Y(p[1])]);
+  const ligne = c.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join("");
+  const aire = "";
+  const dots = c.map((q, i) => `<circle class="pt${i === c.length - 1 ? " last" : ""}" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${i === c.length - 1 ? 4.5 : 3.5}"><title>${esc(dateLongue(pts[i][0]))} : ${esc(rang(pts[i][1]))}</title></circle>`).join("");
+  const lab = `<text x="${L}" y="${H - 6}" text-anchor="start">${esc(dateCourte(pts[0][0]))} ${esc(pd(pts[0][0]).y)}</text>` +
+    (pts.length > 1 ? `<text x="${W - Rr}" y="${H - 6}" text-anchor="end">${esc(dateCourte(pts[pts.length - 1][0]))} ${esc(pd(pts[pts.length - 1][0]).y)}</text>` : "");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution du rang UCI : de ${esc(rang(pts[0][1]))} à ${esc(rang(pts[pts.length - 1][1]))}, meilleur ${esc(rang(rmin))}">
+    <line class="ax" x1="${L}" x2="${L}" y1="${T}" y2="${H - B}"/>${grille}${aire}<path class="ln" d="${ligne}"/>${dots}${lab}</svg>`;
+}
+
+/* ---- calculs sur l'entité ---- */
+function identite(cr) {
+  const E = cr.ent || {}, F = cr.fiche && cr.fiche.riders && (cr.fiche.riders[cr.id] || cr.fiche.riders[cr.cid]) || {};
+  return { name: E.name || F.name || "", nationality: E.nationality || F.nationality, flag: E.flag || F.flag, birth: E.birth_date || F.birth_date, wd: E.wikidata || null,
+    fr: (E.nationality || F.nationality) === "FRA" };
+}
+function equipeActuelle(cr) {
+  const s = saisonsTriees(cr.ent).find(([, v]) => v.team);
+  if (s) return { team: s[1].team, y: s[0] };
+  const F = cr.fiche && cr.fiche.riders && (cr.fiche.riders[cr.id] || cr.fiche.riders[cr.cid]);
+  return F && F.team ? { team: F.team, y: cr.fiche.season } : null;
+}
+/** Meilleur rang UCI : instantanés (date exacte) ou fin de saison (sans jour). */
+function meilleurUci(cr) {
+  const E = cr.ent || {}; let best = null;
+  (E.historique_uci || []).forEach(([d, r]) => { if (r != null && (!best || r < best.r || (r === best.r && d < best.d))) best = { r, d }; });
+  saisonsTriees(E).forEach(([y, s]) => { if (s.uci_rank != null && (!best || s.uci_rank < best.r)) best = { r: s.uci_rank, y, d: s.cal ? s.uci_date : null }; });
+  return best;
+}
+function tuilesCoureur(cr) {
+  const E = cr.ent; if (!E) return "";
+  const T = E.totaux || {}, gt = E.grands_tours || [], fini = gt.filter(x => !x.status), ab = gt.length - fini.length, b = meilleurUci(cr);
+  return htmlTuiles([
+    { lab: "Victoires", val: T.wins != null ? T.wins : null, sub: "étapes et courses d'un jour" },
+    { lab: "Podiums", val: T.podiums != null ? T.podiums : null, sub: "places 1 à 3" },
+    { lab: "Victoires au général", val: T.gc_wins != null ? T.gc_wins : null, sub: "courses par étapes" },
+    b ? { lab: "Meilleur rang UCI", val: rang(b.r), sub: b.d ? `au ${dateLongue(b.d)}` : b.y ? `fin de saison ${b.y}` : "" } : null,
+    gt.length ? { lab: "Grands tours terminés", val: fini.length, sub: ab ? `${ab} abandon${ab > 1 ? "s" : ""}` : "" } : null,
+  ]);
+}
+function htmlHero(cr) {
+  const h = identite(cr), wd = h.wd, im = wd && wd.image, src = im && urlMedia(im.url), page = im && urlMedia(im.page);
+  const ini = h.name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  const photo = `<div class="hero-photo"><span aria-hidden="true">${esc(ini)}</span>${src ? `<img src="${esc(src)}" alt="Photo de ${esc(h.name)}" loading="lazy">` : ""}</div>`;
+  let credit = "";
+  if (src && im) {
+    const txt = [im.auteur, im.licence].filter(Boolean).join(", ");
+    if (txt) credit = `<div class="credit">Photo : ${page ? `<a href="${esc(page)}" target="_blank" rel="noopener noreferrer">${esc(txt)}</a>` : esc(txt)}</div>`;
+  }
+  const age = ageDe(h.birth), eq = equipeActuelle(cr), E = cr.ent, ys = E ? saisonsTriees(E).map(x => x[0]) : [];
+  const pills = [age != null ? `${age} ans` : "", wd && wd.taille ? `${wd.taille.toFixed(2).replace(".", ",")} m` : ""].filter(Boolean).map(t => `<span class="pill">${esc(t)}</span>`).join("") +
+    (h.fr ? '<span class="pill fr">France</span>' : "");
+  const faits = [
+    h.birth ? ["Naissance", `${dateLongue(h.birth)}${age != null ? ` (${age} ans)` : ""}`] : null,
+    wd && wd.lieu && wd.lieu.libelle ? ["Lieu", wd.lieu.libelle] : null,
+    eq ? [eq.y != null && state.current != null && eq.y < state.current ? "Dernière équipe" : "Équipe", eq.y != null && state.current != null && eq.y < state.current ? `${eq.team} (${eq.y})` : eq.team] : null,
+    ys.length ? ["Dans nos données", ys.length > 1 ? `${ys[ys.length - 1]} → ${ys[0]}` : String(ys[0])] : null,
+  ].filter(Boolean);
+  return `<div class="hero"><div class="hero-top">${photo}<div class="hero-id"><h1 class="h-title">${esc(h.name || "Coureur")}</h1>
+    <div class="hero-sub">${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span></div></div></div>
+    ${pills ? `<div class="hero-pills">${pills}</div>` : ""}${credit}
+    ${faits.length ? `<dl class="facts">${faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}</div>`;
+}
+function ongletsCoureur(cr) {
+  const E = cr.ent, out = [];
+  if (E) {
+    out.push({ k: "apercu", l: "Aperçu" });
+    if ((E.palmares || []).length) out.push({ k: "palmares", l: "Palmarès" });
+    if (saisonsTriees(E).length) out.push({ k: "saisons", l: "Saisons" });
+    if ((E.grands_tours || []).length) out.push({ k: "gt", l: "Grands tours" });
+    if ((E.historique_uci || []).length || saisonsTriees(E).some(([, s]) => s.uci_rank != null)) out.push({ k: "uci", l: "Classement UCI" });
+    if (saisonsTriees(E).some(([, s]) => s.team) || ((E.wikidata || {}).equipes_wd || []).some(x => x.libelle)) out.push({ k: "parcours", l: "Parcours" });
+  }
+  if (cr.fiche && identite(cr).name) out.push({ k: "saison", l: !cr.ctx.archive && cr.ctx.saison === state.current ? "Saison en cours" : `Saison ${cr.ctx.saison}` });
+  return out;
+}
+function carteResultat(x) {
+  const lab = x.label && x.label !== "Course" ? x.label : "";
+  const stage = x.classification === "stage" ? "" : "F";
+  return `<button class="res" data-open="${esc(x.race_id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification || "")}">
+    <span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
+    <span class="t"><b>${esc(x._nom || nomCoursePalmares(x))}</b><small>${x.category ? catBadge(x.category, x.uci_class) + " " : ""}${esc(lab)}</small></span>
+    <span class="d">${esc(dateCourte(x.date))}<br>${esc((pd(x.date) || {}).y || "")}</span></button>`;
+}
+function lienWikipedia(lang, titre) {
+  if (!/^[a-z]{2,3}$/.test(lang) || typeof titre !== "string" || !titre) return "";
+  return `<a href="https://${lang}.wikipedia.org/wiki/${encodeURIComponent(titre.replace(/ /g, "_"))}" target="_blank" rel="noopener noreferrer" hreflang="${lang}">${esc(LANGUES[lang] || lang.toUpperCase())}</a>`;
+}
+
+/* ---- onglets ---- */
+function htmlApercu(cr) {
+  const E = cr.ent, P = E.palmares || [], wd = E.wikidata || {}, S = saisonsTriees(E);
+  const chiffres = [
+    ["Saisons dans nos données", S.length], ["Courses courues", aSomme(E, "races")], ["Jours de course", aSomme(E, "race_days")],
+    ["Top 10", aSomme(E, "top10")], ["Abandons", aSomme(E, "dnf")],
+  ].filter(([, v]) => v > 0);
+  const liens = Object.entries(wd.wikipedia || {}).sort((a, b) => (a[0] === "fr" ? -1 : b[0] === "fr" ? 1 : a[0].localeCompare(b[0]))).map(([l, t]) => lienWikipedia(l, t)).filter(Boolean);
+  return `${P.length ? `<div><div class="grp-title" style="margin-top:0">Derniers résultats marquants</div><div class="res-list">${P.slice(0, 5).map(carteResultat).join("")}</div>
+      ${P.length > 5 ? `<button class="more" data-rtab="palmares">Tout le palmarès (${P.length})</button>` : ""}</div>` : ""}
+    ${chiffres.length ? `<div class="card"><h2 class="h-sec">En chiffres</h2><dl class="facts" style="margin:0;padding:0;border:0">${chiffres.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(num(v))}</dd>`).join("")}</dl>
+      <div class="tbl-note">Seules les courses suivies par ce site sont comptées.</div></div>` : ""}
+    ${liens.length ? `<div class="card"><h2 class="h-sec">Pour en savoir plus</h2><div class="wiki-links">${liens.join("")}</div><div class="tbl-note">Wikipédia (CC BY-SA)</div></div>` : ""}`;
+}
+function htmlPalmares(cr) {
+  const P = cr.ent.palmares || [], R = state.rpal;
+  const cats = CATS.filter(c => P.some(x => x.category === c)).concat([...new Set(P.map(x => x.category).filter(c => c && !CATS.includes(c)))]);
+  const chips = cats.length > 1 ? `<div class="chips">${["all"].concat(cats).map(c => `<button class="chip ${R.cat === c ? "active" : ""}" data-pcat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("")}</div>` : "";
+  const outil = `<div class="table-tools card" style="padding:8px 12px"><button class="switch" data-action="pal-vic" aria-pressed="${R.vic}"><i></i>Victoires seulement</button></div>`;
+  const L = P.filter(x => (R.cat === "all" || x.category === R.cat) && (!R.vic || x.rank === 1));
+  const groupes = [];
+  L.forEach(x => { const g = groupes[groupes.length - 1]; if (g && g.y === x.season) g.l.push(x); else groupes.push({ y: x.season, l: [x] }); });
+  return `${chips}${outil}${groupes.length ? groupes.map(g => `<div><div class="grp-title" style="margin-top:0">${esc(g.y)}<span>${g.l.length} résultat${g.l.length > 1 ? "s" : ""}</span></div>
+    <div class="res-list">${g.l.map(carteResultat).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
+    <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.</div>`;
+}
+function htmlSaisons(cr) {
+  const S = saisonsTriees(cr.ent);
+  const n = (s, k) => (s.stats || {})[k] ? esc(num(s.stats[k])) : "–";
+  const rows = S.map(([y, s]) => [esc(y), esc(s.team || "–"), n(s, "race_days"), n(s, "wins"), n(s, "podiums"), n(s, "top10"),
+    s.uci_rank != null ? `${esc(s.uci_rank)}${s.cal ? "*" : ""}` : "–"]);
+  const etoiles = S.filter(([, s]) => s.cal && s.uci_rank != null);
+  return `${htmlTableau([{ l: "Saison" }, { l: "Équipe", tl: true }, { l: "Jours", t: "Jours de course" }, { l: "Vic", t: "Victoires (étapes et courses d'un jour)" },
+      { l: "Pod", t: "Podiums" }, { l: "T10", t: "Top 10" }, { l: "UCI", t: "Rang au classement UCI de fin de saison" }], rows)}
+    <div class="tbl-note">Jours : jours de course · Vic : victoires · Pod : podiums · T10 : top 10 · UCI : rang de fin de saison.</div>
+    ${etoiles.length ? `<div class="tbl-note">* Saison en cours : rang du classement UCI le plus récent${etoiles[0][1].uci_date ? ` (au ${esc(dateLongue(etoiles[0][1].uci_date))})` : ""}.</div>` : ""}`;
+}
+function htmlGrandsTours(cr) {
+  const G = cr.ent.grands_tours || [], ys = [...new Set(G.map(x => x.season))].sort((a, b) => b - a);
+  const cell = x => {
+    if (!x) return '<span class="dim">–</span>';
+    const t = x.status ? (STATUTS_GT[x.status] || x.status) : rang(x.rank);
+    return x.race_id ? `<button class="cell" data-open="${esc(x.race_id)}" data-stage="${x.status ? "" : "F"}" data-vsub="${x.status ? "" : "gc"}">${esc(t)}</button>` : esc(t);
+  };
+  const rows = ys.map(y => [esc(y)].concat(GT_COLONNES.map(([k]) => cell(G.find(x => x.season === y && x.course === k)))));
+  return `${htmlTableau([{ l: "Saison" }].concat(GT_COLONNES.map(([, l]) => ({ l }))), rows)}
+    <div class="tbl-note">Place au classement général final, ou abandon constaté sur une étape.</div>`;
+}
+function htmlUci(cr) {
+  const E = cr.ent, H = (E.historique_uci || []).slice().sort((a, b) => a[0].localeCompare(b[0]));
+  const fins = saisonsTriees(E).filter(([, s]) => s.uci_rank != null);
+  let html = "";
+  if (H.length) {
+    html += `<div class="card chart-card"><h2 class="h-sec">Évolution du rang</h2>${sparkRang(H)}
+      <div class="tbl-note">Instantanés du classement UCI (fin de mois et après chaque course WorldTour). Rang 1 en haut.</div></div>`;
+    const lignes = H.map((p, i) => {
+      const prev = i ? H[i - 1][1] : null, d = prev == null ? "" : prev - p[1];
+      const v = !d ? '<span class="dim">–</span>' : d > 0 ? `<span class="mv-up">▲ ${d}</span>` : `<span class="mv-down">▼ ${-d}</span>`;
+      return [esc(dateLongue(p[0])), esc(p[1]), v];
+    }).reverse();
+    html += htmlTableau([{ l: "Date" }, { l: "Rang" }, { l: "Évolution" }], lignes);
+  }
+  if (fins.length) {
+    html += `<div class="grp-title" style="margin:0">Fin de saison</div>` + htmlTableau([{ l: "Saison" }, { l: "Rang" }, { l: "Points" }],
+      fins.map(([y, s]) => [esc(y), `${esc(s.uci_rank)}${s.cal ? "*" : ""}`, s.uci_points != null ? esc(num(s.uci_points)) : "–"]));
+    if (fins.some(([, s]) => s.cal)) html += `<div class="tbl-note">* Saison en cours : classement le plus récent.</div>`;
+  }
+  return html || htmlVide("Aucun classement UCI connu.");
+}
+function htmlParcours(cr) {
+  const E = cr.ent, S = saisonsTriees(E).filter(([, s]) => s.team).slice().reverse();   // anciennes d'abord
+  const blocs = [];
+  S.forEach(([y, s]) => { const b = blocs[blocs.length - 1]; if (b && b.team === s.team && b.fin + 1 === y) b.fin = y; else blocs.push({ team: s.team, deb: y, fin: y }); });
+  const nos = blocs.reverse().map(b => `<li><b>${esc(b.team)}</b><span>${b.deb === b.fin ? esc(b.deb) : `${esc(b.deb)} → ${esc(b.fin)}`}</span></li>`).join("");
+  const P54 = ((E.wikidata || {}).equipes_wd || []).filter(x => x.libelle);
+  const wd = P54.slice().sort((a, b) => (b.debut || "").localeCompare(a.debut || "")).map(x => {
+    const d = dateWd(x.debut, x.precision_debut), f = dateWd(x.fin, x.precision_fin);
+    const t = d && f ? `${d} → ${f}` : d ? `depuis ${d}` : f ? `jusqu'en ${f}` : "";
+    return `<li><b>${esc(x.libelle)}</b>${t ? `<span>${esc(t)}</span>` : ""}</li>`;
+  }).join("");
+  return `${nos ? `<div class="card"><h2 class="h-sec">Équipes par saison</h2><ul class="frise">${nos}</ul><div class="tbl-note">D'après les courses suivies par ce site (saison près).</div></div>` : ""}
+    ${wd ? `<div class="card"><h2 class="h-sec">Parcours selon Wikidata</h2><ul class="frise">${wd}</ul><div class="tbl-note">Source : Wikidata (CC0). Dates à la précision de la source.</div></div>` : ""}`;
+}
+/** Contenu de l'ancienne fiche (saison du contexte), sans l'en-tête. */
+function htmlSaison(cr) {
+  const D = cr.fiche, f = D && (D.riders[cr.id] || D.riders[cr.cid]);
+  if (!f) return `<div class="vide">${cr.msg ? esc(cr.msg) : "Fiche indisponible pour ce coureur."}</div>`;
+  const S = f.stats || {}, v = k => S[k] || 0, rk = D.ranking;
   const uci = f.uci_rank != null
     ? `<b>${esc(rang(f.uci_rank))}</b><span class="sub">${f.uci_points != null ? esc(num(f.uci_points)) + " pts · " : ""}au ${esc(dateLongue(rk && rk.date))}</span>`
     : rk ? `<b class="off">Non classé</b><span class="sub">${esc(rk.name || "Classement UCI")} du ${esc(dateLongue(rk.date))}</span>`
@@ -1189,7 +1693,6 @@ function renderSaison(id) {
     <div class="tile"><small>Top 10</small><b>${v("top10")}</b><span class="sub">étapes et courses d'un jour</span></div>
     <div class="tile"><small>Jours de course</small><b>${v("race_days")}</b><span class="sub">${v("races")} course${v("races") > 1 ? "s" : ""}${v("dnf") ? ` · ${v("dnf")} abandon${v("dnf") > 1 ? "s" : ""}` : ""}</span></div>
   </div>`;
-  // palmarès groupé par course (le plus récent d'abord)
   const R = f.results || [], groupes = [], idx = {};
   R.forEach(x => {
     if (!(x.race_id in idx)) { idx[x.race_id] = groupes.length; groupes.push({ id: x.race_id, items: [] }); }
@@ -1197,7 +1700,7 @@ function renderSaison(id) {
   });
   let pal;
   if (!R.length) {
-    pal = `<div class="empty card">${v("top10") || v("gc_wins") ? "Détail du palmarès non conservé pour ce coureur (fichier allégé)." : "Aucune place dans les 10 premiers cette saison."}</div>`;
+    pal = `<div class="vide">${v("top10") || v("gc_wins") ? "Détail du palmarès non conservé pour ce coureur (fichier allégé)." : "Aucune place dans les 10 premiers cette saison."}</div>`;
   } else {
     pal = groupes.map(g => {
       const c = (D.races || {})[g.id] || {}, ci = courseParId(g.id);
@@ -1211,153 +1714,190 @@ function renderSaison(id) {
         }).join("")}</div>`;
     }).join("");
   }
-  const fr = f.is_french ? ' <span class="badge fr">FR</span>' : "";
-  box.innerHTML = `<div class="stack">
-    <div class="rhead">${flag(f.flag, f.nationality)}<h2>${esc(f.name)}${fr}</h2></div>
-    ${tuiles}
-    <div><div class="sec-title">Palmarès de la saison ${esc(D.season ?? "")}</div><div class="stack" style="gap:8px">${pal}</div>
-      <div class="small muted" style="margin-top:8px">10 premières places des étapes, des courses d'un jour et des classements finaux (général, points, montagne, jeunes).</div></div>
-  </div>`;
+  return `${tuiles}<div><div class="sec-title">Palmarès de la saison ${esc(D.season ?? "")}</div><div class="stack" style="gap:8px">${pal}</div>
+      <div class="small muted" style="margin-top:8px">10 premières places des étapes, des courses d'un jour et des classements finaux (général, points, montagne, jeunes).</div></div>`;
 }
+const ONGLET_HTML = { apercu: htmlApercu, palmares: htmlPalmares, saisons: htmlSaisons, gt: htmlGrandsTours, uci: htmlUci, parcours: htmlParcours, saison: htmlSaison };
 
-/* ---- carrière : archives (archives/carrieres/<lettre>.json) + saisons du Calendrier (riders-<année>.json) ---- */
-async function chargerIndexCarrieres() {
-  try {
-    const d = await chargerArchive("carrieres/index.json");
-    return { alias: d.alias || {}, lettres: d.lettres || [] };
-  } catch (e) {
-    if (e.status === 404) return { alias: {}, lettres: [] };
-    throw e;
-  }
+function creditsCoureur(cr) {
+  const wd = identite(cr).wd, im = wd && wd.image, bits = ["Résultats : UCI DataRide"];
+  if (wd) bits.push(`Données : <a href="https://www.wikidata.org/wiki/${esc(wd.qid)}" target="_blank" rel="noopener noreferrer">Wikidata</a> (CC0)`);
+  if (im && urlMedia(im.url)) bits.push(`Photo : Wikimedia Commons, licence indiquée sous la photo${im.licence_url && urlMedia(im.licence_url) ? ` (<a href="${esc(urlMedia(im.licence_url))}" target="_blank" rel="noopener noreferrer">${esc(im.licence || "licence")}</a>)` : ""}`);
+  if (Object.keys((wd && wd.wikipedia) || {}).length) bits.push("Wikipédia (CC BY-SA)");
+  return `<div class="foot-credits">${bits.join(" · ")}</div>`;
 }
-/** Rassemble les saisons d'un coureur : rapprochement par rider_id exact (+ alias manuels), un seul fichier lettre chargé. */
-async function donneesCarriere(id) {
-  const I = await chargerIndexCarrieres();
-  const cid = Object.prototype.hasOwnProperty.call(I.alias, id) ? I.alias[id] : id;
-  const sources = [cid].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid));
-  const lettre = /^[a-z]/.test(cid) ? cid[0] : "_";
-  const saisons = new Map();
-  let arch = null;
-  if (I.lettres.includes(lettre)) {
-    const F = await chargerArchive(`carrieres/${lettre}.json`);
-    arch = Object.prototype.hasOwnProperty.call(F, cid) ? F[cid] : null;
-  }
-  if (arch) Object.entries(arch.seasons || {}).forEach(([y, v]) => saisons.set(+y, { ...v, archive: true }));
-  let id0 = arch ? { name: arch.name, nationality: arch.nationality, flag: arch.flag } : null;
-  const cal = (state.saisons && state.saisons.available) || [];
-  const fichiers = await Promise.all(cal.map(async y => {
-    try { return [y, await charger(`riders-${y}.json`)]; }
-    catch (e) {
-      if (y !== state.current) return [y, null];
-      try { return [y, await charger("riders.json")]; } catch (e2) { return [y, null]; }
-    }
-  }));
-  for (const [y, D] of fichiers) {
-    if (!D || (D.season != null && D.season !== y) || !D.riders || saisons.has(y)) continue;
-    const src = sources.find(k => Object.prototype.hasOwnProperty.call(D.riders, k));
-    if (!src) continue;
-    const f = D.riders[src];
-    if (!id0) id0 = { name: f.name, nationality: f.nationality, flag: f.flag };
-    saisons.set(y, { team: f.team, stats: f.stats || {}, uci_rank: f.uci_rank, uci_date: D.ranking && D.ranking.date, archive: false,
-      results: (f.results || []).filter(x => x.rank != null && x.rank <= 3).map(x => ({ ...x, race: (D.races && D.races[x.race_id] || {}).name })) });
-  }
-  return { id0, saisons: [...saisons.entries()].sort((a, b) => b[0] - a[0]) };
-}
-function ligneCarriere(y, s) {
-  const S = s.stats || {}, n = k => S[k] ? esc(S[k]) : "–";
-  const res = s.results || [];
-  const etoile = !s.archive && s.uci_rank != null ? "*" : "";
-  const cellules = `<span class="y">${res.length ? '<i class="chev">&rsaquo;</i>' : '<i class="chev"></i>'}${esc(y)}</span><span>${esc(s.team || "–")}</span>
-    <span class="n">${n("wins")}</span><span class="n">${n("podiums")}</span><span class="n">${n("top10")}</span><span class="n">${n("race_days")}</span>
-    <span class="n">${s.uci_rank != null ? esc(s.uci_rank) + etoile : "–"}</span>`;
-  if (!res.length) return `<div class="car-s"><div class="car-row">${cellules}</div></div>`;
-  const lignes = res.map(x => {
-    const stage = x.classification === "stage" ? (x.stage_number == null ? "" : x.stage_number) : "F";
-    const nom = x.race || x.race_id, detail = x.label && x.label !== "Course" ? x.label : "";
-    return `<button class="pal-row" data-open="${esc(x.race_id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification)}">
-      <span class="d">${esc(dateCourte(x.date))}</span><span class="l">${esc(nom)}${detail ? `<small>${esc(detail)}</small>` : ""}</span><span class="k${rangClasse(x.rank)}">${esc(x.rank)}</span></button>`;
-  }).join("");
-  return `<details class="car-s"><summary class="car-row">${cellules}</summary><div class="car-pal">${lignes}</div></details>`;
-}
-async function renderCarriere(id) {
-  const box = document.getElementById("rcontent");
-  box.innerHTML = `<div class="loading">Chargement…</div>`;
-  const actuel = () => state.coureurOuvert === id && state.rtab === "carriere";
-  let C;
-  try { C = await donneesCarriere(id); }
-  catch (e) {
-    console.warn("Carrière indisponible :", e.message);
-    if (actuel()) box.innerHTML = messageErreur(`Carrière indisponible (${e.message}).`, "retry-car");
+function renderCoureur() {
+  const cr = state.cr, body = document.getElementById("rsheet-body");
+  if (!cr) return;
+  const h = identite(cr), eq = equipeActuelle(cr), age = ageDe(h.birth);
+  document.getElementById("rsheet-name").textContent = h.name || "Coureur";
+  document.getElementById("rsheet-sub").textContent = [eq && eq.team, age != null ? `${age} ans` : ""].filter(Boolean).join(" · ");
+  const defs = ongletsCoureur(cr);
+  if (!h.name || !defs.length) {
+    body.innerHTML = `<div class="stack"><div class="vide">${cr.msg && !cr.ent ? esc(cr.msg) : "Pas d'archives pour ce coureur"}</div></div>`;
     return;
   }
-  if (!actuel()) return;
-  if (!C.saisons.length) { box.innerHTML = `<div class="empty card">Pas d'archives pour ce coureur</div>`; return; }
-  const h = C.id0 || {};
-  if (h.name && !(state.riders && state.riders.riders[id])) document.getElementById("rsheet-name").textContent = h.name;
-  const fr = h.nationality === "FRA" ? ' <span class="badge fr">FR</span>' : "";
-  const etoiles = C.saisons.filter(([, s]) => !s.archive && s.uci_rank != null).map(([y, s]) => `${y}${s.uci_date ? ` (au ${dateLongue(s.uci_date)})` : ""}`);
-  box.innerHTML = `<div class="stack">
-    <div class="rhead">${flag(h.flag, h.nationality)}<h2>${esc(h.name || "Coureur")}${fr}</h2></div>
-    <div class="card table-card"><div class="car-row car-h"><span>Saison</span><span>Équipe</span><span class="n" title="Victoires">Vic</span><span class="n" title="Podiums">Pod</span>
-      <span class="n" title="Top 10">T10</span><span class="n" title="Jours de course">Jrs</span><span class="n" title="Rang au classement UCI de fin de saison">UCI</span></div>
-      ${C.saisons.map(([y, s]) => ligneCarriere(y, s)).join("")}</div>
-    <div class="small muted">Vic : victoires d'étapes et de courses d'un jour · Pod : podiums · T10 : top 10 · Jrs : jours de course · UCI : rang au classement UCI de fin de saison.
-      Touchez une saison pour son palmarès (victoires et podiums, y compris les classements finaux). Seules les courses suivies par ce site sont comptées.</div>
-    ${etoiles.length ? `<div class="small muted">* Saison non archivée : rang du classement UCI le plus récent, pas de fin de saison (${esc(etoiles.join(" ; "))}).</div>` : ""}
-  </div>`;
+  if (!defs.some(d => d.k === state.rtab)) state.rtab = defs[0].k;
+  body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHero(cr)}</aside>
+    <div class="rmain">${tuilesCoureur(cr)}${htmlOnglets(defs, state.rtab, "rtab", "rtabs")}<div class="tabcontent" id="rcontent" role="tabpanel"></div>${creditsCoureur(cr)}</div></div>`;
+  majContenuCoureur();
+}
+/** Redessine seulement le contenu de l'onglet actif (la barre d'onglets collante et le défilement restent en place). */
+function majContenuCoureur() {
+  const cr = state.cr, box = document.getElementById("rcontent");
+  if (!cr || !box) return;
+  document.querySelectorAll("#rtabs .subtab").forEach(b => { const a = b.dataset.rtab === state.rtab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); });
+  const f = ONGLET_HTML[state.rtab];
+  box.innerHTML = f ? f(cr) : "";
+}
+function choisirOngletCoureur(k) {
+  state.rtab = k; state.rtabs[state.coureurOuvert] = k;
+  majContenuCoureur();
+  const rs = document.getElementById("rsheet"), tabs = document.getElementById("rtabs"), rc = document.getElementById("rcontent");
+  if (tabs && rc) {   // le contenu commence sous les onglets collants : on remonte si on a défilé plus bas
+    const limite = tabs.getBoundingClientRect().bottom, haut = rc.getBoundingClientRect().top;
+    if (haut < limite) rs.scrollTop += haut - limite - 8;
+  }
 }
 
 async function ouvrirCoureur(id) {
   const rs = document.getElementById("rsheet"), body = document.getElementById("rsheet-body");
   const nouveau = state.coureurOuvert !== id;
   state.coureurOuvert = id;
-  if (nouveau) { state.rtab = "saison"; state.rMsg = null; }
+  if (nouveau) { state.rtab = state.rtabs[id] || "apercu"; state.rpal = { cat: "all", vic: false }; }
   rs.classList.add("open"); rs.setAttribute("aria-hidden", "false");
   majScroll();
   if (nouveau) rs.scrollTop = 0;
   const ctx = state.rctx || { archive: state.ctxArchive, saison: state.ctxSaison ?? state.current };
-  const arch = ctx.archive, voulue = ctx.saison;
-  const cle = arch ? `archives/${voulue}/riders.json` : `riders-${voulue}.json`;
-  if (!state.riders || state.ridersFor !== cle) {
+  const cle = `${id}|${ctx.archive ? "a" : "c"}${ctx.saison}`;
+  if (!state.cr || state.cr.cle !== cle) {
+    state.cr = null;
     document.getElementById("rsheet-name").textContent = "Coureur";
     document.getElementById("rsheet-sub").textContent = "";
-    body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
-    const indisponible = () => {   // archive : jamais de repli vers les fiches d'une autre saison ; la carrière reste consultable
-      state.riders = null; state.ridersFor = null;
-      state.rMsg = `Fiche disponible à la fin de la collecte de la saison ${voulue}.`; state.rtab = "carriere";
-      renderCoureur(id);
-    };
-    if (arch) {   // saison en cours de collecte : pas de riders.json (inutile de le demander)
-      const A = await chargerArchivesIndex(), info = A && A.seasons.find(x => x.season === voulue);
+    body.innerHTML = squeletteCoureur();
+    let cr;
+    try { cr = await construireCoureur(id, ctx, cle); }
+    catch (e) {
+      console.warn("Fiche coureur indisponible :", e.message);
       if (parseHashCoureur() !== id) return;
-      if ((info && !info.complete) || (state.archIndexes[voulue] && !state.archIndexes[voulue].complete)) { indisponible(); return; }
-    }
-    try {
-      let d;
-      if (arch) d = await charger(cle);
-      else {
-        try { d = await charger(cle); }
-        catch (e) {   // repli sur riders.json seulement pour la saison en cours
-          if (voulue !== state.current) throw e;
-          d = await chargerAvecRepli(`riders-${state.current}.json`, "riders.json");
-        }
-      }
-      if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
-      state.riders = d; state.ridersFor = cle; state.rMsg = null;
-    } catch (e) {
-      console.warn("Fiches coureurs indisponibles :", e.message);
-      if (parseHashCoureur() !== id) return;
-      document.getElementById("rsheet-name").textContent = "Coureur";
-      if (arch && e.status === 404) { indisponible(); return; }
-      body.innerHTML = `<div class="errbox"><div>Fiche indisponible</div><button data-action="retry">Réessayer</button></div>`;
+      body.innerHTML = messageErreur(`Fiche indisponible (${e.message}).`, "retry");
       return;
     }
+    if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
+    state.cr = cr;
   }
-  renderCoureur(id);
+  renderCoureur();
+}
+
+/* ================== recherche globale (E2) ================== */
+/** Même normalisation que netutil.normalize (Python) : ASCII minuscule sans ponctuation, espaces simples. */
+function normIdx(t) { return String(t || "").normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+function parseHashRecherche() {
+  const m = /^#recherche(?:\/(.*))?$/.exec(location.hash);
+  if (!m) return null;
+  try { return decodeURIComponent(m[1] || ""); } catch (e) { return m[1] || ""; }
+}
+function lettreRecherche(q) {
+  const mots = normIdx(q).split(" ").filter(Boolean);
+  if (!mots.length || mots.join("").length < 2) return null;
+  return lettreId(mots.slice().sort((a, b) => b.length - a.length)[0]);
+}
+async function chercher(q) {
+  const qn = normIdx(q), mots = qn.split(" ").filter(Boolean), l = lettreRecherche(q);
+  let L;
+  try { L = await chargerArchive(`entites/recherche/${l}.json`); } catch (e) { if (e.status === 404) L = []; else throw e; }
+  const out = [];
+  for (const e of L) {
+    if (e._n === undefined) e._n = normIdx(e.n);
+    const ew = e._n.split(" ");
+    if (mots.every(w => ew.some(x => x.startsWith(w)))) out.push({ e, s: e._n === qn ? 0 : e._n.startsWith(qn) ? 1 : 2 });
+  }
+  out.sort((a, b) => a.s - b.s || ((b.e.y || [0, 0])[1] - (a.e.y || [0, 0])[1]) || a.e._n.localeCompare(b.e._n));
+  return out.map(x => x.e);
+}
+const SR_GROUPES = [["c", "Coureurs", ["c"]], ["e", "Équipes et lignées", ["e", "l"]], ["r", "Courses", ["r"]]];
+const SR_PAR_GROUPE = 8;
+function annees(y) { return !y ? "" : y[0] === y[1] ? String(y[0]) : `${y[0]}–${y[1]}`; }
+function htmlResultats() {
+  const S = state.sr, R = S.res || [];
+  if (!R.length) return `<div class="sr-hint">Aucun résultat pour « ${esc(S.q.trim())} ».</div>`;
+  let i = 0;
+  const html = SR_GROUPES.map(([g, titre, types]) => {
+    const L = R.filter(e => types.includes(e.t));
+    if (!L.length) return "";
+    const vis = S.tout[g] ? L : L.slice(0, SR_PAR_GROUPE);
+    const items = vis.map(e => {
+      const fl = e.f ? flag(e.f, "") : '<span class="flag" style="visibility:hidden"></span>';
+      const yr = `<span class="yr">${esc(annees(e.y))}</span>`;
+      if (e.t === "c" || e.t === "r") {
+        const n = i++;
+        return `<button class="sr-item nav${S.sel === n ? " sel" : ""}" role="option" aria-selected="${S.sel === n}" id="sr-i${n}" data-sr="${e.t}" data-id="${esc(e.id)}">${fl}<span class="nm">${esc(e.n)}</span>${yr}</button>`;
+      }
+      return `<div class="sr-item off" role="option" aria-disabled="true">${fl}<span class="nm">${esc(e.n)}</span>${e.t === "l" ? '<span class="badge">Lignée</span>' : e.nat ? '<span class="badge">Sélection</span>' : ""}${yr}</div>`;
+    }).join("");
+    const reste = L.length - vis.length;
+    return `<div class="sr-grp"><div class="grp-title" style="margin-top:0">${esc(titre)}<span>${L.length}</span></div><div class="sr-list">${items}
+      ${reste > 0 ? `<button class="sr-more" data-action="sr-more" data-grp="${g}">Afficher ${reste} de plus</button>` : ""}</div></div>`;
+  }).join("");
+  return `<div class="sr-msg small muted" id="sr-msg" aria-live="polite">${S.msg ? esc(S.msg) : ""}</div>${html}`;
+}
+async function majRecherche() {
+  const S = state.sr, body = document.getElementById("sr-body"), tok = ++S.token, q = S.q;
+  S.sel = -1; S.msg = ""; S.tout = {};
+  const l = lettreRecherche(q);
+  if (l == null) { S.res = null; body.innerHTML = `<div class="sr-hint">Cherchez un coureur, une équipe ou une course.<br>Tapez au moins deux lettres.</div>`; return; }
+  if (!cache.has(`archives/entites/recherche/${l}.json`))
+    body.innerHTML = `<div aria-busy="true">${'<div class="sk sk-line" style="height:44px;margin:8px 0;border-radius:14px"></div>'.repeat(4)}</div>`;
+  try { const r = await chercher(q); if (tok !== S.token) return; S.res = r; }
+  catch (e) { if (tok === S.token) { S.res = null; body.innerHTML = messageErreur(`Recherche indisponible (${e.message}).`, "retry-sr"); } return; }
+  body.innerHTML = htmlResultats();
+}
+function itemsNav() { return [...document.querySelectorAll("#sr-body .sr-item.nav")]; }
+function selectionnerResultat(n) {
+  const L = itemsNav(), S = state.sr, inp = document.getElementById("sr-q");
+  if (!L.length) return;
+  S.sel = (n + L.length) % L.length;
+  L.forEach((b, k) => { b.classList.toggle("sel", k === S.sel); b.setAttribute("aria-selected", k === S.sel); });
+  inp.setAttribute("aria-activedescendant", L[S.sel].id);
+  L[S.sel].scrollIntoView({ block: "nearest" });
+}
+async function choisirResultat(el) {
+  if (!el) return;
+  const t = el.dataset.sr, id = el.dataset.id, S = state.sr;
+  if (t === "c") { state.rctx = { archive: false, saison: state.current }; ouvrirCoureurLien(id); return; }
+  if (t === "r") {
+    // E3 : une page « série » (toutes les éditions) remplacera cette redirection ; en attendant, la dernière édition
+    try {
+      const F = await chargerArchive(`entites/courses/${lettreId(id)}.json`), C = F[id], ed = C && C.editions && C.editions[0];
+      if (ed && ed.race_id) { ouvrir(ed.race_id, ""); return; }
+      S.msg = "Aucune édition disponible pour cette course.";
+    } catch (e) { S.msg = `Course indisponible (${e.message}).`; }
+    const m = document.getElementById("sr-msg"); if (m) m.textContent = S.msg;
+  }
+}
+function ouvrirRecherche(q) {
+  const el = document.getElementById("search"), inp = document.getElementById("sr-q"), S = state.sr;
+  const deja = el.classList.contains("open");
+  el.classList.add("open"); el.setAttribute("aria-hidden", "false");
+  majScroll();
+  if (!deja || S.q !== q) { S.q = q; inp.value = q; majRecherche(); }
+  if (!deja) setTimeout(() => inp.focus(), 30);
+}
+function fermerRecherche() {
+  const el = document.getElementById("search");
+  if (!el.classList.contains("open")) return;
+  el.classList.remove("open"); el.setAttribute("aria-hidden", "true");
+  majScroll();
+}
+function lancerRecherche() {   // depuis l'icône de l'en-tête
+  state.ouvertParApp = true;
+  location.hash = "#recherche";
 }
 
 function routeur() {
-  const rid = parseHashCoureur(), h = parseHash();
+  const rid = parseHashCoureur(), h = parseHash(), q = parseHashRecherche();
+  if (q !== null) { fermerCoureur(); fermerFiche(); ouvrirRecherche(q); return; }
+  fermerRecherche();
   if (rid) { ouvrirCoureur(rid); return; }      // la fiche course éventuelle reste ouverte dessous
   fermerCoureur();
   if (h) ouvrirCourse(h.id, h.etape); else fermerFiche();
@@ -1379,7 +1919,7 @@ function ouvrir(id, etape) {
 }
 function retour() {
   if (state.ouvertParApp && history.length > 1) history.back();
-  else { history.replaceState(null, "", location.pathname + location.search); fermerCoureur(); fermerFiche(); }
+  else { history.replaceState(null, "", location.pathname + location.search); fermerRecherche(); fermerCoureur(); fermerFiche(); }
 }
 
 /* ================== événements (délégation) ================== */
@@ -1388,13 +1928,15 @@ document.addEventListener("click", e => {
   if (lien) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); return; }
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
-  if (t.dataset.rtab) { state.rtab = t.dataset.rtab; renderCoureur(state.coureurOuvert); return; }
+  if (t.dataset.rtab) { choisirOngletCoureur(t.dataset.rtab); return; }
+  if (t.dataset.pcat) { state.rpal.cat = t.dataset.pcat; majContenuCoureur(); return; }
   if (t.dataset.calsaison) { changerSaisonCal(+t.dataset.calsaison); return; }
   if (t.dataset.tab) { state.tab = t.dataset.tab; archiveDansUrl(); renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
   if (t.dataset.clsub) { state.clSub = t.dataset.clsub; renderMain(); preparerOnglet(); return; }
   if (t.dataset.acat) { state.archCat = t.dataset.acat; renderMain(); return; }
   if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
   if (t.dataset.calvue) { state.calVue = t.dataset.calvue; renderMain(); return; }
+  if (t.dataset.sr) { choisirResultat(t); return; }
   if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; ouvrir(t.dataset.open, t.dataset.stage); return; }
   if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
     state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
@@ -1410,7 +1952,10 @@ document.addEventListener("click", e => {
   else if (a === "retry-archidx") { state.archIdx = undefined; state.archErr = null; cache.delete("archives/index.json"); renderMain(); preparerOnglet(); }
   else if (a === "retry-arch") { delete state.archIndexes["_err" + state.archSaison]; cache.delete(`archives/${state.archSaison}/index.json`); renderMain(); preparerOnglet(); }
   else if (a === "retry") { routeur(); }
-  else if (a === "retry-car") { renderCarriere(state.coureurOuvert); }
+  else if (a === "search") lancerRecherche();
+  else if (a === "sr-more") { state.sr.tout[t.dataset.grp] = true; document.getElementById("sr-body").innerHTML = htmlResultats(); }
+  else if (a === "retry-sr") { cache.clear(); majRecherche(); }
+  else if (a === "pal-vic") { state.rpal.vic = !state.rpal.vic; majContenuCoureur(); }
   else if (a === "retry-index") { cache.clear(); init(); }
 });
 document.addEventListener("change", e => {
@@ -1419,10 +1964,21 @@ document.addEventListener("change", e => {
   archiveDansUrl(); renderMain(); preparerOnglet();
 });
 document.addEventListener("input", e => {
+  if (e.target.id === "sr-q") {
+    state.sr.q = e.target.value;
+    const q = state.sr.q.trim();
+    history.replaceState(history.state, "", location.pathname + location.search + "#recherche" + (q ? "/" + encodeURIComponent(q) : ""));
+    majRecherche(); return;
+  }
   if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; majListeUci(); }
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && (parseHash() || parseHashCoureur())) retour();
+  if (e.target && e.target.id === "sr-q") {
+    if (e.key === "ArrowDown") { e.preventDefault(); selectionnerResultat(state.sr.sel + 1); return; }
+    if (e.key === "ArrowUp") { e.preventDefault(); selectionnerResultat(state.sr.sel < 0 ? -1 : state.sr.sel - 1); return; }
+    if (e.key === "Enter") { e.preventDefault(); const L = itemsNav(); choisirResultat(L[state.sr.sel >= 0 ? state.sr.sel : 0]); return; }
+  }
+  if (e.key === "Escape" && (parseHash() || parseHashCoureur() || parseHashRecherche() !== null)) retour();
   const lien = e.target.closest && e.target.closest("[data-rider]");
   if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); }
 });

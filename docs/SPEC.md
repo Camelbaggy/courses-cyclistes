@@ -369,10 +369,11 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
   aucune autre édition : éditions archivées (`editions.json`) + courses de même clé des saisons du Calendrier
   (`index-<année>.json`) ; année, vainqueur et meilleur Français (liens coureur lus dans la saison de l'édition), lien vers la
   fiche de l'édition.
-- Fiche coureur : onglets **Saison** (fiche de la saison du contexte) et **Carrière** (tableau par saison : équipe, victoires,
-  podiums, top 10, jours de course, rang UCI de fin de saison ; palmarès victoires/podiums replié par saison ; saisons du
-  Calendrier ajoutées en tête si le même `rider_id` figure dans `riders-<année>.json`, leur rang UCI étant marqué `*` : classement
-  le plus récent, pas de fin de saison). Aucune donnée : « Pas d'archives pour ce coureur ».
+- Fiche coureur `#coureur/<id>` (E2) : en-tête (photo Wikimedia si licence lisible, drapeau, âge, lieu, taille, équipe), tuiles (victoires, podiums,
+  victoires au général, meilleur rang UCI, grands tours terminés) et onglets Aperçu · Palmarès · Saisons · Grands tours · Classement UCI · Parcours · Saison en cours,
+  lus dans `entites/coureurs/<lettre>.json` (§4.5) + `riders-<année>.json` du Calendrier si plus récents (rang UCI marqué `*`). Valeur absente : ligne absente.
+  Aucune donnée : « Pas d'archives pour ce coureur ».
+- Recherche globale (icône de l'en-tête, `#recherche/<texte>`) : `entites/recherche/<lettre>.json`, résultats groupés coureurs / équipes et lignées / courses.
 - Onglets : **Récents** (cartes `latest` : course, étape, vainqueur, meilleur Français, résumé IA) ·
   **Calendrier** (courses de la saison groupées par mois, filtre par catégorie WT / Pro / FDJ / .1 / .2 / Champ.,
   statut, vainqueur ; à venir en grisé) · **FDJ United Series** (classement + manches) · **Français**

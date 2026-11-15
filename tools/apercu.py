@@ -45,24 +45,36 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const debord = [];
   async function verifie(nom) {
     const r = await page.evaluate(() => {
-      const rs = document.getElementById('rsheet');
-      const sheet = rs.classList.contains('open') ? rs : document.getElementById('sheet');
+      const sheet = ['search', 'rsheet', 'sheet'].map(i => document.getElementById(i)).find(e => e.classList.contains('open')) || document.getElementById('sheet');
       const ouvert = sheet.classList.contains('open');
       const el = ouvert ? sheet : document.documentElement;
       const pires = [];
       document.querySelectorAll(ouvert ? `#${sheet.id} *` : 'header.top *, main *').forEach(n => {
         const b = n.getBoundingClientRect();
-        if (b.width > 0 && b.right > 391 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs')) pires.push(n.className || n.tagName);
+        if (b.width > 0 && b.right > window.innerWidth + 1 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs,.tbl-wrap')) pires.push(n.className || n.tagName);
       });
       return { sw: el.scrollWidth, cw: el.clientWidth, pires: pires.slice(0, 5) };
     });
     if (r.sw > r.cw + 1 || r.pires.length) debord.push(`${nom}: scrollWidth=${r.sw} clientWidth=${r.cw} ${r.pires.join(',')}`);
+  }
+  async function ouvreOnglet(k) {
+    // clique l'onglet k de la fiche coureur s'il existe (sinon ne fait rien)
+    const b = await page.$(`#rtabs [data-rtab="${k}"]`);
+    if (b) { await b.click(); await page.waitForTimeout(120); }
   }
   async function cap(nom, full) {
     await page.waitForTimeout(250);
     await verifie(nom);
     await page.screenshot({ path: `${sortie}/${nom}${suf}.png`, fullPage: !!full });
     console.log('capture', `${nom}${suf}.png`);
+  }
+  async function hauteurRsheet(nom) {
+    // fiche coureur : même principe que hauteurFiche, sur #rsheet (largeur de la fenêtre conservée)
+    const vp = page.viewportSize();
+    const h = await page.evaluate(() => document.getElementById('rsheet-body').scrollHeight + 70);
+    await page.setViewportSize({ width: vp.width, height: Math.min(Math.max(h, 844), 4000) });
+    await cap(nom);
+    await page.setViewportSize(vp);
   }
   async function hauteurFiche(nom) {
     // la fiche défile dans #sheet : on agrandit temporairement la fenêtre pour une capture complète
@@ -95,19 +107,21 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     await page.click('[data-action="uc-fr"]'); await page.fill('#uc-q', 'ebauche'); await cap('03d-uci-recherche', false);
     await page.fill('#uc-q', '');
     const lien = await page.$('#uc-list .rlink');
-    if (lien) { await lien.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('03e-uci-fiche-coureur', false); await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300); }
+    if (lien) { await lien.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('03e-uci-fiche-coureur', false);
+      await ouvreOnglet('saison'); await cap('03e2-uci-fiche-coureur-saison', false); await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300); }
   }
   await page.click('[data-clsub="fdj"]'); await cap('03f-classement-fdj', true);
   await page.click('.tab[data-tab="francais"]'); await page.waitForSelector('.fr-card'); await cap('04a-francais', false);
   await page.evaluate(() => document.querySelector('details.nc') && (document.querySelector('details.nc').open = true));
   await cap('04b-francais-complet', true);
   await page.click('.fr-card'); await page.waitForSelector('#rsheet.open .tile'); await cap('04c-francais-fiche', false);
+  await ouvreOnglet('saison'); await cap('04c2-francais-fiche-saison', false);
   await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
   // fiche coureur ouverte depuis le calendrier d'une autre saison (riders-<saison>)
   await page.goto(base + '&saison=' + saisons[0]); await page.waitForSelector('.card');
   await page.click('.tab[data-tab="calendrier"]'); await page.click(`[data-calsaison="${saisons[0]}"]`); await page.waitForSelector('.cal-item');
   await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
-  const rl = await page.$('#sheet .rlink'); if (rl) { await rl.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('05-fiche-coureur-saison', false); }
+  const rl = await page.$('#sheet .rlink'); if (rl) { await rl.click(); await page.waitForSelector('#rsheet.open .tile'); await ouvreOnglet('saison'); await cap('05-fiche-coureur-saison', false); }
   await page.goto(base); await page.waitForSelector('.card');
   await cap('01-recents', true);
   // Archives : onglet par défaut (saison la plus récente), liste vide si aucune archive
@@ -126,17 +140,18 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await cap('07a-archive-fiche-etapes', false);
   await hauteurFiche('07b-archive-fiche-complete');
   const rlA = await page.$('#sheet .rlink'); await rlA.click(); await page.waitForSelector('#rsheet.open .tile');
-  await cap('07c-archive-fiche-coureur', false);
+  await ouvreOnglet('saison'); await cap('07c-archive-fiche-coureur', false);
   await page.click('#rsheet [data-action="back"]'); await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
   await page.goto(base + '&archive=2023'); await page.waitForSelector('.cal-item');
   await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
-  const rlB = await page.$('#sheet .rlink'); await rlB.click(); await page.waitForSelector('#rsheet.open .empty');
+  const rlB = await page.$('#sheet .rlink'); await rlB.click(); await page.waitForSelector('#rsheet.open .hero, #rsheet.open .vide');
   await cap('07d-archive-coureur-sans-riders', false);
+  console.log('2023 : onglet Saison absent (fiche non publiée) :', !(await page.$('#rtabs [data-rtab="saison"]')));
   // lien direct vers une course d'archive (404 volontaire sur races/, puis recherche dans les archives)
   const avantA = erreurs.length;
   await page.goto(base + '#course/fx-a24-classique-hc'); await page.waitForSelector('#sheet.open .card');
   await cap('07e-archive-lien-direct', false);
-  const rlC = await page.$('#sheet .rlink'); await rlC.click(); await page.waitForSelector('#rsheet.open .tile');
+  const rlC = await page.$('#sheet .rlink'); await rlC.click(); await page.waitForSelector('#rsheet.open .tile'); await ouvreOnglet('saison');
   const saison = await page.evaluate(() => document.getElementById('rsheet-body').textContent.includes('Palmarès de la saison 2024'));
   console.log('lien direct archive : fiche coureur de la saison 2024 :', saison);
   console.log('ERREURS_ATTENDUES (404 lien direct)', JSON.stringify(erreurs.splice(avantA)));
@@ -173,10 +188,10 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await page.click('#stage-chips .chip, #subtabs .subtab').catch(() => {});      // un redessin de la fiche garde l'encart déplié
   console.log('encart toujours deplie apres redessin :', await page.$eval('#editions', d => d.open));
   // éditions d'une saison sans fiches coureurs (2023 en cours de collecte) : la fiche s'ouvre sur l'onglet Carrière
-  await page.click('#editions .ed-row:nth-of-type(2) .rlink'); await page.waitForSelector('#rsheet.open .subtabs');
+  await page.click('#editions .ed-row:nth-of-type(2) .rlink'); await page.waitForSelector('#rsheet.open .hero, #rsheet.open .vide');
   await cap('21d-editions-coureur-2023', false);
   await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
-  await page.click('#editions .ed-row:nth-of-type(1) .rlink'); await page.waitForSelector('#rsheet.open .tile, #rsheet.open .empty');
+  await page.click('#editions .ed-row:nth-of-type(1) .rlink'); await page.waitForSelector('#rsheet.open .tile, #rsheet.open .vide');
   await cap('21e-editions-coureur-2024', false);
   await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
   await page.click('#editions .ed-row:nth-of-type(1) .ed-go'); await page.waitForSelector('#sheet-name');
@@ -191,21 +206,83 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   await page.goto(base + '#course/fx-a24-tour-hc'); await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(600);
   console.log('ERREURS_ATTENDUES (404 lien direct, tour)', JSON.stringify(erreurs.splice(avantD).length));
   console.log('course sans autre edition : encart absent =', !(await page.$('#editions')));
-  // carrière : Paul Épure (archives 2022 et 2024 + Calendrier 2026)
-  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile');
-  await cap('23a-coureur-saison-onglets', false);
-  await page.click('[data-rtab="carriere"]'); await page.waitForSelector('.car-s');
-  await cap('23b-carriere', false);
-  await page.click('.car-s > summary'); await page.waitForTimeout(150);
-  await cap('23c-carriere-palmares', false);
-  await page.click('.car-s .pal-row'); await page.waitForFunction(() => location.hash.startsWith('#course/'));
+  // fiche coureur E2 : Paul Épure (archives 2022-2024 + Calendrier 2026-2027, Wikidata fictif, grands tours fictifs)
+  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .hero');
+  await page.waitForSelector('#rsheet.open .tile');
+  await cap('23a-coureur-apercu', false);
+  await hauteurRsheet('23a2-coureur-apercu-complet');
+  const onglets = await page.$$eval('#rtabs .subtab', b => b.map(x => x.dataset.rtab));
+  console.log('onglets de la fiche :', onglets.join(','));
+  for (const k of onglets.filter(x => x !== 'apercu')) {
+    await page.click(`#rtabs [data-rtab="${k}"]`); await page.waitForTimeout(150);
+    await hauteurRsheet(`23-coureur-${k}`);
+  }
+  await page.click('#rtabs [data-rtab="palmares"]'); await page.click('[data-action="pal-vic"]'); await cap('23p-palmares-victoires', false);
+  await page.click('[data-action="pal-vic"]');
+  await page.click('[data-pcat="Pro"]').catch(() => {}); await cap('23q-palmares-filtre-pro', false);
+  await page.click('#rcontent .res'); await page.waitForFunction(() => location.hash.startsWith('#course/'));
   await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(300);
   console.log('palmares -> fiche course :', await page.evaluate(() => location.hash));
-  // coureur sans aucune archive
-  await page.goto(base + '#coureur/inconnu-x-19900101'); await page.waitForSelector('#rsheet.open .subtabs');
-  await page.click('[data-rtab="carriere"]'); await page.waitForSelector('#rcontent .empty');
-  console.log('sans archives :', await page.$eval('#rcontent', e => e.textContent.trim()));
-  await cap('23d-carriere-vide', false);
+  await page.goBack(); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(300);
+  console.log('retour : onglet conserve =', await page.$eval('#rtabs .active', e => e.dataset.rtab));
+  // coureur sans photo ni Wikidata (archives 2024 + 2026)
+  await page.goto(base + '#coureur/demo-paul-19961228'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
+  await cap('24a-coureur-sans-wikidata', false);
+  await ouvreOnglet('uci'); await cap('24b-coureur-sans-wikidata-uci', false);
+  console.log('sans Wikidata : photo =', !!(await page.$('.hero-photo img')), ', credit =', !!(await page.$('.credit')));
+  // coureur du Calendrier seulement (aucune archive)
+  await page.goto(base + '#coureur/echantillon-antoine-19920222'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
+  await cap('24c-coureur-calendrier-seul', false);
+  // coureur sans aucune donnée
+  const avantX = erreurs.length;
+  await page.goto(base + '#coureur/inconnu-x-19900101'); await page.waitForSelector('#rsheet.open .vide');
+  console.log('sans archives :', await page.$eval('#rsheet-body', e => e.textContent.trim()));
+  await cap('23d-coureur-vide', false);
+  console.log('ERREURS_ATTENDUES (404 entites/coureurs/i.json)', JSON.stringify(erreurs.splice(avantX).length));
+  // squelette de chargement (réseau ralenti) : on retient les requêtes de l'entité
+  await page.goto(base); await page.waitForSelector('.card');
+  await page.route('**/entites/coureurs/e.json', async r => { await new Promise(x => setTimeout(x, 900)); await r.continue(); });
+  await page.evaluate(() => { location.hash = '#coureur/epure-paul-19970711'; });
+  await page.waitForSelector('.rpage[aria-busy]'); await cap('25-squelette-coureur', false);
+  await page.waitForSelector('#rsheet.open .tile'); await page.unroute('**/entites/coureurs/e.json');
+
+  // recherche globale
+  await page.goto(base); await page.waitForSelector('.card');
+  await page.click('#open-search'); await page.waitForSelector('#search.open .sr-hint'); await cap('30a-recherche-vide', false);
+  await page.fill('#sr-q', 'e'); await page.waitForTimeout(150); await cap('30b-recherche-une-lettre', false);
+  await page.fill('#sr-q', 'epure'); await page.waitForSelector('#sr-body .sr-item'); await cap('30c-recherche-coureurs', false);
+  console.log('hash recherche :', await page.evaluate(() => location.hash));
+  await page.fill('#sr-q', 'test'); await page.waitForSelector('#sr-body .sr-item'); await cap('30d-recherche-courses', false);
+  await page.fill('#sr-q', 'alpha'); await page.waitForSelector('#sr-body .sr-item'); await cap('30e-recherche-equipe-non-cliquable', false);
+  console.log('equipes cliquables (attendu 0) :', await page.$$eval('#sr-body .sr-item.off', l => l.filter(x => x.tagName === 'BUTTON' || x.dataset.id).length));
+  await page.fill('#sr-q', 'zzzz'); await page.waitForSelector('#sr-body .sr-hint'); await cap('30f-recherche-aucun', false);
+  await page.fill('#sr-q', 'paul epure'); await page.waitForSelector('#sr-body .sr-item.nav');
+  console.log('resultats « paul epure » :', await page.$$eval('#sr-body .sr-item.nav .nm', l => l.map(x => x.textContent)));
+  await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp'); await cap('30g-recherche-clavier', false);
+  await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#coureur/')); await page.waitForSelector('#rsheet.open .hero');
+  console.log('Entree -> ', await page.evaluate(() => location.hash));
+  await page.goBack(); await page.waitForSelector('#search.open #sr-body .sr-item');
+  console.log('retour -> recherche conservee :', await page.$eval('#sr-q', e => e.value), await page.evaluate(() => location.hash));
+  // course : dernière édition
+  await page.fill('#sr-q', 'omloop'); await page.waitForSelector('#sr-body .sr-item.nav');
+  await page.click('#sr-body .sr-item.nav'); await page.waitForFunction(() => location.hash.startsWith('#course/')); await page.waitForSelector('#sheet.open .card');
+  console.log('course -> ', await page.evaluate(() => location.hash));
+  // lien direct #recherche/<texte>, puis fermeture
+  await page.goto(base + '#recherche/ebauche'); await page.waitForSelector('#search.open #sr-body .sr-item');
+  console.log('lien direct recherche, saisie :', await page.$eval('#sr-q', e => e.value));
+  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+  console.log('Echap ferme la recherche :', await page.evaluate(() => !document.getElementById('search').classList.contains('open')));
+
+  // largeur 1024 px : mise en page élargie (infobox à droite)
+  await page.setViewportSize({ width: 1024, height: 800 });
+  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile'); await page.waitForTimeout(250);
+  await cap('40a-large-coureur', false);
+  await ouvreOnglet('saisons'); await cap('40b-large-saisons', false);
+  await ouvreOnglet('uci'); await cap('40c-large-uci', false);
+  await page.goto(base); await page.waitForSelector('.card'); await page.click('#open-search'); await page.fill('#sr-q', 'test'); await page.waitForSelector('#sr-body .sr-item');
+  await cap('40d-large-recherche', false);
+  await page.goto(base); await page.waitForSelector('.card'); await cap('40e-large-recents', false);
+  await page.setViewportSize({ width: 390, height: 844 });
   // erreur de chargement
   const avant = erreurs.length;
   await page.goto(base + '#course/inexistante'); await page.waitForSelector('.errbox');
