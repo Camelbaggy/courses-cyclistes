@@ -7,9 +7,9 @@ valeur `null` est mise en cache (re-tentée plus tard). Wikidata est en CC0 ; le
 licence lus sur Commons (pas de licence lisible = pas d'image).
 
 Fichiers de `ARCHIVES_DIR/entites/wikidata/` (écrits au fil de l'eau, reprenables) :
-    coureurs.json  {rider_id: {"qid": QID|null, "verifie": AAAA-MM-JJ, ...}}   (null : "raison" = aucune | ambigu)
+    coureurs.json  {rider_id: {"qid": QID|null, "verifie": AAAA-MM-JJ, "naissance"?: AAAA-MM-JJ (P569), ...}}   (null : "raison" = aucune | ambigu)
     images.json    {nom de fichier Commons: {"url", "page", "auteur"?, "licence", "licence_url"?, "verifie"} | {"url": null, "raison", "verifie"}}
-    equipes.json   {id d'équipe-saison: {"qid": QID|null, "preuve", "verifie"}}
+    equipes.json   {id d'équipe-saison: {"qid": QID|null, "preuve": "code+nom"|"code+periode"|"alias", "detail"?, "regle", "verifie"}}
     lignees.json   {QID: {"libelle", "noms", "codes", "pays", "classes", "sitelinks", "logo", "verifie"}}
     libelles.json  {QID: libellé fr, sinon en | null}   (lieux, équipes de carrière, pays, classes)
 
@@ -22,8 +22,12 @@ Règles (docs/recherche/encyclopedie_sources.md, E1b) :
 - ÉQUIPE-SAISON (avec `code_uci`) : éléments portant `haswbstatement:P1998=<code>` ; les éléments « saison » remontent à leur parent par
   P5138 ; parent retenu seulement si (i) une déclaration P1998 du parent vaut le code avec une période DATÉE (P580/P582, à l'année) qui contient
   la saison, ET (ii) un nom officiel P1448 daté valable cette année, ou le libellé d'un élément saison de ce parent contenant l'année, concorde avec
-  notre libellé (jetons égaux, ou l'un inclus dans l'autre avec au moins 2 jetons), ET (iii) un seul parent satisfait. Équipes sans code ou non
-  prouvées : seul `alias_equipes.json` (manuel) peut les rattacher.
+  notre libellé (jetons égaux, ou l'un inclus dans l'autre avec au moins 2 jetons), ET (iii) un seul parent satisfait (`preuve: "code+nom"`).
+  Avant tout, les parents dont une classe P31 est féminine (libellé fr/en : women, féminin, femmes…) sont écartés (même code UCI que l'équipe
+  masculine). Si plusieurs parents satisfont (i)-(ii) : on écarte les équipes de développement / réserve (libellé de classe : development, devo, U23,
+  réserve, continental) SEULEMENT si exactement un parent de premier niveau (WorldTeam / ProTeam) reste ; sinon « ambigu ». Preuve plus faible
+  (`preuve: "code+periode"`) quand AUCUN parent ne satisfait (i)-(ii) : un SEUL parent (après filtre féminin) a une déclaration P1998 du code dont
+  la période, avec au moins une borne explicite, contient la saison. Équipes sans code ou non prouvées : seul `alias_equipes.json` (manuel).
 - Politesse : 1 requête/s par hôte, User-Agent du projet (netutil), pas de `maxlag`, abandon de l'hôte sur 403/429.
 
     python wikidata.py --test
@@ -59,6 +63,8 @@ JOURS_NULL = 60                           # `null` re-tenté après ce délai
 PART_EQUIPES = 0.5                        # part maximale du budget pour les équipes (les coureurs ont le reste)
 MAX_ECHECS = 8                            # échecs consécutifs avant d'abandonner le passage
 PROFONDEUR_P279 = 4
+PERIODE_JOURNAL = 300                     # secondes entre deux lignes de progression « en cours »
+REGLE_EQUIPES = 2                         # version des règles de rapprochement d'équipes : une entrée `null` d'une version plus ancienne est re-tentée
 FALLBACK_LIBRE = False                    # 2e recherche sans filtre d'occupation si aucun candidat (coûte ~1 requête de plus par coureur obscur)
 MOTS_SAISON = {"season", "saison", "stagione", "temporada", "seizoen", "sezon", "sasong"}
 FICHIERS = ("coureurs", "equipes", "lignees", "images", "libelles")
@@ -139,6 +145,13 @@ def besoin(entree: Any, aujourdhui: dt.date, cle: str = "qid") -> bool:
     if d is None:
         return True
     return (aujourdhui - d).days > (JOURS_VERIF if entree.get(cle) else JOURS_NULL)
+
+
+def besoin_equipe(entree: Any, aujourdhui: dt.date) -> bool:
+    """Comme `besoin`, et une entrée `null` établie par une règle plus ancienne (`regle` < REGLE_EQUIPES) est re-tentée aussitôt."""
+    if isinstance(entree, dict) and not entree.get("qid") and (entree.get("regle") or 1) < REGLE_EQUIPES:
+        return True
+    return besoin(entree, aujourdhui)
 
 
 # --------------------------------------------------------------------------- lecture des revendications (fonctions pures)
@@ -453,7 +466,8 @@ def resoudre_tranche(ctx: "Contexte", tranche: List[Dict[str, Any]]) -> Dict[str
             continue
         if s["res"] and s["res"][0] == "ok":
             qid = s["res"][1]
-            sortie[rid] = dict(qid=qid, verifie=today, **extraire_coureur(ents_tous[qid], ctx.cache.d["libelles"]))
+            sortie[rid] = dict(qid=qid, verifie=today, naissance=naissance_jour(ents_tous[qid]),
+                               **extraire_coureur(ents_tous[qid], ctx.cache.d["libelles"]))
         else:
             sortie[rid] = {"qid": None, "verifie": today, "raison": "ambigu" if s["res"] else "aucune"}
     return sortie
@@ -559,9 +573,44 @@ def preuve_equipe(parent: Dict[str, Any], elements_saison: List[Dict[str, Any]],
     return None
 
 
+RE_FEMININ = re.compile(r"women|f[ée]minin|femmes|\bfemale\b|\bdames\b", re.I)
+RE_PREMIER_NIVEAU = re.compile(r"world\s*team|world\s*tour|pro\s*team|professional continental|continentale? professionnel", re.I)
+RE_DEVELOPPEMENT = re.compile(r"development|d[ée]veloppement|\bdevo\b|u-?23|r[ée]serve|\bcontinental|\bcontinentale", re.I)
+
+
+def textes_classes(e: Optional[Dict[str, Any]], libelles_classes: Dict[str, str]) -> List[str]:
+    """Libellés (fr + en) des classes P31 d'un élément, lus dans `libelles_classes` {QID de classe: libellés concaténés}."""
+    return [libelles_classes[q] for q in (qid_de(c) for c in revendications(e, "P31")) if q and libelles_classes.get(q)]
+
+
+def est_feminine(e: Optional[Dict[str, Any]], libelles_classes: Dict[str, str]) -> bool:
+    return any(RE_FEMININ.search(t) for t in textes_classes(e, libelles_classes))
+
+
+def niveau_equipe(e: Optional[Dict[str, Any]], libelles_classes: Dict[str, str]) -> str:
+    """'premier' (WorldTeam / ProTeam), 'developpement' (réserve, devo, U23, continentale) ou 'inconnu'. Le premier niveau l'emporte
+    (« Professional Continental » contient « continental »)."""
+    t = textes_classes(e, libelles_classes)
+    if any(RE_PREMIER_NIVEAU.search(x) for x in t):
+        return "premier"
+    if any(RE_DEVELOPPEMENT.search(x) for x in t):
+        return "developpement"
+    return "inconnu"
+
+
+def preuve_periode(parent: Dict[str, Any], code: str, saison: int) -> bool:
+    """Preuve faible : déclaration P1998 = code dont la période (au moins une borne explicite P580 / P582) contient la saison."""
+    return any(str(valeur(c) or "").strip().upper() == code.upper() and periode_contient(c, saison) for c in revendications(parent, "P1998"))
+
+
 def rapprocher_equipe(code: str, saison: int, libelle: str, items: Dict[str, Dict[str, Any]],
-                      parents: Dict[str, Optional[Dict[str, Any]]]) -> Tuple[Optional[str], str]:
-    """(qid du parent, preuve) ; (None, 'aucune' | 'ambigu'). `items` : éléments trouvés par P1998=code ; `parents` : entités des parents."""
+                      parents: Dict[str, Optional[Dict[str, Any]]],
+                      libelles_classes: Optional[Dict[str, str]] = None) -> Tuple[Optional[str], str, str]:
+    """(qid du parent, preuve, détail) ; (None, 'aucune' | 'ambigu', ''). `items` : éléments trouvés par P1998=code ; `parents` : entités des
+    parents ; `libelles_classes` : libellés des classes P31 (filtre féminin, désambiguïsation développement).
+    Ordre : filtre féminin ; « code+nom » (un seul parent, après désambiguïsation éventuelle) ; sinon « code+periode » (un seul parent
+    porte le code sur la période, sans exigence de nom). Plusieurs parents « code+nom » non départageables : jamais de repli sur la preuve faible."""
+    lc = libelles_classes or {}
     cand: Dict[str, List[Dict[str, Any]]] = {}
     for q, e in items.items():
         pars = [p for p in (qid_de(c) for c in revendications(e, "P5138")) if p]
@@ -570,15 +619,26 @@ def rapprocher_equipe(code: str, saison: int, libelle: str, items: Dict[str, Dic
                 cand.setdefault(p, []).append(e)
         else:
             cand.setdefault(q, [])
+    ents = {p: (parents.get(p) or items.get(p)) for p in cand}
+    cand = {p: sl for p, sl in cand.items() if not est_feminine(ents[p], lc)}
     valides = []
     for p, saisons_el in cand.items():
-        ep = parents.get(p) or items.get(p)
+        ep = ents[p]
         pr = preuve_equipe(ep, saisons_el, code, saison, libelle) if ep else None
         if pr:
             valides.append((p, pr))
+    if len(valides) > 1:
+        niveaux = {p: niveau_equipe(ents[p], lc) for p, _ in valides}
+        if sum(1 for n in niveaux.values() if n == "premier") == 1:
+            valides = [(p, pr) for p, pr in valides if niveaux[p] != "developpement"]
     if len(valides) == 1:
-        return valides[0]
-    return None, ("ambigu" if valides else "aucune")
+        return valides[0][0], "code+nom", valides[0][1]
+    if valides:
+        return None, "ambigu", ""
+    faibles = [p for p, _ in cand.items() if ents[p] and preuve_periode(ents[p], code, saison)]
+    if len(faibles) == 1:
+        return faibles[0], "code+periode", f"P1998 {code} sur une période datée contenant {saison} ; nom non concordant"
+    return None, ("ambigu" if faibles else "aucune"), ""
 
 
 def lister_equipes(entites_dir: str) -> List[Dict[str, Any]]:
@@ -602,7 +662,7 @@ def run_equipes(ctx: "Contexte", alias: Dict[str, str]) -> Dict[str, int]:
         if re.fullmatch(r"Q\d+", q) and any(e["id"] == tid for e in equipes):
             cache[tid] = {"qid": q, "preuve": "alias", "verifie": today}
     attente = sorted((e for e in equipes if e["code"] and re.fullmatch(r"[A-Za-z0-9]{2,6}", e["code"]) and e["id"] not in alias
-                      and besoin(cache.get(e["id"]), ctx.aujourdhui)), key=lambda e: (-e["season"], e["name"], e["id"]))
+                      and besoin_equipe(cache.get(e["id"]), ctx.aujourdhui)), key=lambda e: (-e["season"], e["name"], e["id"]))
     par_code: Dict[str, List[Dict[str, Any]]] = {}
     for e in attente:
         par_code.setdefault(e["code"].upper(), []).append(e)
@@ -622,9 +682,11 @@ def run_equipes(ctx: "Contexte", alias: Dict[str, str]) -> Dict[str, int]:
             if qs is None or any(q not in ents for q in qs) or any(p not in parents for p in peres):
                 continue                                  # lecture échouée : retenté au prochain passage
             items = {q: ents[q] for q in qs if ents.get(q)}
+            ctx.charger_classes([e for e in list(items.values()) + [parents.get(p) for p in peres]])
             for e in par_code[c]:
-                qid, pr = rapprocher_equipe(c, e["season"], e["name"], items, parents)
-                cache[e["id"]] = {"qid": qid, "preuve": pr, "verifie": today} if qid else {"qid": None, "raison": pr, "verifie": today}
+                qid, pr, detail = rapprocher_equipe(c, e["season"], e["name"], items, parents, ctx.classes)
+                cache[e["id"]] = (_sans_vide({"qid": qid, "preuve": pr, "detail": detail, "regle": REGLE_EQUIPES, "verifie": today}) if qid
+                                  else {"qid": None, "raison": pr, "regle": REGLE_EQUIPES, "verifie": today})
         ctx.cache.ecrire()
     return bilan_equipes(ctx, alias)
 
@@ -634,7 +696,7 @@ def bilan_equipes(ctx: "Contexte", alias: Dict[str, str]) -> Dict[str, int]:
     equipes = lister_equipes(ctx.entites_dir)
     return {"rapprochees": sum(1 for e in equipes if (cache.get(e["id"]) or {}).get("qid")),
             "sans": sum(1 for e in equipes if e["code"] and cache.get(e["id"]) is not None and not cache[e["id"]].get("qid")),
-            "restantes": sum(1 for e in equipes if e["code"] and e["id"] not in alias and besoin(cache.get(e["id"]), ctx.aujourdhui))}
+            "restantes": sum(1 for e in equipes if e["code"] and e["id"] not in alias and besoin_equipe(cache.get(e["id"]), ctx.aujourdhui))}
 
 
 def extraire_lignee(e: Dict[str, Any], libelles: Dict[str, Optional[str]]) -> Dict[str, Any]:
@@ -689,6 +751,23 @@ class Contexte:
         self.horloge, self.t0 = horloge, horloge()
         self.budget_s = budget_min * 60
         self.sous = Sousclasses(api)
+        self.classes: Dict[str, str] = {}          # {QID de classe P31: libellés fr + en en minuscules} (mémorisé le temps du passage)
+        self.derniere_ligne = self.t0              # dernier journal de progression
+
+    def charger_classes(self, entites: Iterable[Optional[Dict[str, Any]]]) -> None:
+        """Libellés fr|en des classes P31 des `entites` (parents d'équipes), pour le filtre féminin / la désambiguïsation."""
+        manque = [q for e in entites for q in (qid_de(c) for c in revendications(e, "P31")) if q and q not in self.classes]
+        for q, e in lire_entites(self.api, manque, "labels", "fr|en").items():
+            self.classes[q] = " | ".join(v.get("value", "") for v in ((e or {}).get("labels") or {}).values()).lower()
+
+    def minutes(self) -> float:
+        return (self.horloge() - self.t0) / 60
+
+    def journal(self, fait: int, total: int) -> None:
+        """Ligne de progression toutes les PERIODE_JOURNAL secondes."""
+        if self.horloge() - self.derniere_ligne >= PERIODE_JOURNAL:
+            self.derniere_ligne = self.horloge()
+            print(f"[WIKIDATA] en cours : {fait}/{total} coureurs, {self.api.requetes} requêtes, {self.minutes():.0f} min")
 
     def hors_budget(self, part: float = 1.0) -> bool:
         """Budget (ou part du budget) dépassé ; budget 0 = illimité."""
@@ -710,6 +789,7 @@ def run_coureurs(ctx: "Contexte") -> Dict[str, int]:
     cache = ctx.cache.d["coureurs"]
     attente = sorted((f for f in fiches if besoin(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
     traites = 0
+    ctx.derniere_ligne = ctx.horloge()
     if attente and verifier_occupation(ctx.api):
         depuis_ecriture = 0
         for i in range(0, len(attente), LOT_COUREURS):
@@ -720,6 +800,7 @@ def run_coureurs(ctx: "Contexte") -> Dict[str, int]:
             resoudre_images(ctx, [v["image"] for v in res.values() if v.get("image")])
             traites += len(res)
             depuis_ecriture += len(res)
+            ctx.journal(traites, len(attente))
             if depuis_ecriture >= ECRIRE_TOUS:
                 ctx.cache.ecrire()
                 depuis_ecriture = 0
@@ -759,7 +840,8 @@ def run_wikidata(budget_min: float = 300, archives_dir: Optional[str] = None, no
     eq, co = bilan_equipes(ctx, alias), bilan_coureurs(ctx)
     print(f"[WIKIDATA] coureurs : {co['rapproches']} rapprochés, {co['sans']} sans correspondance, {co['restants']} restants"
           f" ({co['sans_date']} sans date de naissance ignorés) ; équipes : {eq['rapprochees']} rapprochées, {eq['sans']} sans correspondance,"
-          f" {eq['restantes']} restantes ; {api.requetes} requête(s)")
+          f" {eq['restantes']} restantes ; {api.requetes} requête(s) en {ctx.minutes():.1f} min"
+          f" ({api.requetes / ctx.minutes() if ctx.minutes() > 0 else 0:.1f} requêtes/min)")
     return {"coureurs": co, "equipes": eq, "requetes": api.requetes}
 
 
@@ -986,19 +1068,70 @@ def _tests() -> None:
         pars = {p for e in items.values() for p in (qid_de(c) for c in revendications(e, "P5138")) if p}
         parents = lire_entites(a, [p for p in pars if p not in items], "claims")
         parents.update({p: items[p] for p in pars if p in items})
-        return rapprocher_equipe(code, saison, lib, {q: e for q, e in items.items() if e}, parents)
+        return rapprocher_equipe(code, saison, lib, {q: e for q, e in items.items() if e}, parents, classes)
+    classes: Dict[str, str] = {}
     r = rap("AUR", 2022, "Aurore Pro")
-    assert r[0] == "Q700" and "P1998 AUR [2020-01-01→2023-01-01]" in r[1] and "Aurore Pro" in r[1], r         # code + période + nom : OK
+    assert r[:2] == ("Q700", "code+nom") and "P1998 AUR [2020-01-01→2023-01-01]" in r[2] and "Aurore Pro" in r[2], r   # code + période + nom : OK
     assert rap("AUR", 2007, "Aurelia Team")[0] == "Q710"                                          # le code homonyme n'est retenu que pour SA période
-    assert rap("AUR", 2022, "Aurelia Team")[0] is None                                             # code valable mais nom d'une autre équipe
+    assert rap("AUR", 2022, "Aurelia Team")[:2] == ("Q700", "code+periode")                       # nom d'une autre équipe : preuve faible seulement
     assert rap("AUR", 2025, "Aurore Pro")[0] is None                                               # code valable mais hors période
-    assert rap("AUR", 2022, "Autre Equipe") == (None, "aucune")                                    # nom différent
+    r = rap("AUR", 2022, "Autre Equipe")                                                           # nom différent : seule la preuve faible reste
+    assert r[:2] == ("Q700", "code+periode"), r                                                    # un seul parent porte AUR en 2022
+    assert rap("AUR", 2006, "Autre Equipe")[:2] == ("Q710", "code+periode")
     assert rap("BOR", 2025, "Boreale Pro")[0] == "Q700" and rap("BOR", 2022, "Boreale Pro")[0] is None
+    assert rap("BOR", 2025, "Autre Nom")[:2] == ("Q700", "code+periode")
     r = rap("CIR", 2021, "Cirrus Racing")
-    assert r[0] == "Q720" and "saison « 2021 Cirrus Racing season »" in r[1], r                    # preuve par élément saison de l'année
-    assert rap("CIR", 2022, "Cirrus Racing")[0] is None                                            # pas d'élément saison pour 2022
-    assert rap("DEL", 2019, "Delta Cycling") == (None, "ambigu")                                   # deux parents : rien
-    assert rap("ECH", 2012, "Echo Team") == (None, "aucune")                                       # code sans période : jamais accepté
+    assert r[0] == "Q720" and "saison « 2021 Cirrus Racing season »" in r[2], r                    # preuve par élément saison de l'année
+    assert rap("CIR", 2022, "Cirrus Racing")[1] == "code+periode"                              # pas d'élément saison pour 2022 : preuve faible
+    assert rap("DEL", 2019, "Delta Cycling") == (None, "ambigu", "")                               # deux parents : rien
+    assert rap("DEL", 2019, "Autre Nom") == (None, "ambigu", "")                                   # preuve faible : deux parents -> rien
+    assert rap("ECH", 2012, "Echo Team") == (None, "aucune", "")                                   # code sans période : jamais accepté
+    assert rap("CIR", 2022, "Cirrus Racing") == ("Q720", "code+periode", "P1998 CIR sur une période datée contenant 2022 ; nom non concordant"), rap("CIR", 2022, "Cirrus Racing")
+    # preuve faible : une borne explicite suffit (fin seule), aucune borne = refusé
+    mondew = {"Q760": equipe("Q760", "Fin seule", [("FIN", {"P582": A(2012)})]), "Q761": equipe("Q761", "Sans borne", [("SBO", None)])}
+    aw = Api(FauxWikimedia(mondew, {"haswbstatement:P1998=FIN": ["Q760"], "haswbstatement:P1998=SBO": ["Q761"]}, {}))
+    def rapw(code, saison, lib):
+        items = lire_entites(aw, recherche(aw, f"haswbstatement:P1998={code}", 30), "claims")
+        return rapprocher_equipe(code, saison, lib, items, {})
+    assert rapw("FIN", 2010, "Quelconque")[:2] == ("Q760", "code+periode") and rapw("FIN", 2013, "Quelconque")[0] is None
+    assert rapw("SBO", 2010, "Quelconque")[0] is None
+
+    # --- équipe masculine / féminine / réserve avec le même code (Movistar, MOV)
+    def equipe_p31(q, nom, classe, codes=(("MOV", {"P580": A(2010)}),), noms=None):
+        e = equipe(q, nom, list(codes), [(noms or nom, {"P580": A(2010)})])
+        e["claims"]["P31"] = [_cl(_eid(classe))]
+        return e
+    lab = lambda q, fr, en: {"id": q, "labels": {"fr": {"language": "fr", "value": fr}, "en": {"language": "en", "value": en}}}   # noqa: E731
+    mondem = {
+        "Q800": equipe_p31("Q800", "Movistar Team", "Q890"),                         # UCI WorldTeam
+        "Q801": equipe_p31("Q801", "Movistar Team", "Q891"),                         # même nom, équipe féminine
+        "Q802": equipe_p31("Q802", "Movistar Team", "Q892"),                         # réserve
+        "Q803": equipe_p31("Q803", "Movistar Team", "Q893"),                         # inconnu
+        "Q890": lab("Q890", "équipe cycliste UCI WorldTeam", "UCI WorldTeam"),
+        "Q891": lab("Q891", "équipe cycliste féminine", "UCI Women's team"),
+        "Q892": lab("Q892", "équipe cycliste de développement", "UCI Continental development team"),
+        "Q893": lab("Q893", "équipe quelconque", "some team"),
+    }
+    am = Api(FauxWikimedia(mondem, {}, {}))
+    cl = {}
+    for q, e in lire_entites(am, ["Q890", "Q891", "Q892", "Q893"], "labels", "fr|en").items():
+        cl[q] = " | ".join(v["value"] for v in e["labels"].values()).lower()
+    def rapm(qs, lib="Movistar Team", saison=2022):
+        its = lire_entites(am, qs, "claims")
+        return rapprocher_equipe("MOV", saison, lib, its, {}, cl)
+    assert rapm(["Q800", "Q801"])[:2] == ("Q800", "code+nom")                       # féminine écartée
+    assert rapm(["Q801"]) == (None, "aucune", "")                                   # seule la féminine : rien (pas de repli faible)
+    assert rapm(["Q800", "Q802"])[:2] == ("Q800", "code+nom")                       # réserve écartée car un seul premier niveau
+    assert rapm(["Q800", "Q801", "Q802"])[:2] == ("Q800", "code+nom")
+    assert rapm(["Q802", "Q803"]) == (None, "ambigu", "")                           # aucun premier niveau : on ne départage pas
+    assert rapm(["Q800", "Q803"]) == (None, "ambigu", "")                           # un inconnu reste : ambigu
+    assert rapm(["Q800", "Q801"], "Autre Nom")[:2] == ("Q800", "code+periode")      # preuve faible après filtre féminin
+    assert rapm(["Q800", "Q802"], "Autre Nom") == (None, "ambigu", "")              # preuve faible : pas de désambiguïsation
+    assert niveau_equipe(mondem["Q800"], cl) == "premier" and niveau_equipe(mondem["Q802"], cl) == "developpement" and est_feminine(mondem["Q801"], cl)
+    # version de règle : un `null` ancien est re-tenté, une correspondance ou un `null` récent de règle courante non
+    assert besoin_equipe({"qid": None, "raison": "ambigu", "verifie": "2026-11-10"}, aujourdhui)
+    assert not besoin_equipe({"qid": None, "raison": "ambigu", "regle": REGLE_EQUIPES, "verifie": "2026-11-10"}, aujourdhui)
+    assert not besoin_equipe({"qid": "Q1", "preuve": "p", "verifie": "2026-11-10"}, aujourdhui)
 
     # --- run_wikidata complet, reprise sur budget, priorité, alias (fichiers d'entités simulés)
     with tempfile.TemporaryDirectory() as tmp:
@@ -1042,12 +1175,26 @@ def _tests() -> None:
         assert cc["epure-paul-19970711"]["qid"] == "Q101" and cc["doublon-luc-19950505"]["qid"] is None and "sansdate-x" not in cc
         assert bilan["coureurs"]["rapproches"] == 1 and bilan["coureurs"]["sans"] == 1 and bilan["coureurs"]["restants"] == 0
         assert bilan["coureurs"]["sans_date"] == 1
+        assert cc["epure-paul-19970711"]["naissance"] == "1997-07-11" and "naissance" not in cc["doublon-luc-19950505"]   # date P569 conservée
+        assert ee["aurore-pro-2022"]["preuve"] == "code+nom" and ee["aurore-pro-2022"]["regle"] == REGLE_EQUIPES and "P1998 AUR" in ee["aurore-pro-2022"]["detail"]
+        assert fiche_lignee(ll["Q700"], collector._load(os.path.join(w, "images.json"), {}))["logo"]["licence"] == "Public domain"
+        assert "licence_url" not in fiche_lignee(ll["Q700"], collector._load(os.path.join(w, "images.json"), {}))["logo"]   # licence sans lien : gardée
         # n'écrit que entites/wikidata/ : rien d'autre n'a bougé
         assert sorted(os.listdir(ent)) == ["coureurs", "equipes", "wikidata"]
         # reprise : second passage sans changement = aucune nouvelle recherche de coureur ni d'équipe
         faux.log.clear()
         run_wikidata(1, tmp, aujourdhui, Api(fetch), horloge, alias_equipes={"sans-code-2022": "Q730"})
         assert faux.n("search") == 0, faux.log
+        # entrée `null` d'une règle plus ancienne (sans `regle`) : re-tentée au passage suivant, même récente ; entrée courante : non
+        ee0 = collector._load(os.path.join(w, "equipes.json"), {})
+        ee0["aurore-pro-2022"] = {"qid": None, "raison": "ambigu", "verifie": "2026-11-14"}
+        collector._dump(os.path.join(w, "equipes.json"), ee0)
+        faux.log.clear()
+        run_wikidata(1, tmp, aujourdhui, Api(fetch), horloge, alias_equipes={"sans-code-2022": "Q730"})
+        assert faux.n("search") >= 1 and collector._load(os.path.join(w, "equipes.json"), {})["aurore-pro-2022"]["qid"] == "Q700"
+        faux.log.clear()
+        run_wikidata(1, tmp, aujourdhui, Api(fetch), horloge, alias_equipes={"sans-code-2022": "Q730"})
+        assert faux.n("search") == 0
         # re-vérification : au-delà de 180 jours, les entrées sont relues
         faux.log.clear()
         run_wikidata(1, tmp, aujourdhui + dt.timedelta(days=181), Api(fetch), horloge, alias_equipes={})
@@ -1075,6 +1222,21 @@ def _tests() -> None:
         assert 0 < len(c1) < 100, len(c1)
         assert "coureur-099-19900101" in c1 and "coureur-000-19900101" not in c1        # meilleur rang d'abord
         n1 = len(c1)
+        assert all(v["naissance"] == "1990-01-01" for v in c1.values())
+        # journal de progression : une ligne « en cours » toutes les PERIODE_JOURNAL s, puis synthèse avec le rythme
+        import contextlib
+        import io
+        global PERIODE_JOURNAL
+        ancien, PERIODE_JOURNAL = PERIODE_JOURNAL, 20
+        tampon = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(tampon):
+                run_wikidata(0.5, tmp, aujourdhui, Api(fetch3), lambda: t[0], alias_equipes={})
+        finally:
+            PERIODE_JOURNAL = ancien
+        sortie_j = tampon.getvalue()
+        assert re.search(r"\[WIKIDATA\] en cours : \d+/\d+ coureurs, \d+ requêtes, \d+ min", sortie_j), sortie_j
+        assert re.search(r"\(\d+\.\d requêtes/min\)", sortie_j), sortie_j
         for _ in range(3):      # chaque passage lit son propre t0 : reprise immédiate à partir du cache
             run_wikidata(1.0, tmp, aujourdhui, Api(fetch3), lambda: t[0], alias_equipes={})
         c2 = collector._load(os.path.join(ent, "wikidata", "coureurs.json"), {})
