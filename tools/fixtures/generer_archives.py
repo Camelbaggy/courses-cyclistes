@@ -149,8 +149,12 @@ def ecrire_cache_wikidata(codes):
              "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/", "verifie": v}
     collector._dump(str(dossier / "coureurs.json"), {ID_COMMUN: {
         "qid": "Q99900001", "verifie": v, "lieu": {"qid": "Q99900002", "libelle": "Test-sur-Mer (fictif)"}, "taille": 1.78, "image": "Photo fictive.svg",
-        "sitelinks": {"fr": "Paul Épure (fictif)"},
-        "equipes": [{"qid": "Q99900100", "libelle": "Alpha Racing (fictif)", "debut": "2022", "precision_debut": "annee"}]}})
+        "sitelinks": {"fr": "Paul Épure (fictif)", "en": "Paul Epure (fictional)", "nl": "Paul Épure (fictief)"},
+        # P54 fictifs à précisions variées (année, mois, jour ; avec ou sans fin) pour la frise « Parcours » de la fiche coureur
+        "equipes": [{"qid": "Q99900100", "libelle": "Alpha Racing (fictif)", "debut": "2022", "precision_debut": "annee"},
+                    {"qid": "Q99900101", "libelle": "Équipe de développement Alpha (fictive)", "debut": "2016-08", "precision_debut": "mois",
+                     "fin": "2017-12-31", "precision_fin": "jour"},
+                    {"qid": "Q99900102", "libelle": "Delta Cycling (fictif)", "debut": "2018-03-12", "precision_debut": "jour", "fin": "2021", "precision_fin": "annee"}]}})
     collector._dump(str(dossier / "images.json"), {"Photo fictive.svg": photo, "Logo fictif.svg": dict(photo, auteur="Logo fictif")})
     collector._dump(str(dossier / "equipes.json"), {"alpha-racing-2024": {"qid": "Q99900100", "preuve": f"P1998 {codes['Alpha Racing']} [fictif]", "verifie": v}})
     collector._dump(str(dossier / "lignees.json"), {"Q99900100": {
@@ -158,6 +162,21 @@ def ecrire_cache_wikidata(codes):
         "classes": ["équipe cycliste (fictif)"], "sitelinks": {"fr": "Alpha Racing (fictif)"},
         "noms": [{"nom": "Alpha Cycling (fictif)", "debut": "2018", "fin": "2021"}, {"nom": "Alpha Racing (fictif)", "debut": "2022"}],
         "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]}})
+
+
+def ajouter_grands_tours_fictifs():
+    """Le jeu fictif n'a aucun grand tour (clés d'édition exactes « tour de france|FRA »…) : on ajoute à la main, dans entites/coureurs/e.json
+    UNIQUEMENT, des entrées `grands_tours` FICTIVES pour le coureur commun (grille Giro / Tour / Vuelta de la fiche : rang, abandon, hors délai).
+    Les race_id pointent vers des fiches fictives existantes ; ces entrées ne sont pas produites par encyclopedie.construire."""
+    chemin = SORTIE / "entites" / "coureurs" / "e.json"
+    d = json.loads(chemin.read_text(encoding="utf-8"))
+    d[ID_COMMUN]["grands_tours"] = [
+        {"season": 2024, "course": "tour", "race_id": "fx-a24-tour-hc", "rank": 2},
+        {"season": 2024, "course": "vuelta", "status": "DNF", "race_id": "fx-a24-classique-hc"},
+        {"season": 2023, "course": "giro", "race_id": "fx-a23-omloop", "rank": 14},
+        {"season": 2023, "course": "tour", "status": "OTL", "race_id": "fx-a23-gp-fr"},
+        {"season": 2022, "course": "vuelta", "race_id": "fx-a22-gp-fr", "rank": 41}]
+    collector._dump(str(chemin), d)
 
 
 def ecrire_classements(rows):
@@ -220,6 +239,7 @@ def main():
     ecrire_classements(rows)
     collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
+    ajouter_grands_tours_fictifs()
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])
 
 
