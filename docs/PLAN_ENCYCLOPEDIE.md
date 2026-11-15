@@ -15,7 +15,7 @@ actuel (résultats du jour, notifications) reste la partie « actualité » du s
   (identifiant source ou alias manuel), jamais par ressemblance de nom.
 - **Précision honnête** : quand une date n'est connue qu'à la saison près (ex. un changement d'équipe), la page
   l'écrit ainsi (« 2023 → 2024 »), comme Liquipedia accepte `2014-??-??`.
-- Mobile d'abord (390 px), même page `index.html` sans dépendance ni étape de build (choix à confirmer, §8).
+- Mobile d'abord (390 px), thème sombre, même page `index.html` sans dépendance ni étape de build (§8).
 
 ## 1. Correspondance Liquipedia → cyclisme
 
@@ -104,7 +104,7 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 
 | Étape | Contenu | Livrable |
 |---|---|---|
-| E0 | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
+| E0 (fait) | Sondes : `TeamCode` sur plusieurs saisons, classements par équipes UCI, couverture Wikidata (coureurs, équipes), audit des doublons de coureurs ; décisions du §8 | `docs/recherche/encyclopedie_sources.md` |
 | E1 | Socle : génération des fichiers d'entités + index de recherche + fusion des identités coureurs | fichiers `entites/`, tests |
 | E2 | Pages coureur + recherche globale | captures 390 px |
 | E3 | Pages course (série) et édition enrichie | captures |
@@ -115,14 +115,22 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 
 Chaque étape : PR vérifiée (tests, captures), fusionnée, puis bilan.
 
-## 8. Décisions à prendre
+## 8. Décisions (15 novembre 2026)
 
-1. Périmètre des fiches : tout le peloton (recommandé, comme Liquipedia) ou centré France.
-2. Texte : faits générés seulement, ou extrait Wikipédia crédité (recommandé), ou résumé Gemini contrôlé.
-3. Sources libres Wikidata / Commons : sonder puis utiliser (recommandé) ou UCI seulement.
-4. Livraison : même page à routes (recommandé, pas de build) ou pages statiques générées (URL indexables, ~15 000
-   fichiers).
-5. Historique du classement UCI : fin de mois (léger) ou chaque semaine.
+1. **Périmètre** : tout le peloton (une fiche par coureur et par équipe présents dans nos courses) ; les Français restent
+   mis en avant sur l'accueil.
+2. **Texte** : **Wikipédia en source principale**, en consultant plusieurs langues (fr, en, es, it, nl, be… : la page
+   espagnole de Movistar ou néerlandaise d'une équipe belge peut être la plus complète) ; Gemini seulement en dernier
+   recours, à partir des faits, avec contrôle des chiffres et en ménageant le quota gratuit. **Rester synthétique** :
+   quelques phrases par page, jamais de longs pavés ; le texte complète les tableaux, il ne les remplace pas. Source et
+   licence (CC BY-SA) affichées et liées.
+3. **Wikidata et Wikimedia Commons** : oui (sonde d'abord en E0, rapprochements stricts).
+4. **Livraison** : dans la page actuelle (`index.html`, nouvelles routes, sans build).
+5. **Historique du classement UCI** : un instantané en **fin de mois** et **après chaque course WorldTour** (après la
+   dernière étape pour une course par étapes), en tenant compte du délai de publication de l'UCI (mesuré en E0).
+6. **Design** : plus moderne que Liquipedia (pas de copie de son apparence), très lisible sur mobile (390 px d'abord),
+   thème sombre soigné ; hiérarchie visuelle nette, tableaux compacts et défilables, infobox en cartes, typographie
+   et espacements généreux, peu de texte.
 
 ## 9. Limites assumées
 
