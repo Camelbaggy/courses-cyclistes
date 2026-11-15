@@ -27,6 +27,7 @@ AI_BUDGET_SECONDS=0 python tools/essais/essai_ia.py   # dossier, repli, notifica
 python tools/apercu.py <dossier> [--data tools/fixtures/data] [--sombre]   # captures 390 px (Playwright), dossier obligatoire
 ARCHIVES_DIR=/tmp/arch python run_pipeline.py --archive 2023 --max-races 5  # mode archives (sans ARCHIVES_DIR : data/archives/, à supprimer ensuite)
 python collector.py --test                            # tests locaux de compact_race (sans réseau)
+python encyclopedie.py --test                         # tests locaux des fichiers entites/ (sans réseau)
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
 
@@ -59,6 +60,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ directvelo.py récits des courses françaises (Crawl-delay 10 s)
                                  ├ cyclingnews.py récits (RSS, ~3 jours de profondeur)
                                  ├ wikipedia_cal.py calendrier à venir (Wikipédia EN + FR « UCI ProSeries {année} »…, fusionnés) + LNC
+                                 ├ encyclopedie.py entités de l'encyclopédie (coureurs, équipes-saisons, courses, saisons, pays, recherche) -> ARCHIVES_DIR/entites/
                                  ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
@@ -131,6 +133,20 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   (log `[ROTATION] saison S archivée dans courses-cyclistes-archives : fichiers retirés de data/`). Tests sans réseau
   (index injecté) dans `collector.py --test`. Une saison reste donc quelques passages dans `data/` après sa sortie du
   Calendrier, le temps que l'archive soit publiée.
+- **Encyclopédie, socle de données (E1a, `encyclopedie.py`, `docs/PLAN_ENCYCLOPEDIE.md`)** : `collector.write_archives_index`
+  (donc chaque passage d'archives.yml, qui a les archives ET le `data/` du dépôt principal) appelle `write_entites` ->
+  `encyclopedie.construire(ARCHIVES_DIR, DATA_DIR)` (échec journalisé, jamais bloquant). Lit TOUTES les saisons (archives +
+  Calendrier), course par course (~120 Mo de mémoire, ~8 s pour 2019-2027), applique `alias_coureurs.json` / `alias_courses.json` et
+  écrit `ARCHIVES_DIR/entites/` (`_dump_if_changed`, ordre déterministe, fichiers devenus inutiles supprimés) :
+  `coureurs/<lettre>.json`, `equipes/<année>.json` + `equipes/index.json`, `courses/<lettre>.json`, `saisons/<année>.json`,
+  `pays.json`, `recherche/<lettre>.json`, `index.json` (schéma : `docs/SPEC.md` §4.5). Points à préserver : statistiques par saison
+  recalculées avec `riders._agreger` course par course (mêmes définitions que `riders.json`, qui peut être en retard sur les fiches après
+  une révision des temps : `rapport["coherence"]`) ; équipe-saison = `<slug du libellé>-<année>` (casse / accents / ponctuation fusionnés) ;
+  sélection nationale = libellé égal au nom d'un pays (`PAYS_NOMS`) ET tous ses coureurs de la saison de ce pays (`_est_nationale`) ;
+  équipe principale d'un coureur = équipe de marque aux plus nombreux jours de course ; grands tours = clés d'édition EXACTES
+  (`GRANDS_TOURS`, `CLASSES_GRAND_TOUR`), jamais de motif flou ; `code_uci` et `lignee` des équipes absents (E1b). Tests :
+  `python encyclopedie.py --test` ; génération manuelle : `python encyclopedie.py <archives_dir> <data_dir> [--sortie DIR]` (jamais dans un
+  dépôt de données hors workflow). Le jeu fictif `tools/fixtures/data/archives/entites/` est produit par `generer_archives.py`.
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
   `editions.json` (dans `ARCHIVES_DIR` ; éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
   ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`

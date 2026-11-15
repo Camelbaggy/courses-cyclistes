@@ -10,8 +10,9 @@ Les courses passent par les vraies fonctions du collecteur (`finalize_race`, `co
 Ne touche pas au reste de tools/fixtures/data.
 
 Cohérence éditions / carrières (docs/SPEC.md §4.4) : le « Grand Prix de Test-sur-Mer (fictif) » (FRA) existe en 2022, 2023, 2024 et dans le Calendrier fictif (saison 2026) -> encart « Éditions précédentes » ; le coureur « Paul Épure » (même rider_id que
-dans riders-2026.json) court en 2022, 2024 et dans le Calendrier -> onglet « Carrière » sur trois saisons. `editions.json` et `carrieres/` sont
-produits par `collector.write_archives_index` (mêmes fonctions que la production).
+dans riders-2026.json) court en 2022, 2024 et dans le Calendrier -> onglet « Carrière » sur trois saisons. `editions.json`, `carrieres/` et `entites/`
+(encyclopédie : coureurs, équipes, courses, saisons, pays, recherche) sont produits par `collector.write_archives_index`
+(mêmes fonctions que la production ; `entites/` lit aussi le Calendrier fictif `tools/fixtures/data`).
 
     python tools/fixtures/generer_archives.py
 """
@@ -167,6 +168,7 @@ def main():
     ecrire_saison(2023, [omloop, gp23], False)
     ecrire_saison(2022, [gp22, trophee22], True)
     collector.ARCHIVES_DIR = str(SORTIE)
+    collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])
 
