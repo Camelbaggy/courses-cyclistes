@@ -193,7 +193,12 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`
   + `carrieres/index.json` (saisons d'un coureur, par `rider_id` exact). Alias MANUELS à la racine de CE dépôt (code) : `alias_courses.json`
   (`{"clé": "clé canonique"}`, changements de nom de course) et `alias_coureurs.json` (`{"rider_id": "rider_id canonique"}`), `{}` au
-  départ, jamais devinés (une modification se publie au passage d'archives.yml suivant). `cleEdition` (index.html) DOIT rester alignée avec `cle_edition` ; tests dans `collector.py --test`.
+  départ, jamais devinés (une modification se publie au passage d'archives.yml suivant). **Doublons avérés présents la même saison** : par défaut la
+  règle de contradiction ignore l'alias (protège d'une fusion de deux personnes) ; la clé `_fusion_meme_saison` d'`alias_coureurs.json` (liste de
+  rider_id SOURCES, qui doivent aussi figurer en alias ; `charger_alias` l'ignore, fichier rétro-compatible) l'autorise explicitement
+  (`collector.charger_fusions` / `fusions_valides`) : les deux identifiants sont réunis (stats, palmarès, équipes ; `encyclopedie._fusionner_ids`,
+  `collector._fusionner_fiches` pour les carrières), sauf dans une course où les deux figurent (`[WARN]`, pas de double comptage). Canonique = id le plus complet
+  (nom le plus long / le plus de saisons) ; à n'utiliser qu'après vérification (même date de naissance, mêmes mots du nom, saisons cohérentes). `cleEdition` (index.html) DOIT rester alignée avec `cle_edition` ; tests dans `collector.py --test`.
 - `data/races/<id>.json` sont conservés d'un passage à l'autre ; seules les courses nouvelles, en cours, terminées
   depuis ≤ 3 jours ou incomplètes sont recollectées. `data/state.json` : étapes déjà notifiées (`<race_id>:<n|F>`),
   décisions « Français dans le top 10 » des .1/.2 étrangères (mémorisées, sondées une seule fois).
@@ -207,6 +212,11 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 
 ## Sources : règles et pièges vérifiés
 
+- **Corrections de source documentées** : `corrections_coureurs.json` (racine, manuel) corrige des erreurs avérées de l'UCI (date de naissance,
+  nationalité) pour l'affichage, `rider_id` inchangé (`uci.corriger_ref`, appliqué par `rider_ref`, `encyclopedie.construire`, `construire_carrieres`).
+  Uniquement avec une source citée (Wikidata + 2e source indépendante) et validées par le propriétaire ; jamais devinées. Chaque entrée porte
+  `valeur`, `uci` (valeur d'origine), `source`, `date`, `note` ; l'entité coureur expose `corrections` et la fiche l'affiche (« UCI : … · corrigé d'après … »).
+  Les fiches de course d'archive déjà écrites gardent la valeur UCI. Schéma : `docs/SPEC.md` §4.5 ; vérification : `docs/recherche/encyclopedie_sources.md`.
 - **Exclues** : ProCyclingStats et FirstCycling (CGU/robots.txt interdisent, Cloudflare). Ne pas les réintroduire.
   Aucun contournement anti-robot (pas de faux navigateur, pas de jeton récupéré dans une page).
 - **ASO et DirectVélo** : accord du propriétaire du projet. Respecter quand même robots.txt (ASO interdit `/api`,

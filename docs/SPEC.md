@@ -235,7 +235,11 @@ d'une saison archivée est faite par `update.yml`, voir la rotation ci-dessous).
   `carrieres/index.json` : `{"alias", "lettres"}` (la page ne demande que les lettres présentes). Rapprochement par `rider_id`
   exact (slug + date de naissance) ; **`alias_coureurs.json`** (racine, `{}` au départ, manuel) `{"rider_id source": "rider_id
   canonique"}`, jamais deviné ; si l'alias ferait figurer deux fois le même coureur la même saison, il est ignoré pour cette
-  saison (`[WARN]`, rien n'est fusionné). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
+  saison (`[WARN]`, rien n'est fusionné), SAUF si la source figure dans la clé **`_fusion_meme_saison`** du même fichier (liste de rider_id sources
+  dont l'alias est aussi déclaré ; valeur non textuelle donc ignorée par `charger_alias`) : les deux identifiants de la saison sont alors réunis
+  (entités : réécriture de l'identifiant dans chaque fiche de course avant cumul, donc stats, palmarès et équipes réunis, équipe principale = plus de
+  jours, `equipes` liste les deux ; carrières : stats sommées, résultats réunis). Une course où les deux identifiants figurent n'est jamais fusionnée
+  (`[WARN]`, aucun double comptage). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
 - La page lit `index.json` du dépôt d'archives (liste des saisons, `complete` ; base `BASE_ARCHIVES` : `?archives=`, sinon `<data>/archives` avec `?data=`, sinon l'URL publique du dépôt d'archives, voir CLAUDE.md) à l'ouverture de l'onglet Archives, puis
   `<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
   `editions.json` est lu à l'ouverture d'une fiche course (encart « Éditions précédentes »), `carrieres/index.json` puis un
@@ -259,8 +263,18 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   {"date", "season", "race_id", "course" (clé d'édition), "label", "classification" (stage|gc|points|mountain|youth), "rank", "category",
   "uci_class"}], "grands_tours": [{"season", "course": "tour"|"giro"|"vuelta", "race_id", "rank"} ou {…, "status": "DNF"|"OTL"|"DSQ"} (abandon
   constaté sur une étape, absent du général final)], "totaux": {"wins", "podiums", "gc_wins", "seasons"}, "historique_uci"? [[date, rang]] (E1c, trié par date, tous les instantanés où le coureur
-  figure ; absent sans instantané)}}`. `palmares` et `grands_tours`
+  figure ; absent sans instantané), "corrections"? [{"champ": "birth_date"|"nationality", "uci": valeur UCI d'origine, "source": "Wikidata Qxxx (P569|P27)"}]
+  (erreurs de source documentées, voir ci-dessous ; absent sans correction)}}`. `palmares` et `grands_tours`
   absents si vides. Les étapes d'une course en cours comptent (comme `riders.json`) ; ses classements généraux provisoires non.
+- **Corrections de source documentées** (`corrections_coureurs.json`, racine, manuel) : `{"<rider_id>": {"birth_date"|"nationality": {"valeur",
+  "uci" (valeur UCI d'origine), "source" ("Wikidata Qxxx (P569|P27)"), "date" (de la décision), "note"}}}`. Le `rider_id` NE CHANGE PAS (clé stable : slug
+  + date UCI). La valeur corrigée est appliquée à l'affichage : `uci.rider_ref` (collecte en cours et nouvelles archives : `birth_date`, `nationality`,
+  `flag` recalculé par `netutil.flag_code`, `is_french`), `encyclopedie.construire` (entités coureurs, pays, saisons, podiums d'éditions) et
+  `collector.construire_carrieres`. Une correction n'est appliquée que si la valeur courante est celle de l'UCI d'origine (ou déjà corrigée : idempotent) ;
+  si l'UCI a changé, `[WARN]` et rien n'est appliqué. Entrée invalide (champ inconnu, source absente, date / code pays mal formé, `uci` incohérent avec
+  le `rider_id`) : ignorée avec `[WARN]`. Les fiches de course d'archive déjà écrites gardent la valeur UCI dans leurs `riders` (l'interface lit en
+  priorité l'entité coureur pour la fiche coureur ; la fiche de course affiche la valeur UCI tant qu'elle n'est pas recollectée). Le rapprochement
+  Wikidata (`wikidata.lister_coureurs`) lit la date de naissance des entités, donc la date corrigée.
 - **Grands tours** (`encyclopedie.GRANDS_TOURS`) : clés d'édition EXACTES `tour de france|FRA`, `giro d italia|ITA`, `la vuelta ciclista a
   espana|ESP` (+ graphies `vuelta a espana|ESP`, `la vuelta a espana|ESP`, absentes des données actuelles), course par étapes terminée de
   classe 2.UWT / 2.WT / 2.HC / 2.HIS / 2.CH ; jamais de motif flou (« Tour de France Saitama Criterium », « Giro Ciclistico d'Italia »,

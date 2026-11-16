@@ -45,6 +45,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import collector
 import netutil
 import riders
+import uci
 import wikidata
 
 TOP = 30                          # saisons : taille des classements (équipes, coureurs)
@@ -296,6 +297,7 @@ class _Saison:
         self.sans_cle = 0
         self.sans_equipe = 0
         self.gt_vus: List[Dict[str, Any]] = []
+        self.corrections: Dict[str, Dict[str, Dict[str, str]]] = {}     # rid brut -> {champ: {uci, source}} (corrections_coureurs.json)
 
     def equipe(self, libelle: str) -> Optional[Dict[str, Any]]:
         slug = netutil.slugify(libelle)
@@ -308,9 +310,48 @@ class _Saison:
         return e
 
 
-def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, str]) -> None:
+def _fusionner_ids(race: Dict[str, Any], fus: Dict[str, str]) -> Tuple[Dict[str, Any], Dict[str, str]]:
+    """Fusion « même saison » explicite (`_fusion_meme_saison`) : dans cette fiche, l'identifiant source devient l'identifiant canonique
+    (clés de `riders`, `id` des refs, `rider_id` des lignes) ; les cumuls de la saison réunissent donc les deux identifiants (stats,
+    palmarès, équipes). Si les deux identifiants figurent dans la même course, rien n'est changé (double comptage possible : `[WARN]`)
+    et la règle de contradiction s'applique ensuite. Retourne (fiche, {source: canonique} effectivement appliqués)."""
+    refs = race.get("riders") or {}
+    actifs: Dict[str, str] = {}
+    for src, canon in fus.items():
+        if src in refs:
+            if canon in refs:
+                print(f"[WARN] encyclopédie : fusion « {src} » -> « {canon} » ignorée dans {race.get('id')} (les deux figurent dans la course)")
+            else:
+                actifs[src] = canon
+    if not actifs:
+        return race, {}
+
+    def tr(o: Any, parent: Optional[str] = None) -> Any:
+        if isinstance(o, dict):
+            return {(actifs.get(k, k) if parent == "riders" else k):
+                    (actifs.get(v, v) if k in ("rider_id", "id") and isinstance(v, str) else tr(v, k)) for k, v in o.items()}
+        if isinstance(o, list):
+            return [tr(x, parent) for x in o]
+        return o
+    return tr(race), actifs
+
+
+def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, str], fus: Optional[Dict[str, str]] = None) -> None:
     """Réduit une fiche de course et l'ajoute aux cumuls de la saison."""
     refs = race.get("riders") or {}
+    corr = uci.corrections_coureurs()
+    if corr and any(rid in corr for rid in refs):
+        # erreurs de source documentées : les fiches d'archive déjà écrites gardent la valeur UCI, l'entité porte la valeur corrigée
+        refs = dict(refs)
+        for rid in [r for r in refs if r in corr]:
+            refs[rid] = dict(refs[rid])
+            for c in uci.corriger_ref(rid, refs[rid]):
+                S.corrections.setdefault(rid, {})[c["champ"]] = {"uci": c["uci"], "source": c["source"]}
+        race = dict(race, riders=refs)
+    if fus:
+        race, actifs = _fusionner_ids(race, fus)
+        refs = race.get("riders") or {}
+        S.corrections = {actifs.get(k, k): v for k, v in S.corrections.items()}      # clés = identifiants après fusion
     dk = _dk(race)
     fini = race.get("status") in (None, "finished")
     S.courses_total += 1
@@ -453,7 +494,7 @@ def _codes_equipes(src: Dict[str, Any]) -> Dict[str, Set[str]]:
 
 def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, now: Optional[str] = None,
                alias_coureurs: Optional[Dict[str, str]] = None, alias_courses: Optional[Dict[str, str]] = None,
-               verbose: bool = True, wikidata_dir: Optional[str] = None) -> Dict[str, Any]:
+               verbose: bool = True, wikidata_dir: Optional[str] = None, fusions: Optional[Iterable[str]] = None) -> Dict[str, Any]:
     """Génère `sortie` (défaut `<archives_dir>/entites`). Retourne un rapport (compteurs, tailles, anomalies).
     `wikidata_dir` : cache Wikidata lu (défaut `<sortie>/wikidata`)."""
     t0 = time.time()
@@ -462,6 +503,9 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     LIGNEES_EQ: Dict[str, List[Tuple[int, str]]] = {}      # QID de lignée -> [(saison, id d'équipe-saison)]
     ar = collector.charger_alias(collector.ALIAS_COUREURS) if alias_coureurs is None else alias_coureurs
     ac = collector.charger_alias(collector.ALIAS_COURSES) if alias_courses is None else alias_courses
+    if fusions is None and alias_coureurs is None:
+        fusions = collector.charger_fusions(collector.ALIAS_COUREURS)
+    fus = collector.fusions_valides(ar, fusions)      # fusions « même saison » explicitement autorisées
     now = now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sources, inconnues = lister_sources(archives_dir, data_dir)
     annees = sorted(sources)
@@ -496,7 +540,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             if not race or not race.get("id") or race["id"] in vus:
                 continue
             vus.add(race["id"])
-            _traiter_course(S, race, ac)
+            _traiter_course(S, race, ac, fus)
             del race
         avert: List[str] = []
         mapping = _mapping_alias(S, ar, avert)
@@ -604,6 +648,10 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             for k in ("name", "nationality", "flag", "birth_date"):
                 if a.get(k):
                     c[k] = a[k]
+            for champ, v in sorted(S.corrections.get(rid, {}).items()):
+                lst = c.setdefault("corrections", [])
+                if not any(x["champ"] == champ for x in lst):
+                    lst.append({"champ": champ, "uci": v["uci"], "source": v["source"]})
             s: Dict[str, Any] = {}
             if a["equipes"]:
                 # équipe principale = équipe de marque (pas une sélection nationale) aux plus nombreux jours de course
@@ -1182,6 +1230,72 @@ def _tests() -> None:
             assert rf["compteurs"]["lignees"] == 1 and rf["compteurs"]["coureurs_wikidata"] == 1, rf["compteurs"]   # cache fictif de tools/fixtures   # (riders-2027.json du jeu d'essai est fictif : pas de contrôle de cohérence)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    # --- corrections de source documentées (corrections_coureurs.json) : valeur corrigée dans l'entité, rider_id inchangé
+    tmp2 = tempfile.mkdtemp(prefix="encyclo_corr_")
+    avant = uci._CORRECTIONS
+    try:
+        A2, D2, O2 = (os.path.join(tmp2, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(os.path.join(D2, "races"))
+        dec, ok = "decale-ana-20000105", "ok-bob-19990101"
+        src = {"valeur": "2000-06-01", "uci": "2000-01-05", "source": "Wikidata Q1 (P569)", "date": "2026-11-16"}
+        nat = {"valeur": "RSA", "uci": "CHN", "source": "Wikidata Q2 (P27)", "date": "2026-11-16"}
+        uci._CORRECTIONS = {dec: {"birth_date": src, "nationality": nat}}
+        rc = _course_test("uci-c1", "Course Test", "BEL", "1.1", ".1", "one_day", "2024-03-01",
+                          {dec: ("Ana Decale", "CHN", "cn", "Équipe C", "2000-01-05"), ok: ("Bob Ok", "FRA", "fr", "Équipe C", "1999-01-01")},
+                          [(None, "2024-03-01", [_ligne(dec, 1), _ligne(ok, 2)])])
+        collector._dump(os.path.join(A2, "2024", "races", "uci-c1.json"), rc)
+        collector._dump(os.path.join(A2, "2024", "state.json"), {"complete": True})
+        construire(A2, D2, O2, now="2026-01-01T00:00:00Z", alias_coureurs={}, alias_courses={}, verbose=False)
+        ent = collector._load(os.path.join(O2, "coureurs", "d.json"), {})[dec]        # même clé d'entité : le rider_id n'a pas changé
+        assert ent["birth_date"] == "2000-06-01" and ent["nationality"] == "RSA" and ent["flag"] == "za", ent
+        assert ent["corrections"] == [{"champ": "birth_date", "uci": "2000-01-05", "source": "Wikidata Q1 (P569)"},
+                                      {"champ": "nationality", "uci": "CHN", "source": "Wikidata Q2 (P27)"}], ent
+        assert "corrections" not in collector._load(os.path.join(O2, "coureurs", "o.json"), {})[ok]
+        assert collector._load(os.path.join(O2, "saisons", "2024.json"), {})["victoires_par_pays"] == {"RSA": 1}
+        assert "RSA" in collector._load(os.path.join(O2, "pays.json"), {}) and "CHN" not in collector._load(os.path.join(O2, "pays.json"), {})
+        assert collector._load(os.path.join(A2, "2024", "races", "uci-c1.json"), {})["riders"][dec]["nationality"] == "CHN"   # fiche d'archive intacte
+    finally:
+        uci._CORRECTIONS = avant
+        shutil.rmtree(tmp2, ignore_errors=True)
+    # --- fusion « même saison » explicite (_fusion_meme_saison) : réunion sans double comptage, refus par défaut
+    tmp3 = tempfile.mkdtemp(prefix="encyclo_fus_")
+    try:
+        A3, D3, O3 = (os.path.join(tmp3, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(os.path.join(D3, "races"))
+        can, src = "fusion-ana-marie-20000101", "fusion-ana-20000101"
+        pc, ps = ("Ana Marie Fusion", "FRA", "fr", "Équipe C", "2000-01-01"), ("Ana Fusion", "FRA", "fr", "Équipe S", "2000-01-01")
+        rs = [_course_test("uci-f1", "Course F1", "BEL", "1.1", ".1", "one_day", "2024-03-01", {src: ps}, [(None, "2024-03-01", [_ligne(src, 1)])]),
+              _course_test("uci-f2", "Course F2", "BEL", "1.1", ".1", "one_day", "2024-03-08", {src: ps}, [(None, "2024-03-08", [_ligne(src, 1)])]),
+              _course_test("uci-f3", "Course F3", "BEL", "1.1", ".1", "one_day", "2024-03-15", {can: pc}, [(None, "2024-03-15", [_ligne(can, 1)])]),
+              # course où les DEUX identifiants figurent : jamais fusionnés (double comptage possible)
+              _course_test("uci-f4", "Course F4", "BEL", "1.1", ".1", "one_day", "2024-03-22", {can: pc, src: ps},
+                           [(None, "2024-03-22", [_ligne(can, 2), _ligne(src, 3)])])]
+        for c in rs[:3]:
+            collector._dump(os.path.join(A3, "2024", "races", c["id"] + ".json"), c)
+        collector._dump(os.path.join(A3, "2024", "state.json"), {"complete": True})
+        L3 = lambda o: collector._load(os.path.join(o, "coureurs", "f.json"), {})      # noqa: E731
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False)      # par défaut : refus
+        assert set(L3(O3)) == {can, src} and L3(O3)[can]["totaux"]["wins"] == 1, set(L3(O3))
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False, fusions=[src])
+        e = L3(O3)
+        assert set(e) == {can}, set(e)
+        s24 = e[can]["saisons"]["2024"]
+        assert s24["stats"]["wins"] == 3 and s24["stats"]["race_days"] == 3 and s24["equipe"] == "equipe-s-2024", s24     # équipe principale = plus de jours
+        assert s24["equipes"] == ["equipe-s-2024", "equipe-c-2024"] and e[can]["totaux"]["wins"] == 3
+        assert len(e[can]["palmares"]) == 3 and {p["race_id"] for p in e[can]["palmares"]} == {"uci-f1", "uci-f2", "uci-f3"}
+        # une course avec les deux identifiants : fusion ignorée dans cette course, aucun double comptage, rien d'écrasé
+        collector._dump(os.path.join(A3, "2024", "races", "uci-f4.json"), rs[3])
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False, fusions=[src])
+        e = L3(O3)
+        assert set(e) == {can, src} and e[can]["saisons"]["2024"]["stats"]["wins"] == 3 and e[can]["saisons"]["2024"]["stats"]["race_days"] == 4 \
+            and e[src]["saisons"]["2024"]["stats"]["race_days"] == 1 and e[src]["totaux"]["wins"] == 0      # f4 : chaque identifiant compte une fois
+        r, _ = _fusionner_ids(rs[3], {src: can})
+        assert r is rs[3]
+        r, ap = _fusionner_ids(rs[0], {src: can})
+        assert ap == {src: can} and list(r["riders"]) == [can] and r["riders"][can]["id"] == can \
+            and r["stages"][0]["results"]["stage"][0]["rider_id"] == can and rs[0]["riders"][src]["id"] == src
+    finally:
+        shutil.rmtree(tmp3, ignore_errors=True)
     print("[OK] encyclopedie.py : tests locaux réussis")
 
 

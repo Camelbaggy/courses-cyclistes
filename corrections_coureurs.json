@@ -1,0 +1,83 @@
+{
+ "da-silva-tiano-20010417": {
+  "nationality": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Tiano Da Silva » : même date de naissance que nous, nationalité Afrique du Sud ; WorldDB : RSA.",
+   "source": "Wikidata Q112656245 (P27)",
+   "uci": "CHN",
+   "valeur": "RSA"
+  }
+ },
+ "ermakov-roman-20041006": {
+  "nationality": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Roman Ermakov » : même date de naissance que nous, nationalité Russie ; WorldDB : RUS.",
+   "source": "Wikidata Q124388036 (P27)",
+   "uci": "SLO",
+   "valeur": "RUS"
+  }
+ },
+ "kone-souleymane-19970615": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Souleymane Koné » (précision jour) ; même date que la base WorldDB (2e source indépendante).",
+   "source": "Wikidata Q55714714 (P569)",
+   "uci": "1997-06-15",
+   "valeur": "1997-06-14"
+  }
+ },
+ "lund-andresen-tobias-20020208": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Tobias Lund Andresen » ; même date que WorldDB (jour et mois inversés par l'UCI).",
+   "source": "Wikidata Q98918621 (P569)",
+   "uci": "2002-02-08",
+   "valeur": "2002-08-20"
+  }
+ },
+ "phounsavath-ariya-19910203": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Ariya Phounsavath » ; même date que WorldDB (jour et mois inversés).",
+   "source": "Wikidata Q22893639 (P569)",
+   "uci": "1991-02-03",
+   "valeur": "1991-03-02"
+  }
+ },
+ "ramsay-andrew-19980924": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Andrew Ramsay (cyclisme) » ; même date que WorldDB.",
+   "source": "Wikidata Q134087532 (P569)",
+   "uci": "1998-09-24",
+   "valeur": "1998-04-24"
+  }
+ },
+ "rosado-arroyo-abel-20030508": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Abel Rosado » (nationalité États-Unis ; celle de l'UCI, PUR, n'est pas modifiée) ; même date que WorldDB (jour et mois inversés).",
+   "source": "Wikidata Q136841423 (P569)",
+   "uci": "2003-05-08",
+   "valeur": "2003-08-05"
+  }
+ },
+ "sychuhou-aliaksandr-20021219": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Aliaksandr Sychuhou » ; même date que WorldDB.",
+   "source": "Wikidata Q118444544 (P569)",
+   "uci": "2002-12-19",
+   "valeur": "2002-02-19"
+  }
+ },
+ "wasowicz-kajetan-20040105": {
+  "birth_date": {
+   "date": "2026-11-16",
+   "note": "Wikidata « Kajetan Wąsowicz » ; même date que WorldDB.",
+   "source": "Wikidata Q124432575 (P569)",
+   "uci": "2004-01-05",
+   "valeur": "2004-06-03"
+  }
+ }
+}

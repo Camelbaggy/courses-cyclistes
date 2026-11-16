@@ -11,6 +11,8 @@ Contrat : docs/SPEC.md §4 et §5. `python uci.py` exécute les tests locaux de 
 """
 
 import datetime
+import json
+import os
 import re
 from collections import Counter
 from typing import Any, Dict, List, Optional, Tuple
@@ -212,6 +214,94 @@ _MEME_TEMPS = {"s.t.", "st", "s.t", "m.t.", "mt", "m.t", "same time", "id", "id.
 # Normalisation des lignes
 # --------------------------------------------------------------------------------------------------
 
+# --------------------------------------------------------------------------------------------------
+# Corrections de source documentées (corrections_coureurs.json)
+# --------------------------------------------------------------------------------------------------
+
+CORRECTIONS_COUREURS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corrections_coureurs.json")
+_CHAMPS_CORRIGES = ("birth_date", "nationality")
+_CORRECTIONS: Optional[Dict[str, Dict[str, Dict[str, Any]]]] = None     # cache (chargé au premier usage)
+_CORR_AVERTIES: set = set()
+
+
+def charger_corrections(chemin: str) -> Dict[str, Dict[str, Dict[str, Any]]]:
+    """Fichier manuel {rider_id: {"birth_date"|"nationality": {valeur, uci, source, date, note}}}. Une entrée invalide
+    (champ inconnu, valeur mal formée, source ou valeur UCI d'origine absente, `uci` incohérent avec le rider_id,
+    valeur identique à l'UCI) est ignorée avec [WARN] : une correction ne se devine jamais."""
+    try:
+        with open(chemin, encoding="utf-8") as fh:
+            brut = json.load(fh)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        print(f"[WARN] corrections_coureurs : fichier illisible ({e})")
+        return {}
+    out: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    for rid, champs in (brut.items() if isinstance(brut, dict) else []):
+        if not isinstance(rid, str) or not isinstance(champs, dict):
+            print(f"[WARN] corrections_coureurs : entrée {rid!r} ignorée (forme invalide)")
+            continue
+        for champ, c in champs.items():
+            val, uci_v, src = (c.get("valeur"), c.get("uci"), c.get("source")) if isinstance(c, dict) else (None, None, None)
+            if champ not in _CHAMPS_CORRIGES:
+                raison = "champ inconnu"
+            elif not (isinstance(src, str) and src.strip()):
+                raison = "source absente"
+            elif not (isinstance(val, str) and isinstance(uci_v, str)) or val == uci_v:
+                raison = "valeur ou valeur UCI d'origine invalide"
+            elif champ == "birth_date" and not (_date_valide(val) and _date_valide(uci_v)):
+                raison = "date invalide (AAAA-MM-JJ attendu)"
+            elif champ == "birth_date" and not rid.endswith("-" + uci_v.replace("-", "")):
+                raison = "date UCI incohérente avec le rider_id"
+            elif champ == "nationality" and not (re.fullmatch(r"[A-Z]{3}", val) and re.fullmatch(r"[A-Z]{3}", uci_v)):
+                raison = "code pays invalide (3 lettres majuscules attendues)"
+            else:
+                out.setdefault(rid, {})[champ] = {k: c[k] for k in ("valeur", "uci", "source", "date", "note") if c.get(k) is not None}
+                continue
+            print(f"[WARN] corrections_coureurs : {rid} / {champ} ignorée ({raison})")
+    return out
+
+
+def _date_valide(txt: str) -> bool:
+    try:
+        return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", txt)) and bool(datetime.date.fromisoformat(txt))
+    except ValueError:
+        return False
+
+
+def corrections_coureurs() -> Dict[str, Dict[str, Dict[str, Any]]]:
+    global _CORRECTIONS
+    if _CORRECTIONS is None:
+        _CORRECTIONS = charger_corrections(CORRECTIONS_COUREURS)
+    return _CORRECTIONS
+
+
+def corriger_ref(rid: Optional[str], ref: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Applique à `ref` (birth_date, nationality, flag, is_french) les corrections documentées du coureur `rid`, sur place.
+    Le rider_id ne change jamais. Une correction ne s'applique que si la valeur courante est celle de l'UCI d'origine
+    (ou déjà corrigée : idempotent) ; si l'UCI a changé depuis, elle est laissée de côté avec [WARN] (une fois).
+    Retourne les corrections appliquées [{champ, uci, source}]."""
+    appliquees: List[Dict[str, str]] = []
+    for champ, c in (corrections_coureurs().get(rid or "") or {}).items():
+        actuel = ref.get(champ)
+        if actuel == c["valeur"]:
+            pass
+        elif actuel == c["uci"]:
+            ref[champ] = c["valeur"]
+            if champ == "nationality":
+                ref["flag"] = netutil.flag_code(c["valeur"])      # le drapeau d'origine était celui de la mauvaise nationalité
+                ref["is_french"] = c["valeur"] == "FRA"
+        else:
+            if (rid, champ) not in _CORR_AVERTIES:
+                _CORR_AVERTIES.add((rid, champ))
+                print(f"[WARN] corrections_coureurs : {rid} / {champ} non appliquée (valeur courante {actuel!r}, "
+                      f"attendue {c['uci']!r} : l'UCI a peut-être changé)")
+            continue
+        appliquees.append({"champ": champ, "uci": c["uci"], "source": c["source"]})
+    return appliquees
+
+
+
 def rider_ref(ligne: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
     """Ligne de Results -> (rider_id, RiderRef + birth_date). (None, {}) si le coureur n'a pas de nom."""
     brut = " ".join(str(ligne.get("DisplayName") or "").split())
@@ -223,6 +313,7 @@ def rider_ref(ligne: Dict[str, Any]) -> Tuple[Optional[str], Dict[str, Any]]:
     flag = (str(ligne.get("FlagCode") or "").strip().lower() or None) or netutil.flag_code(nation)
     ref = {"id": rid, "name": display_name(brut), "nationality": nation, "flag": flag,
            "is_french": nation == "FRA", "team": team_name(ligne.get("TeamName")), "birth_date": naissance}
+    corriger_ref(rid, ref)      # erreurs de source documentées : le rider_id (calculé sur les valeurs UCI) ne change pas
     return rid, ref
 
 
@@ -771,6 +862,45 @@ def _tests() -> None:
     # Paramètres Kendo : trois filtres + pagination
     ch = dict(_kendo(100, 200, [("RaceTypeId", 0), ("CategoryId", 22), ("SeasonId", 464)], ("StartDate", "asc"), disciplineId=10))
     assert ch["page"] == 3 and ch["skip"] == 200 and ch["filter[filters][2][field]"] == "SeasonId"
+    # Corrections de source documentées
+    import tempfile
+    global _CORRECTIONS
+    def _ms(j):
+        return "/Date(%d)/" % (datetime.datetime.fromisoformat(j + "T00:00:00+00:00").timestamp() * 1000)
+    def _src(corr):
+        return {"valeur": corr[0], "uci": corr[1], "source": "Wikidata Q1 (P569)", "date": "2026-11-16"}
+    avant = _CORRECTIONS
+    try:
+        _CORRECTIONS = {"test-jean-20000105": {"birth_date": _src(("2000-06-01", "2000-01-05"))},
+                        "test-luc-20010417": {"nationality": _src(("RSA", "CHN"))},
+                        "test-fra-20010101": {"nationality": _src(("FRA", "BEL"))}}
+        rid, ref = rider_ref({"DisplayName": "TEST Jean", "BirthDate": _ms("2000-01-05"), "NationName": "FRA", "FlagCode": "fr"})
+        assert rid == "test-jean-20000105" and ref["id"] == rid and ref["birth_date"] == "2000-06-01" and ref["is_french"]   # rider_id inchangé
+        rid, ref = rider_ref({"DisplayName": "TEST Luc", "BirthDate": _ms("2001-04-17"), "NationName": "CHN", "FlagCode": "cn"})
+        assert rid == "test-luc-20010417" and ref["nationality"] == "RSA" and ref["flag"] == "za" and not ref["is_french"]
+        assert ref["birth_date"] == "2001-04-17"
+        rid, ref = rider_ref({"DisplayName": "TEST Fra", "BirthDate": _ms("2001-01-01"), "NationName": "BEL", "FlagCode": "be"})
+        assert ref["nationality"] == "FRA" and ref["flag"] == "fr" and ref["is_french"]
+        # idempotent, et sans effet si l'UCI a changé depuis (valeur courante inattendue)
+        assert [c["champ"] for c in corriger_ref("test-luc-20010417", dict(ref, nationality="RSA"))] == ["nationality"]
+        assert corriger_ref("test-luc-20010417", {"nationality": "ITA", "flag": "it"}) == []
+        # fichier : entrées invalides ignorées avec [WARN]
+        with tempfile.TemporaryDirectory() as tmp:
+            ch = os.path.join(tmp, "c.json")
+            ok = {"valeur": "1997-06-14", "uci": "1997-06-15", "source": "Wikidata Q2 (P569)"}
+            with open(ch, "w", encoding="utf-8") as fh:
+                json.dump({"a-b-19970615": {"birth_date": ok, "nationality": {"valeur": "XX", "uci": "FRA", "source": "s"}},
+                           "c-d-19970615": {"birth_date": dict(ok, source="")},
+                           "e-f-19970615": {"birth_date": dict(ok, valeur="1997-13-40")},
+                           "g-h-19990101": {"birth_date": ok}, "i-j-1": {"taille": ok}, "k-l-1": 3}, fh)
+            res = charger_corrections(ch)
+            assert list(res) == ["a-b-19970615"] and list(res["a-b-19970615"]) == ["birth_date"]
+            assert charger_corrections(os.path.join(tmp, "absent.json")) == {}
+    finally:
+        _CORRECTIONS = avant
+    # le fichier réel est valide : aucune entrée écartée
+    reel = charger_corrections(CORRECTIONS_COUREURS)
+    assert reel and all(c["source"].startswith("Wikidata Q") for v in reel.values() for c in v.values())
     print("[OK] uci.py : tests locaux réussis")
 
 

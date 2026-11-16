@@ -968,6 +968,54 @@ def charger_alias(chemin: str) -> Dict[str, str]:
     return alias
 
 
+FUSIONS_CLE = "_fusion_meme_saison"
+
+
+def charger_fusions(chemin: str) -> List[str]:
+    """Clé `_fusion_meme_saison` de alias_coureurs.json : liste des rider_id SOURCES dont l'alias peut fusionner deux identifiants
+    présents la même saison (doublons avérés, validés à la main). `charger_alias` ignore cette clé (valeur non textuelle), donc le
+    fichier reste lisible par l'ancien code. Par défaut (id absent de la liste) la règle de contradiction s'applique : rien n'est fusionné."""
+    brut = _load(chemin, {})
+    lst = brut.get(FUSIONS_CLE) if isinstance(brut, dict) else None
+    if lst is not None and not (isinstance(lst, list) and all(isinstance(x, str) for x in lst)):
+        print(f"[WARN] alias {os.path.basename(chemin)} : « {FUSIONS_CLE} » doit être une liste de rider_id (ignorée)")
+        return []
+    return sorted(set(lst or []))
+
+
+def fusions_valides(alias: Dict[str, str], fusions: Optional[Any]) -> Dict[str, str]:
+    """{source: canonique} des fusions « même saison » autorisées : l'identifiant doit aussi figurer dans `alias`."""
+    out: Dict[str, str] = {}
+    for s in fusions or ():
+        if s in alias:
+            out[s] = alias[s]
+        else:
+            print(f"[WARN] alias : « {s} » figure dans {FUSIONS_CLE} sans alias correspondant (ignoré)")
+    return out
+
+
+def _fusionner_fiches(fc: Dict[str, Any], fs: Dict[str, Any]) -> Dict[str, Any]:
+    """Fiche `riders.json` d'une même saison : canonique `fc` + source `fs` (même personne). Stats sommées, résultats réunis,
+    équipe = celle aux plus nombreux jours, meilleur rang UCI conservé ; le reste vient de `fc` (complété par `fs` si absent)."""
+    out = dict(fc)
+    for k, v in fs.items():
+        if out.get(k) is None and v is not None and k not in ("stats", "results"):
+            out[k] = v
+    st = dict(fc.get("stats") or {})
+    for k, v in (fs.get("stats") or {}).items():
+        st[k] = (st.get(k) or 0) + (v or 0)
+    out["stats"] = st
+    out["results"] = sorted(list(fc.get("results") or []) + list(fs.get("results") or []),
+                            key=lambda x: (x.get("date") or "", x.get("race_id") or ""), reverse=True)
+    if (fs.get("stats") or {}).get("race_days", 0) > (fc.get("stats") or {}).get("race_days", 0) and fs.get("team"):
+        out["team"] = fs["team"]
+    out["is_french"] = bool(fc.get("is_french") or fs.get("is_french"))
+    rangs = [(f["uci_rank"], f.get("uci_points")) for f in (fc, fs) if f.get("uci_rank") is not None]
+    if rangs:
+        out["uci_rank"], out["uci_points"] = min(rangs, key=lambda t: t[0])
+    return out
+
+
 def _ref_reduit(ref: Optional[Dict]) -> Optional[Dict]:
     if not ref:
         return None
@@ -1007,10 +1055,13 @@ def lettre_carriere(rider_id: str) -> str:
     return c if "a" <= c <= "z" else "_"
 
 
-def construire_carrieres(archives_dir: str, alias: Dict[str, str]) -> Dict[str, Dict]:
+def construire_carrieres(archives_dir: str, alias: Dict[str, str], fusions: Optional[Any] = None) -> Dict[str, Dict]:
     """{lettre: {rider_id: carrière}} d'après les riders.json des saisons d'archive. Rapprochement par rider_id exact
     (slug du nom + date de naissance) après alias manuel. Un alias qui ferait apparaître deux fois le même coureur la
-    même saison est ignoré pour cette saison (contradiction : la fiche garde son propre identifiant, rien n'est fusionné)."""
+    même saison est ignoré pour cette saison (contradiction : la fiche garde son propre identifiant, rien n'est fusionné),
+    sauf si la source figure dans `fusions` (`_fusion_meme_saison`) : les deux fiches de la saison sont alors réunies
+    (`_fusionner_fiches`), sauf si elles ont un résultat commun (même course : double comptage possible, `[WARN]`, non fusionnées)."""
+    fus = fusions_valides(alias, fusions)
     par_coureur: Dict[str, Dict] = {}
     annees = sorted(int(n) for n in os.listdir(archives_dir) if n.isdigit()) if os.path.isdir(archives_dir) else []
     vus: Dict[Tuple[str, int], str] = {}
@@ -1019,9 +1070,22 @@ def construire_carrieres(archives_dir: str, alias: Dict[str, str]) -> Dict[str, 
         if not D or not isinstance(D.get("riders"), dict):
             continue
         noms_courses = D.get("races") or {}
+        D["riders"] = dict(D["riders"])
+        for src, canon in fus.items():
+            if src in D["riders"] and canon in D["riders"]:
+                fc, fs = D["riders"][canon], D["riders"][src]
+                communs = {x.get("race_id") for x in fc.get("results") or []} & {x.get("race_id") for x in fs.get("results") or []}
+                if communs:
+                    print(f"[WARN] carrières : fusion « {src} » -> « {canon} » ignorée en {an} (résultats communs : {sorted(communs)[:3]})")
+                    continue
+                D["riders"][canon] = _fusionner_fiches(fc, fs)
+                del D["riders"][src]
         # coureurs de la saison dans l'ordre : identifiants canoniques d'abord (alias contradictoires écartés)
         for rid in sorted(D["riders"], key=lambda k: (k in alias, k)):
             f = D["riders"][rid]
+            if rid in uci.corrections_coureurs():     # erreurs de source documentées (corrections_coureurs.json) ; rider_id inchangé
+                f = dict(f)
+                uci.corriger_ref(rid, f)
             cid = alias.get(rid, rid)
             if (cid, an) in vus:
                 print(f"[WARN] carrières : alias « {rid} » -> « {cid} » ignoré en {an} (le coureur canonique y figure déjà)")
@@ -1066,7 +1130,8 @@ def construire_carrieres(archives_dir: str, alias: Dict[str, str]) -> Dict[str, 
 
 def write_archives_editions_carrieres(archives_dir: Optional[str] = None, now: Optional[str] = None,
                                       alias_courses: Optional[Dict[str, str]] = None,
-                                      alias_coureurs: Optional[Dict[str, str]] = None) -> None:
+                                      alias_coureurs: Optional[Dict[str, str]] = None,
+                                      fusions: Optional[Any] = None) -> None:
     """Écrit archives/editions.json, archives/carrieres/<lettre>.json et archives/carrieres/index.json (seulement s'ils
     changent). Les fichiers de lettre devenus sans coureur sont supprimés (données dérivées)."""
     archives_dir = archives_dir or ARCHIVES_DIR
@@ -1075,7 +1140,8 @@ def write_archives_editions_carrieres(archives_dir: Optional[str] = None, now: O
     ed = construire_editions(archives_dir, ac, now)
     _dump_if_changed(os.path.join(archives_dir, "editions.json"), ed)
     dossier = os.path.join(archives_dir, "carrieres")
-    lettres = construire_carrieres(archives_dir, ar)
+    fu = charger_fusions(ALIAS_COUREURS) if fusions is None and alias_coureurs is None else fusions
+    lettres = construire_carrieres(archives_dir, ar, fu)
     for lettre, contenu in lettres.items():
         _dump_if_changed(os.path.join(dossier, f"{lettre}.json"), contenu, ignore=())
     # index.json : alias manuels (copie d'alias_coureurs.json) et lettres présentes (la page ne demande que celles-là : pas de 404)
@@ -1447,6 +1513,15 @@ def _tests_editions() -> None:
         assert "xx-1" in car2["x"] and car2["x"]["x-1"]["seasons"]["2024"]["team"] == "T2"
         car3 = construire_carrieres(arch, {"z-9": "x-1"})       # x-1 figure déjà en 2023 : z-9 écarté (jamais deux fiches fusionnées)
         assert "z-9" in car3["z"] and list(car3["x"]["x-1"]["seasons"]) == ["2024", "2023"] and car3["x"]["x-1"]["seasons"]["2023"]["team"] == "T1"
+        # fusion « même saison » explicite : les deux fiches de 2024 sont réunies (stats sommées), xx-1 disparaît
+        car5 = construire_carrieres(arch, {"xx-1": "x-1"}, ["xx-1"])
+        assert "xx-1" not in car5["x"] and car5["x"]["x-1"]["seasons"]["2024"]["stats"] == {"podiums": 2, "wins": 5}
+        assert car5["x"]["x-1"]["seasons"]["2024"]["team"] == "T2" and len(car5["x"]["x-1"]["seasons"]["2024"]["results"]) == 1
+        assert construire_carrieres(arch, {"xx-1": "x-1"}, ["autre"])["x"].keys() >= {"xx-1"}      # liste sans la source : refus par défaut
+        _dump(os.path.join(tmp, "fu.json"), {"a": "b", FUSIONS_CLE: ["a", "zz"], "c": "d"})
+        assert charger_alias(os.path.join(tmp, "fu.json")) == {"a": "b", "c": "d"} and charger_fusions(os.path.join(tmp, "fu.json")) == ["a", "zz"]
+        assert fusions_valides({"a": "b"}, ["a", "zz"]) == {"a": "b"}
+        assert charger_fusions(os.path.join(tmp, "absent.json")) == []
         car4 = construire_carrieres(arch, {"xx-1": "y-7"})      # alias vers un id sans autre fiche : renommage
         assert "y-7" in car4["y"] and "xx-1" not in car4["x"] and car4["y"]["y-7"]["seasons"]["2024"]["stats"] == {"wins": 5}
         assert lettre_carriere("_bizarre") == "_" and lettre_carriere("é-1") == "_" and lettre_carriere("a") == "a"

@@ -100,3 +100,36 @@ reprendre un champ de jeu (`value_*`, `charac_*`, `gene_f_*`, potentiel, popular
 jeu) ; dates et nombre d'étapes des courses (calendrier de jeu lissé) ; palmarès avant 2011 comme fait publié ; e-mails d'organisateurs et toute donnée
 personnelle ; coureurs « libres » non rapprochés (fictifs possibles). La base et les rapports qui en reprennent des valeurs restent **hors des dépôts
 publics** (scratchpad ou disque local) ; `tools/audit_worlddb.py` refuse d'écrire dans un dépôt git et ne contient que du code.
+
+## Vérification des écarts WorldDB (16 novembre 2026)
+
+Le rapport d'écarts (usage 1 ci-dessus) a été vérifié sur Wikidata (`tools/essais/essai_verif_ecarts.py`, 240 requêtes, 3,9 min). Aucune valeur WorldDB n'est
+reprise : seules les valeurs Wikidata confirmées par une 2e source indépendante (concordance avec WorldDB) sont entrées dans `corrections_coureurs.json`.
+
+**Chiffres.** Écarts de date de naissance : 99 coureurs contrôlés (79 écarts WorldDB + coureurs des contrôles de nationalité) : 48 notre date confirmée par
+Wikidata, 10 date Wikidata différente, 41 non trouvés ou ambigus (aucun candidat vérifié). Nationalités : 20 contrôles. Éditions : 6 (4 confirmées dont 1
+faux positif du script, 2 indéterminées). Doublons de `rider_id` : 9.
+
+**Corrections faites (9, `corrections_coureurs.json`)** : naissance, quand Wikidata (précision jour) et WorldDB concordent contre l'UCI : Souleymane Koné
+(1997-06-15 -> 06-14, Q55714714), Tobias Lund Andresen (2002-02-08 -> 08-20, Q98918621), Ariya Phounsavath (1991-02-03 -> 03-02, Q22893639), Andrew Ramsay
+(1998-09-24 -> 04-24, Q134087532), Abel Rosado Arroyo (2003-05-08 -> 08-05, Q136841423 ; nationalité PUR chez l'UCI, USA sur Wikidata : non corrigée),
+Aliaksandr Sychuhou (2002-12-19 -> 02-19, Q118444544), Kajetan Wąsowicz (2004-01-05 -> 06-03, Q124432575) ; nationalité, la date de naissance étant égale :
+Tiano Da Silva (CHN -> RSA, Q112656245), Roman Ermakov (SLO -> RUS, Q124388036).
+
+**Cas laissés tels quels** : Amir Ansari (Wikidata 1999-08-26, WorldDB sans écart, nationalité REF / SWE / Afghanistan : trois sources, aucune concordance) ;
+Martin Popov (trois dates distinctes) ; João Silva 2007 (homonyme probable, Wikidata 2002, WorldDB 2003) ; nationalités d'athlètes sous bannière
+particulière (Macao : Kam Chin Pok MAC / CHN ; réfugiés : REF / SYR, Wais Ahmad Badreddin) et doubles nationalités (De Fabritiis, Meunier Sow, Poulard,
+Frislie : nationalité sportive de la licence ≠ nationalité de naissance, pas une erreur de l'UCI) ; 41 coureurs non retrouvés sur Wikidata (pas de
+contre-preuve : non modifiés). Éditions : Circuit des Ardennes 2023, Turul României 2024 (Wikidata confirme l'UCI), Tour de l'Ain 2024 (variante de nom),
+Tour de Wallonie 2022 et Tour of Thailand 2022 (indéterminés). **La Polynormande 2022** : l'UCI classe Rota 1er, Wikidata Bonnamour (Rota 2e) ; on garde l'UCI
+(source officielle du projet), aucune correction de classement.
+
+**Doublons de `rider_id` (9 paires, mêmes date de naissance, nationalité et mots du nom, saisons cohérentes)** : 4 ajoutés simplement à `alias_coureurs.json`
+(canonique = id aux saisons les plus nombreuses) : `solhaug-hansen-martin-20030511` -> `hansen-martin-solhaug-20030511`, `assis-moreira-lino-guilherme-20060808` ->
+`lino-guilherme-20060808`, `kamena-tshiyana-loick-20000525` -> `kamena-tshiyana-20000525`, `teshome-meron-19920713` -> `teshome-hagos-meron-19920713`.
+5 paires dont les deux identifiants figurent la même saison (la règle de contradiction ignorerait l'alias) : ajoutées ensuite avec la clé explicite
+`_fusion_meme_saison` d'`alias_coureurs.json` (aucune course n'y compte les deux identifiants ; vérifié sur les archives) : `d-unienville-thibault-19950309` ->
+`marrier-d-unienville-thibault-19950309` (2023), `d-aquila-silva-nahuel-19980221` -> `d-aquila-silva-nahuel-omar-19980221` (2022),
+`nikolaos-zegklis-19960705` -> `zegklis-nikolaos-19960705` (2025), `muhammad-danieal-haikkal-19980413` ->
+`edy-suhaidee-muhammad-danieal-haikkal-19980413` (2022, deux équipes), `harvey-james-mark-19900512` -> `harvey-james-19900512` (2023, club et sélection ;
+canonique choisi aux 3 saisons plutôt qu'au nom le plus long).

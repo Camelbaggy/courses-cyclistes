@@ -1730,6 +1730,16 @@ function htmlHeroGen(o) {
     ${o.pills ? `<div class="hero-pills">${o.pills}</div>` : ""}${o.credit || ""}
     ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
 }
+/** Notes « UCI : <valeur d'origine> · corrigé d'après <source> » (corrections de source documentées, corrections_coureurs.json). */
+function notesCorrections(E) {
+  return ((E && E.corrections) || []).map(c => {
+    const lab = c.champ === "birth_date" ? "Naissance" : c.champ === "nationality" ? "Nationalité" : "";
+    const val = c.champ === "birth_date" ? dateLongue(c.uci) : c.champ === "nationality" ? nomPays(c.uci) : c.uci;
+    const q = /Q\d+/.exec(c.source || ""), src = c.source || "";
+    const lien = q ? `<a href="https://www.wikidata.org/wiki/${esc(q[0])}" target="_blank" rel="noopener noreferrer">${esc(src)}</a>` : esc(src);
+    return lab && val ? `<div class="credit">${esc(lab)}, UCI : ${esc(val)} · corrigé d'après ${lien}</div>` : "";
+  }).join("");
+}
 function htmlHero(cr) {
   const h = identite(cr), wd = h.wd, im = wd && wd.image, src = im && urlMedia(im.url), page = im && urlMedia(im.page);
   const ini = h.name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
@@ -1748,7 +1758,7 @@ function htmlHero(cr) {
     eq ? [eq.y != null && state.current != null && eq.y < state.current ? "Dernière équipe" : "Équipe", eq.y != null && state.current != null && eq.y < state.current ? `${eq.team} (${eq.y})` : eq.team] : null,
     ys.length ? ["Dans nos données", ys.length > 1 ? `${ys[ys.length - 1]} → ${ys[0]}` : String(ys[0])] : null,
   ].filter(Boolean);
-  return htmlHeroGen({ photo, titre: h.name || "Coureur", sub: `${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span>`, pills, credit, faits });
+  return htmlHeroGen({ photo, titre: h.name || "Coureur", sub: `${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span>`, pills, credit: credit + notesCorrections(cr.ent), faits });
 }
 function ongletsCoureur(cr) {
   const E = cr.ent, out = [];
