@@ -33,40 +33,87 @@ except ImportError:                     # outil manuel : Pillow requis
 # Codes dont l'équipe-saison n'a pas de code UCI unique dans nos données (anomalie `code_uci_multiple`), validés par le propriétaire.
 NOMS_MANUELS = {"GFC": "Groupama-FDJ"}   # GFC = WorldTeam, CGF = équipe continentale (16/11/2026)
 
-# Maillots distinctifs : nom WorldDB -> édition 2025 suivie (« nom exact|PAYS » de l'index 2025 des archives). Table MANUELLE, vérifiée
-# un par un (16/11/2026) : nom, et pour les cas non évidents les inscriptions du maillot de leader (Coppi e Bartali, Okolo Slovenska,
-# Route d'Occitanie = ex-Route du Sud, CRO Race = Tour de Croatie, Tour of the Alps = ex-Trentino, Renewi Tour = ex-Benelux,
-# Région Pays de la Loire Tour = ex-Circuit Sarthe, AlUla Tour = ex-Saudi Tour). Courses non suivies en 2025 ou douteuses : absentes.
+# Maillots distinctifs : nom WorldDB -> clés d'épreuve (`collector.cle_edition`, celles de entites/courses/index.json) de TOUTES les dénominations
+# de la même course (règle du propriétaire, 17/11/2026 : les maillots restent quand la course change de nom). Table MANUELLE, vérifiée un par un :
+# nom, années successives sans chevauchement, et pour les cas non évidents les inscriptions du maillot de leader (Coppi e Bartali, Okolo Slovenska,
+# Route d'Occitanie = ex-Route du Sud, CRO Race = Tour of Croatia, Tour of the Alps = ex-Trentino, Renewi Tour = ex-Benelux, Région Pays de la Loire
+# Tour = ex-Circuit Sarthe, AlUla Tour = ex-Saudi Tour, Petronas Le Tour de Langkawi = « tourofmalaysia »). Les alias de alias_courses.json sont ajoutés
+# automatiquement. Courses non suivies ou douteuses : absentes (ex. Eneco Tour 2026 non relié au Renewi Tour faute de preuve).
 COURSES_WORLDDB = {
-    "4joursdunkerque": "4 Jours de Dunkerque / Grand Prix des Hauts de France|FRA", "aegean": "Visit South Aegean Islands|GRE",
-    "articracenorway": "Arctic Race of Norway|NOR", "beauce": None, "beiras": "Grande Prémio Internacional Beiras e Serra da Estrela|POR",
-    "besseges": "Etoile de Bessèges - Tour du Gard|FRA", "biya": "Grand Prix Chantal Biya|CMR",
-    "bouclesmayenne": "Boucles de la Mayenne - Crédit Mutuel|FRA", "burgos": "Vuelta a Burgos|ESP",
-    "circuitardennes": "Circuit des Ardennes|FRA", "circuitsarthe": "Région Pays de la Loire Tour|FRA",
-    "coppainternazionale": "Settimana Internazionale Coppi e Bartali|ITA", "czechtour": "Czech Tour|CZE",
-    "dauphinelibere": "Critérium du Dauphiné|FRA", "deutschlandtour": "Lidl Deutschland Tour|GER", "flechesud": "Flèche du Sud|LUX",
-    "giro": "Giro d'Italia|ITA", "gptorresvedras": "GP Internacional Torres Vedras - Trofeu Joaquim Agostinho|POR",
-    "grancamino": "O Gran Camiño - The Historical Route|ESP", "hainan": "Tour of Hainan|CHN", "hongrie": "Tour de Hongrie|HUN",
-    "istrianspringtrophy": "Istrian Spring Tour|CRO", "kreizbreizh": "Kreiz Breizh Elites|FRA", "loiretcher": "Tour du Loir et Cher|FRA",
-    "oise": None, "okolo": "Okolo Slovenska / Tour de Slovaquie|SVK", "olympiastour": "Olympia's Tour|NED", "parisnice": "Paris-Nice|FRA",
-    "qinghai": "Tour of Magnificent Qinghai|CHN", "rhalpesisere": "Alpes Isère Tour|FRA",
-    "rhodestour": "Tour of Rhodes Powered by Rodos Palace|GRE", "routealsace": "Tour Alsace|FRA",
-    "routelimousin": "Tour du Limousin-Périgord - Nouvelle Aquitaine|FRA", "rwanda": "Tour du Rwanda|RWA", "sauditour": "AlUla Tour|KSA",
-    "sharjah": "Tour of Sharjah|UAE", "taiwan": "Tour de Taiwan|TPE", "thailand": None, "tirrenoadriatico": "Tirreno-Adriatico|ITA",
-    "tour": "Tour de France|FRA", "tourbelgique": "Baloise Belgium Tour|BEL", "tourbretagne": "Le Tour de Bretagne Cycliste|FRA",
-    "tourcroatia": "CRO Race|CRO", "tourdecatalogne": "Volta Ciclista a Catalunya|ESP", "tourderomandie": "Tour de Romandie|SUI",
-    "tourdesuisse": "Tour de Suisse|SUI", "tourdubenelux": "Renewi Tour|BEL", "tourdudanemark": "PostNord Tour of Denmark|DEN",
-    "tourduportugal": "Volta a Portugal em Bicicleta|POR", "tourdusud": "La Route d'Occitanie - CIC|FRA",
-    "tourlaprovence": "Tour de la Provence|FRA", "tourluxembourg": "Skoda Tour de Luxembourg|LUX",
-    "tourofbritain": "Lloyds Bank Tour of Britain Men|GBR", "tourofguangxi": "Tour of Guangxi|CHN", "tourofiran": "Tour of Iran (Azarbaijan)|IRI",
-    "tourofnorway": "Tour of Norway|NOR", "tourofoman": "Tour of Oman|OMA", "tourofturkey": "Presidential Cycling Tour of Turkiye|TUR",
-    "tourpaysbasque": "Itzulia Basque Country|ESP", "tourpologne": "Tour de Pologne|POL", "tourslovenia": "Tour of Slovenia|SLO",
-    "tpoitoucharentes": "Tour Poitou - Charentes en Nouvelle Aquitaine|FRA", "trentino": "Tour of the Alps|ITA", "uaetour": "UAE Tour|UAE",
-    "voltaalgarve": "Volta ao Algarve em Bicicleta|POR", "voltavalenciana": "Volta a la Comunitat Valenciana|ESP",
-    "vuelta": "La Vuelta Ciclista a España|ESP", "vueltaandalucia": "Vuelta a Andalucia Ruta Ciclista Del Sol|ESP",
-    "vueltaasturias": "Vuelta Asturias Julio Alvarez Mendo|ESP", "bulgaria": None,
+    "4joursdunkerque": ["4 jours de dunkerque grand prix des hauts de france|FRA", "4 jours de dunkerque tour du nord pas de calais|FRA"],
+    "aegean": ["visit south aegean islands|GRE", "south aegean tour|GRE"],
+    "articracenorway": ["arctic race of norway|NOR"],
+    "beauce": ["tour de beauce|CAN"],
+    "beiras": ["grande premio internacional beiras e serra da estrela|POR"],
+    "besseges": ["etoile de besseges tour du gard|FRA", "etoile de besseges|FRA"],
+    "biya": ["grand prix chantal biya|CMR"],
+    "bouclesmayenne": ["boucles de la mayenne credit mutuel|FRA"],
+    "bulgaria": ["tour of bulgaria|BUL"],
+    "burgos": ["vuelta a burgos|ESP"],
+    "circuitardennes": ["circuit des ardennes|FRA", "circuit des ardennes international|FRA"],
+    "circuitsarthe": ["region pays de la loire tour|FRA", "circuit cycliste sarthe pays de la loire|FRA"],
+    "coppainternazionale": ["settimana internazionale coppi e bartali|ITA"],
+    "czechtour": ["czech tour|CZE", "sazka tour|CZE"],
+    "dauphinelibere": ["criterium du dauphine|FRA"],
+    "deutschlandtour": ["lidl deutschland tour|GER", "deutschland tour|GER"],
+    "flechesud": ["fleche du sud|LUX"],
+    "giro": ["giro d italia|ITA"],
+    "gptorresvedras": ["gp internacional torres vedras trofeu joaquim agostinho|POR"],
+    "grancamino": ["o gran camino the historical route|ESP"],
+    "hainan": ["tour of hainan|CHN"],
+    "hongrie": ["tour de hongrie|HUN"],
+    "istrianspringtrophy": ["istrian spring tour|CRO", "istarsko proljece istrian spring trophy|CRO"],
+    "kreizbreizh": ["kreiz breizh elites|FRA"],
+    "loiretcher": ["tour du loir et cher|FRA", "tour du loir et cher e provost|FRA"],
+    "oise": ["ronde de l oise|FRA"],
+    "okolo": ["okolo slovenska tour de slovaquie|SVK", "tour de slovaquie|SVK"],
+    "olympiastour": ["olympia s tour|NED"],
+    "parisnice": ["paris nice|FRA"],
+    "qinghai": ["tour of magnificent qinghai|CHN", "tour of qinghai lake|CHN"],
+    "rhalpesisere": ["alpes isere tour|FRA", "rhone alpes isere tour|FRA"],
+    "rhodestour": ["tour of rhodes powered by rodos palace|GRE", "international tour of rhodes|GRE"],
+    "routealsace": ["tour alsace|FRA", "tour d alsace|FRA"],
+    "routelimousin": ["tour du limousin nouvelle aquitaine|FRA", "tour du limousin|FRA"],
+    "rwanda": ["tour du rwanda|RWA"],
+    "sauditour": ["alula tour|KSA", "saudi tour|KSA"],
+    "sharjah": ["tour of sharjah|UAE", "sharjah tour|UAE"],
+    "taiwan": ["tour de taiwan|TPE"],
+    "thailand": ["the princess maha chakri sirindhorn s cup tour of thailand|THA", "the princess maha chakri sirindhorns cup tour of thailand|THA",
+                 "the princess maha chackri sirindhorn s cup tour of thailand|THA"],
+    "tirrenoadriatico": ["tirreno adriatico|ITA"],
+    "tour": ["tour de france|FRA"],
+    "tourbelgique": ["baloise belgium tour|BEL"],
+    "tourbretagne": ["le tour de bretagne cycliste|FRA"],
+    "tourcroatia": ["cro race|CRO", "tour of croatia|CRO"],
+    "tourdecatalogne": ["volta ciclista a catalunya|ESP"],
+    "tourderomandie": ["tour de romandie|SUI"],
+    "tourdesuisse": ["tour de suisse|SUI"],
+    "tourdubenelux": ["renewi tour|BEL"],
+    "tourdudanemark": ["postnord tour of denmark|DEN", "postnord danmark rundt tour of denmark|DEN"],
+    "tourduportugal": ["volta a portugal em bicicleta|POR", "volta a portugal santander|POR", "volta a portugal em bicicleta edicao especial|POR"],
+    "tourdusud": ["la route d occitanie la depeche du midi|FRA", "route d occitanie|FRA", "route du sud la depeche du midi|FRA"],
+    "tourlaprovence": ["tour de la provence|FRA", "tour cycliste international la provence|FRA"],
+    "tourluxembourg": ["skoda tour de luxembourg|LUX", "skoda tour luxembourg|LUX"],
+    "tourofbritain": ["lloyds bank tour of britain men|GBR", "tour of britain|GBR", "ovo energy tour of britain|GBR", "lloyds tour of britain men|GBR"],
+    "tourofguangxi": ["tour of guangxi|CHN", "gree tour of guangxi|CHN"],
+    "tourofiran": ["tour of iran azarbaijan|IRI"],
+    "tourofmalaysia": ["petronas le tour de langkawi|MAS", "le tour de langkawi|MAS"],
+    "tourofnorway": ["tour of norway|NOR"],
+    "tourofoman": ["tour of oman|OMA"],
+    "tourofturkey": ["presidential cycling tour of turkiye|TUR", "presidential cycling tour of turkey|TUR"],
+    "tourpaysbasque": ["itzulia basque country|ESP", "vuelta ciclista al pais vasco|ESP"],
+    "tourpologne": ["tour de pologne|POL"],
+    "tourslovenia": ["tour of slovenia|SLO"],
+    "tpoitoucharentes": ["tour poitou charentes en nouvelle aquitaine|FRA", "tour du poitou charentes charente charente maritime deux sevres vienne|FRA",
+                         "tpc en nouvelle aquitaine|FRA"],
+    "trentino": ["tour of the alps|ITA"],
+    "uaetour": ["uae tour|UAE"],
+    "voltaalgarve": ["volta ao algarve em bicicleta|POR", "volta ao algarve cofidis|POR"],
+    "voltavalenciana": ["volta a la comunitat valenciana|ESP", "volta comunitat valenciana|ESP"],
+    "vuelta": ["la vuelta ciclista a espana|ESP"],
+    "vueltaandalucia": ["vuelta a andalucia ruta ciclista del sol|ESP"],
+    "vueltaasturias": ["vuelta asturias julio alvarez mendo|ESP"],
 }
-# None : course suivie mais sans édition 2025 dans nos archives (Tour de Beauce, Ronde de l'Oise, Tour of Bulgaria, Tour of Thailand) : rien.
 TYPES_COURSE = {"time": "gc", "points": "points", "mountain": "mountain", "young": "youth"}   # type WorldDB -> classement
 
 ZONE_AVANT = (134, 0, 452, 400)          # panneau avant, coupé avant le bas du maillot
@@ -105,26 +152,25 @@ def noms_par_code(equipes):
 
 
 def epreuves(chemin_index, courses, erreurs):
-    """Clé d'édition BRUTE (`collector.cle_edition` du nom 2025) -> nom WorldDB, et clé canonique (alias_courses.json) -> nom WorldDB.
-    La page n'affiche un maillot distinctif que sur une édition dont la clé brute est celle de 2025 (même dénomination)."""
+    """Clés d'édition BRUTES (toutes les dénominations de la course + sources d'alias_courses.json pointant vers elles) -> nom WorldDB, et clé
+    canonique -> nom WorldDB (page épreuve). `chemin_index` = entites/courses/index.json (clés d'épreuve existantes, pour valider la table)."""
     with open(chemin_index, encoding="utf-8") as f:
-        d = json.load(f)
-    noms = {f"{r['name']}|{r.get('country')}": r for r in (d.get("races") if isinstance(d, dict) else d)}
+        connues = {c["k"] for c in json.load(f)}
     alias = collector.charger_alias(collector.ALIAS_COURSES)
     brut, canon = {}, {}
-    for w, ref in sorted(COURSES_WORLDDB.items()):
-        if ref is None:
-            continue
+    for w, cles in sorted(COURSES_WORLDDB.items()):
         if w not in courses:
             erreurs.append(f"course WorldDB absente : {w}")
             continue
-        if ref not in noms:
-            erreurs.append(f"édition 2025 introuvable pour {w} : {ref}")
-            continue
-        nom, pays = ref.rsplit("|", 1)
-        k = collector.cle_edition(nom, pays)
-        brut[k] = w
-        canon[alias.get(k, k)] = w
+        for k in cles:
+            if k not in connues and k not in alias:
+                erreurs.append(f"clé d'épreuve inconnue pour {w} : {k}")
+                continue
+            for b in [k] + [s for s, c in alias.items() if c == k]:
+                if brut.get(b, w) != w:
+                    erreurs.append(f"clé {b} reliée à deux maillots : {brut[b]} et {w}")
+                brut[b] = w
+            canon[alias.get(k, k)] = w
     return brut, canon
 
 
@@ -134,7 +180,7 @@ def main():
     ap.add_argument("equipes", help="entites/equipes/<saison>.json de la saison des maillots")
     ap.add_argument("--saison", type=int, default=2025)
     ap.add_argument("--sortie", default="maillots")
-    ap.add_argument("--courses", help="index.json des archives de la saison des maillots (noms exacts des éditions)")
+    ap.add_argument("--courses", help="entites/courses/index.json (clés d'épreuve, pour valider COURSES_WORLDDB)")
     a = ap.parse_args()
     if Image is None:
         sys.exit("Pillow requis (pip install pillow)")
