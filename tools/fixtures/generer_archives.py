@@ -169,12 +169,20 @@ def ecrire_cache_wikidata(codes):
                      "fin": "2017-12-31", "precision_fin": "jour"},
                     {"qid": "Q99900102", "libelle": "Delta Cycling (fictif)", "debut": "2018-03-12", "precision_debut": "jour", "fin": "2021", "precision_fin": "annee"}]}})
     collector._dump(str(dossier / "images.json"), {"Photo fictive.svg": photo, "Logo fictif.svg": dict(photo, auteur="Logo fictif")})
-    collector._dump(str(dossier / "equipes.json"), {"alpha-racing-2024": {"qid": "Q99900100", "preuve": f"P1998 {codes['Alpha Racing']} [fictif]", "verifie": v}})
+    # Alpha Racing : 2024 (archives) + 2026 (Calendrier fictif) = deux saisons non consécutives ; Bravo Cycling : 2022, 2023, 2024 puis 2026 = trois saisons
+    # consécutives (mouvements d'effectif d'une saison à la suivante) et un trou (2024 -> 2026, `depuis` = 2024) pour l'article d'équipe (R2)
+    preuve = lambda c: {"preuve": f"P1998 {c} [fictif]", "verifie": v}
+    collector._dump(str(dossier / "equipes.json"), {
+        "alpha-racing-2024": dict(qid="Q99900100", **preuve(codes["Alpha Racing"])), "alpha-racing-2026": dict(qid="Q99900100", **preuve(codes["Alpha Racing"])),
+        **{f"bravo-cycling-{an}": dict(qid="Q99900110", **preuve("FXB")) for an in (2022, 2023, 2024, 2026)}})
     collector._dump(str(dossier / "lignees.json"), {"Q99900100": {
         "libelle": "Alpha Racing (fictif)", "verifie": v, "logo": "Logo fictif.svg", "pays": {"qid": "Q99900003", "libelle": "France (fictif)"},
         "classes": ["UCI ProTeam (fictif)"], "sitelinks": {"fr": "Alpha Racing (fictif)"},
         "noms": [{"nom": "Alpha Cycling (fictif)", "debut": "2018", "fin": "2021"}, {"nom": "Alpha Racing (fictif)", "debut": "2022"}],
-        "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]}})
+        "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]},
+        "Q99900110": {"libelle": "Bravo Cycling (fictif)", "verifie": v, "pays": {"qid": "Q99900003", "libelle": "France (fictif)"},
+                      "classes": ["UCI WorldTeam (fictif)"], "sitelinks": {"fr": "Bravo Cycling (fictif)", "en": "Bravo Cycling (fictional)"},
+                      "noms": [{"nom": "Bravo Cycling (fictif)", "debut": "2010"}], "codes": [{"code": "FXB", "debut": "2010"}]}})
 
 
 def ajouter_grands_tours_fictifs():

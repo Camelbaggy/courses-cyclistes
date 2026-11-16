@@ -562,6 +562,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     coherence = {"coureurs_compares": 0, "ecarts": 0, "exemples": []}
     HISTORIQUE: Dict[str, Dict[str, int]] = {}      # rider_id canonique -> {date: rang UCI} (instantanés E1c)
     equipes_ecrites: Set[str] = set()
+    EQ_PAR_AN: Dict[int, Dict[str, Dict[str, Any]]] = {}     # année -> {id d'équipe-saison: fiche} (écrites après la dernière saison : `meme_nom`, `mouvements`)
+    LIGNEE_DE: Dict[str, str] = {}                            # id d'équipe-saison -> QID de lignée (rapprochée par Wikidata)
     saisons_ecrites: Set[str] = set()
     equipes_total = 0
     nationales = 0
@@ -643,6 +645,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             lig = (WD["equipes"].get(tid) or {}).get("qid")
             if lig:
                 fiche["lignee"] = lig
+                LIGNEE_DE[tid] = lig
                 LIGNEES_EQ.setdefault(lig, []).append((an, tid))
             fiche["effectif"] = effectif
             fiche["victoires"] = vict
@@ -672,7 +675,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                                         "pays": nat, "lignee": lig}))
         equipes = dict(sorted(equipes.items()))
         equipes_total += len(equipes)
-        ecrire(os.path.join(sortie, "equipes", f"{an}.json"), equipes)
+        EQ_PAR_AN[an] = equipes
         equipes_ecrites.add(f"{an}.json")
         id_equipe_de = lambda label: slug_vers_id.get(netutil.slugify(label or ""))   # noqa: E731
 
@@ -707,6 +710,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                     sl = max(pool)[2]
                     s["team"] = slug_nom[sl]
                     s["equipe"] = slug_vers_id[sl]
+                    if s["equipe"] in LIGNEE_DE:
+                        s["lignee"] = LIGNEE_DE[s["equipe"]]
                     if len(cands) > 1:      # plusieurs équipes la même saison (transfert, sélection nationale) : toutes, par ordre d'apparition
                         s["equipes"] = [slug_vers_id[c[2]] for c in sorted(cands, key=lambda c: (min(par_slug[c[2]]), c[2]))]
             stats = {k: v for k, v in a["stats"].items() if v}
@@ -895,6 +900,16 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             "cats": niveaux_l[qid] if len(niveaux_l[qid]) > 1 else None,
             "pays": pays_l[qid], "pays_nom": (lg.get("pays") or {}).get("libelle")})
     ecrire(os.path.join(sortie, "equipes", "lignees_index.json"), lignees_idx)
+    # fichiers d'équipes-saisons (`meme_nom`, `mouvements`) puis un article par lignée (`equipes/lignees/<QID>.json`)
+    _completer_equipes(EQ_PAR_AN, LIGNEE_DE)
+    for an, equipes in sorted(EQ_PAR_AN.items()):
+        ecrire(os.path.join(sortie, "equipes", f"{an}.json"), equipes)
+    fichiers_lignees: Set[str] = set()
+    for qid, lg in lignees_out.items():
+        ecrire(os.path.join(sortie, "equipes", "lignees", f"{qid}.json"),
+               _article_lignee(qid, lg, WD["lignees"].get(qid), WD["images"], EQ_PAR_AN, niveaux_l[qid], pays_l[qid], anomalies))
+        fichiers_lignees.add(f"{qid}.json")
+    _nettoyer(os.path.join(sortie, "equipes", "lignees"), fichiers_lignees)
     _nettoyer(os.path.join(sortie, "equipes"), equipes_ecrites | {"index.json", "lignees.json", "lignees_index.json"})
     _nettoyer(os.path.join(sortie, "saisons"), saisons_ecrites)
 
@@ -1039,6 +1054,84 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     return rapport
 
 
+def _rids(fiche: Dict[str, Any]) -> Set[str]:
+    return {x["rider_id"] for x in fiche.get("effectif") or ()}
+
+
+def _mouvements(avant: Set[str], apres: Set[str]) -> Dict[str, List[str]]:
+    """Différence d'effectif entre deux saisons : arrivées (dans `apres`, pas dans `avant`) et départs. Constaté dans nos données, à la saison
+    près : un coureur peut avoir couru peu de jours, ou être absent de nos classements ; ce n'est pas un transfert officiel."""
+    return {"arrivees": sorted(apres - avant), "departs": sorted(avant - apres)}
+
+
+def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_de: Dict[str, str]) -> None:
+    """Ajoute à chaque équipe-saison (en place) :
+    - `meme_nom` : ids des AUTRES saisons portant exactement le même slug de libellé (id = `<slug>-<année>`), années croissantes. Aucune preuve de
+      continuité (deux équipes homonymes peuvent n'avoir rien de commun) : l'interface l'affiche « même nom en … » ;
+    - `mouvements` {arrivees, departs} (rider_id) seulement si l'équipe-saison de l'année précédente au même slug existe ET que les deux portent
+      la même lignée Wikidata ; sinon absent (les lignées ont leurs propres mouvements, d'une saison présente à la suivante)."""
+    par_slug: Dict[str, List[Tuple[int, str]]] = collections.defaultdict(list)
+    for an, equipes in eq_par_an.items():
+        for tid in equipes:
+            par_slug[tid[:-(len(str(an)) + 1)]].append((an, tid))
+    for an, equipes in eq_par_an.items():
+        for tid, f in equipes.items():
+            slug = tid[:-(len(str(an)) + 1)]
+            autres = [t for a, t in sorted(par_slug[slug]) if a != an]
+            if autres:
+                f["meme_nom"] = autres
+            q = lignee_de.get(tid)
+            prec = f"{slug}-{an - 1}"
+            if q and lignee_de.get(prec) == q and prec in eq_par_an.get(an - 1, {}):
+                f["mouvements"] = _mouvements(_rids(eq_par_an[an - 1][prec]), _rids(f))
+
+
+def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]], images: Dict[str, Any],
+                    eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], niveaux: List[str], pays: Optional[str],
+                    anomalies: Dict[str, Any]) -> Dict[str, Any]:
+    """`equipes/lignees/<QID>.json` : cache Wikidata de la lignée + ses équipes-saisons rattachées (contenu des fichiers `equipes/<année>.json`,
+    sans recalcul) + mouvements d'effectif d'une saison présente à la suivante présente + totaux. Voir docs/SPEC.md §4.5."""
+    wd = wikidata.fiche_lignee(brut, images)
+    par_an: Dict[int, List[Tuple[str, Dict[str, Any]]]] = collections.defaultdict(list)
+    for tid in lg["equipes"]:
+        an = int(tid.rsplit("-", 1)[1])
+        par_an[an].append((tid, eq_par_an[an][tid]))
+    saisons: Dict[str, Any] = {}
+    effectifs: Dict[int, Set[str]] = {}
+    coureurs: Set[str] = set()
+    victoires = 0
+    gt_gagnes = 0
+    for an in sorted(par_an, reverse=True):
+        # plusieurs équipes-saisons de la même saison dans une lignée (variantes de libellé de slugs différents) : la plus active est
+        # retenue, les autres sont listées dans `autres` ; l'effectif servant aux mouvements est l'union
+        lst = sorted(par_an[an], key=lambda t: (-t[1]["totaux"]["jours"], t[0]))
+        tid, f = lst[0]
+        if len(lst) > 1:
+            anomalies["lignee_plusieurs_equipes_meme_saison"].append(f"{qid} {an} {[t for t, _ in lst]}")
+        eff = [_sans_vide({"rider_id": x["rider_id"], "n": x.get("name"), "f": x.get("flag"), "jours": x["jours"], "v": x["wins"]})
+               for x in f["effectif"]]
+        saisons[str(an)] = _sans_vide({
+            "id": tid, "libelle": f["name"], "code_uci": f.get("code_uci"), "effectif": eff,
+            "victoires": [{k: v[k] for k in ("date", "race_id", "course", "label", "classification", "rider_id") if k in v} for v in f["victoires"]],
+            "grands_tours": f.get("grands_tours"), "totaux": f["totaux"],
+            "autres": [t for t, _ in lst[1:]] or None})
+        effectifs[an] = set().union(*(_rids(g) for _, g in lst))
+        coureurs |= effectifs[an]
+        victoires += sum(g["totaux"]["wins"] for _, g in lst)
+        gt_gagnes += sum(1 for _, g in lst for v in (g.get("grands_tours") or {}).values() if v.get("rank") == 1)
+    mouvements: Dict[str, Any] = {}
+    annees = sorted(effectifs)
+    for prec, an in zip(annees, annees[1:]):
+        mouvements[str(an)] = dict(_mouvements(effectifs[prec], effectifs[an]), depuis=prec)
+    nom = wd.get("libelle") or next(iter(saisons.values()))["libelle"]
+    return _sans_vide({
+        "qid": qid, "nom": nom, "noms": wd.get("noms"), "codes": wd.get("codes"), "pays": pays,
+        "pays_nom": (wd.get("pays") or {}).get("libelle"), "cats": niveaux or None, "sitelinks": wd.get("sitelinks"), "logo": wd.get("logo"),
+        "saisons": dict(sorted(saisons.items(), reverse=True)),
+        "mouvements": dict(sorted(mouvements.items(), reverse=True)),
+        "totaux_lignee": {"saisons": [annees[0], annees[-1]], "victoires": victoires, "coureurs": len(coureurs), "grands_tours_gagnes": gt_gagnes}})
+
+
 def _drapeau_pays(S: _Saison, code: str) -> Optional[str]:
     c = collections.Counter(a.get("flag") for a in S.coureurs.values() if a.get("nationality") == code and a.get("flag"))
     return sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[0][0] if c else netutil.flag_code(code)
@@ -1099,6 +1192,25 @@ def taille_entites(sortie: str) -> Dict[str, int]:
 
 
 # --------------------------------------------------------------------------- tests
+
+# Couples (libellé brut d'équipe réellement présent dans les données -> slug `netutil.slugify`) : référence pour le miroir JS de index.html
+# (docs/SPEC.md §4.5, « Id d'équipe-saison »). Piège : les lettres sans décomposition Unicode (ł, ß, ø, æ…) sont SUPPRIMÉES, pas translittérées.
+COUPLES_SLUG = [
+    ("Groupama - FDJ", "groupama-fdj"),
+    ("Arkea-B&B Hotels", "arkea-b-b-hotels"),
+    ("Team Dauner D&DQ | Akkon", "team-dauner-d-dq-akkon"),
+    ("Amore E Vita | P:", "amore-e-vita-p"),
+    ("Canel's - Java", "canel-s-java"),
+    ("Akros - Excelsior - Thömus", "akros-excelsior-thomus"),
+    ("Aviludo - Louletano - Loulé", "aviludo-louletano-loule"),
+    ("7ELEVEN Cliqq - AIR21 by Roadbike Philippines", "7eleven-cliqq-air21-by-roadbike-philippines"),
+    ("AP Hotels & Resorts /tavira/ SC Farense", "ap-hotels-resorts-tavira-sc-farense"),
+    ("Pauwels Sauzen \u2013 Bingoal", "pauwels-sauzen-bingoal"),
+    ("Lubelskie Perła Polski", "lubelskie-pera-polski"),
+    ("RAD-NET OßWALD", "rad-net-owald"),
+    ("Heizomat RAD-Net.de", "heizomat-rad-net-de"),
+]
+
 
 def _ligne(rid: str, rank: Optional[int], status: Optional[str] = None) -> Dict[str, Any]:
     return {"rank": rank, "status": status, "bib": None, "rider_id": rid, "time_s": None, "gap_s": None,
@@ -1307,6 +1419,28 @@ def _tests() -> None:
         assert next(t for t in idx if t.get("nationale"))["pays"] in PAYS_NOMS
         assert L("equipes/lignees_index.json") == {"Q8001": {"n": "Équipe Alpha (lignée)", "s": [2024, 2025], "eq": ["equipe-a-2025", "equipe-a-2024"],
                                                              "cat": "Pro", "pays": "FRA", "pays_nom": "France"}}
+        for _lib, _slug in COUPLES_SLUG:
+            assert netutil.slugify(_lib) == _slug, (_lib, netutil.slugify(_lib), _slug)
+        assert netutil.slugify("") == "" and netutil.slugify(None) == "" and netutil.slugify("  --  ") == ""
+        # R2a : article de lignée (`equipes/lignees/<QID>.json`), `meme_nom`, `mouvements`, `lignee` dans la saison du coureur
+        al = L("equipes/lignees/Q8001.json")
+        assert al["nom"] == "Équipe Alpha (lignée)" and al["pays"] == "FRA" and al["pays_nom"] == "France" and al["cats"] == ["Pro"] and "sitelinks" not in al
+        assert al["logo"]["licence"] == "Public domain" and list(al["saisons"]) == ["2025", "2024"] and al["saisons"]["2024"]["code_uci"] == "EQA"
+        assert al["saisons"]["2024"]["effectif"][0] == {"rider_id": dup, "n": "Jean Dupont", "f": "fr", "jours": 1, "v": 1}
+        assert al["saisons"]["2024"]["victoires"] == e24["equipe-a-2024"]["victoires"] and al["saisons"]["2024"]["grands_tours"] == e24["equipe-a-2024"]["grands_tours"]
+        assert al["mouvements"] == {"2025": {"arrivees": [], "departs": [brut], "depuis": 2024}}, al["mouvements"]   # 2024 = première saison de la lignée : pas de mouvements
+        assert al["totaux_lignee"] == {"saisons": [2024, 2025], "victoires": 2, "coureurs": 2, "grands_tours_gagnes": 1}, al["totaux_lignee"]
+        assert e25["equipe-a-2025"]["mouvements"] == {"arrivees": [], "departs": [brut]} and "mouvements" not in e24["equipe-a-2024"]   # 2023 sans lignée
+        assert e25["equipe-a-2025"]["meme_nom"] == ["equipe-a-2023", "equipe-a-2024"] and e25["belgium-2025"]["meme_nom"] == ["belgium-2023", "belgium-2024"]
+        assert L("coureurs/d.json")[dup]["saisons"]["2025"]["lignee"] == "Q8001" and "lignee" not in L("coureurs/d.json")[dup]["saisons"]["2023"]
+        assert os.listdir(os.path.join(OUT, "equipes", "lignees")) == ["Q8001.json"]
+        # toute référence d'équipe d'une saison de coureur existe dans le fichier d'équipes de la même saison (sélections nationales comprises)
+        for lettre in os.listdir(os.path.join(OUT, "coureurs")):
+            if len(lettre) == 6 and lettre != "index.json":
+                for _cid, _c in L(f"coureurs/{lettre}").items():
+                    for _an, _s in _c["saisons"].items():
+                        for _t in ([_s["equipe"]] if "equipe" in _s else []) + _s.get("equipes", []):
+                            assert _t in L(f"equipes/{_an}.json"), (_cid, _an, _t)
         assert [_niveau_equipe(x) for x in ("UCI WorldTeam", "UCI ProTeam", "UCI Professional Continental Team", "équipe continentale",
                                             "UCI Women's ProTeam", "équipe de club", "Groupe Sportif II")] == ["WT", "Pro", "Pro", "Cont", None, None, None]
         assert _niveaux_lignee(["équipe continentale", "UCI ProTeam", "UCI ProTeam"]) == ["Pro", "Cont"] and _niveaux_lignee([]) == []
@@ -1406,7 +1540,15 @@ def _tests() -> None:
             rf = construire(os.path.join(fx, "archives"), fx, sortie_fx, verbose=False, alias_coureurs={}, alias_courses={},
                             wikidata_dir=os.path.join(fx, "archives", "entites", "wikidata"))
             assert rf["compteurs"]["coureurs"] > 0 and rf["compteurs"]["editions"] > 0, rf
-            assert rf["compteurs"]["lignees"] == 1 and rf["compteurs"]["coureurs_wikidata"] == 1, rf["compteurs"]   # cache fictif de tools/fixtures   # (riders-2027.json du jeu d'essai est fictif : pas de contrôle de cohérence)
+            assert rf["compteurs"]["lignees"] == 2 and rf["compteurs"]["coureurs_wikidata"] == 1, rf["compteurs"]   # cache fictif de tools/fixtures   # (riders-2027.json du jeu d'essai est fictif : pas de contrôle de cohérence)
+            # lignée fictive sur 4 saisons (2022, 2023, 2024 consécutives, puis 2026 : `depuis` = 2024) avec mouvements non vides
+            bl = collector._load(os.path.join(sortie_fx, "equipes", "lignees", "Q99900110.json"), None)
+            assert list(bl["saisons"]) == ["2026", "2024", "2023", "2022"] and list(bl["mouvements"]) == ["2026", "2024", "2023"], bl["mouvements"].keys()
+            assert [bl["mouvements"][k]["depuis"] for k in ("2026", "2024", "2023")] == [2024, 2023, 2022]
+            assert all(bl["mouvements"][k]["arrivees"] and bl["mouvements"][k]["departs"] for k in ("2024", "2023")) and bl["totaux_lignee"]["saisons"] == [2022, 2026]
+            assert set(bl["saisons"]["2024"]) >= {"id", "libelle", "effectif", "victoires", "totaux"} and bl["cats"] == ["WT"] and "pays" not in bl   # « France (fictif) » : pas de code ISO3
+            eq24 = collector._load(os.path.join(sortie_fx, "equipes", "2024.json"), None)["bravo-cycling-2024"]
+            assert eq24["meme_nom"] == ["bravo-cycling-2022", "bravo-cycling-2023", "bravo-cycling-2026", "bravo-cycling-2027"] and "mouvements" in eq24
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     # --- corrections de source documentées (corrections_coureurs.json) : valeur corrigée dans l'entité, rider_id inchangé
