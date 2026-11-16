@@ -36,7 +36,7 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
   supprimé), pas de liens en doublon (« Toutes les éditions » sous le palmarès supprimé), listes simples.
 - Claude fusionne lui-même ses PR après vérification ; code et opérations délégués à des agents Sonnet.
 - Environnement « dashboards-sport » : accès web libre.
-- WorldDB (base PCM) : contrôle croisé seulement, jamais publiée, gardée hors des dépôts.
+- WorldDB (base PCM) : contrôle croisé seulement, jamais publiée, gardée hors des dépôts. Exception (16/11) : les maillots, publiés en buste avec crédit « WorldDB » (accord des auteurs), sources dans le dépôt privé maillots-pcm.
 - cyclingdb.com : réutilisation interdite sans autorisation écrite ; demande rédigée (à envoyer par le propriétaire).
 
 ## Prochaines étapes
@@ -54,3 +54,10 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
 
 - Bilan programmé le 17/11 à 11 h 20 UTC (avancement archives, contrôle des vainqueurs 2016-2017, instantanés UCI,
   re-vérification Cofidis, historique dans `entites/index.json`).
+
+## Maillots (16/11/2026)
+
+- Liste des participants : cartes repliables à la Liquipedia, avec maillot WorldDB (buste) pour les équipes dont le nom et le code UCI
+  sont ceux de 2025, sinon logo de lignée ou initiales. Sources privées : Camelbaggy/maillots-pcm ; rendu : `tools/maillots.py`.
+- À faire : maillot dans l'infobox des articles d'équipe ; maillots de champion national (fiches coureurs) ; maillots distinctifs des
+  courses (table de correspondance noms WorldDB -> épreuves, cas sûrs seulement) ; autres saisons si WorldDB les fournit.

@@ -423,6 +423,8 @@ button.res:active { background: var(--s3); }
 .tc-tog[aria-expanded="true"] svg { transform: rotate(180deg); }
 .tc-logo { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; background: var(--blanc); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .tc-logo img { max-width: 30px; max-height: 30px; object-fit: contain; }
+.tc-logo.maillot { background: none; width: 34px; height: 38px; border-radius: 0; }
+.tc-logo.maillot img { max-width: 36px; max-height: 38px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
 .tc-logo.ini { background: var(--s3); color: var(--tx2); font-size: .7rem; font-weight: 800; letter-spacing: .02em; }
 .pill-fr { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; color: var(--tx2); flex: 0 0 auto; }
 .pill-fr img { width: 16px; height: auto; border-radius: 2px; }
@@ -625,6 +627,12 @@ const BASE_ARCHIVES = (() => {
     return a.replace(/\/+$/, "");
   if (PARAMS.get("data")) return `${BASE}/archives`;
   return "https://camelbaggy.github.io/courses-cyclistes-archives/data/archives";
+})();
+
+/** Maillots WorldDB (vues de face générées par tools/maillots.py, publiées avec le site) : `?maillots=<chemin relatif>` (jeu d'essai), sinon `maillots`. */
+const BASE_MAILLOTS = (() => {
+  const m = PARAMS.get("maillots");
+  return m && /^[\w\-./]+$/.test(m) && !m.includes("..") && !m.startsWith("/") ? m.replace(/\/+$/, "") : "maillots";
 })();
 
 const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
@@ -1440,11 +1448,38 @@ function selectionNationale(c, libelle) {
 const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
 /** Logo d'une équipe dans la liste des participants : logo Wikidata de sa lignée (lignees_index.json), seulement si la saison est couverte par le nom
  *  actuel de la lignée (`logo_depuis`) ; sinon pastille avec les initiales. Les deux index sont chargés à la demande (la liste est redessinée ensuite). */
+function redessinerParticipants() {
+  if (state.course && state.sub === "participants") { const tb = document.getElementById("table"); if (tb) tb.innerHTML = renderTable(state.course, state.sel, state.sub); }
+}
+/** Index des maillots (maillots/index.json) : { equipes: {CODE: {nom, slug}}, parSlug: {slug: CODE} } ; absent ou illisible : null (aucun maillot). */
+function demanderMaillots() {
+  if (state.mIdx !== undefined || state.mDem) return;
+  state.mDem = true;
+  fetch(`${BASE_MAILLOTS}/index.json`).then(r => (r.ok ? r.json() : null)).catch(() => null).then(d => {
+    const parSlug = {};
+    if (d && d.equipes) Object.entries(d.equipes).forEach(([c, v]) => { if (v && v.slug) parSlug[v.slug] = c; });
+    state.mIdx = d ? { ...d, parSlug } : null;
+    redessinerParticipants();
+  });
+}
+/** Maillot WorldDB d'une équipe d'une saison : même dénomination (slug du libellé) que l'équipe de la saison des maillots portant ce code,
+ *  et même code UCI quand l'équipe-saison en a un (règle du propriétaire : toute la période de dénomination, tant que le code ne change pas). */
+function maillotEquipe(nom, saison) {
+  if (!nom) return null;
+  if (state.mIdx === undefined) { demanderMaillots(); return null; }
+  const M = state.mIdx, code = M && M.parSlug[slugEquipe(nom)];
+  if (!code) return null;
+  const q = equipeDeLibelle(nom, saison);
+  if (q && q.e.code_uci && q.e.code_uci !== code) return null;
+  return `${BASE_MAILLOTS}/equipes/${code}.webp`;
+}
 function htmlLogoEquipe(nom, saison) {
   const vide = `<span class="tc-logo ini" aria-hidden="true">${esc(initialesEquipe(nom))}</span>`;
+  const mail = maillotEquipe(nom, saison);
+  if (mail) { state.partMaillot = true; return `<span class="tc-logo maillot"><img src="${esc(mail)}" alt="" loading="lazy" title="Maillot : WorldDB" onerror="this.parentNode.className='tc-logo ini';this.parentNode.textContent=${esc(JSON.stringify(initialesEquipe(nom)))}"></span>`; }
   const q = nom ? equipeDeLibelle(nom, saison) : null, lg = q && q.e.lignee;
   if (!lg) return vide;
-  if (state.lgIdx === undefined) { if (!state.lgDem) { state.lgDem = true; chargerLigneesIdx().then(() => { if (state.course && state.sub === "participants") { const tb = document.getElementById("table"); if (tb) tb.innerHTML = renderTable(state.course, state.sel, state.sub); } }); } return vide; }
+  if (state.lgIdx === undefined) { if (!state.lgDem) { state.lgDem = true; chargerLigneesIdx().then(redessinerParticipants); } return vide; }
   const L = (state.lgIdx || {})[lg], logo = L && L.logo, src = logo && urlMedia(logo.url);
   if (!src || L.logo_depuis == null || saison < L.logo_depuis) return vide;
   state.partLogo = true;
@@ -1485,7 +1520,7 @@ function htmlParticipants(c) {
   }).join("");
   const prov = c.race_type === "stage_race" && c.status === "in_progress";
   return html + `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">Rang : ${c.race_type === "stage_race" ? `classement général${prov ? " provisoire" : " final"}` : "classement de la course"} ;
-    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.${state.partLogo ? " Logos : Wikimedia Commons (auteur et licence au survol et sur l'article de l'équipe), logo actuel de l'équipe affiché seulement pour les saisons sous son nom actuel." : ""}</div>`;
+    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.${state.partMaillot ? " Maillots : WorldDB (maillots de la saison 2025, montrés pour toute la période où l'équipe porte le même nom et le même code UCI)." : ""}${state.partLogo ? " Logos : Wikimedia Commons (auteur et licence au survol et sur l'article de l'équipe), logo actuel de l'équipe affiché seulement pour les saisons sous son nom actuel." : ""}</div>`;
 }
 function htmlPays(c) {
   const L = participantsCourse(c);
@@ -1537,7 +1572,7 @@ async function pageCourse(r, tok) {
     try {
       const [{ d, annee }] = await Promise.all([chargerCourse(id), chargerPays()]);
       if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
-      state.course = d; state.courseArchive = annee; state.partOuv = {}; state.partLogo = false;
+      state.course = d; state.courseArchive = annee; state.partOuv = {}; state.partLogo = false; state.partMaillot = false;
     } catch (e) {
       if (tok !== state.routeTok) return;
       console.error("Chargement de la course échoué :", e);
