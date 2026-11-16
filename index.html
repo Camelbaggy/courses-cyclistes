@@ -2,9 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
 <title>Courses cyclistes</title>
+<meta name="description" content="Encyclopédie du cyclisme sur route : résultats, calendrier, classements, coureurs et courses.">
 <style>
 /* ---------- jetons de design (thème sombre unique) ----------
    fond / surfaces étagées / bordure / texte ; une couleur d'accent ; catégories ; maillots ; espacements 4-8-12-16-24-32 ; rayons 8 / 14 */
@@ -28,7 +29,8 @@
   --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px; --sp5: 24px; --sp6: 32px;
   --r1: 8px; --r2: 14px;
   --sh1: 0 1px 2px rgba(0, 0, 0, .35); --sh2: 0 8px 24px rgba(0, 0, 0, .45);
-  --bar-h: 57px;       /* hauteur de la barre des fiches (onglets collants dessous) */
+  --bar-h: 56px;       /* hauteur de l'en-tête (onglets collants dessous) */
+  --bnav-h: 58px;      /* hauteur de la barre de navigation du bas (mobile) */
   /* noms historiques conservés (pages existantes) */
   --card: var(--s1); --elev: var(--s2); --border: var(--line); --text: var(--tx); --muted: var(--tx3);
   --fr: var(--accent); --fr-bg: rgba(106, 169, 255, .12); --shadow: var(--sh1);
@@ -38,29 +40,47 @@ html { color-scheme: dark; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
   background: var(--bg); color: var(--text); line-height: 1.45; font-size: 15px;
-  overflow-x: hidden; padding-bottom: 40px;
+  overflow-x: hidden; padding-bottom: calc(var(--bnav-h) + env(safe-area-inset-bottom, 0px) + 12px);
 }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 .muted { color: var(--muted); }
 .small { font-size: .78rem; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-/* ---------- en-tête + onglets ---------- */
+/* ---------- en-tête, menu principal, barre du bas ---------- */
 header.top {
-  position: sticky; top: 0; z-index: 20; background: var(--bg);
-  border-bottom: 1px solid var(--border); padding: 10px 16px 0;
+  position: sticky; top: 0; z-index: 30; height: var(--bar-h);
+  background: rgba(10, 14, 21, .94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
 }
-.top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-.app-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
-.app-sub { font-size: .72rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.tab {
-  font-size: .74rem; font-weight: 600; color: var(--muted); padding: 10px 0;
-  border-bottom: 3px solid transparent; white-space: nowrap; min-width: 0;
+.top-in { max-width: 1040px; margin: 0 auto; height: 100%; padding: 0 var(--sp4); display: flex; align-items: center; gap: var(--sp3); }
+.brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em; color: var(--tx); text-decoration: none; white-space: nowrap; }
+.brand svg { width: 26px; height: 26px; color: var(--accent); flex: none; }
+.dnav { display: none; gap: 2px; margin-left: var(--sp3); }
+.dnav a { padding: 8px 14px; border-radius: 99px; font-weight: 600; font-size: .9rem; color: var(--tx2); text-decoration: none; }
+.dnav a:hover { background: var(--s2); color: var(--tx); }
+.dnav a.on { color: var(--accent); background: var(--accent-soft); }
+.top-r { margin-left: auto; display: flex; align-items: center; gap: var(--sp1); min-width: 0; }
+#maj { font-size: .7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bnav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--s1); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
+.bnav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--bnav-h); padding: 6px 2px;
+  font-size: .68rem; font-weight: 600; color: var(--tx3); text-decoration: none; }
+.bnav a svg { width: 24px; height: 24px; }
+.bnav a.on { color: var(--accent); }
+.bnav a:focus-visible, .dnav a:focus-visible, .brand:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+main { max-width: 1040px; margin: 0 auto; padding: var(--sp4) var(--sp4) var(--sp5); min-height: 70vh; }
+.pg { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--sp3); }
 .stack { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 880px) {
+  body { padding-bottom: 40px; }
+  .dnav { display: flex; }
+  .bnav { display: none; }
+  main { padding-top: var(--sp5); }
+}
+@media (max-width: 400px) { #maj { display: none; } }
 
 /* ---------- cartes ---------- */
 .card {
@@ -144,20 +164,6 @@ main { max-width: 680px; margin: 0 auto; padding: 14px 16px; }
 .errbox button { margin-top: 8px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--bad); font-weight: 600; color: var(--bad); }
 
 /* ---------- fiche course ---------- */
-#sheet, #esheet, #rsheet { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
-#sheet.open, #esheet.open, #rsheet.open { display: block; }
-#esheet { z-index: 55; }
-#rsheet { z-index: 60; }
-.sheet-bar {
-  position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px 6px;
-}
-.back { width: 40px; height: 40px; border-radius: 10px; font-size: 1.4rem; line-height: 1; flex: none; }
-.back:active { background: var(--elev); }
-.sheet-title { min-width: 0; flex: 1; }
-.sheet-title b { display: block; font-size: .98rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sheet-title span { font-size: .72rem; color: var(--muted); }
-.sheet-body { max-width: 680px; margin: 0 auto; padding: 10px 16px 24px; }
 .stage-head h2 { font-size: 1.05rem; line-height: 1.25; }
 .stage-head .sub { color: var(--muted); font-size: .82rem; margin-top: 2px; }
 .jerseys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -281,9 +287,7 @@ h2.h-sec { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--sp2); }
 .btn-ico { width: 40px; height: 40px; border-radius: var(--r1); display: inline-flex; align-items: center; justify-content: center; color: var(--tx2); flex: none; }
 .btn-ico:active, .btn-ico:hover { background: var(--s2); color: var(--tx); }
 .btn-ico svg { width: 22px; height: 22px; }
-.btn-ico:focus-visible, .tab:focus-visible, .subtab:focus-visible, .chip:focus-visible, .back:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.top-row { align-items: center; }
-.top-row .app-sub { margin-right: -8px; }
+.btn-ico:focus-visible, .subtab:focus-visible, .chip:focus-visible, .more:focus-visible, .crow:focus-visible, .mini:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* en-tête de fiche (« hero ») */
 .hero { background: linear-gradient(180deg, var(--s2), var(--s1)); border: 1px solid var(--line); border-radius: var(--r2); padding: var(--sp4); box-shadow: var(--sh1); }
@@ -362,7 +366,6 @@ button.res:active { background: var(--s3); }
 .src-note { font-size: .72rem; color: var(--tx3); }
 
 /* ================== fiche coureur (E2) ================== */
-#rsheet .sheet-body, #esheet .sheet-body { max-width: 1040px; }
 .rpage { display: flex; flex-direction: column; gap: var(--sp3); }
 .rmain { display: flex; flex-direction: column; gap: var(--sp3); min-width: 0; }
 .rside { min-width: 0; }
@@ -413,10 +416,8 @@ button.res:active { background: var(--s3); }
 .res-ep:hover, .res-ep:focus-visible { background: var(--accent-soft); outline: none; }
 
 /* ================== recherche globale (E2) ================== */
-#search { position: fixed; inset: 0; z-index: 70; background: var(--bg); overflow-y: auto; overflow-x: hidden; display: none; overscroll-behavior: contain; }
-#search.open { display: block; }
 .sr-input { flex: 1; min-width: 0; font-size: 1rem; padding: 10px 12px; border-radius: 99px; }
-.sr-body { max-width: 680px; margin: 0 auto; padding: var(--sp3) var(--sp4) var(--sp6); }
+.sr-body { padding: var(--sp3) 0 var(--sp5); }
 .sr-grp { margin-bottom: var(--sp4); }
 .sr-list { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
 .sr-item { display: flex; align-items: center; gap: var(--sp3); width: 100%; text-align: left; padding: 11px var(--sp3); border-top: 1px solid var(--line); min-height: 48px; }
@@ -428,58 +429,113 @@ button.res:active { background: var(--s3); }
 .sr-item.off .nm { color: var(--tx2); font-weight: 500; }
 .sr-hint { color: var(--tx3); text-align: center; padding: var(--sp6) var(--sp4); font-size: .9rem; }
 .sr-more { display: block; width: 100%; padding: 10px; font-size: .82rem; font-weight: 700; color: var(--accent); border-top: 1px solid var(--line); }
+
+/* ================== encyclopédie : gabarit d'article, listes, accueil (R1) ================== */
+a { text-underline-offset: 2px; }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: .78rem; color: var(--tx3); margin-bottom: var(--sp2); line-height: 1.5; }
+.crumbs a { color: var(--tx2); text-decoration: none; padding: 4px 0; }
+.crumbs a:hover, .crumbs a:focus-visible { color: var(--accent); text-decoration: underline; outline: none; }
+.crumbs .sep { opacity: .6; }
+.crumbs [aria-current] { overflow-wrap: anywhere; }
+.art { min-width: 0; }
+.art-head { margin-bottom: var(--sp3); }
+.art-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--sp2); color: var(--tx2); font-size: .9rem; margin-top: var(--sp2); }
+.art-sub .flag { width: 22px; height: 15px; }
+.art-head .hero-pills { margin-top: var(--sp2); }
+.infobox { padding: var(--sp3) var(--sp4) var(--sp4); }
+.infobox > .facts:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+.ib-photo { display: flex; justify-content: center; margin-bottom: var(--sp2); }
+.ib-photo .hero-photo { width: 96px; height: 96px; }
+.ib-title { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3); margin-bottom: var(--sp1); }
+.infobox .credit { text-align: center; }
+.sec-h { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--sp2); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+details.navbox { border: 1px solid var(--line); border-radius: var(--r2); background: var(--s1); margin-top: var(--sp5); overflow: hidden; }
+details.navbox > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); min-height: 48px; padding: 8px var(--sp4); cursor: pointer;
+  list-style: none; font-weight: 700; font-size: .88rem; background: var(--s2); }
+details.navbox > summary::-webkit-details-marker { display: none; }
+details.navbox > summary::after { content: "›"; transform: rotate(90deg); color: var(--tx3); font-size: 1.2rem; transition: transform .15s; }
+details.navbox[open] > summary::after { transform: rotate(-90deg); }
+details.navbox > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nb-body { padding: var(--sp3) var(--sp4) var(--sp4); display: flex; flex-direction: column; gap: var(--sp2); }
+.nb-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.nb-row .nb-l { flex: none; min-width: 56px; font-size: .72rem; font-weight: 700; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; }
+.nb-a { display: inline-flex; align-items: center; min-height: 32px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--s2); color: var(--tx);
+  font-size: .8rem; font-weight: 600; text-decoration: none; font-variant-numeric: tabular-nums; }
+.nb-a:hover { border-color: var(--accent); }
+.nb-a[aria-current] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pg-title { font-size: 1.45rem; line-height: 1.15; letter-spacing: -.02em; font-weight: 800; }
+.pg-sub { color: var(--tx3); font-size: .85rem; margin-top: 2px; }
+.tools { display: flex; flex-direction: column; gap: var(--sp2); }
+.tools .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp2); }
+.sel { min-height: 44px; }
+.search { min-height: 44px; }
+.chip { min-height: 36px; display: inline-flex; align-items: center; }
+.more { min-height: 44px; }
+.crows { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+.crow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--sp3); align-items: center; min-height: 52px; padding: 8px var(--sp3);
+  border-top: 1px solid var(--line); color: var(--tx); text-decoration: none; }
+.crow:first-child { border-top: none; }
+a.crow:hover, a.crow:focus-visible { background: var(--s2); outline: none; }
+a.crow:active { background: var(--s3); }
+.crow .nm { font-weight: 600; font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
+.crow .sm { font-size: .74rem; color: var(--tx3); line-height: 1.3; margin-top: 1px; overflow-wrap: anywhere; }
+.crow .rt { text-align: right; font-size: .78rem; color: var(--tx2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.crow .rt b { display: block; font-size: .9rem; }
+.crow.fr { box-shadow: inset 3px 0 0 var(--fr); }
+.crow .badge { margin-left: 4px; vertical-align: 1px; }
+.count-line { font-size: .78rem; color: var(--tx3); }
+a.res { color: var(--tx); text-decoration: none; }
+.wd-s { font-size: .55rem; font-weight: 800; color: var(--tx3); margin-left: 2px; letter-spacing: .02em; vertical-align: top; }
+.tbl a.cell:hover { text-decoration: underline; }
+.tbl td > div.small { white-space: normal; min-width: 180px; }
+a.nb-a .wd-s { color: inherit; opacity: .7; }
+/* accueil */
+.home { display: grid; gap: var(--sp5); grid-template-columns: minmax(0, 1fr); }
+.home .col { display: contents; }
+.blk { min-width: 0; }
+.blk-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); margin-bottom: var(--sp2); }
+.blk-h h2 { font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--tx2); }
+.blk-h a { font-size: .8rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 6px 0; }
+.blk-h a:hover { text-decoration: underline; }
+.o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; } .o6 { order: 6; } .o7 { order: 7; }
+.summary.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.minis { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+.mini { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: var(--sp2); align-items: center; width: 100%; text-align: left; min-height: 52px;
+  padding: 8px var(--sp3); border-top: 1px solid var(--line); color: var(--tx); text-decoration: none; }
+.minis > :first-child { border-top: none; }
+button.mini:hover, a.mini:hover { background: var(--s2); }
+.mini .d { font-size: .76rem; font-weight: 600; color: var(--tx3); line-height: 1.25; }
+.mini .t { min-width: 0; }
+.mini .t b { display: block; font-size: .88rem; line-height: 1.25; overflow-wrap: anywhere; }
+.mini .t small { display: block; font-size: .74rem; color: var(--tx3); overflow-wrap: anywhere; }
+.home-count { font-size: .78rem; color: var(--tx3); text-align: center; padding-top: var(--sp2); }
+.home-count b { color: var(--tx2); font-variant-numeric: tabular-nums; }
+.note-warn { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
+@media (min-width: 880px) {
+  .home { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp5) var(--sp6); align-items: start; }
+  .home .col { display: flex; flex-direction: column; gap: var(--sp5); min-width: 0; }
+  .pg-wide { max-width: 1040px; }
+  .tools { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .tools .search { flex: 1 1 260px; width: auto; }
+  .tools .sel { width: auto; flex: 0 1 220px; }
+  .tools .two { display: contents; }
+  .tools .chips { flex: 1 1 100%; }
+}
 </style>
 </head>
 <body>
 <div id="banner"></div>
 <header class="top">
-  <div class="top-row">
-    <div class="app-title">Courses cyclistes</div>
-    <div class="app-sub"><span id="maj"></span>
+  <div class="top-in">
+    <a class="brand" href="#/" aria-label="Courses cyclistes, accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="16.5" r="3.6"/><circle cx="18" cy="16.5" r="3.6"/><path d="M6 16.5 9.6 8h5.2l3.2 8.5M9.6 8H7.4M14.8 8l-3.1 8.5h-5.7"/></svg><span>Courses cyclistes</span></a>
+    <nav class="dnav" id="dnav" aria-label="Menu principal"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
+    <div class="top-r"><span id="maj"></span>
       <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
-  <nav class="tabs" id="tabs" role="tablist">
-    <button class="tab active" role="tab" data-tab="recents">Récents</button>
-    <button class="tab" role="tab" data-tab="calendrier">Calendrier</button>
-    <button class="tab" role="tab" data-tab="classements">Classements</button>
-    <button class="tab" role="tab" data-tab="francais">Français</button>
-    <button class="tab" role="tab" data-tab="archives">Archives</button>
-  </nav>
 </header>
 <main id="main"><div class="loading">Chargement…</div></main>
 <footer id="foot"></footer>
-
-<section id="sheet" aria-label="Fiche course" aria-hidden="true">
-  <div class="sheet-bar">
-    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
-    <div class="sheet-title"><b id="sheet-name"></b><span id="sheet-sub"></span></div>
-  </div>
-  <div class="sheet-body" id="sheet-body"></div>
-</section>
-
-<section id="esheet" aria-label="Fiche épreuve" aria-hidden="true">
-  <div class="sheet-bar">
-    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
-    <div class="sheet-title"><b id="esheet-name"></b><span id="esheet-sub"></span></div>
-  </div>
-  <div class="sheet-body" id="esheet-body"></div>
-</section>
-
-<section id="rsheet" aria-label="Fiche coureur" aria-hidden="true">
-  <div class="sheet-bar">
-    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
-    <div class="sheet-title"><b id="rsheet-name"></b><span id="rsheet-sub"></span></div>
-  </div>
-  <div class="sheet-body" id="rsheet-body"></div>
-</section>
-
-<section id="search" aria-label="Recherche" aria-hidden="true">
-  <div class="sheet-bar">
-    <button class="back" data-action="back" aria-label="Retour">&#8592;</button>
-    <input class="search sr-input" id="sr-q" type="search" placeholder="Coureur, équipe, course…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Rechercher" role="combobox" aria-expanded="true" aria-controls="sr-body">
-  </div>
-  <div class="sr-body" id="sr-body" role="listbox" aria-label="Résultats"></div>
-</section>
+<nav class="bnav" id="bnav" aria-label="Menu principal"><a href="#/" data-nav="accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 3.8l8.5 7.2"/><path d="M5.5 9.8V20h4.2v-5.4h4.6V20h4.2V9.8"/></svg><span>Accueil</span></a><a href="#courses" data-nav="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4.5h12.5l-2.3 4 2.3 4H5"/></svg><span>Courses</span></a><a href="#equipes" data-nav="equipes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.1"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M17.2 14.2c2.4.3 4.3 2.4 4.3 5.3"/></svg><span>Équipes</span></a><a href="#coureurs" data-nav="coureurs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.8" r="3.9"/><path d="M4.2 21c0-4.3 3.5-7.6 7.8-7.6s7.8 3.3 7.8 7.6"/></svg><span>Coureurs</span></a><a href="#classements" data-nav="classements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5h16"/><rect x="4.5" y="12" width="4.6" height="8.5" rx="1"/><rect x="9.7" y="4.5" width="4.6" height="16" rx="1"/><rect x="14.9" y="9" width="4.6" height="11.5" rx="1"/></svg><span>Classements</span></a></nav>
 
 <script>
 "use strict";
@@ -573,27 +629,31 @@ async function charger(chemin) {
 /** Lecture d'un fichier d'archive : `chemin` relatif au dossier des archives (« index.json », « 2024/races/<id>.json »…). */
 function chargerArchive(chemin) { return charger(`archives/${chemin}`); }
 
-/** Nom de coureur cliquable (ouvre la fiche coureur) ; sans identifiant : texte simple. */
+/** Nom de coureur cliquable (ouvre l'article du coureur) ; sans identifiant : texte simple. */
 function plink(id, texte, ctx) {
-  // ctx (optionnel) : saison dont la fiche doit être lue, « a2023 » (archive) ou « c2027 » (Calendrier)
-  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}"${ctx ? ` data-rctx="${esc(ctx)}"` : ""}>${esc(texte)}</span>` : esc(texte);
+  // ctx (optionnel) : saison dont la fiche doit être lue, « a2023 » (archive) ou « c2027 » (Calendrier) ; défaut : saison de la page affichée
+  const c = ctx || state.ctxPage;
+  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}"${c ? ` data-rctx="${esc(c)}"` : ""}>${esc(texte)}</span>` : esc(texte);
 }
 
-const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null, calSaison: null, ctxSaison: null,
-  subVoulu: null, tab: "recents", clSub: "uci", filtreCat: "all", calVue: "resultats", course: null, sel: null, sub: null, frOnly: false,
-  limit: 50, ouvertParApp: false, ranking: undefined, uc: { fr: false, q: "", limit: 100 },
-  // archives : index (undefined = pas chargé, null = indisponible), saison choisie, index/classements par saison,
-  // chemin (année) de chaque course d'archive connue, catégorie filtrée ; courseArchive = année de la fiche ouverte
-  archIdx: undefined, archErr: null, archSaison: null, archIndexes: {}, archRankings: {}, archChemins: new Map(), archCat: "all",
-  ctxArchive: false, courseArchive: null,
-  // fiche coureur (E2) : données assemblées, onglet par coureur, filtres du palmarès, pays et noms de courses (entités) ; recherche globale
-  cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {},
+const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null,
+  // page affichée : route, jeton (une page lente qui finit après une navigation ne dessine plus), saison de contexte des liens coureur
+  route: null, routeTok: 0, ctxPage: null, restaurer: null, seq: 0,
+  // fiche course
+  course: null, sel: null, sub: null, subVoulu: null, frOnly: false, limit: 50, courseArchive: null,
+  // classements
+  ranking: undefined, ridersCl: undefined, uc: { fr: false, q: "", limit: 100 }, clData: {},
+  // archives : index (undefined = pas chargé, null = indisponible), index par saison, chemin (année) de chaque course d'archive connue
+  archIdx: undefined, archErr: null, archIndexes: {}, archChemins: new Map(),
+  // fiche coureur : données assemblées, onglet par coureur, filtres du palmarès, pays et noms de courses (entités)
+  cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {}, rtab: "apercu", coureurOuvert: null,
+  // recherche globale
   sr: { q: "", res: null, sel: -1, tout: {}, token: 0, msg: "" },
-  // fiche coureur : onglet courant, saison imposée par un lien d'édition ({archive, saison}) ;
-  rtab: "apercu", rctx: null,
-  // fiche d'édition (E3) : navigation précédente / suivante ({id, nav} ; nav null = inconnue), équipes de la saison (sélections nationales),
-  // participants mémorisés ; page épreuve : données assemblées, onglet par épreuve, épreuve ouverte
-  nav: null, navLoading: null, eqSaison: {}, partMemo: null, ep: null, etab: "palmares", etabs: {}, epreuveOuverte: null };
+  // édition : navigation précédente / suivante ({id, nav} ; nav null = inconnue), équipes de la saison, participants mémorisés ;
+  // épreuve : données assemblées, onglet par épreuve
+  nav: null, navLoading: null, eqSaison: {}, partMemo: null, ep: null, etab: "palmares", etabs: {}, epreuveOuverte: null,
+  // listes (chargées à la demande) : index des coureurs, des épreuves, des équipes-saisons, compteurs ; filtres de la page Coureurs
+  cIdx: undefined, eIdx: undefined, eqIdx: undefined, entIdx: undefined, co: null };
 
 /* ================== éléments communs ================== */
 const CLASSES_ANCIENNES = {
@@ -607,17 +667,9 @@ function catBadge(c, cl) {
   return `<span class="badge cat-${esc((c || "").replace(/[^\w]/g, ""))}"${eq ? ` title="${esc(eq)}"` : ""}>${esc(cl || c)}</span>`;
 }
 function courseParId(id) {
-  const ordre = [state.indexes[state.calSaison], state.index].concat(Object.values(state.indexes), Object.values(state.archIndexes));
+  const ordre = [state.index].concat(Object.values(state.indexes), Object.values(state.archIndexes));
   for (const ix of ordre) { const r = ix && (ix.races || []).find(x => x.id === id); if (r) return r; }
   return null;
-}
-/** Saison de contexte : celle d'une fiche d'archive ouverte, de l'onglet Archives ou du sous-onglet Calendrier,
- *  sinon la saison en cours (ctxArchive : les fiches coureurs viennent alors de archives/<année>/riders.json). */
-function majContexte() {
-  const f = document.getElementById("sheet");
-  if (state.courseArchive != null && f && f.classList.contains("open")) { state.ctxSaison = state.courseArchive; state.ctxArchive = true; }
-  else if (state.tab === "archives") { state.ctxSaison = state.archSaison; state.ctxArchive = state.archSaison != null; }
-  else { state.ctxSaison = state.tab === "calendrier" ? state.calSaison : state.current; state.ctxArchive = false; }
 }
 function ligneCoureur(ref, label, extra) {
   if (!ref) return "";
@@ -629,62 +681,26 @@ function messageErreur(msg, action) {
   return `<div class="errbox"><div>${esc(msg)}</div>${action ? `<button data-action="${esc(action)}">Réessayer</button>` : ""}</div>`;
 }
 
-/* ================== onglets principaux ================== */
-function renderRecents() {
-  const L = state.index.latest || [];
-  if (!L.length) return `<div class="empty card">Aucun résultat récent.</div>`;
-  return `<div class="stack">${L.map(it => {
-    const c = courseParId(it.race_id);
-    const sn = it.stage_number == null ? "" : it.stage_number;
-    const bf = it.best_french;
-    return `<button class="card click" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
-      <div class="card-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>
-        ${c ? catBadge(c.category, c.uci_class) : ""}</div>
-      <div class="card-label">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
-      ${ligneCoureur(it.winner, "Vainqueur")}
-      ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
-      ${it.ai_summary ? `<div class="summary">${esc(it.ai_summary)}</div>` : ""}
-    </button>`;
-  }).join("")}</div>`;
+/* ================== blocs communs aux pages ================== */
+/** Carte d'un dernier résultat (course, étape, vainqueur, meilleur Français, résumé) ; `court` : résumé limité à 3 lignes (accueil). */
+function carteEtape(it, court) {
+  const c = courseParId(it.race_id);
+  const sn = it.stage_number == null ? "" : it.stage_number;
+  const bf = it.best_french;
+  return `<button class="card click" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
+    <div class="card-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>
+      ${c ? catBadge(c.category, c.uci_class) : ""}</div>
+    <div class="card-label">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
+    ${ligneCoureur(it.winner, "Vainqueur")}
+    ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
+    ${it.ai_summary ? `<div class="summary${court ? " clamp" : ""}">${esc(it.ai_summary)}</div>` : ""}
+  </button>`;
 }
 
 function saisonTerminee(y, ix) {
   if (y < state.current) return true;
   if (y > state.current) return false;
   return !((ix.upcoming || []).length);
-}
-function renderCalendrier() {
-  const y = state.calSaison, ix = state.indexes[y];
-  const dispo = (state.saisons && state.saisons.available) || [y];
-  const saisons = `<div class="chips" id="cal-saisons">${dispo.map(s =>
-    `<button class="chip ${s === y ? "active" : ""}" data-calsaison="${esc(s)}">${esc(s)}</button>`).join("")}</div>`;
-  if (!ix) {
-    if (state.indexes["_err" + y]) return saisons + messageErreur(`Impossible de charger la saison ${y}.`, "retry-cal");
-    return saisons + `<div class="loading">Chargement…</div>`;
-  }
-  // Résultats : les plus récents d'abord ; À venir : la prochaine course d'abord.
-  const up = (ix.upcoming || []).map(u => ({ ...u, _futur: true }));
-  const rs = ix.races || [];
-  const avenir = state.calVue === "avenir";
-  let tout = avenir
-    ? up.sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
-    : rs.map(r => ({ ...r, _futur: false }))
-        .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || "") || (a.name || "").localeCompare(b.name || ""));
-  const f = state.filtreCat;
-  if (f !== "all") tout = tout.filter(r => r.category === f);
-  const vues = `<div class="chips">
-      <button class="chip ${!avenir ? "active" : ""}" data-calvue="resultats">Résultats (${rs.length})</button>
-      <button class="chip ${avenir ? "active" : ""}" data-calvue="avenir">À venir (${up.length})</button></div>`;
-  const chips = ["all"].concat(CATS).map(c =>
-    `<button class="chip ${f === c ? "active" : ""}" data-cat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("");
-  let html = `${saisons}${vues}<div class="chips">${chips}</div>`;
-  if (!tout.length) {
-    const vide = f !== "all" ? "Aucune course dans cette catégorie."
-      : !avenir ? "Aucune course de cette saison n'a encore été courue."
-      : saisonTerminee(y, ix) ? "Toutes les courses de la saison ont été courues." : "Calendrier pas encore publié.";
-    return html + `<div class="empty card">${vide}</div>`;
-  }
-  return html + listeCourses(tout);
 }
 
 /** Courses groupées par mois (liste commune au Calendrier et aux Archives) ; `tout` déjà filtré et trié. */
@@ -745,56 +761,47 @@ async function chargerRanking() {
 async function chargerRidersCourant() {
   try { return await chargerAvecRepli(`riders-${state.current}.json`, "riders.json"); } catch (e) { return null; }
 }
-/** Ligne du classement UCI ; `ids` : fiches connues (le nom n'est cliquable que s'il y a une fiche), null = toujours cliquable. */
+/** Ligne du classement UCI ; `ids` : fiches connues (objet par id, ou fonction id -> booléen ; le nom n'est cliquable que s'il y a une fiche), null = toujours cliquable. */
 function ligneUci(r, ids) {
   const mv = r.previous_rank == null || r.rank == null ? ""
     : r.previous_rank > r.rank ? `<span class="mv up">▲${r.previous_rank - r.rank}</span>`
     : r.previous_rank < r.rank ? `<span class="mv down">▼${r.rank - r.previous_rank}</span>` : `<span class="mv">=</span>`;
   const nom = r.name || r.rider || "";
-  const lien = r.rider_id && (!ids || ids[r.rider_id]);
+  const lien = r.rider_id && (!ids || (typeof ids === "function" ? ids(r.rider_id) : ids[r.rider_id]));
   return `<div class="row uc ${r.nationality === "FRA" ? "fr" : ""}">
     <div class="rk">${esc(r.rank)}${mv}</div>${drapeauIso3(r.nationality)}
     <div class="mid"><div class="nm">${lien ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(r.team || "")}</div></div>
     <div class="val">${esc(num(r.points))}<small>pts</small></div></div>`;
 }
-function lignesUci() {
-  const R = state.ranking, U = state.uc;
-  let rows = R.rows || [];
+/** Lignes (déjà filtrées par la recherche et le filtre Français) d'un jeu de rangs `rows` ; `ids` : voir ligneUci. */
+function lignesUci(rows, ids) {
+  const U = state.uc;
   const total = rows.length;
   if (U.fr) rows = rows.filter(r => r.nationality === "FRA");
   const q = normaliser(U.q).trim();
   if (q) rows = rows.filter(r => normaliser(r.name).includes(q) || normaliser(r.rider).includes(q));
   const vis = rows.slice(0, U.limit), reste = rows.length - vis.length;
-  const ids = (state.ridersCl && state.ridersCl.riders) || {};
   const html = vis.map(r => ligneUci(r, ids)).join("");
   const compte = `${rows.length}${rows.length !== total ? " / " + total : ""} coureur${rows.length > 1 ? "s" : ""}`;
   return { compte, html: (html ? `<div class="rows">${html}</div>` : `<div class="empty">Aucun coureur trouvé.</div>`)
     + (reste > 0 ? `<button class="more" data-action="uc-more">Afficher ${Math.min(100, reste)} de plus (${reste} restants)</button>` : "") };
 }
 function majListeUci() {
-  const l = document.getElementById("uc-list"); if (!l) return;
-  const r = lignesUci();
+  const l = document.getElementById("uc-list"); if (!l || !state.clVue) return;
+  const r = lignesUci(state.clVue.rows, state.clVue.ids);
   l.innerHTML = r.html;
   document.getElementById("uc-count").textContent = r.compte;
 }
-function renderUci() {
-  const R = state.ranking;
-  if (!R || !(R.rows || []).length) return `<div class="empty card">Classement UCI indisponible.</div>`;
+/** Carte d'un classement UCI (titre, recherche, filtre Français, liste) ; la liste est remplie par majListeUci. */
+function blocUci(titre) {
   const U = state.uc;
-  return `<div><div class="sec-title">${esc(R.name || "Classement UCI")}${R.date ? ` · au ${esc(dateLongue(R.date))}` : ""}</div>
+  return `<div><div class="sec-title">${esc(titre)}</div>
     <div class="card table-card"><div class="uc-tools"><input class="search" id="uc-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(U.q)}" autocomplete="off">
       <div class="l1"><button class="switch" data-action="uc-fr" aria-pressed="${U.fr}"><i></i>Français seulement</button><span class="small muted" id="uc-count"></span></div></div>
       <div id="uc-list"></div></div></div>`;
 }
-function renderClassements() {
-  const subs = [["uci", "UCI"], ["fdj", "FDJ Series"]];
-  const bar = `<div class="subtabs clsubs">${subs.map(([k, l]) => `<button class="subtab ${state.clSub === k ? "active" : ""}" data-clsub="${k}">${l}</button>`).join("")}</div>`;
-  if (state.clSub === "fdj") return bar + renderFdj();
-  if (state.ranking === undefined || state.ridersCl === undefined) return bar + `<div class="loading">Chargement…</div>`;
-  return bar + renderUci();
-}
 
-/* ---- onglet Archives ---- */
+/* ---- archives (saisons passées) ---- */
 async function chargerArchivesIndex() {
   if (state.archIdx !== undefined) return state.archIdx;
   try { state.archIdx = await chargerArchive("index.json"); }
@@ -825,17 +832,6 @@ async function chercherArchive(id) {
   }
   return null;
 }
-function choisirSaisonArchive() {
-  const A = state.archIdx, ids = ((A && A.seasons) || []).map(s => s.season);
-  const demande = parseInt(PARAMS.get("archive"), 10);
-  if (!ids.includes(state.archSaison)) state.archSaison = ids.includes(demande) ? demande : (ids[0] ?? null);
-}
-function archiveDansUrl() {
-  const u = new URL(location.href);
-  if (state.tab === "archives" && state.archSaison != null) u.searchParams.set("archive", state.archSaison);
-  else u.searchParams.delete("archive");
-  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
-}
 function blocVictoiresFr(ix) {
   const W = ix.french_wins || [];
   if (!W.length) return "";
@@ -844,38 +840,7 @@ function blocVictoiresFr(ix) {
       <span class="l"><b>${plink(w.rider_id, w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span></button>`).join("");
   return `<details class="card table-card"${W.length <= 8 ? " open" : ""}><summary class="group-title" style="cursor:pointer">Victoires françaises · ${W.length}</summary>${lignes}</details>`;
 }
-function blocClassementArchive(y) {
-  const R = state.archRankings[y];
-  if (!R || !(R.rows || []).length) return "";
-  return `<div><div class="sec-title">Classement UCI de fin de saison</div>
-    <div class="card table-card"><div class="group-title">${esc(R.name || "Classement UCI")}${R.date ? ` · au ${esc(dateLongue(R.date))}` : ""}</div>
-    <div class="rows">${R.rows.slice(0, 10).map(r => ligneUci(r, null)).join("")}</div></div></div>`;
-}
-function renderArchives() {
-  const A = state.archIdx;
-  if (A === undefined) return `<div class="loading">Chargement…</div>`;
-  const saisons = (A && A.seasons) || [];
-  if (!A && state.archErr) return messageErreur(state.archErr, "retry-archidx");
-  if (!saisons.length) return `<div class="empty card">Aucune archive disponible pour l'instant.</div>`;
-  const y = state.archSaison, ix = state.archIndexes[y];
-  const sel = `<select class="sel" id="arch-sel" aria-label="Saison des archives">${saisons.map(s =>
-    `<option value="${esc(s.season)}"${s.season === y ? " selected" : ""}>${esc(s.season)}${s.complete ? "" : " (collecte en cours)"}</option>`).join("")}</select>`;
-  if (!ix) {
-    if (state.archIndexes["_err" + y]) return `<div class="stack">${sel}${messageErreur(`Impossible de charger la saison ${y}.`, "retry-arch")}</div>`;
-    return `<div class="stack">${sel}<div class="loading">Chargement…</div></div>`;
-  }
-  const rs = ix.races || [], f = state.archCat;
-  const tout = rs.filter(r => f === "all" || r.category === f)
-    .sort((a, b) => (b.start_date || "").localeCompare(a.start_date || "") || (a.name || "").localeCompare(b.name || ""));
-  const chips = ["all"].concat(CATS).map(c =>
-    `<button class="chip ${f === c ? "active" : ""}" data-acat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("");
-  const note = ix.complete ? "" : `<div class="arch-note">Collecte en cours : cette saison est incomplète, des courses s'ajoutent à chaque passage.</div>`;
-  return `<div class="stack">${sel}${note}${blocClassementArchive(y)}${blocVictoiresFr(ix)}
-    <div><div class="sec-title">Résultats (${rs.length})</div><div class="chips">${chips}</div>
-    ${tout.length ? listeCourses(tout) : `<div class="empty card">${rs.length ? "Aucune course dans cette catégorie." : "Aucune course archivée pour cette saison."}</div>`}</div></div>`;
-}
-
-/* ---- onglet Français ---- */
+/* ---- coureurs français (vue de la page Coureurs) ---- */
 function nomCourseAnnee(x, D) {
   const c = (D.races || {})[x.race_id] || {}, ci = courseParId(x.race_id);
   const nom = c.name || (ci && ci.name) || x.race_id;
@@ -904,45 +869,6 @@ function renderFrancais() {
   return `<div class="sec-title">${F.length} coureur${F.length > 1 ? "s" : ""} français · saison ${esc(D.season ?? state.current)}</div>
     <div class="stack">${cl.map(([id, f]) => carteFrancais(id, f, D)).join("")}</div>
     ${nc.length ? `<details class="nc"><summary>Non classés au classement UCI (${nc.length})</summary><div class="stack" style="margin-top:8px">${nc.map(([id, f]) => carteFrancais(id, f, D)).join("")}</div></details>` : ""}`;
-}
-
-/** Charge (si besoin) les données propres à l'onglet affiché, puis redessine. */
-async function preparerOnglet() {
-  const t = state.tab, avant = `${t}|${state.clSub}|${state.calSaison}|${state.archSaison}`;
-  const encore = () => `${state.tab}|${state.clSub}|${state.calSaison}|${state.archSaison}` === avant;
-  if (t === "calendrier" && !state.indexes[state.calSaison]) {
-    const y = state.calSaison;
-    try { state.indexes[y] = await chargerIndex(y); } catch (e) { console.error("Saison", y, e); state.indexes["_err" + y] = true; }
-  } else if (t === "archives") {
-    if (state.archIdx === undefined) { await chargerArchivesIndex(); choisirSaisonArchive(); }
-    const y = state.archSaison;
-    if (state.tab === t) { archiveDansUrl(); renderMain(); }
-    if (y == null || (state.archIndexes[y] && state.archRankings[y] !== undefined)) return;
-    try {
-      const ix = await chargerIndexArchive(y);
-      if (ix.complete && state.archRankings[y] === undefined) {
-        try { state.archRankings[y] = await chargerArchive(`${y}/ranking.json`); } catch (e) { state.archRankings[y] = null; }
-      } else if (state.archRankings[y] === undefined) state.archRankings[y] = null;
-    } catch (e) { console.error("Archive", y, e); state.archIndexes["_err" + y] = true; }
-    if (state.tab === t && state.archSaison === y) renderMain();
-    return;
-  } else if (t === "francais" && state.ridersCl === undefined) {
-    state.ridersCl = await chargerRidersCourant();
-  } else if (t === "classements" && state.clSub === "uci" && (state.ranking === undefined || state.ridersCl === undefined)) {
-    await chargerRanking();
-    if (state.ridersCl === undefined) state.ridersCl = await chargerRidersCourant();
-  } else return;
-  if (encore()) renderMain();
-}
-
-function renderMain() {
-  const el = document.getElementById("main");
-  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab === state.tab));
-  if (!state.index) return;
-  majContexte();
-  const f = { recents: renderRecents, calendrier: renderCalendrier, classements: renderClassements, francais: renderFrancais, archives: renderArchives }[state.tab];
-  el.innerHTML = f();
-  if (state.tab === "classements" && state.clSub === "uci" && document.getElementById("uc-list")) majListeUci();
 }
 
 /* ================== fiche course ================== */
@@ -1135,12 +1061,58 @@ function renderTable(c, sel, sub) {
   return `<div class="rows">${html}</div>` + (reste > 0 ? `<button class="more" data-action="more">Afficher ${Math.min(50, reste)} de plus (${reste} restants)</button>` : "");
 }
 
+/* ---- gabarit d'article (commun aux articles coureur, épreuve, édition) ---- */
+/** Fil d'Ariane : items [libellé, href] ; le dernier (sans href) est la page courante. */
+function htmlCrumbs(items) {
+  return `<nav class="crumbs" aria-label="Fil d'Ariane">${items.map((it, i) => i === items.length - 1
+    ? `<span aria-current="page">${esc(it[0])}</span>`
+    : `<a href="${esc(it[1])}">${esc(it[0])}</a><span class="sep" aria-hidden="true">›</span>`).join("")}</nav>`;
+}
+/** En-tête d'article : fil d'Ariane (HTML), titre (texte), sous-titre (HTML), pastilles (HTML). */
+function htmlArtHead(o) {
+  return `<header class="art-head">${o.crumbs || ""}<h1 class="h-title">${esc(o.titre)}</h1>
+    ${o.sub ? `<div class="art-sub">${o.sub}</div>` : ""}${o.pills ? `<div class="hero-pills">${o.pills}</div>` : ""}</header>`;
+}
+/** Infobox (à droite à partir de 880 px, en tête sur mobile, en carte) : `photo` (HTML du rond), `credit` (HTML), `faits` [[libellé, valeur]] (échappés ici),
+ *  `extra` (HTML : podium, chronologie). */
+function htmlInfobox(o) {
+  return `<div class="hero infobox">${o.photo ? `<div class="ib-photo">${o.photo}</div>` : ""}${o.credit || ""}
+    ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
+}
+/** Boîte de navigation repliable (pied d'article) ; `corps` : HTML. */
+function htmlNavbox(titre, corps, ouvert) {
+  return `<details class="navbox"${ouvert ? " open" : ""}><summary>${esc(titre)}</summary><div class="nb-body">${corps}</div></details>`;
+}
+/** Années d'une épreuve groupées par décennie (récentes d'abord) : liens vers les éditions ; `courant` : race_id de la page affichée. */
+function htmlAnneesEditions(eds, courant) {
+  const dec = new Map();
+  eds.forEach(x => { const d = Math.floor(x.season / 10) * 10; if (!dec.has(d)) dec.set(d, []); dec.get(d).push(x); });
+  return [...dec.entries()].sort((a, b) => b[0] - a[0]).map(([d, l]) => `<div class="nb-row"><span class="nb-l">${d}</span>${l.map(x => x.race_id === courant
+    ? `<span class="nb-a" aria-current="page">${esc(x.season)}</span>` : x.race_id ? `<a class="nb-a" href="#course/${esc(x.race_id)}">${esc(x.season)}</a>`
+    : lienWd(x.qid, `${esc(x.season)}<sup class="wd-s">WD</sup>`, "nb-a")).join("")}</div>`).join("");
+}
+/** Article : en-tête, infobox (colonne de droite à partir de 880 px), colonne principale, boîte de navigation. */
+function htmlArticle(o) {
+  return `<article class="art">${o.head}<div class="rpage"><aside class="rside">${o.infobox}</aside><div class="rmain">${o.main}</div></div>${o.navbox || ""}</article>`;
+}
+
+/* ---- article d'une édition ---- */
+function navEdition(c) { return state.nav && state.nav.id === c.id ? state.nav.nav : null; }
+function crumbsEdition(c) {
+  const nv = navEdition(c), y = saisonCourse(c), base = [["Accueil", "#/"], ["Courses", "#courses"]];
+  if (nv && nv.cle) return htmlCrumbs(base.concat([[nv.nom, `#epreuve/${encodeURIComponent(nv.cle)}`], [String(y ?? c.name)]]));
+  return htmlCrumbs(y != null ? base.concat([[String(y), `#courses/${y}`], [c.name]]) : base.concat([[c.name]]));
+}
+function navboxEdition(c) {
+  const nv = navEdition(c);
+  if (!nv || (nv.eds || []).length < 2) return "";
+  return htmlNavbox(`Éditions · ${nv.nom}`, `${htmlAnneesEditions(nv.eds, c.id)}
+    <div class="nb-row"><a class="nb-a" href="#epreuve/${esc(encodeURIComponent(nv.cle))}">Page de l'épreuve</a></div>`, false);
+}
 function renderFiche() {
   const c = state.course;
-  const body = document.getElementById("sheet-body");
-  if (!c) return;
-  document.getElementById("sheet-name").textContent = c.name;
-  document.getElementById("sheet-sub").textContent = sousTitreCourse(c);
+  const body = document.getElementById("main");
+  if (!c || !state.route || state.route.nom !== "course") return;
   const E = etapes(c);
   const sel = state.sel;
   const stage = etapeCourante(c, sel);
@@ -1164,15 +1136,25 @@ function renderFiche() {
   const compte = state.sub === "participants" ? `${nPart} coureur${nPart > 1 ? "s" : ""}` : state.sub === "pays" ? "" : ((cls(c, sel)[state.sub] || []).length || "");
   const outils = tabs.length ? `<div class="table-tools">${state.sub === "pays" ? "<span></span>" : `<button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>`}
       <span class="small muted">${esc(compte)}</span></div>` : "";
-  const hero = htmlHeroGen({
-    titre: c.name,
-    sub: `${flag(c.flag, c.country)}<span id="ed-pays">${esc(nomPays(c.country))}</span><span>·</span><span>${esc(plage(c.start_date, c.end_date))}</span>`,
+  const an = saisonCourse(c);
+  const dates = c.race_type === "stage_race" || c.start_date !== c.end_date ? `${plage(c.start_date, c.end_date)}${an != null ? " " + an : ""}` : dateLongue(c.start_date);
+  const faits = [
+    c.country ? ["Pays", nomPays(c.country)] : null,
+    dates.trim() ? ["Dates", dates] : null,
+    c.uci_class ? ["Classe UCI", c.uci_class] : null,
+    c.race_type ? ["Type", TYPES_EPREUVE[c.race_type] || ""] : null,
+    c.race_type === "stage_race" ? ["Étapes", `${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""}`] : null,
+  ].filter(x => x && x[1]);
+  const head = htmlArtHead({
+    crumbs: `<div id="crumbs-slot">${crumbsEdition(c)}</div>`, titre: c.name,
+    sub: `${flag(c.flag, c.country)}<span>${esc(nomPays(c.country))}</span><span>·</span><span>${esc(plage(c.start_date, c.end_date))}</span>`,
     pills: `${catBadge(c.category, c.uci_class)}${tp}`,
-    credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "",
-    extra: `${htmlPodium(c)}<div id="ednav-slot">${state.nav && state.nav.id === c.id ? htmlNavEdition(state.nav.nav) : ""}</div>`,
   });
-  body.innerHTML = `<div class="stack">
-    ${hero}
+  const infobox = htmlInfobox({
+    credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "", faits,
+    extra: `${htmlPodium(c)}<div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
+  });
+  const main = `<div class="stack">
     ${chips}
     ${entete}
     ${c.race_type === "stage_race" ? renderMaillots(c, sel) : ""}
@@ -1182,8 +1164,9 @@ function renderFiche() {
     ${tabs.length ? `<div class="card table-card">${subtabs}${outils}<div id="table">${renderTable(c, sel, state.sub)}</div></div>`
       : '<div class="card"><div class="empty">Classement non publié</div></div>'}
   </div>`;
+  body.innerHTML = htmlArticle({ head, infobox, main, navbox: `<div id="navbox-slot">${navboxEdition(c)}</div>` });
+  document.title = `${c.name}${an != null && !c.name.includes(String(an)) ? " " + an : ""} · Courses cyclistes`;
   majNavEdition(c);
-  if (state.pays === undefined) chargerPays().then(() => { const el = document.getElementById("ed-pays"); if (el && state.course === c) el.textContent = nomPays(c.country); });
   const ch = document.querySelector("#stage-chips .active");
   if (ch && ch.scrollIntoView) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
 }
@@ -1265,12 +1248,13 @@ async function navigationEdition(c) {
   const avant = autres.filter(e => ordreEdition(e, cur) < 0).sort((a, b) => ordreEdition(b, a));
   const apres = autres.filter(e => ordreEdition(e, cur) > 0).sort(ordreEdition);
   const prev = avant[0] || null, next = apres[0] || null;
-  if (!prev && !next) return null;
-  noterChemin(prev); noterChemin(next);
-  return { cle: E.cle, prev, next };
+  const eds = (E.C.editions || []).filter(x => x.season != null && x.race_id).slice().sort((a, b) => ordreEdition(b, a));
+  eds.forEach(noterChemin);
+  const edsNav = eds.concat((E.C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
+  return { cle: E.cle, nom: nomRecent(E.C, E.cle), prev, next, eds: edsNav };
 }
 function htmlNavEdition(nav) {
-  if (!nav) return "";
+  if (!nav || (!nav.prev && !nav.next)) return "";
   const b = (e, cl, txt, lib) => e ? `<button class="${cl}" data-open="${esc(e.race_id)}" data-stage="" aria-label="${esc(lib)} : ${esc(e.season)}">${txt}</button>` : "<span></span>";
   return `<nav class="ednav" aria-label="Éditions de l'épreuve">${b(nav.prev, "prev", `&lsaquo; ${esc(nav.prev && nav.prev.season)}`, "Édition précédente")}
     <button class="all" data-epreuve="${esc(nav.cle)}">Toutes les éditions</button>${b(nav.next, "next", `${esc(nav.next && nav.next.season)} &rsaquo;`, "Édition suivante")}</nav>`;
@@ -1284,8 +1268,10 @@ function majNavEdition(c) {
     if (state.navLoading === id) state.navLoading = null;
     state.nav = { id, nav };
     if (!state.course || state.course.id !== id) return;
-    const slot = document.getElementById("ednav-slot");
+    const slot = document.getElementById("ednav-slot"), cr = document.getElementById("crumbs-slot"), nb = document.getElementById("navbox-slot");
     if (slot) slot.innerHTML = htmlNavEdition(nav);
+    if (cr) cr.innerHTML = crumbsEdition(state.course);
+    if (nb) nb.innerHTML = navboxEdition(state.course);
   }).catch(e => { if (state.navLoading === id) state.navLoading = null; console.warn("Navigation entre éditions indisponible :", e.message); });
 }
 
@@ -1404,19 +1390,7 @@ function htmlPays(c) {
     `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">${l.length} pays · classés : coureurs avec un rang final ; abandons : DNF, hors délai et disqualifiés (les non-partants ne sont pas comptés).${sans ? ` ${sans} coureur${sans > 1 ? "s" : ""} sans nationalité renseignée non compté${sans > 1 ? "s" : ""}.` : ""}</div>`;
 }
 
-/* ================== navigation ================== */
-function parseHashCoureur() {
-  const m = /^#coureur\/([\w-]+)$/.exec(location.hash);
-  return m ? m[1] : null;
-}
-function majScroll() {
-  const ouvert = ["sheet", "esheet", "rsheet", "search"].some(i => document.getElementById(i).classList.contains("open"));
-  document.body.style.overflow = ouvert ? "hidden" : "";
-}
-function parseHash() {
-  const m = /^#course\/([\w-]+)(?:\/([\w]+))?$/.exec(location.hash);
-  return m ? { id: m[1], etape: m[2] ?? null } : null;
-}
+/* ================== page Édition (#course/<id>[/<étape|F>]) ================== */
 function setHashEtape(sel) {
   const h = `#course/${state.course.id}${sel !== "" && sel != null && state.course.race_type === "stage_race" ? "/" + sel : ""}`;
   history.replaceState(history.state, "", h);
@@ -1436,31 +1410,27 @@ async function chargerCourse(id) {
   }
 }
 
-async function ouvrirCourse(id, etape) {
-  const sheet = document.getElementById("sheet"), body = document.getElementById("sheet-body");
-  const r = courseParId(id);
-  const dejaOuverte = sheet.classList.contains("open") && state.course && state.course.id === id;
-  sheet.classList.add("open"); sheet.setAttribute("aria-hidden", "false");
-  majScroll();
-  if (!dejaOuverte) sheet.scrollTop = 0;
-  document.getElementById("sheet-name").textContent = r ? r.name : "Course";
-  document.getElementById("sheet-sub").textContent = r ? sousTitreCourse(r) : "";
+async function pageCourse(r, tok) {
+  const main = document.getElementById("main"), id = r.id, etape = r.etape;
+  const ci = courseParId(id);
+  titre(ci ? ci.name : "Course");
   if (!state.course || state.course.id !== id) {
     state.course = null;
-    body.innerHTML = `<div class="loading">Chargement de la fiche…</div>`;
+    main.innerHTML = `<article class="art"><header class="art-head">${htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], [ci ? ci.name : "Édition"]])}</header><div class="loading">Chargement de la fiche…</div></article>`;
     try {
-      const { d, annee } = await chargerCourse(id);
-      if (parseHash()?.id !== id) return;   // l'utilisateur est parti entre-temps
+      const [{ d, annee }] = await Promise.all([chargerCourse(id), chargerPays()]);
+      if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
       state.course = d; state.courseArchive = annee;
     } catch (e) {
+      if (tok !== state.routeTok) return;
       console.error("Chargement de la course échoué :", e);
-      body.innerHTML = messageErreur(`Impossible de charger cette course (${e.message}).`, "retry");
+      main.innerHTML = `<div class="pg">${htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Édition"]])}${messageErreur(`Impossible de charger cette course (${e.message}).`, "retry")}</div>`;
       return;
     }
     state.frOnly = false; state.limit = 50; state.sub = null;
   }
   const c = state.course;
-  majContexte();
+  state.ctxPage = state.courseArchive != null ? `a${state.courseArchive}` : (saisonCourse(c) != null ? `c${saisonCourse(c)}` : null);
   let sel = etape != null && etape !== "" ? etape : selectionDefaut(c);
   if (c.race_type === "stage_race") {
     const ok = sel === "F" ? !!c.final : etapes(c).some(s => String(s.number) === String(sel));
@@ -1469,12 +1439,7 @@ async function ouvrirCourse(id, etape) {
   state.sel = sel;
   if (state.subVoulu) { state.sub = state.subVoulu; state.subVoulu = null; }
   renderFiche();
-}
-
-function fermerFiche() {
-  const sheet = document.getElementById("sheet");
-  sheet.classList.remove("open"); sheet.setAttribute("aria-hidden", "true");
-  majScroll(); majContexte();
+  finPage(tok);
 }
 
 /** Alias manuels de coureurs (carrieres/index.json, copie d'alias_coureurs.json) ; absent : aucun. */
@@ -1490,13 +1455,6 @@ async function chargerIndexCarrieres() {
 /* ================== fiche coureur (E2) ================== */
 /* Données : entites/coureurs/<lettre>.json (archives) + riders-<année>.json du Calendrier (fusionnés si plus récents) +
    fiche de la saison du contexte (onglet « Saison »). Toute valeur absente : la ligne n'est pas affichée. */
-function fermerCoureur() {
-  const rs = document.getElementById("rsheet");
-  rs.classList.remove("open"); rs.setAttribute("aria-hidden", "true");
-  state.coureurOuvert = null; state.rctx = null;
-  majScroll();
-}
-
 const CLASSEMENT_LABEL = { stage: "Étape / course", gc: "Général", points: "Points", mountain: "Montagne", youth: "Jeunes" };
 const LANGUES = { fr: "Français", en: "English", es: "Español", it: "Italiano", nl: "Nederlands", de: "Deutsch", pt: "Português", ca: "Català" };
 const STATUTS_GT = { DNF: "Abandon", OTL: "Hors délai", DSQ: "Disqualifié", DNS: "Non-partant" };
@@ -1615,7 +1573,7 @@ async function construireCoureur(id, ctx, cle) {
   const sources = [cid, id].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid)).filter((v, i, t) => t.indexOf(v) === i);
   const cals = await fichesCalendrier(sources);
   const ent = fusionCalendrier(R.ent, cals, idx && idx.generated_at);
-  const lettres = [...new Set(((ent && ent.palmares) || []).map(x => lettreId(x.course)).filter(Boolean))];
+  const lettres = [...new Set((((ent && ent.palmares) || []).concat((ent && ent.palmares_historique) || [])).map(x => lettreId(x.course)).filter(Boolean))];
   await Promise.all(lettres.map(chargerCoursesEnt));
   return { id, cid, cle, ctx, ent, fiche: fs.d, msg: fs.msg, err: fs.err };
 }
@@ -1722,14 +1680,6 @@ function tuilesCoureur(cr) {
     gt.length ? { lab: "Grands tours terminés", val: fini.length, sub: ab ? `${ab} abandon${ab > 1 ? "s" : ""}` : "" } : null,
   ]);
 }
-/** Bandeau de fiche (coureur, épreuve, édition) : `photo` (HTML du rond, absent = pas de photo), `titre`, `sub` (HTML), `pills` (HTML), `credit`,
- *  `faits` [[libellé, valeur]], `extra` (HTML ajouté en bas : podium, navigation). Tout texte doit déjà être échappé SAUF `titre` et `faits`. */
-function htmlHeroGen(o) {
-  return `<div class="hero"><div class="hero-top">${o.photo || ""}<div class="hero-id"><h1 class="h-title">${esc(o.titre)}</h1>
-    ${o.sub ? `<div class="hero-sub">${o.sub}</div>` : ""}</div></div>
-    ${o.pills ? `<div class="hero-pills">${o.pills}</div>` : ""}${o.credit || ""}
-    ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
-}
 /** Notes « UCI : <valeur d'origine> · corrigé d'après <source> » (corrections de source documentées, corrections_coureurs.json). */
 function notesCorrections(E) {
   return ((E && E.corrections) || []).map(c => {
@@ -1740,7 +1690,8 @@ function notesCorrections(E) {
     return lab && val ? `<div class="credit">${esc(lab)}, UCI : ${esc(val)} · corrigé d'après ${lien}</div>` : "";
   }).join("");
 }
-function htmlHero(cr) {
+/** { head, infobox } de l'article d'un coureur. */
+function articleCoureur(cr) {
   const h = identite(cr), wd = h.wd, im = wd && wd.image, src = im && urlMedia(im.url), page = im && urlMedia(im.page);
   const ini = h.name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
   const photo = `<div class="hero-photo"><span aria-hidden="true">${esc(ini)}</span>${src ? `<img src="${esc(src)}" alt="Photo de ${esc(h.name)}" loading="lazy">` : ""}</div>`;
@@ -1758,13 +1709,17 @@ function htmlHero(cr) {
     eq ? [eq.y != null && state.current != null && eq.y < state.current ? "Dernière équipe" : "Équipe", eq.y != null && state.current != null && eq.y < state.current ? `${eq.team} (${eq.y})` : eq.team] : null,
     ys.length ? ["Dans nos données", ys.length > 1 ? `${ys[ys.length - 1]} → ${ys[0]}` : String(ys[0])] : null,
   ].filter(Boolean);
-  return htmlHeroGen({ photo, titre: h.name || "Coureur", sub: `${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span>`, pills, credit: credit + notesCorrections(cr.ent), faits });
+  return {
+    head: htmlArtHead({ crumbs: htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], [h.name || "Coureur"]]), titre: h.name || "Coureur",
+      sub: `${flag(h.flag, h.nationality)}<span>${esc(nomPays(h.nationality))}</span>`, pills }),
+    infobox: htmlInfobox({ photo, credit: credit + notesCorrections(cr.ent), faits }),
+  };
 }
 function ongletsCoureur(cr) {
   const E = cr.ent, out = [];
   if (E) {
     out.push({ k: "apercu", l: "Aperçu" });
-    if ((E.palmares || []).length) out.push({ k: "palmares", l: "Palmarès" });
+    if ((E.palmares || []).length || (E.palmares_historique || []).length) out.push({ k: "palmares", l: "Palmarès" });
     if (saisonsTriees(E).length) out.push({ k: "saisons", l: "Saisons" });
     if ((E.grands_tours || []).length) out.push({ k: "gt", l: "Grands tours" });
     if ((E.historique_uci || []).length || saisonsTriees(E).some(([, s]) => s.uci_rank != null)) out.push({ k: "uci", l: "Classement UCI" });
@@ -1775,6 +1730,7 @@ function ongletsCoureur(cr) {
 }
 /** Carte d'un résultat (ouvre l'édition) ; `ep` : ajoute, sous la carte, un lien discret vers l'épreuve si elle compte au moins deux éditions. */
 function carteResultat(x, ep) {
+  noterChemin(x);
   const lab = x.label && x.label !== "Course" ? x.label : "";
   const stage = x.classification === "stage" ? "" : "F";
   const nom = x._nom || nomCoursePalmares(x);
@@ -1805,17 +1761,26 @@ function htmlApercu(cr) {
       <div class="tbl-note">Seules les courses suivies par ce site sont comptées.</div></div>` : ""}
     ${liens.length ? `<div class="card"><h2 class="h-sec">Pour en savoir plus</h2><div class="wiki-links">${liens.join("")}</div><div class="tbl-note">Wikipédia (CC BY-SA)</div></div>` : ""}`;
 }
+/** Carte d'un résultat d'historique Wikidata (avant nos données UCI) : ouvre l'épreuve ; lien discret vers la source. */
+function carteHistorique(x) {
+  const nom = nomCourse(x.course, x.season) || String(x.course || "").split("|")[0];
+  const carte = `<a class="res" href="${esc(hrefEpreuve(x.course))}"><span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
+    <span class="t"><b>${esc(nom)}</b><small>Palmarès historique</small></span><span class="d">${esc(x.season)}</span></a>`;
+  return `<div class="res-box">${carte}${urlWd(x.qid) ? lienWd(x.qid, "source : Wikidata", "res-ep") : ""}</div>`;
+}
 function htmlPalmares(cr) {
   const P = cr.ent.palmares || [], R = state.rpal;
+  const PH = (cr.ent.palmares_historique || []).map(x => ({ _h: true, season: x.annee, date: x.date || String(x.annee), course: x.course, rank: x.rang, qid: x.source_qid }));
   const cats = CATS.filter(c => P.some(x => x.category === c)).concat([...new Set(P.map(x => x.category).filter(c => c && !CATS.includes(c)))]);
   const chips = cats.length > 1 ? `<div class="chips">${["all"].concat(cats).map(c => `<button class="chip ${R.cat === c ? "active" : ""}" data-pcat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("")}</div>` : "";
   const outil = `<div class="table-tools card" style="padding:8px 12px"><button class="switch" data-action="pal-vic" aria-pressed="${R.vic}"><i></i>Victoires seulement</button></div>`;
-  const L = P.filter(x => (R.cat === "all" || x.category === R.cat) && (!R.vic || x.rank === 1));
+  const L = P.filter(x => (R.cat === "all" || x.category === R.cat) && (!R.vic || x.rank === 1))
+    .concat(R.cat === "all" ? PH.filter(x => !R.vic || x.rank === 1) : []).sort((a, b) => b.season - a.season || (b.date || "").localeCompare(a.date || ""));
   const groupes = [];
   L.forEach(x => { const g = groupes[groupes.length - 1]; if (g && g.y === x.season) g.l.push(x); else groupes.push({ y: x.season, l: [x] }); });
   return `${chips}${outil}${groupes.length ? groupes.map(g => `<div><div class="grp-title" style="margin-top:0">${esc(g.y)}<span>${g.l.length} résultat${g.l.length > 1 ? "s" : ""}</span></div>
-    <div class="res-list">${g.l.map(x => carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
-    <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.</div>`;
+    <div class="res-list">${g.l.map(x => x._h ? carteHistorique(x) : carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
+    <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.${PH.length ? " Résultats « Palmarès historique » : avant nos données UCI, d'après Wikidata (CC0)." : ""}</div>`;
 }
 function htmlSaisons(cr) {
   const S = saisonsTriees(cr.ent);
@@ -1832,6 +1797,7 @@ function htmlGrandsTours(cr) {
   const G = cr.ent.grands_tours || [], ys = [...new Set(G.map(x => x.season))].sort((a, b) => b - a);
   const cell = x => {
     if (!x) return '<span class="dim">–</span>';
+    noterChemin(x);
     const t = x.status ? (STATUTS_GT[x.status] || x.status) : rang(x.rank);
     return x.race_id ? `<button class="cell" data-open="${esc(x.race_id)}" data-stage="${x.status ? "" : "F"}" data-vsub="${x.status ? "" : "gc"}">${esc(t)}</button>` : esc(t);
   };
@@ -1924,19 +1890,19 @@ function creditsCoureur(cr) {
   return `<div class="foot-credits">${bits.join(" · ")}</div>`;
 }
 function renderCoureur() {
-  const cr = state.cr, body = document.getElementById("rsheet-body");
-  if (!cr) return;
+  const cr = state.cr, body = document.getElementById("main");
+  if (!cr || !state.route || state.route.nom !== "coureur") return;
   const h = identite(cr), eq = equipeActuelle(cr), age = ageDe(h.birth);
-  document.getElementById("rsheet-name").textContent = h.name || "Coureur";
-  document.getElementById("rsheet-sub").textContent = [eq && eq.team, age != null ? `${age} ans` : ""].filter(Boolean).join(" · ");
+  titre(h.name || "Coureur");
   const defs = ongletsCoureur(cr);
   if (!h.name || !defs.length) {
-    body.innerHTML = `<div class="stack"><div class="vide">${cr.msg && !cr.ent ? esc(cr.msg) : "Pas d'archives pour ce coureur"}</div></div>`;
+    body.innerHTML = `<div class="pg">${htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], ["Coureur"]])}<div class="vide">${cr.msg && !cr.ent ? esc(cr.msg) : "Pas d'archives pour ce coureur"}</div></div>`;
     return;
   }
   if (!defs.some(d => d.k === state.rtab)) state.rtab = defs[0].k;
-  body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHero(cr)}</aside>
-    <div class="rmain">${tuilesCoureur(cr)}${htmlOnglets(defs, state.rtab, "rtab", "rtabs")}<div class="tabcontent" id="rcontent" role="tabpanel"></div>${creditsCoureur(cr)}</div></div>`;
+  const A = articleCoureur(cr);
+  body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox,
+    main: `${tuilesCoureur(cr)}${htmlOnglets(defs, state.rtab, "rtab", "rtabs")}<div class="tabcontent" id="rcontent" role="tabpanel"></div>${creditsCoureur(cr)}` });
   majContenuCoureur();
 }
 /** Redessine seulement le contenu de l'onglet actif (la barre d'onglets collante et le défilement restent en place). */
@@ -1950,59 +1916,82 @@ function majContenuCoureur() {
 function choisirOngletCoureur(k) {
   state.rtab = k; state.rtabs[state.coureurOuvert] = k;
   majContenuCoureur();
-  const rs = document.getElementById("rsheet"), tabs = document.getElementById("rtabs"), rc = document.getElementById("rcontent");
+  const tabs = document.getElementById("rtabs"), rc = document.getElementById("rcontent");
   if (tabs && rc) {   // le contenu commence sous les onglets collants : on remonte si on a défilé plus bas
     const limite = tabs.getBoundingClientRect().bottom, haut = rc.getBoundingClientRect().top;
-    if (haut < limite) rs.scrollTop += haut - limite - 8;
+    if (haut < limite) window.scrollBy(0, haut - limite - 8);
   }
 }
 
-async function ouvrirCoureur(id) {
-  const rs = document.getElementById("rsheet"), body = document.getElementById("rsheet-body");
-  const nouveau = state.coureurOuvert !== id;
+/** Contexte de saison d'un lien coureur : « a2023 » (archive) / « c2027 » (Calendrier) ; défaut : saison en cours. */
+function contexteDe(s) {
+  const m = /^([ac])(\d{4})$/.exec(s || "");
+  return m ? { archive: m[1] === "a", saison: +m[2] } : { archive: false, saison: state.current };
+}
+async function pageCoureur(r, tok) {
+  const main = document.getElementById("main"), id = r.id;
+  state.ctxPage = null;
+  if (/^wd-Q\d+$/.test(id)) { await pageCoureurHistorique(r, tok); return; }
+  if (state.coureurOuvert !== id) { state.rtab = state.rtabs[id] || "apercu"; state.rpal = { cat: "all", vic: false }; }
   state.coureurOuvert = id;
-  if (nouveau) { state.rtab = state.rtabs[id] || "apercu"; state.rpal = { cat: "all", vic: false }; }
-  rs.classList.add("open"); rs.setAttribute("aria-hidden", "false");
-  majScroll();
-  if (nouveau) rs.scrollTop = 0;
-  const ctx = state.rctx || { archive: state.ctxArchive, saison: state.ctxSaison ?? state.current };
+  const ctx = contexteDe(r.s);
   const cle = `${id}|${ctx.archive ? "a" : "c"}${ctx.saison}`;
+  titre("Coureur");
   if (!state.cr || state.cr.cle !== cle) {
     state.cr = null;
-    document.getElementById("rsheet-name").textContent = "Coureur";
-    document.getElementById("rsheet-sub").textContent = "";
-    body.innerHTML = squeletteCoureur();
+    main.innerHTML = `<article class="art"><header class="art-head">${htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], ["Coureur"]])}</header>${squeletteCoureur()}</article>`;
     let cr;
     try { cr = await construireCoureur(id, ctx, cle); }
     catch (e) {
       console.warn("Fiche coureur indisponible :", e.message);
-      if (parseHashCoureur() !== id) return;
-      body.innerHTML = messageErreur(`Fiche indisponible (${e.message}).`, "retry");
+      if (tok !== state.routeTok) return;
+      main.innerHTML = `<div class="pg">${htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], ["Coureur"]])}${messageErreur(`Fiche indisponible (${e.message}).`, "retry")}</div>`;
       return;
     }
-    if (parseHashCoureur() !== id) return;   // l'utilisateur est parti entre-temps
+    if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
     state.cr = cr;
   }
   renderCoureur();
+  finPage(tok);
+}
+/** Coureur historique `wd-Q…` (palmarès Wikidata d'avant nos données) : fiche légère entites/coureurs_historiques/<NN>.json ; sinon page vide. */
+async function pageCoureurHistorique(r, tok) {
+  const main = document.getElementById("main"), id = r.id;
+  const fil = n => htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], [n || "Coureur historique"]]);
+  titre("Coureur historique");
+  main.innerHTML = `<article class="art"><header class="art-head">${fil("")}</header>${squeletteCoureur()}</article>`;
+  let f = null;
+  try {
+    const F = await chargerArchive(`entites/coureurs_historiques/${id.replace(/\D/g, "").slice(-2).padStart(2, "0")}.json`);
+    f = aPropre(F, id) ? F[id] : null;
+  } catch (e) { if (e.status !== 404 && !e.reseau) throw e; }
+  await chargerPays();
+  if (tok !== state.routeTok) return;
+  if (!f) { main.innerHTML = `<div class="pg">${fil("")}<div class="vide">Pas d'archives pour ce coureur</div></div>`; finPage(tok); return; }
+  titre(f.name);
+  const nat = [].concat(f.nationality || []);
+  const naiss = f.birth_date ? dateWd(f.birth_date, f.birth_precision) : "", deces = f.death_date ? dateWd(f.death_date, f.death_precision) : "";
+  const P = f.palmares_historique || [];
+  const T = f.totaux || {};
+  const head = htmlArtHead({ crumbs: fil(f.name), titre: f.name, sub: `${f.flag ? flag(f.flag, "") : ""}<span>${esc(nat.map(nomPays).join(" / "))}</span>`,
+    pills: '<span class="pill">Palmarès historique</span>' });
+  const infobox = htmlInfobox({ faits: [naiss ? ["Naissance", naiss] : null, deces ? ["Décès", deces] : null].filter(Boolean),
+    credit: `<div class="credit">Source : Wikidata (CC0)</div>` });
+  const cles = [...new Set(P.map(x => lettreId(x.course)))];
+  await Promise.all(cles.map(chargerCoursesEnt));
+  if (tok !== state.routeTok) return;
+  const lignes = P.map(x => [esc(x.annee), esc(rang(x.rang)), x.course ? `<a class="cell" href="#epreuve/${esc(encodeURIComponent(x.course))}">${esc(nomCourse(x.course, x.annee) || String(x.course).split("|")[0])}</a>` : "", lienWd(x.source_qid, "Wikidata", "cell")]);
+  const main2 = `${htmlTuiles([{ lab: "Victoires", val: T.wins }, { lab: "Podiums", val: T.podiums }])}
+    ${P.length ? `<div><h2 class="sec-h">Palmarès</h2>${htmlTableau([{ l: "Année" }, { l: "Rang" }, { l: "Épreuve", tl: true }, { l: "Source", tl: true }], lignes)}
+      <div class="tbl-note">Podiums des épreuves suivies, d'après Wikidata (statuts non tranchés exclus). Avant nos données UCI.</div></div>` : htmlVide("Aucun palmarès connu.")}`;
+  main.innerHTML = htmlArticle({ head, infobox, main: main2 });
+  finPage(tok);
 }
 
 /* ================== page épreuve (E3) ================== */
 /* Une épreuve = une course à travers ses éditions (clé d'édition `nom normalisé|PAYS`) ; données : entites/courses/<lettre>.json.
    Route `#epreuve/<clé encodée>` ; l'édition reste `#course/<race_id>`. Valeur absente : ligne / tuile absente. */
 const TYPES_EPREUVE = { one_day: "Course d'un jour", stage_race: "Course par étapes" };
-function parseHashEpreuve() {
-  const m = /^#epreuve\/(.+)$/.exec(location.hash);
-  if (!m) return null;
-  let k;
-  try { k = decodeURIComponent(m[1]); } catch (e) { return null; }
-  return k.length <= 200 && k.includes("|") ? k : null;
-}
-function fermerEpreuve() {
-  const es = document.getElementById("esheet");
-  es.classList.remove("open"); es.setAttribute("aria-hidden", "true");
-  state.epreuveOuverte = null;
-  majScroll();
-}
 /** Nom de l'épreuve la saison la plus récente ; à défaut, la clé mise en forme. */
 function nomRecent(C, cle) {
   let best = null;
@@ -2025,61 +2014,109 @@ async function construireEpreuve(cle) {
   return { cle, C };
 }
 function ongletsEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, out = [];
-  if (E.length) out.push({ k: "palmares", l: "Palmarès" });
-  if (E.length > 1 && ((R.victoires_par_coureur || []).length || Object.keys(R.victoires_par_pays || {}).length)) out.push({ k: "records", l: "Records" });
+  const C = ep.C, E = C.editions || [], H = C.historique || [], R = C.records_historique || C.records || {}, out = [];
+  if (E.length || H.length) out.push({ k: "palmares", l: "Palmarès" });
+  if (E.length + H.length > 1 && ((R.victoires_par_coureur || []).length || Object.keys(R.victoires_par_pays || {}).length)) out.push({ k: "records", l: "Records" });
   if (new Set(Object.keys(C.noms || {})).size > 1 || new Set(Object.values(C.classes || {})).size > 1) out.push({ k: "historique", l: "Historique" });
   return out;
 }
+/** Lien vers l'élément Wikidata d'une édition ou d'un coureur (QID valide seulement). */
+function urlWd(qid) { return /^Q\d+$/.test(qid || "") ? `https://www.wikidata.org/wiki/${qid}` : null; }
+function lienWd(qid, txt, cl) {
+  const u = urlWd(qid);
+  return u ? `<a class="${cl || "wd"}" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="Source : Wikidata (CC0)">${txt}</a>` : txt;
+}
+const VIDE_CELLULE = '<span class="muted">–</span>';
+function nomsHist(L) { return (L || []).map(p => plink(p.id, p.name || "Coureur")).join(", "); }
+/** Ligne du tableau Palmarès pour une année d'historique Wikidata (années absentes de nos éditions UCI) ; null si rien à montrer. Statuts jamais tranchés. */
+function ligneHistorique(h) {
+  const P = h.podium || [], D = h.detail || {}, g = r => P.filter(p => p.rang === r);
+  const cell = L => L.length ? L.map(p => `${flag(p.flag, p.nat)} ${plink(p.id, p.name || "Coureur")}`).join("<br>") : VIDE_CELLULE;
+  let v;
+  if (h.statut === "ok" && g(1).length) v = cell(g(1));
+  else if (h.statut === "non_attribue") v = `<span class="badge" title="Vainqueur non attribué (statut Wikidata)">Non attribué</span>${(D.p2321 || []).length ? `<div class="muted small">déclassé : ${nomsHist(D.p2321)}</div>` : ""}`;
+  else if (h.statut === "conflit") {
+    const a = nomsHist(D.p1346), b = nomsHist(D.p2321), idsA = (D.p1346 || []).map(p => p.id).sort().join(), idsB = (D.p2321 || []).map(p => p.id).sort().join();
+    const val = idsA === idsB ? a : [a ? `${a} <span class="muted">(vainqueur)</span>` : "", b ? `${b} <span class="muted">(classement)</span>` : ""].filter(Boolean).join(" · ");
+    v = `<span class="badge" title="Sources en désaccord (Wikidata)">contesté</span>${val ? `<div class="small">${val}</div>` : ""}`;
+  } else if (P.length) v = '<span class="muted">vainqueur inconnu</span>';
+  else return null;
+  const fr = P.filter(p => p.nat === "FRA" && p.rang != null).sort((a, b) => a.rang - b.rang)[0];
+  return { season: h.annee, cells: [lienWd(h.source_qid, `${esc(h.annee)}<sup class="wd-s">WD</sup>`, "cell"), v, cell(g(2)), cell(g(3)),
+    fr ? `${plink(fr.id, fr.name || "Coureur")} <span class="muted small">(${esc(rang(fr.rang))})</span>` : VIDE_CELLULE] };
+}
 function listeNoms(noms) { return noms.length <= 3 ? noms.join(", ") : `${noms.length}`; }
+/** Articles de la tuile « Éditions » : années UCI + années d'historique Wikidata. */
+function anneesEpreuve(C) { return (C.editions || []).map(x => x.season).concat((C.historique || []).map(h => h.annee)).filter(y => y != null); }
 function tuilesEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, ys = E.map(e => e.season);
+  const C = ep.C, E = C.editions || [], RH = C.records_historique, R = RH || C.records || {}, ys = anneesEpreuve(C);
+  const dep = RH && (RH.annees_couvertes || [])[0] != null ? ` depuis ${RH.annees_couvertes[0]}` : "";
   const vc = (R.victoires_par_coureur || []).filter(x => x.name), top = vc.length ? Math.max(...vc.map(x => x.wins)) : 0, tops = vc.filter(x => x.wins === top);
   const vp = Object.entries(R.victoires_par_pays || {}), topP = vp.length ? Math.max(...vp.map(x => x[1])) : 0, topsP = vp.filter(x => x[1] === topP).map(x => x[0]).sort();
-  const connus = E.filter(e => (e.podium || []).some(p => p.rank === 1)).length, fra = (R.victoires_par_pays || {}).FRA || 0;
+  const connus = RH ? RH.editions_avec_vainqueur : E.filter(e => (e.podium || []).some(p => p.rank === 1)).length, fra = (R.victoires_par_pays || {}).FRA || 0;
   return htmlTuiles([
-    E.length ? { lab: "Éditions", val: E.length, sub: ys.length > 1 ? `${Math.min(...ys)} → ${Math.max(...ys)}` : String(ys[0]) } : null,
-    top >= 2 ? (tops.length === 1 ? { lab: "Coureur le plus titré", val: tops[0].name, txt: true, sub: `${top} victoires` }
-      : tops.length <= 3 ? { lab: "Coureurs les plus titrés", val: tops.map(x => x.name).join(", "), txt: true, sub: `${top} victoires chacun` }
-      : { lab: "Coureurs les plus titrés", val: `${tops.length} coureurs`, sub: `${top} victoires chacun` }) : null,
-    topP >= 2 ? (topsP.length <= 3 ? { lab: topsP.length === 1 ? "Pays le plus titré" : "Pays les plus titrés", val: topsP.map(nomPays).join(", "), txt: true, sub: `${topP} victoires${topsP.length > 1 ? " chacun" : ""}` }
-      : { lab: "Pays les plus titrés", val: `${topsP.length} pays`, sub: `${topP} victoires chacun` }) : null,
+    ys.length ? { lab: "Éditions", val: ys.length, sub: Math.min(...ys) !== Math.max(...ys) ? `${Math.min(...ys)} → ${Math.max(...ys)}` : String(ys[0]) } : null,
+    top >= 2 ? (tops.length === 1 ? { lab: "Coureur le plus titré", val: tops[0].name, txt: true, sub: `${top} victoires${dep}` }
+      : tops.length <= 3 ? { lab: "Coureurs les plus titrés", val: tops.map(x => x.name).join(", "), txt: true, sub: `${top} victoires chacun${dep}` }
+      : { lab: "Coureurs les plus titrés", val: `${tops.length} coureurs`, sub: `${top} victoires chacun${dep}` }) : null,
+    topP >= 2 ? (topsP.length <= 3 ? { lab: topsP.length === 1 ? "Pays le plus titré" : "Pays les plus titrés", val: topsP.map(nomPays).join(", "), txt: true, sub: `${topP} victoires${topsP.length > 1 ? " chacun" : ""}${dep}` }
+      : { lab: "Pays les plus titrés", val: `${topsP.length} pays`, sub: `${topP} victoires chacun${dep}` }) : null,
     connus ? { lab: "Victoires françaises", val: fra, sub: `sur ${connus} édition${connus > 1 ? "s" : ""} avec vainqueur connu` } : null,
   ]);
 }
-function htmlHeroEpreuve(ep) {
-  const C = ep.C, cl = classeActuelle(C), ys = (C.editions || []).map(e => e.season), n = ys.length;
+/** { head, infobox, navbox } de l'article d'une épreuve. */
+function articleEpreuve(ep) {
+  const C = ep.C, cl = classeActuelle(C), E = C.editions || [], ys = E.map(e => e.season), n = ys.length;
+  const nom = nomRecent(C, ep.cle);
   const pills = [cl ? catBadge(categorieClasse(cl), cl) : "", C.type && TYPES_EPREUVE[C.type] ? `<span class="pill">${esc(TYPES_EPREUVE[C.type])}</span>` : ""].join("");
-  const faits = n ? [["Dans nos données", `${n} édition${n > 1 ? "s" : ""}${n > 1 ? ` · ${Math.min(...ys)} → ${Math.max(...ys)}` : ` · ${ys[0]}`}`]] : [];
-  return htmlHeroGen({ titre: nomRecent(C, ep.cle), sub: `${flag(C.flag, nomPays(C.pays))}<span>${esc(nomPays(C.pays))}</span>`, pills,
-    credit: cl && equivClasse(cl) ? `<div class="credit">Classe ${esc(cl)} : ${esc(equivClasse(cl))}</div>` : "", faits });
+  const faits = [
+    C.pays ? ["Pays", nomPays(C.pays)] : null,
+    cl ? ["Classe actuelle", cl] : null,
+    C.historique_info && C.historique_info.editions ? ["Historique Wikidata", `${C.historique_info.annees[0]} → ${C.historique_info.annees[1]} · ${C.historique_info.editions} éditions`] : null,
+    n ? ["Dans nos données", `${n} édition${n > 1 ? "s" : ""}${n > 1 ? ` · ${Math.min(...ys)} → ${Math.max(...ys)}` : ` · ${ys[0]}`}`] : null,
+  ].filter(Boolean);
+  const eds = E.filter(x => x.season != null && x.race_id).concat((C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
+  return {
+    head: htmlArtHead({ crumbs: htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Épreuves", "#courses/epreuves"], [nom]]), titre: nom,
+      sub: `${flag(C.flag, nomPays(C.pays))}<span>${esc(nomPays(C.pays))}</span>`, pills }),
+    infobox: htmlInfobox({ credit: cl && equivClasse(cl) ? `<div class="credit">Classe ${esc(cl)} : ${esc(equivClasse(cl))}</div>` : "", faits }),
+    navbox: eds.length > 1 ? htmlNavbox(`Éditions · ${nom}`, htmlAnneesEditions(eds, null), false) : "",
+  };
 }
 function cellePodium(e, p) {
   return p ? `${flag(p.flag, p.nat)} ${plink(p.id, p.name || "Coureur", ctxSaison(e.season))}` : '<span class="muted">–</span>';
 }
 function htmlPalmaresEpreuve(ep) {
-  const E = ep.C.editions || [];
-  const rows = E.map(e => {
+  const C = ep.C, E = C.editions || [];
+  const L = E.map(e => {
     const P = e.podium || [], g = r => P.find(p => p.rank === r), bf = e.best_french;
-    return [`<button class="cell" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>`,
+    return { season: e.season, cells: [`<button class="cell" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>`,
       cellePodium(e, g(1)), cellePodium(e, g(2)), cellePodium(e, g(3)),
-      bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : '<span class="muted">–</span>'];
-  });
-  return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true }, { l: "2e", tl: true }, { l: "3e", tl: true }, { l: "Meilleur Français", tl: true }], rows)}
-    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions terminées seulement ; l'année ouvre la fiche de l'édition.</div>`;
+      bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : VIDE_CELLULE] };
+  }).concat((C.historique || []).map(ligneHistorique).filter(Boolean)).sort((a, b) => b.season - a.season);
+  const hist = (C.historique || []).length;
+  return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true }, { l: "2e", tl: true }, { l: "3e", tl: true }, { l: "Meilleur Français", tl: true }], L.map(x => x.cells))}
+    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions UCI terminées seulement ; l'année ouvre la fiche de l'édition.</div>
+    ${hist ? `<div class="tbl-note">Années marquées <sup class="wd-s">WD</sup> : avant nos données UCI, d'après Wikidata (CC0) ; l'année ouvre l'élément Wikidata. Les statuts sont repris tels quels : « non attribué » (titre retiré, coureur déclassé indiqué s'il est connu), « contesté » (sources en désaccord, les deux valeurs sont données).</div>` : ""}`;
 }
 function htmlRecordsEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, vc = R.victoires_par_coureur || [], vp = Object.entries(R.victoires_par_pays || {});
-  const gagnant = (e, id) => (e.podium || []).find(p => p.rank === 1 && p.id === id);
+  const C = ep.C, E = C.editions || [], RH = C.records_historique, R = RH || C.records || {}, vc = R.victoires_par_coureur || [], vp = Object.entries(R.victoires_par_pays || {});
+  // vainqueurs (rang 1) de toutes les années connues : éditions UCI + années d'historique au statut « ok »
+  const V = E.map(e => ({ y: e.season, p: (e.podium || []).find(p => p.rank === 1) })).concat(RH ? (C.historique || []).filter(h => h.statut === "ok").map(h => ({ y: h.annee, p: (h.podium || []).find(p => p.rang === 1) })) : [])
+    .filter(x => x.p).sort((a, b) => b.y - a.y);
   const rc = vc.map(x => {
-    const eds = E.filter(e => gagnant(e, x.id)), p = eds.length ? gagnant(eds[0], x.id) : null;
-    return [`${p ? flag(p.flag, p.nat) + " " : ""}${plink(x.id, x.name || "Coureur", "c" + state.current)}`, esc(x.wins), esc(eds.map(e => e.season).join(", "))];
+    const w = V.filter(v => v.p.id === x.id), p = w.length ? w[0].p : null;
+    return [`${p ? flag(p.flag, p.nat) + " " : ""}${plink(x.id, x.name || "Coureur", "c" + state.current)}`, esc(x.wins), esc(w.map(v => v.y).join(", "))];
   });
   const rp = vp.sort((a, b) => b[1] - a[1] || nomPays(a[0]).localeCompare(nomPays(b[0]), "fr")).map(([iso, n]) =>
-    [`${drapeauIso3(iso)} ${esc(nomPays(iso))}`, esc(n), esc(E.filter(e => (e.podium || []).some(p => p.rank === 1 && p.nat === iso)).map(e => e.season).join(", "))]);
-  return `${rc.length ? `<div><h2 class="h-sec">Victoires par coureur</h2>${htmlTableau([{ l: "Coureur", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rc)}
-      <div class="tbl-note">Coureurs avec au moins deux victoires dans nos données.</div></div>` : ""}
-    ${rp.length ? `<div><h2 class="h-sec">Victoires par pays</h2>${htmlTableau([{ l: "Pays", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rp)}</div>` : ""}`
+    [`${drapeauIso3(iso)} ${esc(nomPays(iso))}`, esc(n), esc(V.filter(v => v.p.nat === iso).map(v => v.y).join(", "))]);
+  const dep = RH && (RH.annees_couvertes || [])[0] != null ? ` (depuis ${RH.annees_couvertes[0]})` : "";
+  const notes = RH ? [RH.non_attribuees ? `${RH.non_attribuees} édition${RH.non_attribuees > 1 ? "s" : ""} non attribuée${RH.non_attribuees > 1 ? "s" : ""}` : "", RH.conflits ? `${RH.conflits} contestée${RH.conflits > 1 ? "s" : ""}` : "",
+    RH.victoires_pays_indeterminees ? `${RH.victoires_pays_indeterminees} victoire${RH.victoires_pays_indeterminees > 1 ? "s" : ""} sans pays déterminé` : ""].filter(Boolean) : [];
+  return `${rc.length ? `<div><h2 class="h-sec">Victoires par coureur${esc(dep)}</h2>${htmlTableau([{ l: "Coureur", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rc)}
+      <div class="tbl-note">Coureurs avec au moins deux victoires${RH ? " (nos éditions UCI et palmarès Wikidata)" : " dans nos données"}.</div></div>` : ""}
+    ${rp.length ? `<div><h2 class="h-sec">Victoires par pays${esc(dep)}</h2>${htmlTableau([{ l: "Pays", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rp)}
+      ${notes.length ? `<div class="tbl-note">Hors décompte : ${esc(notes.join(" · "))}.</div>` : ""}</div>` : ""}`
     || htmlVide("Aucun record pour l'instant.");
 }
 function htmlHistoriqueEpreuve(ep) {
@@ -2095,23 +2132,21 @@ function htmlHistoriqueEpreuve(ep) {
 }
 const ONGLET_EPREUVE = { palmares: htmlPalmaresEpreuve, records: htmlRecordsEpreuve, historique: htmlHistoriqueEpreuve };
 function renderEpreuve() {
-  const ep = state.ep, body = document.getElementById("esheet-body");
-  if (!ep) return;
+  const ep = state.ep, body = document.getElementById("main");
+  if (!ep || !state.route || state.route.nom !== "epreuve") return;
   if (!ep.C) {
-    document.getElementById("esheet-name").textContent = "Épreuve";
-    document.getElementById("esheet-sub").textContent = "";
-    body.innerHTML = `<div class="stack"><div class="vide">Épreuve introuvable dans les archives.</div></div>`;
+    titre("Épreuve");
+    body.innerHTML = `<div class="pg">${htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Épreuves", "#courses/epreuves"], ["Épreuve"]])}<div class="vide">Épreuve introuvable dans les archives.</div></div>`;
     return;
   }
-  const C = ep.C, cl = classeActuelle(C);
-  document.getElementById("esheet-name").textContent = nomRecent(C, ep.cle);
-  document.getElementById("esheet-sub").textContent = [cl, nomPays(C.pays)].filter(Boolean).join(" · ");
+  const C = ep.C, A = articleEpreuve(ep);
+  titre(nomRecent(C, ep.cle));
   const defs = ongletsEpreuve(ep);
-  if (!defs.length) { body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHeroEpreuve(ep)}</aside><div class="rmain">${htmlVide("Aucune édition terminée dans nos données.")}</div></div>`; return; }
+  if (!defs.length) { body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox, main: htmlVide("Aucune édition terminée dans nos données."), navbox: A.navbox }); return; }
   if (!defs.some(d => d.k === state.etab)) state.etab = defs[0].k;
-  body.innerHTML = `<div class="rpage"><aside class="rside">${htmlHeroEpreuve(ep)}</aside>
-    <div class="rmain">${tuilesEpreuve(ep)}${htmlOnglets(defs, state.etab, "etab", "etabs")}<div class="tabcontent" id="econtent" role="tabpanel"></div>
-    <div class="foot-credits">Résultats : UCI DataRide. Les éditions comptées sont celles de nos données (courses suivies par ce site).</div></div></div>`;
+  body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox, navbox: A.navbox,
+    main: `${tuilesEpreuve(ep)}${htmlOnglets(defs, state.etab, "etab", "etabs")}<div class="tabcontent" id="econtent" role="tabpanel"></div>
+    <div class="foot-credits">Résultats : UCI DataRide. Les éditions comptées sont celles de nos données (courses suivies par ce site).</div>` });
   majContenuEpreuve();
 }
 function majContenuEpreuve() {
@@ -2124,51 +2159,40 @@ function majContenuEpreuve() {
 function choisirOngletEpreuve(k) {
   state.etab = k; state.etabs[state.epreuveOuverte] = k;
   majContenuEpreuve();
-  const es = document.getElementById("esheet"), tabs = document.getElementById("etabs"), ec = document.getElementById("econtent");
+  const tabs = document.getElementById("etabs"), ec = document.getElementById("econtent");
   if (tabs && ec) {   // le contenu commence sous les onglets collants : on remonte si on a défilé plus bas
     const limite = tabs.getBoundingClientRect().bottom, haut = ec.getBoundingClientRect().top;
-    if (haut < limite) es.scrollTop += haut - limite - 8;
+    if (haut < limite) window.scrollBy(0, haut - limite - 8);
   }
 }
-async function ouvrirEpreuve(cle) {
-  const es = document.getElementById("esheet"), body = document.getElementById("esheet-body");
-  const nouveau = state.epreuveOuverte !== cle;
+async function pageEpreuve(r, tok) {
+  const main = document.getElementById("main"), cle = r.cle;
+  state.ctxPage = null;
+  const fil = n => htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Épreuves", "#courses/epreuves"], [n || "Épreuve"]]);
+  titre("Épreuve");
+  if (state.epreuveOuverte !== cle) state.etab = state.etabs[cle] || "palmares";
   state.epreuveOuverte = cle;
-  if (nouveau) state.etab = state.etabs[cle] || "palmares";
-  es.classList.add("open"); es.setAttribute("aria-hidden", "false");
-  majScroll();
-  if (nouveau) es.scrollTop = 0;
   if (!state.ep || state.ep.cle !== cle) {
     state.ep = null;
-    document.getElementById("esheet-name").textContent = "Épreuve";
-    document.getElementById("esheet-sub").textContent = "";
-    body.innerHTML = squeletteCoureur();
+    main.innerHTML = `<article class="art"><header class="art-head">${fil("")}</header>${squeletteCoureur()}</article>`;
     let ep;
     try { ep = await construireEpreuve(cle); }
     catch (e) {
       console.warn("Épreuve indisponible :", e.message);
-      if (parseHashEpreuve() !== cle) return;
-      body.innerHTML = messageErreur(`Épreuve indisponible (${e.message}).`, "retry");
+      if (tok !== state.routeTok) return;
+      main.innerHTML = `<div class="pg">${fil("")}${messageErreur(`Épreuve indisponible (${e.message}).`, "retry")}</div>`;
       return;
     }
-    if (parseHashEpreuve() !== cle) return;   // l'utilisateur est parti entre-temps
+    if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
     state.ep = ep;
   }
   renderEpreuve();
-}
-function ouvrirEpreuveLien(cle) {
-  state.ouvertParApp = true;
-  location.hash = `#epreuve/${encodeURIComponent(cle)}`;
+  finPage(tok);
 }
 
 /* ================== recherche globale (E2) ================== */
 /** Même normalisation que netutil.normalize (Python) : ASCII minuscule sans ponctuation, espaces simples. */
 function normIdx(t) { return String(t || "").normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
-function parseHashRecherche() {
-  const m = /^#recherche(?:\/(.*))?$/.exec(location.hash);
-  if (!m) return null;
-  try { return decodeURIComponent(m[1] || ""); } catch (e) { return m[1] || ""; }
-}
 function lettreRecherche(q) {
   const mots = normIdx(q).split(" ").filter(Boolean);
   if (!mots.length || mots.join("").length < 2) return null;
@@ -2233,112 +2257,569 @@ function selectionnerResultat(n) {
   inp.setAttribute("aria-activedescendant", L[S.sel].id);
   L[S.sel].scrollIntoView({ block: "nearest" });
 }
-async function choisirResultat(el) {
+function choisirResultat(el) {
   if (!el) return;
-  const t = el.dataset.sr, id = el.dataset.id, S = state.sr;
-  if (t === "c") { state.rctx = { archive: false, saison: state.current }; ouvrirCoureurLien(id); return; }
-  if (t === "r") ouvrirEpreuveLien(id);
+  const t = el.dataset.sr, id = el.dataset.id;
+  if (t === "c") go(hrefCoureur(id, null));
+  else if (t === "r") go(hrefEpreuve(id));
 }
-function ouvrirRecherche(q) {
-  const el = document.getElementById("search"), inp = document.getElementById("sr-q"), S = state.sr;
-  const deja = el.classList.contains("open");
-  el.classList.add("open"); el.setAttribute("aria-hidden", "false");
-  majScroll();
-  if (!deja || S.q !== q) { S.q = q; inp.value = q; majRecherche(); }
-  if (!deja) setTimeout(() => inp.focus(), 30);
+/* ================== routes et navigation ================== */
+/* Une route = une page plein écran dans #main ; l'état est dans le hash (retour arrière du navigateur cohérent).
+   #/ accueil · #courses[/<année>|/epreuves][?vue=avenir&cat=…] · #epreuve/<clé> · #course/<id>[/<étape|F>] · #equipes[/<année>] ·
+   #coureurs[?vue=francais&q=…] · #coureur/<id>[?s=a2023|c2027] · #classements[/uci[/<année>]|/fdj] · #recherche/<texte> */
+function hrefCourse(id, etape) { return `#course/${id}${etape !== "" && etape != null ? "/" + etape : ""}`; }
+function hrefCoureur(id, ctx) { return `#coureur/${id}${ctx && ctx !== `c${state.current}` ? "?s=" + ctx : ""}`; }
+function hrefEpreuve(cle) { return `#epreuve/${encodeURIComponent(cle)}`; }
+function qs(o) { const q = new URLSearchParams(); Object.entries(o).forEach(([k, v]) => { if (v != null && v !== "" && v !== "all") q.set(k, v); }); const s = q.toString(); return s ? "?" + s : ""; }
+function hrefCourses(o) {
+  const p = o.vue === "epreuves" ? "/epreuves" : o.saison != null ? `/${o.saison}` : "";
+  return `#courses${p}${qs(o.vue === "epreuves" ? { cat: o.cat, pays: o.pays, q: o.q } : { vue: o.vue === "avenir" ? "avenir" : "", cat: o.cat })}`;
 }
-function fermerRecherche() {
-  const el = document.getElementById("search");
-  if (!el.classList.contains("open")) return;
-  el.classList.remove("open"); el.setAttribute("aria-hidden", "true");
-  majScroll();
+function hrefEquipes(o) { return `#equipes${o.saison != null ? "/" + o.saison : ""}${qs({ cat: o.cat, q: o.q, tri: o.tri === "nom" ? "" : o.tri })}`; }
+function hrefCoureurs(o) {
+  return `#coureurs${o.vue === "francais" ? "?vue=francais" : qs({ q: o.q, nat: o.nat, act: o.act, eq: o.eq, tri: o.tri === "pert" ? "" : o.tri })}`;
 }
-function lancerRecherche() {   // depuis l'icône de l'en-tête
-  state.ouvertParApp = true;
-  location.hash = "#recherche";
+function hrefClassements(o) {
+  return o.sub === "fdj" ? "#classements/fdj" : `#classements/uci${o.saison != null ? "/" + o.saison : ""}${qs({ date: o.date })}`;
+}
+function go(href) { location.hash = href.replace(/^#/, ""); }
+/** Change l'état d'une page (filtre, saison) sans ajouter d'entrée à l'historique, puis redessine. */
+function remplacer(href) { history.replaceState(history.state, "", href); routeur({ garder: true }); }
+function dec(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+
+function parseRoute() {
+  const brut = location.hash.replace(/^#/, ""), i = brut.indexOf("?");
+  const chemin = i < 0 ? brut : brut.slice(0, i), q = new URLSearchParams(i < 0 ? "" : brut.slice(i + 1));
+  const seg = chemin.replace(/^\/+/, "").split("/"), an = s => /^\d{4}$/.test(s || "") ? +s : null;
+  switch (seg[0]) {
+    case "": return { nom: "accueil", famille: "accueil" };
+    case "courses": return { nom: "courses", famille: "courses", vue: seg[1] === "epreuves" ? "epreuves" : q.get("vue") === "avenir" ? "avenir" : "resultats",
+      saison: an(seg[1]), cat: q.get("cat") || "all", pays: q.get("pays") || "", q: q.get("q") || "" };
+    case "epreuve": { const cle = dec(chemin.replace(/^\/*epreuve\//, "")); return cle.length <= 200 && cle.includes("|") ? { nom: "epreuve", famille: "courses", cle } : { nom: "introuvable" }; }
+    case "course": return /^[\w-]+$/.test(seg[1] || "") && (seg[2] == null || /^\w+$/.test(seg[2])) ? { nom: "course", famille: "courses", id: seg[1], etape: seg[2] ?? null } : { nom: "introuvable" };
+    case "equipes": return { nom: "equipes", famille: "equipes", saison: an(seg[1]), cat: q.get("cat") || "all", q: q.get("q") || "", tri: q.get("tri") || "nom" };
+    case "coureurs": return { nom: "coureurs", famille: "coureurs", vue: q.get("vue") === "francais" ? "francais" : "annuaire", q: q.get("q") || "", nat: q.get("nat") || "",
+      act: q.get("act") || "", eq: q.get("eq") || "", tri: ["nom", "vic", "uci"].includes(q.get("tri")) ? q.get("tri") : "pert" };
+    case "coureur": return /^[\w-]+$/.test(seg[1] || "") ? { nom: "coureur", famille: "coureurs", id: seg[1], s: q.get("s") || "" } : { nom: "introuvable" };
+    case "classements": return { nom: "classements", famille: "classements", sub: seg[1] === "fdj" ? "fdj" : "uci", saison: an(seg[2]), date: q.get("date") || "" };
+    case "recherche": return { nom: "recherche", famille: "", q: dec(chemin.replace(/^\/*recherche\/?/, "")) };
+    default: return { nom: "introuvable", famille: "" };
+  }
+}
+function titre(t) { document.title = t ? `${t} · Courses cyclistes` : "Courses cyclistes"; }
+function majMenu(f) {
+  document.querySelectorAll("[data-nav]").forEach(a => { const on = a.dataset.nav === f; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+}
+const scrollMemo = new Map();
+function nouvelleCle() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+/** Fin du dessin d'une page : retour arrière / avance = position de défilement mémorisée. */
+function finPage(tok) {
+  if (tok === state.routeTok && state.restaurer != null) { window.scrollTo(0, state.restaurer); state.restaurer = null; }
+}
+const PAGES = { accueil: pageAccueil, courses: pageCourses, epreuve: pageEpreuve, course: pageCourse, equipes: pageEquipes, coureurs: pageCoureurs,
+  coureur: pageCoureur, classements: pageClassements, recherche: pageRecherche, introuvable: pageIntrouvable };
+function routeur(opts) {
+  const r = parseRoute();
+  state.route = r;
+  const tok = ++state.routeTok;
+  if (!(opts && opts.garder)) {
+    const k = history.state && history.state.k;
+    if (k != null) state.restaurer = scrollMemo.has(k) ? scrollMemo.get(k) : null;   // retour / avance : on revient où on était
+    else { state.restaurer = null; window.scrollTo(0, 0); history.replaceState({ k: nouvelleCle() }, "", location.href); }   // nouvelle page : en haut
+  }
+  majMenu(r.famille);
+  Promise.resolve().then(() => PAGES[r.nom](r, tok)).catch(err => {
+    console.error("Page en erreur :", err);
+    if (tok === state.routeTok) document.getElementById("main").innerHTML = `<div class="pg">${messageErreur(`Impossible d'afficher cette page (${err.message}).`, "retry")}</div>`;
+  });
+}
+async function pageIntrouvable(r, tok) {
+  titre("Page introuvable");
+  document.getElementById("main").innerHTML = `<div class="pg">${htmlCrumbs([["Accueil", "#/"], ["Page introuvable"]])}<div class="vide">Cette page n'existe pas.<br><a href="#/">Retour à l'accueil</a></div></div>`;
+  finPage(tok);
 }
 
-function routeur() {
-  const rid = parseHashCoureur(), h = parseHash(), q = parseHashRecherche(), ep = parseHashEpreuve();
-  if (q !== null) { fermerCoureur(); fermerEpreuve(); fermerFiche(); ouvrirRecherche(q); return; }
-  fermerRecherche();
-  if (rid) { ouvrirCoureur(rid); return; }      // la fiche course ou épreuve éventuelle reste ouverte dessous
-  fermerCoureur();
-  if (ep) { ouvrirEpreuve(ep); return; }        // la fiche d'édition éventuelle reste ouverte dessous
-  fermerEpreuve();
-  if (h) ouvrirCourse(h.id, h.etape); else fermerFiche();
+/* ================== éléments des pages de liste ================== */
+function enteteListe(titreP, sous) { return `<div><h1 class="pg-title">${esc(titreP)}</h1>${sous ? `<div class="pg-sub">${esc(sous)}</div>` : ""}</div>`; }
+function squeletteListe() { return `<div aria-busy="true">${'<div class="sk sk-line" style="height:52px;margin:8px 0;border-radius:14px"></div>'.repeat(5)}</div>`; }
+/** Liste déroulante dont chaque option porte une route complète (value = href) : un changement remplace la route (data-hsel). */
+function selectHref(id, label, options) {
+  return `<select class="sel" id="${esc(id)}" aria-label="${esc(label)}" data-hsel>${options.map(([h, t, s]) => `<option value="${esc(h)}"${s ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
 }
-window.addEventListener("hashchange", routeur);
+function chipHref(href, label, actif) { return `<button class="chip ${actif ? "active" : ""}" data-cgo="${esc(href)}">${esc(label)}</button>`; }
+function chipsCat(cats, actuel, hrefDe) {
+  return `<div class="chips">${chipHref(hrefDe("all"), "Toutes", actuel === "all")}${cats.map(c => chipHref(hrefDe(c), c, actuel === c)).join("")}</div>`;
+}
+function pagePlus(restant, action, pas) { return restant > 0 ? `<button class="more" data-action="${action}">Afficher ${Math.min(pas, restant)} de plus (${restant} restants)</button>` : ""; }
+async function chargerOptionnel(chemin) {   // 404 : null (fichier pas encore généré) ; autre erreur : exception
+  try { return await chargerArchive(chemin); } catch (e) { if (e.status === 404) return null; throw e; }
+}
+async function chargerEntIdx() {
+  if (state.entIdx === undefined) { try { state.entIdx = await chargerArchive("entites/index.json"); } catch (e) { state.entIdx = null; } }
+  return state.entIdx;
+}
+async function chargerCoureursIdx() { if (state.cIdx === undefined) state.cIdx = await chargerOptionnel("entites/coureurs/index.json"); return state.cIdx; }
+async function chargerEpreuvesIdx() { if (state.eIdx === undefined) state.eIdx = await chargerOptionnel("entites/courses/index.json"); return state.eIdx; }
+async function chargerEquipesIdx() { if (state.eqIdx === undefined) state.eqIdx = await chargerOptionnel("entites/equipes/index.json"); return state.eqIdx; }
+const MSG_INDEX = "Cette liste est générée chaque nuit ; elle sera disponible après le prochain passage des archives.";
 
-/** Saison imposée par un lien coureur (data-rctx « a2023 » / « c2027 ») ; null : contexte courant de la page. */
-function rctxDe(lien) {
-  const m = /^([ac])(\d{4})$/.exec(lien.dataset.rctx || "");
-  return m ? { archive: m[1] === "a", saison: +m[2] } : null;
+/* ================== accueil (portail) ================== */
+async function courseAVenir() {
+  const ys = (state.saisons && state.saisons.available) || [state.current];
+  const L = await Promise.all(ys.map(async y => {
+    try { if (!state.indexes[y]) state.indexes[y] = await chargerIndex(y); return (state.indexes[y].upcoming || []).map(u => ({ ...u, _y: y })); } catch (e) { return []; }
+  }));
+  return [].concat(...L).sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
 }
-function ouvrirCoureurLien(id) {
-  state.ouvertParApp = true;
-  location.hash = `#coureur/${id}`;
+function blocAvenir(L) {
+  const lignes = L.slice(0, 8).map(u => `<div class="mini"><span class="d">${esc(plage(u.start_date, u.end_date))}</span>
+    <span class="t"><b>${flag(u.flag, u.country)} ${esc(u.name)}</b></span>${catBadge(u.category, u.uci_class)}</div>`).join("");
+  const y = L.length ? L[0]._y : null;
+  return `<div class="blk-h"><h2>Courses à venir</h2><a href="${esc(hrefCourses({ saison: y, vue: "avenir" }))}">Calendrier</a></div>
+    ${L.length ? `<div class="minis">${lignes}</div>` : '<div class="empty card">Aucune course à venir dans le calendrier.</div>'}`;
 }
-function ouvrir(id, etape) {
-  state.ouvertParApp = true;
-  location.hash = `#course/${id}${etape !== "" && etape != null ? "/" + etape : ""}`;
+function blocUciAccueil(R) {
+  return `<div class="blk-h"><h2>Classement UCI</h2><a href="#classements/uci">Classement complet</a></div>
+    <div class="card table-card"><div class="group-title">${esc(R.name || "Classement UCI")}${R.date ? ` · au ${esc(dateLongue(R.date))}` : ""}</div>
+    <div class="rows">${R.rows.slice(0, 10).map(r => ligneUci(r, null)).join("")}</div></div>`;
 }
-function retour() {
-  if (state.ouvertParApp && history.length > 1) history.back();
-  else { history.replaceState(null, "", location.pathname + location.search); fermerRecherche(); fermerCoureur(); fermerEpreuve(); fermerFiche(); }
+function blocFrancais(ix) {
+  const T = ix.french_wins || [];
+  if (!T.length) return "";
+  const W = T.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5);
+  return `<div class="blk-h"><h2>Français à la une</h2><a href="${esc(hrefCoureurs({ vue: "francais" }))}">Les Français</a></div>
+    <div class="minis">${W.map(w => `<button class="mini" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
+      <span class="d">${esc(dateCourte(w.date))}</span><span class="t"><b>${esc(w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span>
+      <span class="badge fr">1er</span></button>`).join("")}</div>
+    <div class="count-line" style="margin-top:6px">${T.length} victoire${T.length > 1 ? "s" : ""} française${T.length > 1 ? "s" : ""} en ${esc(ix.season ?? state.current)}</div>`;
+}
+/** Victoires des années passées à la même date (jour et mois), d'après entites/courses : éditions UCI avec vainqueur, puis palmarès Wikidata de date complète. */
+async function ceJourLa() {
+  const E = await chargerEpreuvesIdx();
+  if (!E) return [];
+  const auj = new Date(), md = `${p2(auj.getMonth() + 1)}-${p2(auj.getDate())}`, an = auj.getFullYear();
+  const lettres = [...new Set(E.map(x => lettreId(x.k)))];
+  const F = await Promise.all(lettres.map(chargerCoursesEnt));
+  const out = [];
+  F.forEach(Fl => Object.entries(Fl).forEach(([cle, C]) => {
+    (C.editions || []).forEach(ed => {
+      const d = ed.end_date || ed.start_date, w = (ed.podium || []).find(p => p.rank === 1);
+      if (!d || !w || d.slice(5, 10) !== md || +d.slice(0, 4) >= an) return;
+      noterChemin(ed);
+      out.push({ an: +d.slice(0, 4), nom: nomRecent(C, cle), flag: C.flag, pays: C.pays, win: w, href: hrefCourse(ed.race_id, "") });
+    });
+    (C.historique || []).forEach(h => {
+      const w = h.statut === "ok" && h.vainqueur ? (h.podium || []).find(p => p.rang === 1) : null;
+      if (!w || !h.date || h.date.length !== 10 || h.date.slice(5) !== md || +h.date.slice(0, 4) >= an) return;
+      out.push({ an: +h.date.slice(0, 4), nom: nomRecent(C, cle), flag: C.flag, pays: C.pays, win: w, href: hrefEpreuve(cle) });
+    });
+  }));
+  return out.sort((a, b) => b.an - a.an || a.nom.localeCompare(b.nom, "fr")).slice(0, 6);
+}
+function blocCeJourLa(L) {
+  const auj = new Date();
+  return `<div class="blk-h"><h2>Ce jour-là</h2><span class="small muted">${auj.getDate() === 1 ? "1er" : auj.getDate()} ${MOIS[auj.getMonth()]}</span></div>
+    <div class="minis">${L.map(x => `<a class="mini" href="${esc(x.href)}"><span class="d">${esc(x.an)}</span>
+      <span class="t"><b>${flag(x.flag, nomPays(x.pays))} ${esc(x.nom)}</b><small>${esc(x.win.name || "Vainqueur")}</small></span><span class="badge">1er</span></a>`).join("")}</div>`;
+}
+function surVisible(el, f) {
+  if (!el) return;
+  if (!("IntersectionObserver" in window)) { f(); return; }
+  const o = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { o.disconnect(); f(); } }, { rootMargin: "400px" });
+  o.observe(el);
+}
+async function pageAccueil(r, tok) {
+  const main = document.getElementById("main"), ix = state.index;
+  titre(null);
+  state.ctxPage = `c${state.current}`;
+  const cours = (ix.races || []).filter(x => x.status === "in_progress");
+  const derniers = (ix.latest || []).slice(0, 6);
+  const enCours = cours.length ? `<section class="blk o1"><div class="blk-h"><h2>Courses en cours</h2><a href="#courses">Courses</a></div><div class="minis">${cours.map(x => `<button class="mini" data-open="${esc(x.id)}" data-stage="">
+      <span class="d">${esc(plage(x.start_date, x.end_date))}</span><span class="t"><b>${flag(x.flag, x.country)} ${esc(x.name)}</b><small>${x.race_type === "stage_race" ? `${esc(x.stages_done)}${x.stages_total ? "/" + esc(x.stages_total) : ""} étapes` : "course d'un jour"}${x.leader ? ` · leader : ${esc(x.leader.name)}` : ""}</small></span>
+      ${catBadge(x.category, x.uci_class)}</button>`).join("")}</div></section>` : "";
+  const fr = blocFrancais(ix);
+  main.innerHTML = `<h1 class="sr">Courses cyclistes : accueil</h1><div class="home">
+    <div class="col">${enCours}
+      <section class="blk o2"><div class="blk-h"><h2>Derniers résultats</h2><a href="#courses">Tous les résultats</a></div>
+        ${derniers.length ? `<div class="stack">${derniers.map(it => carteEtape(it, true)).join("")}</div>` : '<div class="empty card">Aucun résultat récent.</div>'}</section>
+      <section class="blk o6" id="b-jour"></section></div>
+    <div class="col"><section class="blk o3" id="b-venir"><div class="blk-h"><h2>Courses à venir</h2></div>${squeletteListe().replace(/5\)/, "3)")}</section>
+      <section class="blk o4" id="b-uci"><div class="blk-h"><h2>Classement UCI</h2></div>${squeletteListe()}</section>
+      ${fr ? `<section class="blk o5">${fr}</section>` : ""}</div>
+    <div class="home-count o7" id="b-compteurs"></div></div>`;
+  const remplit = (id, html) => { const b = document.getElementById(id); if (b && tok === state.routeTok) { if (html) b.innerHTML = html; else b.remove(); } };
+  courseAVenir().then(L => remplit("b-venir", blocAvenir(L)));
+  chargerRanking().then(R => remplit("b-uci", R && (R.rows || []).length ? blocUciAccueil(R) : ""));
+  chargerEntIdx().then(I => {
+    const c = I && I.compteurs;
+    remplit("b-compteurs", c ? [["coureurs", "coureurs"], ["courses", "épreuves"], ["editions", "éditions"], ["saisons", "saisons"]].filter(([k]) => c[k] != null)
+      .map(([k, l]) => `<b>${esc(num(c[k]))}</b> ${l}`).join(" · ") : "");
+  });
+  surVisible(document.getElementById("b-jour"), () => ceJourLa().then(L => { if (tok === state.routeTok) remplit("b-jour", L.length ? blocCeJourLa(L) : ""); }).catch(() => remplit("b-jour", "")));
+  finPage(tok);
+}
+
+/* ================== courses : saisons (résultats, à venir) et épreuves ================== */
+function listeSaisons() {   // récentes d'abord : [{y, cal (Calendrier), complete}]
+  const cal = (state.saisons && state.saisons.available) || [state.current];
+  const out = cal.map(y => ({ y, cal: true, complete: true }));
+  (((state.archIdx && state.archIdx.seasons) || [])).forEach(s => { if (!cal.includes(s.season)) out.push({ y: s.season, cal: false, complete: !!s.complete }); });
+  return out.sort((a, b) => b.y - a.y);
+}
+async function chargerIndexSaison(y) {
+  if (((state.saisons && state.saisons.available) || []).includes(y)) {
+    if (!state.indexes[y]) state.indexes[y] = await chargerIndex(y);
+    return state.indexes[y];
+  }
+  return chargerIndexArchive(y);
+}
+function vuesCourses(r, y, info, nR, nA) {
+  const rr = { ...r, saison: y, cat: "all" };
+  return `<div class="chips">${chipHref(hrefCourses({ ...rr, vue: "resultats" }), `Résultats${nR != null ? ` (${nR})` : ""}`, r.vue === "resultats")}
+    ${info && info.cal ? chipHref(hrefCourses({ ...rr, vue: "avenir" }), `À venir${nA != null ? ` (${nA})` : ""}`, r.vue === "avenir") : ""}
+    ${chipHref(hrefCourses({ vue: "epreuves" }), "Épreuves", false)}</div>`;
+}
+async function pageCourses(r, tok) {
+  const main = document.getElementById("main");
+  state.ctxPage = null;
+  if (r.vue === "epreuves") { await pageEpreuves(r, tok); return; }
+  titre("Courses");
+  main.innerHTML = `<div class="pg">${enteteListe("Courses")}${squeletteListe()}</div>`;
+  await chargerArchivesIndex();
+  if (tok !== state.routeTok) return;
+  const saisons = listeSaisons(), y = r.saison != null ? r.saison : state.current, info = saisons.find(s => s.y === y);
+  if (!info) { main.innerHTML = `<div class="pg">${enteteListe("Courses")}<div class="vide">Saison ${esc(y)} introuvable.</div></div>`; return; }
+  state.ctxPage = ctxSaison(y);
+  const selSaison = selectHref("cs-saison", "Saison", saisons.map(s => [hrefCourses({ saison: s.y, vue: "resultats" }), `${s.y}${s.complete ? "" : " (collecte en cours)"}`, s.y === y]));
+  titre(`Courses ${y}`);
+  let ix;
+  try { ix = await chargerIndexSaison(y); }
+  catch (e) {
+    if (tok !== state.routeTok) return;
+    console.error("Saison", y, e);
+    main.innerHTML = `<div class="pg">${enteteListe("Courses")}${selSaison}${messageErreur(`Impossible de charger la saison ${y}.`, "retry")}</div>`;
+    return;
+  }
+  if (tok !== state.routeTok) return;
+  const r2 = { ...r, saison: y, vue: r.vue === "avenir" && info.cal ? "avenir" : "resultats" };
+  const rs = ix.races || [], up = (ix.upcoming || []).map(u => ({ ...u, _futur: true })), avenir = r2.vue === "avenir";
+  let tout = avenir ? up.sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""))
+    : rs.map(x => ({ ...x, _futur: false })).sort((a, b) => (b.start_date || "").localeCompare(a.start_date || "") || (a.name || "").localeCompare(b.name || ""));
+  const f = r2.cat;
+  if (f !== "all") tout = tout.filter(x => x.category === f);
+  let liste;
+  if (tout.length) liste = listeCourses(tout);
+  else {
+    const vide = f !== "all" ? "Aucune course dans cette catégorie." : !avenir ? "Aucune course de cette saison n'a encore été courue."
+      : saisonTerminee(y, ix) ? "Toutes les courses de la saison ont été courues." : "Calendrier pas encore publié.";
+    liste = `<div class="empty card">${vide}</div>`;
+  }
+  const note = !info.cal && !ix.complete ? `<div class="arch-note">Collecte en cours : cette saison est incomplète, des courses s'ajoutent à chaque passage.</div>` : "";
+  const latest = info.cal && !avenir && f === "all" && (ix.latest || []).length
+    ? `<details class="nc"><summary>Derniers résultats d'étape (${ix.latest.length})</summary><div class="stack" style="margin-top:8px">${ix.latest.map(it => carteEtape(it, false)).join("")}</div></details>` : "";
+  const fin = !info.cal && ix.complete ? `<div class="nb-row"><a class="nb-a" href="${esc(hrefClassements({ sub: "uci", saison: y }))}">Classement UCI de fin de saison ${esc(y)}</a></div>` : "";
+  main.innerHTML = `<div class="pg">${enteteListe("Courses", `Saison ${y}`)}
+    <div class="tools">${selSaison}${vuesCourses(r2, y, info, rs.length, up.length)}${chipsCat(CATS, f, c => hrefCourses({ ...r2, cat: c }))}</div>
+    ${note}${fin}${latest}${avenir ? "" : f === "all" ? blocVictoiresFr(ix) : ""}
+    <div>${liste}</div></div>`;
+  finPage(tok);
+}
+
+/** Épreuves (liste de entites/courses/index.json) : filtres catégorie et pays, recherche, tri par nom. */
+function catEpreuve(e) { return e.cat || categorieClasse(e.cl); }
+function filtrerEpreuves(r) {
+  const q = normIdx(r.q);
+  return (state.eIdx || []).filter(e => {
+    if (r.cat !== "all" && catEpreuve(e) !== r.cat) return false;
+    if (r.pays && e.pays !== r.pays) return false;
+    if (q) { if (e._n === undefined) e._n = normIdx(e.n); if (!e._n.includes(q)) return false; }
+    return true;
+  }).sort((a, b) => (a.n || "").localeCompare(b.n || "", "fr"));
+}
+function rowEpreuve(e) {
+  const cat = catEpreuve(e), s = e.s || [], ys = s.length ? (s[0] === s[1] ? String(s[0]) : `${s[0]}–${s[1]}`) : "";
+  const sm = [e.type && TYPES_EPREUVE[e.type] ? TYPES_EPREUVE[e.type] : "", ys, nomPays(e.pays)].filter(Boolean).join(" · ");
+  return `<a class="crow${e.pays === "FRA" ? " fr" : ""}" href="${esc(hrefEpreuve(e.k))}">${flag(e.f, nomPays(e.pays))}
+    <div><div class="nm">${esc(e.n)}${cat ? ` ${catBadge(cat, e.cl)}` : ""}</div><div class="sm">${esc(sm)}</div></div>
+    <div class="rt"><b>${esc(e.ed)}</b>édition${e.ed > 1 ? "s" : ""}</div></a>`;
+}
+function majListeEpreuves() {
+  const box = document.getElementById("ep-list"); if (!box) return;
+  const r = state.route, L = filtrerEpreuves(r), vis = L.slice(0, state.limitListe);
+  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEpreuve).join("")}</div>` : '<div class="empty card">Aucune épreuve trouvée.</div>') + pagePlus(L.length - vis.length, "ep-more", 100);
+  document.getElementById("ep-count").textContent = `${L.length} épreuve${L.length > 1 ? "s" : ""}`;
+}
+async function pageEpreuves(r, tok) {
+  const main = document.getElementById("main");
+  titre("Épreuves");
+  main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}${squeletteListe()}</div>`;
+  let E;
+  try { [E] = await Promise.all([chargerEpreuvesIdx(), chargerPays()]); }
+  catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}${messageErreur(`Liste indisponible (${e.message}).`, "retry")}</div>`; return; }
+  if (tok !== state.routeTok) return;
+  const sel0 = { ...r, vue: "resultats", saison: state.current };
+  const vues = `<div class="chips">${chipHref(hrefCourses(sel0), "Résultats", false)}${(state.saisons.available || []).length ? chipHref(hrefCourses({ ...sel0, vue: "avenir" }), "À venir", false) : ""}${chipHref(hrefCourses({ vue: "epreuves" }), "Épreuves", true)}</div>`;
+  if (!E) { main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}<div class="tools">${vues}</div><div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
+  state.limitListe = 100;
+  const cats = CATS.filter(c => E.some(e => catEpreuve(e) === c));
+  const pays = [...new Set(E.map(e => e.pays).filter(Boolean))].sort((a, b) => nomPays(a).localeCompare(nomPays(b), "fr"));
+  main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}
+    <div class="tools">${vues}
+      <input class="search" id="ep-q" type="search" placeholder="Rechercher une épreuve" aria-label="Rechercher une épreuve" value="${esc(r.q)}" autocomplete="off">
+      ${chipsCat(cats, r.cat, c => hrefCourses({ ...r, cat: c }))}
+      ${selectHref("ep-pays", "Pays", [[hrefCourses({ ...r, pays: "" }), "Tous les pays", !r.pays]].concat(pays.map(p => [hrefCourses({ ...r, pays: p }), nomPays(p), r.pays === p])))}</div>
+    <div class="count-line" id="ep-count"></div><div id="ep-list"></div></div>`;
+  majListeEpreuves();
+  finPage(tok);
+}
+
+/* ================== équipes (R1 : liste des équipes-saisons, sans article) ================== */
+function filtrerEquipes(r, y) {
+  const q = normIdx(r.q);
+  const L = (state.eqIdx || []).filter(e => e.season === y && (r.cat === "all" || (r.cat === "Sélection" ? e.nationale : e.cat === r.cat)) && (!q || normIdx(e.name).includes(q)));
+  if (r.tri === "vic") return L.sort((a, b) => (b.wins || 0) - (a.wins || 0) || a.name.localeCompare(b.name, "fr"));
+  if (r.tri === "cou") return L.sort((a, b) => (b.riders || 0) - (a.riders || 0) || a.name.localeCompare(b.name, "fr"));
+  return L.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+}
+function rowEquipe(e) {
+  return `<div class="crow">${e.pays ? drapeauIso3(e.pays) : '<span class="flag noimg"></span>'}
+    <div><div class="nm">${esc(e.name)}${e.cat ? ` <span class="badge cat-${esc(e.cat)}">${esc(e.cat)}</span>` : ""}${e.nationale ? ' <span class="badge fr">Sélection nationale</span>' : ""}</div>
+      <div class="sm">${esc([e.pays ? nomPays(e.pays) : ""].filter(Boolean).join(""))}</div></div>
+    <div class="rt"><b>${esc(e.wins || 0)} vic.</b>${esc(e.riders || 0)} coureur${(e.riders || 0) > 1 ? "s" : ""}</div></div>`;
+}
+function majListeEquipes() {
+  const box = document.getElementById("eq-list"); if (!box) return;
+  const r = state.route, L = filtrerEquipes(r, r.saison), vis = L.slice(0, state.limitListe);
+  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEquipe).join("")}</div>` : '<div class="empty card">Aucune équipe trouvée.</div>') + pagePlus(L.length - vis.length, "eq-more", 100);
+  document.getElementById("eq-count").textContent = `${L.length} équipe${L.length > 1 ? "s" : ""}`;
+}
+async function pageEquipes(r, tok) {
+  const main = document.getElementById("main");
+  titre("Équipes"); state.ctxPage = null;
+  main.innerHTML = `<div class="pg">${enteteListe("Équipes")}${squeletteListe()}</div>`;
+  let E;
+  try { [E] = await Promise.all([chargerEquipesIdx(), chargerPays()]); }
+  catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${enteteListe("Équipes")}${messageErreur(`Liste indisponible (${e.message}).`, "retry")}</div>`; return; }
+  if (tok !== state.routeTok) return;
+  if (!E || !E.length) { main.innerHTML = `<div class="pg">${enteteListe("Équipes")}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
+  const ys = [...new Set(E.map(e => e.season))].sort((a, b) => b - a);
+  const y = ys.includes(r.saison) ? r.saison : ys.includes(state.current) ? state.current : ys[0];
+  const r2 = { ...r, saison: y };
+  state.route = r2;
+  titre(`Équipes ${y}`);
+  state.limitListe = 100;
+  const cats = ["WT", "Pro", "Cont"].filter(c => E.some(e => e.season === y && e.cat === c)).concat(E.some(e => e.season === y && e.nationale) ? ["Sélection"] : []);
+  main.innerHTML = `<div class="pg">${enteteListe("Équipes", `Saison ${y}`)}
+    <div class="tools">${selectHref("eq-saison", "Saison", ys.map(s => [hrefEquipes({ ...r2, saison: s, cat: "all" }), String(s), s === y]))}
+      <input class="search" id="eq-q" type="search" placeholder="Rechercher une équipe" aria-label="Rechercher une équipe" value="${esc(r.q)}" autocomplete="off">
+      ${chipsCat(cats, r2.cat, c => hrefEquipes({ ...r2, cat: c }))}
+      ${selectHref("eq-tri", "Tri", [["nom", "Nom"], ["vic", "Victoires"], ["cou", "Coureurs"]].map(([k, l]) => [hrefEquipes({ ...r2, tri: k }), `Tri : ${l}`, r2.tri === k]))}</div>
+    <div class="count-line" id="eq-count"></div><div id="eq-list"></div></div>`;
+  majListeEquipes();
+  finPage(tok);
+}
+
+/* ================== coureurs : annuaire et Français ================== */
+/** Ordre de la liste (calculé une fois par tri) : « pertinence » = actifs d'abord, puis meilleur rang UCI, puis victoires, puis nom ; « nom » = ordre du fichier (identifiant : nom de famille d'abord). */
+/** Actif = présent dans la saison en cours ou la suivante (les données de la toute dernière saison, en intersaison, ne couvrent que quelques courses). */
+function actif(c) { return !!(c.s && c.s[1] >= state.current); }
+function ordreCoureurs(tri) {
+  state.cOrd = state.cOrd || {};
+  if (!state.cOrd[tri]) {
+    const L = state.cIdx;
+    const parUci = (a, b) => (a.uci == null) - (b.uci == null) || (a.uci ?? 0) - (b.uci ?? 0);
+    if (tri === "vic") state.cOrd[tri] = L.slice().sort((a, b) => (b.v || 0) - (a.v || 0));
+    else if (tri === "uci") state.cOrd[tri] = L.slice().sort(parUci);
+    else if (tri === "nom") state.cOrd[tri] = L;
+    else state.cOrd[tri] = L.slice().sort((a, b) => (actif(b) - actif(a)) || parUci(a, b) || (b.v || 0) - (a.v || 0));   // stable : à égalité, ordre du fichier (nom)
+  }
+  return state.cOrd[tri];
+}
+function filtrerCoureurs(r) {
+  const mots = normIdx(r.q).split(" ").filter(Boolean), eq = normIdx(r.eq);
+  return ordreCoureurs(r.tri).filter(c => {
+    if (r.nat && c.nat !== r.nat) return false;
+    if (r.act === "1" && !actif(c)) return false;
+    if (r.act === "0" && actif(c)) return false;
+    if (eq) { if (c._e === undefined) c._e = normIdx(c.eq || ""); if (!c._e.includes(eq)) return false; }
+    if (mots.length) { if (c._n === undefined) c._n = normIdx(c.n); if (!mots.every(w => c._n.includes(w))) return false; }
+    return true;
+  });
+}
+function rowCoureur(c, tri) {
+  const s = c.s || [], ys = s.length ? (s[0] === s[1] ? String(s[0]) : `${s[0]}–${s[1]}`) : "";
+  const b = tri === "uci" && c.uci != null ? `UCI ${c.uci}` : c.v ? `${c.v} vic.` : "";
+  return `<a class="crow${c.fr ? " fr" : ""}" href="${esc(hrefCoureur(c.id, null))}">${flag(c.f, nomPays(c.nat))}
+    <div><div class="nm">${esc(c.n)}</div><div class="sm">${esc(c.eq || "")}</div></div><div class="rt">${b ? `<b>${esc(b)}</b>` : ""}${esc(ys)}</div></a>`;
+}
+function majListeCoureurs() {
+  const box = document.getElementById("co-list"); if (!box) return;
+  const r = state.route, L = filtrerCoureurs(r), vis = L.slice(0, state.limitListe);
+  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(c => rowCoureur(c, r.tri)).join("")}</div>` : '<div class="empty card">Aucun coureur trouvé.</div>') + pagePlus(L.length - vis.length, "co-more", 100);
+  document.getElementById("co-count").textContent = `${num(L.length)} coureur${L.length > 1 ? "s" : ""}`;
+}
+async function pageCoureurs(r, tok) {
+  const main = document.getElementById("main");
+  state.ctxPage = `c${state.current}`;
+  const francais = r.vue === "francais";
+  titre(francais ? "Coureurs français" : "Coureurs");
+  const tete = `${enteteListe("Coureurs")}<div class="subtabs clsubs">${["annuaire", "francais"].map(k =>
+    `<button class="subtab ${(francais ? "francais" : "annuaire") === k ? "active" : ""}" data-cgo="${esc(hrefCoureurs({ vue: k }))}">${k === "annuaire" ? "Annuaire" : "Français"}</button>`).join("")}</div>`;
+  main.innerHTML = `<div class="pg">${tete}${squeletteListe()}</div>`;
+  if (francais) {
+    if (state.ridersCl === undefined) state.ridersCl = await chargerRidersCourant();
+    if (tok !== state.routeTok) return;
+    main.innerHTML = `<div class="pg">${tete}${renderFrancais()}</div>`;
+    finPage(tok);
+    return;
+  }
+  try { await Promise.all([chargerCoureursIdx(), chargerPays()]); }
+  catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${tete}${messageErreur(`Annuaire indisponible (${e.message}).`, "retry")}</div>`; return; }
+  if (tok !== state.routeTok) return;
+  if (!state.cIdx) { main.innerHTML = `<div class="pg">${tete}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
+  state.limitListe = 100;
+  const N = new Map();
+  state.cIdx = state.cIdx.filter(c => /[\p{L}\p{N}]/u.test(c.n || ""));
+  state.cIdx.forEach(c => { if (c.nat) N.set(c.nat, (N.get(c.nat) || 0) + 1); });
+  const nats = [...N.keys()].sort((a, b) => nomPays(a).localeCompare(nomPays(b), "fr"));
+  const bascule = (cle, val) => hrefCoureurs({ ...r, [cle]: r[cle] === val ? "" : val });
+  main.innerHTML = `<div class="pg">${tete}
+    <div class="tools"><input class="search" id="co-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(r.q)}" autocomplete="off">
+      <div class="chips">${chipHref(bascule("nat", "FRA"), "Français", r.nat === "FRA")}${chipHref(bascule("act", "1"), "Actifs", r.act === "1")}${chipHref(bascule("act", "0"), "Anciens", r.act === "0")}</div>
+      <div class="two">${selectHref("co-nat", "Nationalité", [[hrefCoureurs({ ...r, nat: "" }), "Toutes nationalités", !r.nat]].concat(nats.map(n => [hrefCoureurs({ ...r, nat: n }), `${nomPays(n)} (${N.get(n)})`, r.nat === n])))}
+        ${selectHref("co-tri", "Tri", [["pert", "Pertinence"], ["nom", "Nom"], ["vic", "Victoires"], ["uci", "Meilleur rang UCI"]].map(([k, l]) => [hrefCoureurs({ ...r, tri: k }), `Tri : ${l}`, r.tri === k]))}</div>
+      <input class="search" id="co-eq" type="search" placeholder="Équipe (dernière saison connue)" aria-label="Filtrer par équipe" value="${esc(r.eq)}" autocomplete="off"></div>
+    <div class="count-line" id="co-count"></div><div id="co-list"></div></div>`;
+  majListeCoureurs();
+  finPage(tok);
+}
+
+/* ================== classements : UCI (actuel, fin de saison, instantanés) et FDJ United Series ================== */
+let mapCoureurs = null;
+async function mapCoureursIdx() {
+  if (mapCoureurs) return mapCoureurs;
+  const L = await chargerCoureursIdx();
+  if (!L) return null;
+  mapCoureurs = new Map(L.map(c => [c.id, c]));
+  return mapCoureurs;
+}
+/** Dernier recours pour un coureur absent de l'annuaire : l'identifiant (nom de famille, prénom, sans la date de naissance). */
+function nomDepuisId(id) { return id.replace(/-\d{8}$/, "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" "); }
+async function donneesUci(r) {   // { titre, rows, ids, selecteurs } pour la saison et la date de la route
+  const A = state.archIdx, info = A && (A.seasons || []).find(s => s.season === r.saison);
+  if (r.saison == null) {
+    const R = await chargerRanking();
+    if (state.ridersCl === undefined) state.ridersCl = await chargerRidersCourant();
+    if (!R || !(R.rows || []).length) return { vide: "Classement UCI indisponible." };
+    return { titre: `${R.name || "Classement UCI"}${R.date ? ` · au ${dateLongue(R.date)}` : ""}`, rows: R.rows, ids: (state.ridersCl && state.ridersCl.riders) || {} };
+  }
+  const y = r.saison, I = await chargerEntIdx();
+  const S = I && (I.saisons || []).includes(y) ? await chargerOptionnel(`entites/saisons/${y}.json`) : null;
+  const insts = ((S && S.instantanes_uci) || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  const fin = info && info.complete ? await chargerOptionnel(`${y}/ranking.json`) : null;
+  const dates = (fin && (fin.rows || []).length ? [["fin", `Fin de saison${fin.date ? ` (${dateLongue(fin.date)})` : ""}`]] : [])
+    .concat(insts.map(x => [x.date, `${dateLongue(x.date)}${(x.raisons || []).length ? " · " + x.raisons.join(", ") : ""}`]));
+  if (!dates.length) return { vide: `Aucun classement UCI disponible pour la saison ${y}.`, dates: [] };
+  const date = dates.some(d => d[0] === r.date) ? r.date : dates[0][0];
+  if (date === "fin") return { titre: `${fin.name || "Classement UCI"} · fin de saison ${y}`, rows: fin.rows, ids: null, dates, date };
+  const [D, M] = await Promise.all([chargerArchive(`entites/classements/${y}/${date}.json`), mapCoureursIdx().catch(() => null)]);
+  const rows = (D.lignes || []).map(([rk, id, pts, tc]) => {
+    const c = M && id ? M.get(id) : null;
+    return { rank: rk, rider_id: id, name: c ? c.n : id ? nomDepuisId(id) : "Coureur inconnu", nationality: c ? c.nat : null, team: tc || "", points: pts, previous_rank: null };
+  });
+  return { titre: `${D.nom || "Classement UCI"} · au ${dateLongue(D.date || date)}`, rows, ids: id => !!(M && M.has(id)), dates, date };
+}
+async function pageClassements(r, tok) {
+  const main = document.getElementById("main");
+  state.ctxPage = null;
+  const fdj = r.sub === "fdj";
+  titre(fdj ? "Classement FDJ United Series" : "Classement UCI");
+  const bar = `<div class="subtabs clsubs"><a class="subtab ${!fdj ? "active" : ""}" href="#classements/uci">UCI</a><a class="subtab ${fdj ? "active" : ""}" href="#classements/fdj">FDJ United Series</a></div>`;
+  const tete = enteteListe("Classements");
+  if (fdj) { main.innerHTML = `<div class="pg">${tete}${bar}${renderFdj()}</div>`; finPage(tok); return; }
+  main.innerHTML = `<div class="pg">${tete}${bar}${squeletteListe()}</div>`;
+  await chargerArchivesIndex();
+  let D;
+  try { D = await donneesUci(r); }
+  catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${tete}${bar}${messageErreur(`Classement indisponible (${e.message}).`, "retry")}</div>`; return; }
+  if (tok !== state.routeTok) return;
+  const ys = listeSaisons().map(s => s.y);
+  const sels = [selectHref("cl-saison", "Saison", [[hrefClassements({ sub: "uci" }), "Classement actuel", r.saison == null]].concat(ys.map(y => [hrefClassements({ sub: "uci", saison: y }), `Saison ${y}`, r.saison === y])))];
+  if (D.dates && D.dates.length) sels.push(selectHref("cl-date", "Date du classement", D.dates.map(([d, l]) => [hrefClassements({ sub: "uci", saison: r.saison, date: d }), l, d === D.date])));
+  state.uc.limit = 100;
+  state.clVue = D.vide ? null : { rows: D.rows, ids: D.ids };
+  main.innerHTML = `<div class="pg">${tete}${bar}<div class="tools">${sels.join("")}</div>${D.vide ? `<div class="vide">${esc(D.vide)}</div>` : blocUci(D.titre)}</div>`;
+  if (!D.vide) majListeUci();
+  finPage(tok);
+}
+
+/* ================== recherche globale (page) ================== */
+async function pageRecherche(r, tok) {
+  const main = document.getElementById("main"), S = state.sr;
+  state.ctxPage = null;
+  titre(r.q.trim() ? `Recherche : ${r.q.trim()}` : "Recherche");
+  main.innerHTML = `<div class="pg">${enteteListe("Recherche")}
+    <input class="search sr-input" id="sr-q" type="search" placeholder="Coureur, équipe, course…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Rechercher" role="combobox" aria-expanded="true" aria-controls="sr-body" value="${esc(r.q)}">
+    <div class="sr-body" id="sr-body" role="listbox" aria-label="Résultats"></div></div>`;
+  S.q = r.q;
+  majRecherche();
+  if (!r.q) document.getElementById("sr-q").focus();
+  finPage(tok);
 }
 
 /* ================== événements (délégation) ================== */
 document.addEventListener("click", e => {
   const lien = e.target.closest("[data-rider]");
-  if (lien) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); return; }
+  if (lien) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); return; }
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
+  if (t.dataset.cgo) { remplacer(t.dataset.cgo); return; }
   if (t.dataset.rtab) { choisirOngletCoureur(t.dataset.rtab); return; }
   if (t.dataset.etab) { choisirOngletEpreuve(t.dataset.etab); return; }
-  if (t.dataset.epreuve) { ouvrirEpreuveLien(t.dataset.epreuve); return; }
+  if (t.dataset.epreuve) { go(hrefEpreuve(t.dataset.epreuve)); return; }
   if (t.dataset.pcat) { state.rpal.cat = t.dataset.pcat; majContenuCoureur(); return; }
-  if (t.dataset.calsaison) { changerSaisonCal(+t.dataset.calsaison); return; }
-  if (t.dataset.tab) { state.tab = t.dataset.tab; archiveDansUrl(); renderMain(); preparerOnglet(); window.scrollTo(0, 0); return; }
-  if (t.dataset.clsub) { state.clSub = t.dataset.clsub; renderMain(); preparerOnglet(); return; }
-  if (t.dataset.acat) { state.archCat = t.dataset.acat; renderMain(); return; }
-  if (t.dataset.cat) { state.filtreCat = t.dataset.cat; renderMain(); return; }
-  if (t.dataset.calvue) { state.calVue = t.dataset.calvue; renderMain(); return; }
   if (t.dataset.sr) { choisirResultat(t); return; }
-  if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; ouvrir(t.dataset.open, t.dataset.stage); return; }
+  if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; go(hrefCourse(t.dataset.open, t.dataset.stage)); return; }
   if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
     state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
   }
   if (t.dataset.sub) { state.sub = t.dataset.sub; state.limit = 50; renderFiche(); return; }
   const a = t.dataset.action;
-  if (a === "back") retour();
-  else if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
+  if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
   else if (a === "more") { state.limit += 50; document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
   else if (a === "uc-more") { state.uc.limit += 100; majListeUci(); }
   else if (a === "uc-fr") { state.uc.fr = !state.uc.fr; state.uc.limit = 100; t.setAttribute("aria-pressed", state.uc.fr); majListeUci(); }
-  else if (a === "retry-cal") { delete state.indexes["_err" + state.calSaison]; cache.delete(`index-${state.calSaison}.json`); renderMain(); preparerOnglet(); }
-  else if (a === "retry-archidx") { state.archIdx = undefined; state.archErr = null; cache.delete("archives/index.json"); renderMain(); preparerOnglet(); }
-  else if (a === "retry-arch") { delete state.archIndexes["_err" + state.archSaison]; cache.delete(`archives/${state.archSaison}/index.json`); renderMain(); preparerOnglet(); }
-  else if (a === "retry") { routeur(); }
-  else if (a === "search") lancerRecherche();
+  else if (a === "co-more") { state.limitListe += 100; majListeCoureurs(); }
+  else if (a === "ep-more") { state.limitListe += 100; majListeEpreuves(); }
+  else if (a === "eq-more") { state.limitListe += 100; majListeEquipes(); }
+  else if (a === "retry") { routeur({ garder: true }); }
+  else if (a === "search") { if (state.route && state.route.nom === "recherche") document.getElementById("sr-q").focus(); else go("#recherche"); }
   else if (a === "sr-more") { state.sr.tout[t.dataset.grp] = true; document.getElementById("sr-body").innerHTML = htmlResultats(); }
   else if (a === "retry-sr") { cache.clear(); majRecherche(); }
   else if (a === "pal-vic") { state.rpal.vic = !state.rpal.vic; majContenuCoureur(); }
   else if (a === "retry-index") { cache.clear(); init(); }
 });
-document.addEventListener("change", e => {
-  if (e.target.id !== "arch-sel") return;
-  state.archSaison = parseInt(e.target.value, 10); state.archCat = "all";
-  archiveDansUrl(); renderMain(); preparerOnglet();
-});
+document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.hsel != null) remplacer(e.target.value); });
+/** Champ de texte d'une page de liste : met à jour la route (sans historique) et la liste, sans redessiner le champ. */
+function saisie(champ, maj) {
+  const r = state.route, h = { "co-q": ["q", hrefCoureurs], "co-eq": ["eq", hrefCoureurs], "ep-q": ["q", hrefCourses], "eq-q": ["q", hrefEquipes] }[champ.id];
+  if (!h) return false;
+  r[h[0]] = champ.value;
+  history.replaceState(history.state, "", h[1](r));
+  state.limitListe = 100;
+  ({ "co-q": majListeCoureurs, "co-eq": majListeCoureurs, "ep-q": majListeEpreuves, "eq-q": majListeEquipes })[champ.id]();
+  return true;
+}
 document.addEventListener("input", e => {
   if (e.target.id === "sr-q") {
     state.sr.q = e.target.value;
     const q = state.sr.q.trim();
-    history.replaceState(history.state, "", location.pathname + location.search + "#recherche" + (q ? "/" + encodeURIComponent(q) : ""));
+    history.replaceState(history.state, "", "#recherche" + (q ? "/" + encodeURIComponent(q) : ""));
+    titre(q ? `Recherche : ${q}` : "Recherche");
     majRecherche(); return;
   }
-  if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; majListeUci(); }
+  if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; majListeUci(); return; }
+  saisie(e.target);
 });
 document.addEventListener("keydown", e => {
   if (e.target && e.target.id === "sr-q") {
@@ -2346,32 +2827,30 @@ document.addEventListener("keydown", e => {
     if (e.key === "ArrowUp") { e.preventDefault(); selectionnerResultat(state.sr.sel < 0 ? -1 : state.sr.sel - 1); return; }
     if (e.key === "Enter") { e.preventDefault(); const L = itemsNav(); choisirResultat(L[state.sr.sel >= 0 ? state.sr.sel : 0]); return; }
   }
-  if (e.key === "Escape" && (parseHash() || parseHashCoureur() || parseHashEpreuve() || parseHashRecherche() !== null)) retour();
   const lien = e.target.closest && e.target.closest("[data-rider]");
-  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); state.rctx = rctxDe(lien); ouvrirCoureurLien(lien.dataset.rider); }
+  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); }
 });
+window.addEventListener("scroll", () => { const k = history.state && history.state.k; if (k != null) scrollMemo.set(k, window.scrollY); }, { passive: true });
+
 /* ================== démarrage ================== */
-/* ================== saisons ================== */
 async function chargerAvecRepli(chemin, repli) {
   try { return await charger(chemin); } catch (e) { if (!repli) throw e; return await charger(repli); }
-}
-function saisonDansUrl() {
-  const u = new URL(location.href);
-  u.searchParams.set("saison", state.calSaison);
-  history.replaceState(history.state, "", u.pathname + u.search + u.hash);
 }
 async function chargerIndex(saison) {
   const S = state.saisons;
   if (!S) return charger("index.json");
   return chargerAvecRepli(`index-${saison}.json`, saison === S.current ? "index.json" : null);
 }
-function changerSaisonCal(y) {
-  if (y === state.calSaison) return;
-  state.calSaison = y; state.filtreCat = "all"; state.calVue = "resultats";
-  saisonDansUrl();
-  renderMain(); preparerOnglet();
+/** Anciennes adresses : ?archive=2023 et ?saison=2026 (onglets Archives et Calendrier) deviennent #courses/<année>. */
+function redirigerAncienneUrl() {
+  const u = new URL(location.href);
+  if (!u.searchParams.has("archive") && !u.searchParams.has("saison")) return;
+  const an = parseInt(u.searchParams.get("archive") || u.searchParams.get("saison"), 10);
+  u.searchParams.delete("archive"); u.searchParams.delete("saison");
+  if ((!u.hash || u.hash === "#") && an) u.hash = `#courses/${an}`;
+  history.replaceState(null, "", u.pathname + u.search + u.hash);
 }
-
+let ecouteurs = false;
 async function init() {
   const main = document.getElementById("main");
   main.innerHTML = `<div class="loading">Chargement…</div>`;
@@ -2390,17 +2869,18 @@ async function init() {
   const ix = state.index;
   if (!state.saisons) { state.current = ix.season ?? null; state.saisons = { current: state.current, available: [state.current] }; }
   state.indexes[state.current] = ix;
-  const demande = parseInt(PARAMS.get("saison"), 10);
-  state.calSaison = state.saisons.available.includes(demande) ? demande : state.current;
-  state.ctxSaison = state.current;
-  if (PARAMS.get("archive")) state.tab = "archives";   // lien direct vers l'onglet Archives
   if (ix._fixture) document.getElementById("banner").innerHTML = '<div class="fixture-banner">DONNÉES FICTIVES DE TEST</div>';
   const g = ix.generated_at ? new Date(ix.generated_at) : null;
   if (g && !isNaN(g)) {
     document.getElementById("maj").textContent = `MàJ ${g.getDate()} ${MOIS_C[g.getMonth()]} ${p2(g.getHours())}h${p2(g.getMinutes())}`;
   }
   document.getElementById("foot").textContent = "Résultats et classement : UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)";
-  renderMain(); preparerOnglet();
+  redirigerAncienneUrl();
+  if (!ecouteurs) {
+    ecouteurs = true;
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.addEventListener("hashchange", () => routeur());
+  }
   routeur();
 }
 init();

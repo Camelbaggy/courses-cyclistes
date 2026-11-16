@@ -307,7 +307,7 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   `[{"id", "n" (nom), "f"? (code drapeau), "nat"? (ISO3), "eq"? (libellé de l'équipe principale de la dernière saison du coureur), "eqid"? (id d'équipe-saison),
   "s": [première, dernière saison], "v" (victoires totales), "p" (podiums), "uci"? (meilleur rang UCI de fin de saison, `uci_rank` des saisons),
   "fr"? (true si FRA), "act"? (true si présent dans la saison la plus récente des données), "photo"? (true si image Wikidata sous licence lisible)}]`.
-  Coureurs sans nom exclus ; coureurs historiques (`wd-Q…`) non inclus.
+  Coureurs sans nom réel (vide ou ponctuation seule) exclus ; coureurs historiques (`wd-Q…`) non inclus.
 - **`courses/index.json`** (liste des épreuves, triée par clé, ~0,15 Mo) : `[{"k" (clé d'édition), "n" (nom le plus récent), "pays", "f"?, "cl"? (classe UCI la
   plus récente), "cat"? (`selection.categorie_classe(cl)` : WT, Pro, .1, .2), "type"? (`one_day` / `stage_race`), "s": [première, dernière saison UCI],
   "h"? (première année de l'historique Wikidata, si présent), "ed" (nombre d'éditions UCI), "der": {"saison", "race_id", "vainqueur"?: {"id", "nom"?}}
@@ -419,30 +419,18 @@ chiffre (rang, écart, temps) du résumé doit figurer dans la partie factuelle 
 
 ## 6. Interface (`index.html`, page unique sans dépendance, mobile ~390 px)
 
-- Onglet **Archives** (5e) : menu déroulant des saisons archivées (« 2023 (collecte en cours) » si `complete` est faux),
-  encart « Classement UCI de fin de saison » (top 10), « Victoires françaises », liste des courses avec les mêmes filtres
-  de catégorie que le Calendrier ; fiches course et coureur issues de `<année>/` des archives.
-- Fiche course (édition, `#course/<id>`) : en-tête (hero) avec classe, pays, dates, **podium** (rangs 1-3 du classement final de la fiche, course terminée) et navigation
-  **édition précédente / suivante** + « Toutes les éditions » (d'après `entites/courses/`, chargée sans bloquer la fiche, masquée si l'épreuve est inconnue ou n'a pas d'autre édition) ;
-  onglets supplémentaires **Participants** (cartes par équipe, dossard, rang final ou statut, filtre « Français seulement », « Sélection nationale » d'après `entites/equipes/<saison>.json`)
-  et **Pays** (coureurs, classés, abandons, meilleur rang), calculés sur les classements de la fiche.
-- Page épreuve `#epreuve/<clé d'édition encodée>` (E3) : lue dans `entites/courses/<lettre>.json` (§4.5) ; hero (nom le plus récent, pays, classe actuelle, type, éditions dans nos données),
-  tuiles (éditions, coureur le plus titré si >= 2 victoires, pays le plus titré, victoires françaises), onglets Palmarès (année, vainqueur, 2e, 3e, meilleur Français) · Records · Historique
-  (noms et classes par saison, si plusieurs). La recherche mène à cette page ; le palmarès d'un coureur propose un lien discret « Toutes les éditions ».
-- Fiche coureur `#coureur/<id>` (E2) : en-tête (photo Wikimedia si licence lisible, drapeau, âge, lieu, taille, équipe), tuiles (victoires, podiums,
-  victoires au général, meilleur rang UCI, grands tours terminés) et onglets Aperçu · Palmarès · Saisons · Grands tours · Classement UCI · Parcours · Saison en cours,
-  lus dans `entites/coureurs/<lettre>.json` (§4.5) + `riders-<année>.json` du Calendrier si plus récents (rang UCI marqué `*`). Valeur absente : ligne absente.
-  Aucune donnée : « Pas d'archives pour ce coureur ».
-- Recherche globale (icône de l'en-tête, `#recherche/<texte>`) : `entites/recherche/<lettre>.json`, résultats groupés coureurs / équipes et lignées / courses.
-- Onglets : **Récents** (cartes `latest` : course, étape, vainqueur, meilleur Français, résumé IA) ·
-  **Calendrier** (courses de la saison groupées par mois, filtre par catégorie WT / Pro / FDJ / .1 / .2 / Champ.,
-  statut, vainqueur ; à venir en grisé) · **FDJ United Series** (classement + manches) · **Français**
-  (victoires françaises de la saison).
-- Fiche course (au clic) : en-tête (classe, pays, dates), sélecteur d'étape, résumé IA, carte parcours (si
-  `route`), sous-onglets Étape / Général / Points / Montagne / Jeunes / Équipes / Abandons, coureurs français
-  surlignés + filtre « Français seulement », porteurs de maillots.
-- Formatage : temps `h:mm:ss`, écarts `+m:ss`, « m.t. » pour un écart nul hors premier.
-- Toute donnée insérée dans le HTML passe par `esc()`. Drapeaux flagcdn.com.
+Encyclopédie à routes (hash), thème sombre ; détail du routeur, des pages et du gabarit d'article : CLAUDE.md « Interface ».
+
+- Navigation : en-tête (marque, recherche, menu horizontal ≥ 880 px) et barre du bas sur mobile : **Accueil · Courses · Équipes · Coureurs · Classements**.
+- Routes : `#/` · `#courses[/<année>|/epreuves]` · `#epreuve/<clé>` · `#course/<race_id>[/<étape|F>]` · `#equipes[/<année>]` · `#coureurs` · `#coureur/<id>` · `#classements[/uci[/<année>]|/fdj]` · `#recherche/<texte>`.
+- **Accueil** : courses en cours, derniers résultats (`latest`), courses à venir (`upcoming` des saisons du Calendrier), top 10 UCI (`ranking.json`), Français à la une (`french_wins`),
+  « Ce jour-là » (`entites/courses/`), compteurs (`entites/index.json`).
+- **Courses** : toutes les saisons (Calendrier + `archives/index.json`) ; Résultats / À venir (Calendrier seulement) avec filtres de catégorie ; Épreuves (`entites/courses/index.json`, filtres catégorie, pays, recherche).
+- **Équipes** (R1) : `entites/equipes/index.json`, une ligne par équipe-saison (nom, pays, catégorie, victoires, coureurs), sans article. **Coureurs** : `entites/coureurs/index.json` (annuaire filtrable) + vue Français (`riders-<année>.json`).
+- **Classements** : UCI actuel (`ranking.json`), fin de saison (`<année>/ranking.json`), instantanés (`entites/classements/<année>/`, noms par `coureurs/index.json`) ; FDJ United Series.
+- **Articles** (gabarit commun) : fil d'Ariane, titre, infobox, onglets, navbox repliable. Édition : podium, navigation précédente / suivante, sélecteur d'étape, résumé, parcours, classements, participants, pays.
+  Épreuve : tuiles, Palmarès · Records · Historique. Coureur : tuiles, Aperçu · Palmarès · Saisons · Grands tours · Classement UCI · Parcours · Saison. Valeur absente : ligne absente.
+- Formatage : temps `h:mm:ss`, écarts `+m:ss`, « m.t. » pour un écart nul hors premier. Toute donnée insérée dans le HTML passe par `esc()`. Drapeaux flagcdn.com.
 
 ## 7. Planification et notification
 

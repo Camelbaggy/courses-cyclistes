@@ -194,6 +194,29 @@ def ajouter_grands_tours_fictifs():
     collector._dump(str(chemin), d)
 
 
+def ecrire_historique_fictif():
+    """Petit cache FICTIF de palmarès Wikidata (entites/historique/) pour le « Grand Prix de Test-sur-Mer (fictif) » : années absentes de nos éditions UCI,
+    avec les quatre statuts (ok, non_attribue, conflit, inconnu) et des coureurs historiques `wd-Q…` (identifiants fictifs Q9900…)."""
+    dossier = SORTIE / "entites" / "historique"
+    shutil.rmtree(dossier, ignore_errors=True)
+    cle = "grand prix de test sur mer fictif|FRA"
+    pod = lambda *q: [{"rang": r, "qid": x} for r, x in q]
+    editions = [
+        {"annee": 1925, "qid": "Q99900201", "date": "1925-04-12", "vainqueur": "Q99900301", "podium": pod((1, "Q99900301"), (2, "Q99900302"), (3, "Q99900303")), "statut": "ok", "verifie": "2026-11-16"},
+        {"annee": 1926, "qid": "Q99900202", "date": "1926", "vainqueur": "Q99900302", "podium": pod((1, "Q99900302"), (2, "Q99900301")), "statut": "ok", "verifie": "2026-11-16"},
+        {"annee": 1927, "qid": "Q99900203", "date": "1927-04-10", "podium": pod((2, "Q99900303"), (3, "Q99900301")), "statut": "non_attribue", "detail": {"p2321": ["Q99900304"]}, "verifie": "2026-11-16"},
+        {"annee": 1928, "qid": "Q99900204", "date": "1928-04-08", "podium": pod((2, "Q99900303")), "statut": "conflit", "detail": {"p1346": ["Q99900301"], "p2321": ["Q99900302"]}, "verifie": "2026-11-16"},
+        {"annee": 1929, "qid": "Q99900205", "date": "1929-04-07", "podium": pod((2, "Q99900303")), "statut": "inconnu", "verifie": "2026-11-16"},
+        {"annee": 1930, "qid": "Q99900206", "date": "1930-04-06", "podium": [], "statut": "inconnu", "verifie": "2026-11-16"},
+    ]
+    collector._dump(str(dossier / "editions" / "g.json"), {cle: editions})
+    noms = {"Q99900301": ("Pierre Ancien", "FRA"), "Q99900302": ("Jules Vieux", "FRA"), "Q99900303": ("Gaston Lointain", "BEL"), "Q99900304": ("Émile Déclassé", "ITA")}
+    coureurs = {q: {"nom": n, "nationalite": nat, "naissance": f"19{i:02d}-05-17", "naissance_precision": "jour", "verifie": "2026-11-16"}
+                for i, (q, (n, nat)) in enumerate(noms.items(), 1)}
+    coureurs["Q99900303"] = {"nom": "Paul Démo", "rider_id": "demo-paul-19961228", "verifie": "2026-11-16"}   # coureur rattaché à nos données : palmarès historique sur sa fiche
+    collector._dump(str(dossier / "coureurs.json"), coureurs)
+
+
 def ecrire_classements(rows):
     """Trois instantanés FICTIFS du classement UCI 2024 (entites/classements/2024/, format de collector.collecter_classements) : mêmes coureurs que
     le classement de fin de saison, rangs et points décalés d'un instantané à l'autre (déterministe)."""
@@ -253,6 +276,7 @@ def main():
     collector.ARCHIVES_DIR = str(SORTIE)
     ecrire_cache_wikidata(CODES_EQUIPES)
     ecrire_classements(rows)
+    ecrire_historique_fictif()
     collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     ajouter_grands_tours_fictifs()
