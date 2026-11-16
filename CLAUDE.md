@@ -29,6 +29,9 @@ ARCHIVES_DIR=/tmp/arch python run_pipeline.py --archive 2023 --max-races 5  # mo
 python collector.py --test                            # tests locaux de compact_race (sans réseau)
 python encyclopedie.py --test                         # tests locaux des fichiers entites/ (sans réseau)
 python wikidata.py --test                             # tests locaux Wikidata / Commons (réponses simulées)
+python historique.py --test                           # tests locaux de l'historique (palmarès Wikidata, réponses simulées)
+python run_pipeline.py --historique --budget-min 300  # cache entites/historique/ SEUL (ARCHIVES_DIR) ; séries de series_historiques.json
+python historique.py --verifier-series docs/recherche/historique_series_candidats.json <ARCHIVES_DIR> --sortie <dossier>   # preuve des séries (réseau)
 python run_pipeline.py --wikidata --budget-min 300    # cache Wikidata (ARCHIVES_DIR/entites/wikidata/ SEUL) ; --entites reconstruit entites/ à la main
 python -m py_compile *.py tools/*/*.py                # contrôle statique
 ```
@@ -64,12 +67,13 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ wikipedia_cal.py calendrier à venir (Wikipédia EN + FR « UCI ProSeries {année} »…, fusionnés) + LNC
                                  ├ encyclopedie.py entités de l'encyclopédie (coureurs, équipes-saisons, courses, saisons, pays, recherche) -> ARCHIVES_DIR/entites/
                                  ├ wikidata.py   Wikidata + Commons (QID coureurs, lignées d'équipes, images sous licence) -> ARCHIVES_DIR/entites/wikidata/ (cache)
+                                 ├ historique.py palmarès (vainqueur + podium) de toute l'histoire des épreuves suivies, depuis Wikidata -> ARCHIVES_DIR/entites/historique/ (cache)
                                  ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour ; moments et instantanés historiques, E1c)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
                  └ notify.py (ntfy)
 run_pipeline.py --archive 2011-2025 ── collector.run_archive (lancé depuis le dépôt d'archives : rotation calendrier -> archives, puis saisons passées -> ARCHIVES_DIR, voir ci-dessous)
-netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge)
+netutil.py : HTTP poli commun (pause par hôte, UA honnête, abandon d'un hôte sur 403/429/challenge ; option `attendre_429=True` : attend le `Retry-After` puis reprend, pour les limites par IP partagée de Wikimedia)
 index.html : page unique (CSS + JS inline)
 ```
 
@@ -188,6 +192,18 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   (l'auto-relance d'archives.yml ne regarde que les saisons non `complete` : le cron nocturne termine l'historique). `encyclopedie.construire` lit ces
   fichiers (jamais ne les écrit) : champ `historique_uci` `[[date, rang]]` trié des coureurs (alias appliqués saison par saison) et `instantanes_uci` des
   `saisons/<année>.json`. Essai réseau : `[essai:classement_historique]` (forme exacte de `GetRankingMoments` à confirmer au premier passage réel).
+- **Encyclopédie, historique des épreuves (`historique.py`, `series_historiques.json`)** : palmarès (vainqueur + podium) de toute l'histoire des séries suivies, depuis
+  Wikidata seul. `series_historiques.json` (racine, versionné) `{clé d'édition: {"qid" (série), "preuve"}}` : une série n'y entre qu'avec la PREUVE (au moins 2 éditions
+  2019-2025 dont le vainqueur Wikidata = notre vainqueur, par le cache `wikidata/coureurs.json` ou nom + P569 jour exacts) ; refus listés dans
+  `series_historiques_refusees.json` ; `python historique.py --proposer <archives>` étend aux épreuves suivies (même preuve, deux candidates prouvées = « ambigu »).
+  `run_pipeline.py --historique --budget-min N` (workflow du dépôt d'archives à ajouter à `wikidata.yml` : `git add data/archives/entites/historique/` en plus de `wikidata/`)
+  n'écrit QUE `ARCHIVES_DIR/entites/historique/` (`editions/<lettre>.json`, `coureurs.json`, `pays.json`, `non_personnes.json`, `etat.json`), série par série, reprenable ;
+  re-vérification après 180 jours ; HTTP 429 : attente du `Retry-After` puis reprise (`netutil.fetch_*(attendre_429=True)`, hôte jamais abandonné pour un 429), 403 : abandon.
+  Règles (docs/recherche/historique_avant_2009.md §9) : P1346 + P2501 ; P1346 sans P2501 = vainqueur ; P1346 vers une équipe ignoré ; statuts `ok` / `non_attribue` (Q66666778) /
+  `conflit` (plusieurs rang 1 ou P1346 ≠ P2321) / `inconnu`, JAMAIS tranchés (les deux valeurs gardées dans `detail`) ; championnat de France = élément P527 « course en ligne
+  masculine » unique. `encyclopedie.construire` lit ce cache : `courses/*.json` gagne `historique`, `historique_info`, `records_historique` (années ABSENTES de nos éditions UCI
+  seulement ; records UCI inchangés dans `records`), `coureurs/*.json` gagne `palmares_historique` (+ `_source: "wikidata"`), `coureurs_historiques/<NN>.json` (NN = 2 derniers chiffres du
+  QID, entités légères `wd-<QID>`), recherche `t: "c", id: "wd-Q…"`. Schéma : `docs/SPEC.md` §4.5.
 - **Éditions et carrières** (`write_archives_index`, donc chaque passage d'archives.yml, `_dump_if_changed`) :
   `editions.json` (dans `ARCHIVES_DIR` ; éditions d'une même course, clé = `collector.cle_edition(nom, pays)` : minuscules, sans accents ni
   ponctuation ni année / numéro d'édition, + `|PAYS` ; rapprochement EXACT, jamais flou) et `carrieres/<lettre>.json`

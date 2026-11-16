@@ -10,6 +10,7 @@ et écrit dans `<archives_dir>/entites/` (JSON compact, seulement si le contenu 
     coureurs/<lettre>.json     {rider_id: fiche}           lettre = 1re lettre a-z du rider_id canonique, sinon « _ »
     equipes/<année>.json       {id d'équipe-saison: fiche} + equipes/index.json (liste compacte) + equipes/lignees.json (QID -> lignée Wikidata)
     courses/<lettre>.json      {clé d'édition: fiche}      lettre = 1re lettre a-z de la clé, sinon « _ »
+    coureurs_historiques/<NN>.json  {« wd-Q… »: fiche légère}  coureurs d'avant nos données (palmarès Wikidata) ; NN = 2 derniers chiffres du QID
     saisons/<année>.json       statistiques de la saison
     pays.json                  par code ISO3 (UCI / CIO)
     recherche/<lettre>.json    entrées de recherche indexées par la 1re lettre de CHAQUE mot du libellé
@@ -18,7 +19,9 @@ et écrit dans `<archives_dir>/entites/` (JSON compact, seulement si le contenu 
 Schéma détaillé : docs/SPEC.md §4.4. Règles (zéro hallucination) :
 - tout vient des fiches de course ; seules valeurs dérivées : sommes, comptages, tris (calculs déterministes) ;
 - une clé absente reste absente (jamais de valeur de substitution) ; `code_uci` d'une équipe-saison = `TeamCode` UNIQUE des coureurs classés
-  de la saison dont le libellé d'équipe a le même slug (plusieurs codes : absent + anomalie) ; `lignee` (QID Wikidata), `wikidata` d'un
+  de la saison dont le libellé d'équipe a le même slug (plusieurs codes : absent + anomalie) ;
+  `historique` des courses, `palmares_historique` des coureurs et `coureurs_historiques/` viennent du cache `entites/historique/` (module
+  historique : palmarès Wikidata, statuts ok / non_attribue / conflit / inconnu, jamais tranchés) et ne couvrent QUE les années absentes de nos éditions UCI ; `lignee` (QID Wikidata), `wikidata` d'un
   coureur et `equipes/lignees.json` viennent du CACHE `entites/wikidata/` (module wikidata, E1b : rapprochements stricts, jamais devinés) ;
 - identités : `rider_id` exact + `alias_coureurs.json` (même règle de contradiction que `collector.construire_carrieres`) ;
   courses : `collector.cle_edition` + `alias_courses.json` ; jamais de rapprochement flou ;
@@ -43,6 +46,7 @@ import time
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import collector
+import historique
 import netutil
 import riders
 import uci
@@ -494,12 +498,15 @@ def _codes_equipes(src: Dict[str, Any]) -> Dict[str, Set[str]]:
 
 def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, now: Optional[str] = None,
                alias_coureurs: Optional[Dict[str, str]] = None, alias_courses: Optional[Dict[str, str]] = None,
-               verbose: bool = True, wikidata_dir: Optional[str] = None, fusions: Optional[Iterable[str]] = None) -> Dict[str, Any]:
+               verbose: bool = True, wikidata_dir: Optional[str] = None, fusions: Optional[Iterable[str]] = None,
+               historique_dir: Optional[str] = None) -> Dict[str, Any]:
     """Génère `sortie` (défaut `<archives_dir>/entites`). Retourne un rapport (compteurs, tailles, anomalies).
-    `wikidata_dir` : cache Wikidata lu (défaut `<sortie>/wikidata`)."""
+    `wikidata_dir` : cache Wikidata lu (défaut `<sortie>/wikidata`) ; `historique_dir` : cache de l'historique (palmarès Wikidata, module
+    `historique`) lu (défaut `<sortie>/historique`)."""
     t0 = time.time()
     sortie = sortie or os.path.join(archives_dir, "entites")
     WD = wikidata.charger_cache(wikidata_dir or os.path.join(sortie, "wikidata"))
+    HIST = historique.charger_cache(historique_dir or os.path.join(sortie, "historique"))
     LIGNEES_EQ: Dict[str, List[Tuple[int, str]]] = {}      # QID de lignée -> [(saison, id d'équipe-saison)]
     ar = collector.charger_alias(collector.ALIAS_COUREURS) if alias_coureurs is None else alias_coureurs
     ac = collector.charger_alias(collector.ALIAS_COURSES) if alias_courses is None else alias_courses
@@ -762,6 +769,11 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             print(f"[ENCYCLOPEDIE] {an} : {S.courses_total} course(s), {len(S.coureurs)} coureur(s), {len(equipes)} équipe(s)")
         del S
 
+    # ---- historique (palmarès Wikidata des années absentes de nos éditions UCI) : fusionné avant l'écriture des coureurs et des courses
+    H: Dict[str, Any] = historique.appliquer_historique(HIST, COURSES, COUR, ar, WD["coureurs"], now[:10]) if HIST["editions"] else \
+        {"par_cle": {}, "attaches": {}, "legers": {}, "recherche": [], "rapport": {}}
+    rapport["historique"] = H["rapport"]
+
     # ---- finalisation des coureurs
     ordre_class = {"gc": 0, "stage": 1, "points": 2, "mountain": 3, "youth": 4}
     lettres: Dict[str, Dict[str, Any]] = {}
@@ -778,6 +790,9 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         hist = HISTORIQUE.get(cid)
         if hist:
             c["historique_uci"] = [[d, hist[d]] for d in sorted(hist)]
+        if cid in H["attaches"]:
+            c["palmares_historique"] = H["attaches"][cid]            # années absentes de nos données UCI ; source Wikidata (QID de l'édition)
+            c["palmares_historique_source"] = "wikidata"
         wd = wikidata.fiche_wikidata(WD["coureurs"].get(cid), WD["images"])
         if wd:
             c["wikidata"] = wd
@@ -787,6 +802,14 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     for lettre, contenu in sorted(lettres.items()):
         ecrire(os.path.join(sortie, "coureurs", f"{lettre}.json"), contenu)
     _nettoyer(os.path.join(sortie, "coureurs"), {f"{l}.json" for l in lettres})
+
+    # ---- coureurs historiques (légers) : fichier d'après les deux derniers chiffres du QID (« wd-Q123456 » -> 56.json)
+    legers_fichiers: Dict[str, Dict[str, Any]] = {}
+    for wid, fiche in H["legers"].items():
+        legers_fichiers.setdefault(historique.fichier_leger(wid), {})[wid] = fiche
+    for nom, contenu in sorted(legers_fichiers.items()):
+        ecrire(os.path.join(sortie, "coureurs_historiques", f"{nom}.json"), contenu)
+    _nettoyer(os.path.join(sortie, "coureurs_historiques"), {f"{n}.json" for n in legers_fichiers})
 
     # ---- finalisation des équipes (index)
     EQ_INDEX.sort(key=lambda t: (-t["season"], t["name"], t["id"]))
@@ -827,6 +850,11 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             "victoires_par_coureur": [_sans_vide({"id": rid, "name": noms_coureur[rid] or None, "wins": n})
                                        for rid, n in sorted(vict_coureur.items(), key=lambda kv: (-kv[1], noms_coureur[kv[0]], kv[0])) if n >= 2],
             "victoires_par_pays": dict(sorted(vict_pays.items(), key=lambda kv: (-kv[1], kv[0])))}
+        hc = H["par_cle"].get(cle)
+        if hc:
+            fiche["historique"] = hc["historique"]               # statut : ok | non_attribue | conflit | inconnu (jamais tranché), source_qid = élément Wikidata
+            fiche["historique_info"] = hc["info"]
+            fiche["records_historique"] = hc["records"]          # UCI + historique, années couvertes mentionnées
         lettres_c.setdefault(_lettre(cle), {})[cle] = fiche
     for lettre, contenu in sorted(lettres_c.items()):
         ecrire(os.path.join(sortie, "courses", f"{lettre}.json"), contenu)
@@ -865,6 +893,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     for qid, lg in lignees_out.items():
         if lg.get("libelle"):
             indexer({"n": lg["libelle"], "t": "l", "id": qid, "y": lg["saisons"]})
+    for ent in H["recherche"]:
+        indexer(ent)
     for cle, C in COURSES.items():
         dernier = max(C["noms"].items(), key=lambda kv: (max(kv[1]), kv[0]))
         ys = sorted({y for s in C["noms"].values() for y in s})
@@ -886,11 +916,14 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
              "compteurs": {"coureurs": len(COUR), "equipes_saisons": equipes_total,
                            "equipes_nationales": nationales, "courses": len(COURSES), "editions": editions_total,
                            "saisons": len(annees), "pays": len(pays_out),
-                           "lignees": len(lignees_out), "coureurs_wikidata": sum(1 for c in COUR.values() if c.get("wikidata"))},
+                           "lignees": len(lignees_out), "coureurs_wikidata": sum(1 for c in COUR.values() if c.get("wikidata")),
+                           "coureurs_historiques": len(H["legers"]), "editions_historiques": H["rapport"].get("editions_historiques", 0)},
              "saisons": annees, "saisons_archives": arch, "saisons_calendrier": cal,
              "grands_tours_par_saison": {str(a): gt_par_saison.get(a, []) for a in annees},
              "sources": sources_txt,
-             "limites": ["pas d'historique du classement UCI (E1c)",
+             "limites": ["historique des épreuves (avant nos données UCI) : vainqueur et podium depuis Wikidata seul, séries prouvées (series_historiques.json), "
+                         "statuts non_attribue / conflit conservés sans être tranchés",
+                         "pas d'historique du classement UCI (E1c)",
                          "Wikidata : rapprochements stricts seulement (coureur : nom + date de naissance exacte ; équipe : code UCI + période + nom), "
                          "couverture partielle selon le cache entites/wikidata/ ; code_uci seulement si les coureurs classés de la saison portent un code unique"]}
     ecrire(os.path.join(sortie, "index.json"), index, ignore=("generated_at",))
@@ -1208,6 +1241,35 @@ def _tests() -> None:
             for f in fs:
                 apres[os.path.join(racine, f)] = open(os.path.join(racine, f), "rb").read()
         assert rap2["fichiers_modifies"] == 0 and avant == apres, "la deuxième génération doit être identique (aucune réécriture)"
+        # historique (cache Wikidata de palmarès) : années absentes de nos éditions UCI seulement, coureurs légers, palmarès rattaché, records séparés
+        collector._dump(os.path.join(OUT, "historique", "editions", "t.json"), {"tour de france|FRA": [
+            {"annee": 1903, "qid": "Q101", "vainqueur": "Q1", "podium": [{"rang": 1, "qid": "Q1"}, {"rang": 2, "qid": "Q2"}], "statut": "ok",
+             "wikipedia": {"fr": "Tour de France 1903"}, "verifie": "2026-11-16"},
+            {"annee": 1999, "qid": "Q102", "podium": [{"rang": 2, "qid": "Q2"}], "statut": "non_attribue", "detail": {"p2321": ["Q1"]}, "verifie": "2026-11-16"},
+            {"annee": 2023, "qid": "Q103", "vainqueur": "Q1", "podium": [{"rang": 1, "qid": "Q1"}], "statut": "ok", "verifie": "2026-11-16"}]})
+        collector._dump(os.path.join(OUT, "historique", "coureurs.json"), {
+            "Q1": {"nom": "Eddy Test", "nationalite": "BEL", "naissance": "1945-06-17", "naissance_precision": "jour", "verifie": "2026-11-16"},
+            "Q2": {"nom": "Jean Dupont", "rider_id": brut, "verifie": "2026-11-16"}})
+        rap_h = construire(A, D, OUT, now="2026-01-01T00:00:00Z", alias_coureurs=alias_cr, alias_courses={}, verbose=False)
+        cc = L("courses/t.json")["tour de france|FRA"]
+        assert [h["annee"] for h in cc["historique"]] == [1999, 1903], cc["historique"]            # 2023 : déjà dans nos éditions UCI
+        h1903 = cc["historique"][1]
+        assert h1903["vainqueur"] == "wd-Q1" and h1903["source_qid"] == "Q101" and h1903["podium"][1]["id"] == dup, h1903        # Q2 rattaché à dup (alias)
+        assert cc["historique"][0]["statut"] == "non_attribue" and cc["historique"][0]["detail"]["p2321"] == [{"id": "wd-Q1", "name": "Eddy Test", "nat": "BEL", "flag": "be"}]
+        assert cc["historique_info"] == {"source": "wikidata", "annees": [1903, 1999], "editions": 2}
+        assert cc["records"]["victoires_par_coureur"] == [{"id": dup, "name": "Jean Dupont", "wins": 2}]                # records UCI inchangés
+        assert cc["records_historique"]["annees_couvertes"] == [1903, 2024] and cc["records_historique"]["non_attribuees"] == 1
+        assert {"id": "wd-Q1", "name": "Eddy Test", "wins": 1} not in cc["records_historique"]["victoires_par_coureur"]       # 1 victoire : sous le seuil
+        lg = L("coureurs_historiques/01.json")["wd-Q1"]
+        assert lg["name"] == "Eddy Test" and lg["birth_date"] == "1945-06-17" and lg["totaux"] == {"wins": 1, "podiums": 1} and lg["source"] == "wikidata", lg
+        assert L("coureurs/d.json")[dup]["palmares_historique"] == [{"annee": 1999, "course": "tour de france|FRA", "rang": 2, "source_qid": "Q102"},
+                                                                   {"annee": 1903, "course": "tour de france|FRA", "rang": 2, "source_qid": "Q101"}]
+        assert L("coureurs/d.json")[dup]["palmares_historique_source"] == "wikidata" and "palmares_historique" not in L("coureurs/m.json")[martin]
+        assert {"n": "Eddy Test", "t": "c", "id": "wd-Q1", "f": "be", "y": [1903, 1903]} in L("recherche/e.json")
+        assert L("index.json")["compteurs"]["coureurs_historiques"] == 1 and rap_h["historique"]["editions_historiques"] == 2
+        shutil.rmtree(os.path.join(OUT, "historique"))
+        construire(A, D, OUT, now="2026-01-01T00:00:00Z", alias_coureurs=alias_cr, alias_courses={}, verbose=False)
+        assert not os.path.exists(os.path.join(OUT, "coureurs_historiques", "01.json")) and "historique" not in L("courses/t.json")["tour de france|FRA"]
         # fichier devenu inutile : supprimé
         collector._dump(os.path.join(OUT, "coureurs", "zz.json"), {"x": 1})
         os.remove(os.path.join(A, "2023", "races", "uci-4.json"))

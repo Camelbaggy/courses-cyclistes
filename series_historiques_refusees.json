@@ -1,0 +1,15 @@
+{
+ "bretagne classic cic|FRA": {"qid": "Q287950", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 91, "verifie": "2026-11-16"},
+ "championnats nationaux route france me we|FRA": {"qid": "Q32435", "editions_wikidata": 116, "concordances": 0, "comparees": 0, "raison": "preuve_insuffisante", "discordances": [], "verifie": "2026-11-16"},
+ "championnats nationaux route france|FRA": {"qid": "Q32435", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 116, "verifie": "2026-11-16"},
+ "clasica ciclista san sebastian|ESP": {"qid": "Q740787", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 47, "verifie": "2026-11-16"},
+ "dssk donostia san sebastian klasikoa|ESP": {"qid": "Q740787", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 47, "verifie": "2026-11-16"},
+ "e3 binckbank classic|BEL": {"qid": "Q599219", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 70, "verifie": "2026-11-16"},
+ "grand prix de plumelec morbihan|FRA": {"qid": "Q1417470", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 54, "verifie": "2026-11-16"},
+ "in flanders fields from middelkerke to wevelgem|BEL": {"qid": "Q498661", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 89, "verifie": "2026-11-16"},
+ "la route d occitanie cic|FRA": {"qid": "Q1572415", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 50, "verifie": "2026-11-16"},
+ "national road championships france elite|FRA": {"qid": "Q32435", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 116, "verifie": "2026-11-16"},
+ "paris roubaix hauts de france|FRA": {"qid": "Q33992", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 125, "verifie": "2026-11-16"},
+ "ronde van vlaanderen|BEL": {"qid": "Q33970", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 111, "verifie": "2026-11-16"},
+ "tour auvergne rhone alpes|FRA": {"qid": "Q655150", "raison": "moins_de_2_editions_2019_2025", "editions_wikidata": 79, "verifie": "2026-11-16"}
+}
