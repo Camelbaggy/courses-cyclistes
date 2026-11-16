@@ -39,16 +39,22 @@ def main() -> None:
     p.add_argument("--wikidata", action="store_true",
                    help="alimente le cache Wikidata / Commons (ARCHIVES_DIR/entites/wikidata/ SEUL : n'écrit pas les entités ; --budget-min en minutes, "
                         "0 = illimité) ; workflow dédié du dépôt d'archives")
+    p.add_argument("--historique", action="store_true",
+                   help="alimente le cache de l'historique des épreuves (palmarès Wikidata : ARCHIVES_DIR/entites/historique/ SEUL ; séries de series_historiques.json ; "
+                        "--budget-min en minutes, 0 = illimité) ; comme --wikidata, n'écrit pas les entités")
     p.add_argument("--entites", action="store_true",
                    help="reconstruit ARCHIVES_DIR/entites/ à la main (collector.write_entites, lit le cache Wikidata) ; normalement fait par le passage d'archives")
     p.add_argument("--no-notify", action="store_true", help="ne pas envoyer de push ntfy")
     a = p.parse_args()
     today = dt.date.fromisoformat(a.today) if a.today else dt.date.today()
     netutil.set_raw_dir(a.save_raw or None)
-    if a.wikidata or a.entites:
+    if a.wikidata or a.historique or a.entites:
         if a.wikidata:
             import wikidata
             wikidata.run_wikidata(a.budget_min)   # cache seul : jamais write_entites (évite les conflits de commit avec archives.yml)
+        if a.historique:
+            import historique
+            historique.run_historique(a.budget_min)   # idem : cache entites/historique/ seul
         if a.entites:
             collector.write_entites()
         return

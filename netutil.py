@@ -50,16 +50,33 @@ def _looks_like_challenge(status: int, text: str) -> bool:
     return status in (403, 429, 503) and ("Just a moment" in text or "challenge-platform" in text or "cf-" in text)
 
 
+MAX_ATTENTE_429 = 120      # secondes : plafond d'une attente `Retry-After`
+MAX_REPRISES_429 = 10      # 429 consécutifs sur une même requête avant de l'abandonner (sans bloquer l'hôte)
+
+
+def _retry_after(valeur: Optional[str]) -> float:
+    """Délai demandé par l'en-tête `Retry-After` (secondes entières), borné ; 15 s à défaut."""
+    try:
+        return min(max(float(str(valeur).strip()), 1.0), MAX_ATTENTE_429)
+    except (TypeError, ValueError):
+        return 15.0
+
+
 def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[str, str]] = None,
-               retries: int = 3, raw_name: str = "") -> Optional[str]:
+               retries: int = 3, raw_name: str = "", attendre_429: bool = False) -> Optional[str]:
     """GET (ou POST si `data`) poli ; renvoie le corps décodé ou None. Un hôte qui renvoie un challenge
-    anti-robot, un 403 ou un 429 est abandonné pour toute la durée du passage."""
+    anti-robot, un 403 ou un 429 est abandonné pour toute la durée du passage.
+    `attendre_429=True` (limite par IP partagée, ex. Wikimedia) : un 429 attend le `Retry-After` (borné à
+    MAX_ATTENTE_429 s) puis reprend la même requête, sans abandonner l'hôte ; après MAX_REPRISES_429 réponses 429 de
+    suite la requête échoue (None) sans bloquer l'hôte. Le comportement par défaut est inchangé."""
     host = urllib.parse.urlparse(url).netloc
     if host in _blocked_hosts:
         return None
+    n429 = 0
     hdrs = {"User-Agent": USER_AGENT, "Accept": "*/*", "Accept-Encoding": "gzip"}
     hdrs.update(headers or {})
-    for attempt in range(retries):
+    attempt = 0
+    while attempt < retries:
         _wait_for_host(host)
         try:
             req = urllib.request.Request(url, data=data, headers=hdrs, method="POST" if data else "GET")
@@ -75,6 +92,15 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
                 txt = e.read(4000).decode("utf-8", "replace")
             except Exception:
                 txt = ""
+            if e.code == 429 and attendre_429 and not _looks_like_challenge(e.code, txt):
+                n429 += 1
+                if n429 > MAX_REPRISES_429:
+                    print(f"[WARN] {host} : {n429} réponses 429 de suite, requête abandonnée (hôte conservé)")
+                    return None
+                pause = _retry_after(e.headers.get("Retry-After"))
+                print(f"[WARN] {host} : HTTP 429, reprise dans {pause:.0f} s ({n429}/{MAX_REPRISES_429})")
+                time.sleep(pause)
+                continue                       # ne consomme pas un essai ordinaire
             if e.code in (403, 429) or _looks_like_challenge(e.code, txt):
                 print(f"[WARN] {host} refuse l'accès (HTTP {e.code}) : source abandonnée pour ce passage")
                 _blocked_hosts.add(host)
@@ -85,11 +111,13 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
         except Exception as e:
             print(f"[WARN] Erreur réseau sur {url} : {e}")
         time.sleep(2 ** attempt)
+        attempt += 1
     return None
 
 
-def fetch_json(url: str, retries: int = 3, raw_name: str = "") -> Optional[Any]:
-    text = fetch_text(url, headers={"Accept": "application/json"}, retries=retries, raw_name=raw_name)
+def fetch_json(url: str, retries: int = 3, raw_name: str = "", attendre_429: bool = False) -> Optional[Any]:
+    text = fetch_text(url, headers={"Accept": "application/json"}, retries=retries, raw_name=raw_name,
+                      attendre_429=attendre_429)
     return _parse_json(text, url)
 
 

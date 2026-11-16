@@ -332,6 +332,33 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   `libelles.json` `{QID: libellé fr, sinon en}`. Rapprochement coureur : un seul candidat vérifié (P569 jour égale, nom concordant, occupation P106 =
   Q2309784 ou sous-classe) ; équipe : P1998 daté contenant la saison + nom officiel P1448 daté (ou élément saison de l'année) concordant + un seul
   parent ; `alias_equipes.json` (racine du code) `{"id équipe-saison": "QID"}` pour le reste. Re-vérification 180 jours, `null` re-tenté après 60.
+- **Historique des épreuves (palmarès Wikidata, `historique.py`)** : avant (et entre) nos données UCI, vainqueur et podium de TOUTES les éditions des séries retenues,
+  depuis Wikidata seul (CC0). Séries : `series_historiques.json` (racine du code, `{clé d'édition (collector.cle_edition, après alias): {"qid" (série), "preuve":
+  {"regle", "annees" (2019-2025 où le vainqueur Wikidata = le nôtre), "comparees", "discordantes", "verifie"}, "conteneur"? true}}`) ; refus à part dans
+  `series_historiques_refusees.json` (`{clé: {"qid", "raison": preuve_insuffisante | moins_de_2_editions_2019_2025 | lecture_incomplete | ambigu | aucune_candidate,
+  …}}`). **Preuve** : au moins 2 années 2019-2025 pour lesquelles Wikidata et nos données n'ont chacun qu'UNE édition, et le vainqueur Wikidata (statut `ok`) est notre
+  vainqueur (cache `entites/wikidata/coureurs.json` rider_id -> QID, qui tranche s'il existe ; sinon date de naissance P569 à précision jour égale à celle de notre
+  `rider_id` ET nom concordant). Plusieurs clés (noms successifs d'une épreuve) peuvent désigner la même série. **Cache** `entites/historique/` (écrit par
+  `historique.run_historique` seul, série par série, reprenable) : `editions/<lettre>.json` `{clé: [{"annee", "qid" (élément de l'édition), "date"? (précision de
+  la source : AAAA, AAAA-MM ou AAAA-MM-JJ), "annee_source"? "libelle" (année lue dans le libellé, sans date), "qid_conteneur"?, "vainqueur"? (QID, seulement si
+  statut `ok`), "podium": [{"rang", "qid"}] (P1346 + P2501 ; rang 1 seulement si `ok`), "statut": ok | non_attribue | conflit | inconnu, "detail"?
+  {"p1346": [QID], "p2321": [QID] (rang 1 du classement), "ignores": [QID non humains], "raison", "parts"}, "wikipedia"? {fr, en, es, it, nl, de: titre},
+  "verifie"}]}` (trié par année ; les valeurs en désaccord sont gardées toutes, jamais tranchées : « non attribué » = P1346 rang 1 = Q66666778, ex. Tour de France
+  1999-2005 ; conflit = plusieurs rang 1 ou P1346 ≠ P2321) ; `coureurs.json` `{QID humain: {"nom" (fr, sinon en, sinon autre langue), "naissance"?, "naissance_precision"?
+  (jour | mois | annee), "deces"?, "deces_precision"?, "nationalite"? (code CIO via P984 du pays P27 : texte, ou liste si plusieurs), "wikipedia"?, "rider_id"?
+  (nôtre, par le cache Wikidata ou rapprochement strict nom + date exacte unique), "verifie"}}` ; `pays.json`, `non_personnes.json` (équipes ignorées), `etat.json`
+  (`{QID de série: {"verifie", "editions", "cles"}}`). Re-vérification d'une série (et de ses coureurs) après 180 jours. **Dans les entités** (`encyclopedie.construire`
+  lit ce cache ; rien n'est écrit sans lui) : `courses/<lettre>.json` gagne `"historique": [{"annee", "date"?, "vainqueur"? (id : rider_id canonique ou `wd-<QID>`),
+  "podium": [{"rang", "id", "name", "nat"?, "flag"?}], "statut", "detail"? {"p1346"|"p2321": [{id, name, …}], "ignores", "raison"}, "source_qid", "wikipedia"?}]`
+  (récents d'abord) pour les SEULES années absentes de nos éditions UCI (clé ou clé sœur désignant la même série), `"historique_info"` `{"source": "wikidata",
+  "annees": [min, max], "editions"}` et `"records_historique"` `{"annees_couvertes": [min, max] (UCI + historique), "editions_avec_vainqueur", "victoires_par_coureur"
+  [{id, name, wins}] (≥ 2), "victoires_par_pays" (nationalité unique seulement), "victoires_pays_indeterminees"?, "non_attribuees"?, "conflits"?}` (records UCI inchangés dans
+  `records`) ; `coureurs/<lettre>.json` : `"palmares_historique": [{"annee", "course", "rang", "source_qid", "date"?}]` + `"palmares_historique_source": "wikidata"` pour
+  un coureur rattaché ; `coureurs_historiques/<NN>.json` (NN = deux derniers chiffres du QID, « wd-Q12345 » -> `45.json`, déterminé par l'identifiant seul)
+  `{"wd-<QID>": {"name", "nationality"? (code ou liste), "flag"?, "birth_date"?, "birth_precision"?, "death_date"?, "death_precision"?, "wikidata": {"qid",
+  "wikipedia"}, "source": "wikidata", "palmares_historique": [...], "totaux": {"wins", "podiums" (rangs 1-3)}}}` pour les coureurs d'un podium ou d'un détail qui
+  ne sont pas dans nos données ; recherche : entrées `{"t": "c", "id": "wd-Q…"}` ; `index.json` : compteurs `coureurs_historiques`, `editions_historiques`.
+  Règles de lecture Wikidata : docs/recherche/historique_avant_2009.md §9.
 - Mesure (archives 2019-2025 + Calendrier 2026-2027, 15 nov. 2026) : 13 180 coureurs, 2 310 équipes-saisons, 524 courses, 1 503 éditions ;
   18,9 Mo (coureurs 10,6 ; équipes 4,1 ; recherche 3,1 ; courses 1,0) ; ~8 s, ~120 Mo de mémoire.
 
