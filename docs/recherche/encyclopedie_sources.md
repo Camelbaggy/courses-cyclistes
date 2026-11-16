@@ -63,3 +63,40 @@ naissance : ne pas en dépendre.
   n'intervient que si aucun parent n'est prouvé par `code+nom` (qui reste prioritaire), et jamais pour départager plusieurs `code+nom`. L'interface
   peut la nuancer grâce à `preuve`. Les entrées `null` des règles antérieures sont re-tentées (champ `regle`, `REGLE_EQUIPES`). (4) Journal de
   progression toutes les ~5 min et rythme en synthèse. (5) Une licence Commons sans URL (« Public domain ») est conservée (`licence` seule).
+
+## WorldDB (base communautaire PCM)
+
+Analyse locale du 16/11/2026 (aucun réseau, base lue seulement ; `tools/audit_worlddb.py`). **WorldDB** est la base de données communautaire du
+jeu Pro Cycling Manager (éditeur Cyanide / Nacon), en CSV (versions « Official Release » et « 2025 Season Start »), saisie à la main par des
+bénévoles. Aucune mention de licence, d'auteur ni de crédit dans les fichiers : **droits non établis**. Ce n'est pas une source primaire et elle
+n'est jamais citable.
+
+**Contenu** (156 tables, 100 non vides ; chiffres « 2025 Season Start ») : coureurs 8 359 (nom, naissance AAAAMMJJ, région → nationalité, taille, poids,
+équipe 2025) ; équipes 307 et historique de noms par année 1980-2024 (206 équipes, 1 993 lignes) ; palmarès 44 008 lignes 1997-2024 (classement
+général, étapes, points, montagne, jeunes ; exploitable surtout 2007-2024) ; courses 678 (nom, pays, classe de jeu, nombre d'étapes de jeu, jour / mois de
+chaque étape SANS année). Le reste est du jeu (caractéristiques, potentiel, popularité, budgets, contrats 2025, coachs, matériel…) ou des données
+personnelles (670 e-mails d'organisateurs). Ni distances, ni profils, ni villes, ni dates complètes de courses.
+
+**Concordance mesurée avec nos données** (nos 13 525 coureurs, nos 539 épreuves) :
+- coureurs : 5 893 de nos coureurs retrouvés (43,6 %) par date de naissance exacte + noms égaux ou inclus (88 % des coureurs WorldDB de division World
+  Tour, 76 % Pro, 69 % Continental) ; nationalité : 99,7 % de concordance après une table d'alias de 34 codes de pays (20 conflits, parfois
+  légitimes : nationalité sportive ≠ naissance) ; 79 coureurs de même nom avec une date de naissance différente (49 même année, 7 un chiffre, 5 jour / mois
+  inversés, 18 homonymes probables) ; 9 coureurs correspondant à deux de nos `rider_id` (doublons chez nous) ;
+- vainqueurs 2019-2024 : 744 éditions comparées, 722 concordantes (97,0 %), 16 variantes de nom, 6 vrais désaccords à arbitrer ; palmarès avant 2007
+  absent, 2007-2010 présent mais à 98 % sans date de naissance (rapprochement par nom seul) ;
+- équipes : 704 de nos 1 184 équipes-saisons 2019-2024 rapprochées par nom exact et année (0 ambiguïté), 194 lignées de plus d'une saison dont 110 avec
+  renommages ; sur 140 lignées comparables avec Wikidata, 139 cohérentes (une contradiction à vérifier, REMBE) ;
+- courses : 259 épreuves rapprochées (nom + pays exacts) ; nombre d'étapes identique dans 92 % des cas, jour / mois de début identique dans 20 cas sur 352 ;
+- taille : divergence ≥ 3 cm avec Wikidata dans 5 % des cas ; valeur 0 = inconnu (56 % des tailles, 64 % des poids).
+
+**Usages autorisés** (validés par le propriétaire du projet) : (1) contrôle croisé, c'est-à-dire un rapport d'écarts (dates de naissance, nationalités,
+vainqueurs, doublons de `rider_id`) à revérifier par des sources officielles (UCI DataRide, Wikidata, Wikipédia, `tools/essais/essai_verif_ecarts.py`)
+avant toute correction ; (2) propositions d'équivalences d'équipes-saisons (même lignée WorldDB qu'une équipe déjà rattachée à Wikidata avec preuve
+`code+nom` ou `code+periode`), validées à la main une par une avant d'entrer dans `alias_equipes.json` (jamais écrites automatiquement). Dans les deux cas
+seul le résultat vérifié à la source officielle est repris, jamais la valeur WorldDB.
+
+**Usages proscrits** : publier ou copier du contenu WorldDB (entités, archives, pages, fichiers de test) tant que les droits ne sont pas établis ;
+reprendre un champ de jeu (`value_*`, `charac_*`, `gene_f_*`, potentiel, popularité, budgets, évaluations, contrats) ; taille et poids (arrondis, valeurs de
+jeu) ; dates et nombre d'étapes des courses (calendrier de jeu lissé) ; palmarès avant 2011 comme fait publié ; e-mails d'organisateurs et toute donnée
+personnelle ; coureurs « libres » non rapprochés (fictifs possibles). La base et les rapports qui en reprennent des valeurs restent **hors des dépôts
+publics** (scratchpad ou disque local) ; `tools/audit_worlddb.py` refuse d'écrire dans un dépôt git et ne contient que du code.

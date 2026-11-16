@@ -20,6 +20,11 @@ Lire ensuite les logs du job « Essais réseau ».
   réutilisation), coureurs Wikidata retrouvés par l'API de recherche (`haswbstatement:P11020=<UciId>`, sinon nom + date de
   naissance vérifiée), équipes par `haswbstatement:P1998=<code UCI>` (P31, P5138, P1448, P1365/P1366). Importe
   `essai_encyclopedie.py`. Durée visée < 14 min, ≤ 1 requête/s, `maxlag=5`.
+- `verif_ecarts` : vérification sur Wikidata (naissance P569, nationalité P27, vainqueur d'édition P1346, titres Wikipédia fr / en) d'écarts repérés par
+  `tools/audit_worlddb.py` ; lit `tools/essais/verif_ecarts.json` (NOS valeurs seulement, aucune donnée tierce). Verdicts « confirmé / différent /
+  indéterminé » + synthèse chiffrée ; ≤ 1 requête/s, durée visée < 12 min. Test hors réseau : `python tools/essais/essai_verif_ecarts.py --test`.
 
 Audit local sans réseau, hors essais : `python tools/audit_identites.py <data/archives du dépôt d'archives>`
 (doublons de coureurs : noms à plusieurs dates, `uci_id` ↔ `rider_id`, coureurs sans date de naissance).
+Contrôle croisé WorldDB (usage limité, jamais de publication) : `python -I tools/audit_worlddb.py <csv> <data/archives> --sortie <dossier hors dépôt>`
+(écarts, liste à vérifier, propositions d'équipes à valider ; docs/recherche/encyclopedie_sources.md, section WorldDB).
