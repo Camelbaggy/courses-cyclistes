@@ -412,6 +412,21 @@ button.res:active { background: var(--s3); }
 .team-head .tn { font-weight: 700; font-size: .88rem; min-width: 0; overflow-wrap: anywhere; }
 .team-head .small { margin-left: auto; text-align: right; }
 .team-card .row:last-child { border-bottom: none; }
+.team-head { position: relative; flex-wrap: nowrap; min-height: 52px; }
+.team-card:not(.ouvert) .team-head { border-bottom: none; }
+.th-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.th-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: .76rem; color: var(--tx3); }
+.team-head .tn a, .team-head .badge, .team-head .pill-fr { position: relative; z-index: 1; }
+.tc-tog { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; background: none; border: 0; color: inherit; padding: 0; cursor: pointer; }
+.tc-tog::after { content: ""; position: absolute; inset: 0; }
+.tc-tog svg { width: 20px; height: 20px; fill: none; stroke: var(--tx3); stroke-width: 2; transition: transform .15s; }
+.tc-tog[aria-expanded="true"] svg { transform: rotate(180deg); }
+.tc-logo { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 8px; background: var(--blanc); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.tc-logo img { max-width: 30px; max-height: 30px; object-fit: contain; }
+.tc-logo.ini { background: var(--s3); color: var(--tx2); font-size: .7rem; font-weight: 800; letter-spacing: .02em; }
+.pill-fr { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; color: var(--tx2); flex: 0 0 auto; }
+.pill-fr img { width: 16px; height: auto; border-radius: 2px; }
+.tools-l { display: inline-flex; gap: var(--sp4); flex-wrap: wrap; }
 .res-box { display: flex; flex-direction: column; gap: 2px; }
 .res-ep { align-self: flex-end; font-size: .72rem; font-weight: 600; color: var(--accent); padding: 2px 6px; border-radius: 99px; }
 .res-ep:hover, .res-ep:focus-visible { background: var(--accent-soft); outline: none; }
@@ -695,7 +710,7 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // page affichée : route, jeton (une page lente qui finit après une navigation ne dessine plus), saison de contexte des liens coureur
   route: null, routeTok: 0, ctxPage: null, restaurer: null, seq: 0,
   // fiche course
-  course: null, sel: null, sub: null, subVoulu: null, frOnly: false, limit: 50, courseArchive: null,
+  course: null, sel: null, sub: null, subVoulu: null, frOnly: false, partTous: false, partOuv: {}, limit: 50, courseArchive: null,
   // classements
   ranking: undefined, ridersCl: undefined, uc: { fr: false, q: "", limit: 100 }, clData: {},
   // archives : index (undefined = pas chargé, null = indisponible), index par saison, chemin (année) de chaque course d'archive connue
@@ -1192,7 +1207,8 @@ function renderFiche() {
   const subtabs = tabs.length ? `<div class="subtabs" id="subtabs">${tabs.map(t => `<button class="subtab ${t.cle === state.sub ? "active" : ""}" data-sub="${esc(t.cle)}">${esc(t.lab)}</button>`).join("")}</div>` : "";
   const nPart = state.sub === "participants" ? participantsCourse(c).filter(x => !state.frOnly || (x.ref && x.ref.is_french)).length : 0;
   const compte = state.sub === "participants" ? `${nPart} coureur${nPart > 1 ? "s" : ""}` : state.sub === "pays" ? "" : ((cls(c, sel)[state.sub] || []).length || "");
-  const outils = tabs.length ? `<div class="table-tools">${state.sub === "pays" ? "<span></span>" : `<button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>`}
+  const effectifs = state.sub === "participants" ? `<button class="switch" data-action="part-tous" aria-pressed="${state.partTous}"><i></i>Effectifs</button>` : "";
+  const outils = tabs.length ? `<div class="table-tools">${state.sub === "pays" ? "<span></span>" : `<span class="tools-l"><button class="switch" data-action="fronly" aria-pressed="${state.frOnly}"><i></i>Français seulement</button>${effectifs}</span>`}
       <span class="small muted">${esc(compte)}</span></div>` : "";
   const an = saisonCourse(c);
   const dates = c.race_type === "stage_race" || c.start_date !== c.end_date ? `${plage(c.start_date, c.end_date)}${an != null ? " " + an : ""}` : dateLongue(c.start_date);
@@ -1422,6 +1438,23 @@ function selectionNationale(c, libelle) {
   return e && e.nationale ? e : null;
 }
 const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
+/** Logo d'une équipe dans la liste des participants : logo Wikidata de sa lignée (lignees_index.json), seulement si la saison est couverte par le nom
+ *  actuel de la lignée (`logo_depuis`) ; sinon pastille avec les initiales. Les deux index sont chargés à la demande (la liste est redessinée ensuite). */
+function htmlLogoEquipe(nom, saison) {
+  const vide = `<span class="tc-logo ini" aria-hidden="true">${esc(initialesEquipe(nom))}</span>`;
+  const q = nom ? equipeDeLibelle(nom, saison) : null, lg = q && q.e.lignee;
+  if (!lg) return vide;
+  if (state.lgIdx === undefined) { if (!state.lgDem) { state.lgDem = true; chargerLigneesIdx().then(() => { if (state.course && state.sub === "participants") { const tb = document.getElementById("table"); if (tb) tb.innerHTML = renderTable(state.course, state.sel, state.sub); } }); } return vide; }
+  const L = (state.lgIdx || {})[lg], logo = L && L.logo, src = logo && urlMedia(logo.url);
+  if (!src || L.logo_depuis == null || saison < L.logo_depuis) return vide;
+  state.partLogo = true;
+  const cred = [logo.auteur, logo.licence].filter(Boolean).join(", ");
+  return `<span class="tc-logo"><img src="${esc(src)}" alt="" loading="lazy" title="${esc("Logo : " + cred)}" onerror="this.parentNode.classList.add('ini');this.remove()"></span>`;
+}
+function initialesEquipe(nom) {
+  const m = String(nom || "").replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(w => w && !/^(team|cycling|pro|the|de|la|le|des|du)$/i.test(w));
+  return (m.length > 1 ? m[0][0] + m[1][0] : (m[0] || "?").slice(0, 2)).toUpperCase();
+}
 function htmlParticipants(c) {
   let L = participantsCourse(c);
   if (!L.length) return htmlVide("Aucun coureur dans les classements de cette fiche.");
@@ -1436,19 +1469,23 @@ function htmlParticipants(c) {
     .sort((a, b) => (a.nom === "") - (b.nom === "") || (a.best == null) - (b.best == null) || (a.best ?? 0) - (b.best ?? 0) || a.nom.localeCompare(b.nom, "fr"));
   const html = equipes.map(t => {
     const nat = selectionNationale(c, t.nom), lien = t.nom ? lienEquipe(t.nom, saisonCourse(c)) : "";
+    const ouvert = state.partTous || state.frOnly || !!state.partOuv[t.nom];
     const rows = t.l.map(x => {
       const ref = x.ref, fr = ref && ref.is_french;
       return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${x.rang != null ? esc(x.rang) : "–"}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
         <div class="mid"><div class="nm">${ref ? plink(x.id, ref.name) : esc(x.bib != null ? "Dossard " + x.bib : "Coureur inconnu")}</div><div class="tm">${x.bib != null ? "Dossard " + esc(x.bib) : ""}</div></div>
         <div class="val gap">${esc(x.statut || "")}</div></div>`;
     }).join("");
-    return `<div class="team-card"><div class="team-head"><span class="tn">${lien || esc(t.nom || "Équipe non renseignée")}</span>
-      ${nat ? `<span class="badge fr" title="Sélection nationale (libellé égal au nom du pays)">Sélection nationale</span>` : ""}
-      <span class="small muted">${t.l.length} coureur${t.l.length > 1 ? "s" : ""}${t.best != null ? ` · meilleur : ${esc(rang(t.best))}` : ""}</span></div><div class="rows">${rows}</div></div>`;
+    const nFr = t.l.filter(x => x.ref && x.ref.is_french).length, nAb = t.l.filter(x => x.rang == null && x.statut).length;
+    const resume = `${t.l.length} coureur${t.l.length > 1 ? "s" : ""}${t.best != null ? ` · ${esc(rang(t.best))}` : ""}${nAb ? ` · ${nAb} ab.` : ""}`;
+    return `<div class="team-card${ouvert ? " ouvert" : ""}"><div class="team-head">${htmlLogoEquipe(t.nom, saisonCourse(c))}
+      <div class="th-txt"><span class="tn">${lien || esc(t.nom || "Équipe non renseignée")}</span><span class="th-meta">${nat ? `<span class="badge fr" title="Sélection nationale (libellé égal au nom du pays)">Sélection nationale</span>` : ""}<span>${resume}</span>${nFr && !state.frOnly && !nat ? `<span class="pill-fr" title="Coureurs français">${flag("fr", "France")}${nFr}</span>` : ""}</span></div>
+      <button class="tc-tog" data-action="part-eq" data-eq="${esc(t.nom)}" aria-expanded="${ouvert}" aria-label="${ouvert ? "Masquer" : "Afficher"} l'effectif de ${esc(t.nom || "l'équipe")}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>
+      ${ouvert ? `<div class="rows">${rows}</div>` : ""}</div>`;
   }).join("");
   const prov = c.race_type === "stage_race" && c.status === "in_progress";
   return html + `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">Rang : ${c.race_type === "stage_race" ? `classement général${prov ? " provisoire" : " final"}` : "classement de la course"} ;
-    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.</div>`;
+    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.${state.partLogo ? " Logos : Wikimedia Commons (auteur et licence au survol et sur l'article de l'équipe), logo actuel de l'équipe affiché seulement pour les saisons sous son nom actuel." : ""}</div>`;
 }
 function htmlPays(c) {
   const L = participantsCourse(c);
@@ -1500,7 +1537,7 @@ async function pageCourse(r, tok) {
     try {
       const [{ d, annee }] = await Promise.all([chargerCourse(id), chargerPays()]);
       if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
-      state.course = d; state.courseArchive = annee;
+      state.course = d; state.courseArchive = annee; state.partOuv = {}; state.partLogo = false;
     } catch (e) {
       if (tok !== state.routeTok) return;
       console.error("Chargement de la course échoué :", e);
@@ -3203,6 +3240,8 @@ document.addEventListener("click", e => {
   if (t.dataset.sub) { state.sub = t.dataset.sub; state.limit = 50; renderFiche(); return; }
   const a = t.dataset.action;
   if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
+  else if (a === "part-tous") { state.partTous = !state.partTous; state.partOuv = {}; renderFiche(); }
+  else if (a === "part-eq") { const k = t.dataset.eq, o = t.getAttribute("aria-expanded") === "true"; state.partOuv[k] = !o; if (o && state.partTous) { state.partTous = false; document.querySelectorAll('[data-action="part-eq"][aria-expanded="true"]').forEach(b => { if (b !== t) state.partOuv[b.dataset.eq] = true; }); const s = document.querySelector('[data-action="part-tous"]'); if (s) s.setAttribute("aria-pressed", "false"); } document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
   else if (a === "more") { state.limit += 50; document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
   else if (a === "uc-more") { state.uc.limit += 100; majListeUci(); }
   else if (a === "uc-fr") { state.uc.fr = !state.uc.fr; state.uc.limit = 100; t.setAttribute("aria-pressed", state.uc.fr); majListeUci(); }
