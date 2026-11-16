@@ -33,6 +33,12 @@ Précisions (17 novembre 2026) :
   renommés : Coppi e Bartali, Okolo Slovenska, Route d'Occitanie, CRO Race, Tour of the Alps, Renewi Tour, Région Pays de la Loire Tour, AlUla Tour) ;
   les autres sont des courses non suivies en 2025 (U23, Saudi Tour avant renommage…). Affichage sur toute édition de même dénomination.
 
+- 17/11 (règle du propriétaire) : les maillots distinctifs restent quand la course change de nom. `COURSES_WORLDDB` liste toutes les
+  dénominations de chaque course (ex. Saudi Tour -> AlUla Tour, Tour of Qinghai Lake -> Tour of Magnificent Qinghai, Circuit Cycliste Sarthe ->
+  Région Pays de la Loire Tour, Tour of Britain / OVO Energy / Lloyds) + les alias d'alias_courses.json : 71 courses, 113 clés d'édition. Ajouts :
+  `tourofmalaysia` = Petronas Le Tour de Langkawi (inscriptions du maillot), Tour de Beauce, Ronde de l'Oise, Tour of Bulgaria, Tour of Thailand.
+  Écarté faute de preuve : Eneco Tour 2026 (successeur possible du Renewi Tour).
+
 ## Décision (avant l'accord WorldDB)
 
 - Liste des participants : logo de lignée quand il existe, affiché seulement pour les saisons sous le nom actuel (`logo_depuis`),

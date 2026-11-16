@@ -59,7 +59,7 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
 
 - Liste des participants : cartes repliables à la Liquipedia, avec maillot WorldDB (buste) pour les équipes dont le nom et le code UCI
   sont ceux de 2025, sinon logo de lignée ou initiales. Sources privées : Camelbaggy/maillots-pcm ; rendu : `tools/maillots.py`.
-- Fait (17/11) : maillot dans l'infobox des articles d'équipe ; maillots distinctifs (66 épreuves, bloc « Maillots » des fiches de
-  course et infobox des épreuves) ; tenues des équipes nationales pour les sélections.
+- Fait (17/11) : maillot dans l'infobox des articles d'équipe ; maillots distinctifs (71 courses, toutes leurs dénominations, bloc « Maillots » des
+  fiches de course et infobox des épreuves) ; tenues des équipes nationales pour les sélections.
 - Maillots de champion national : PAS disponibles (les fichiers « champion » de WorldDB sont des tenues d'équipe nationale) ; à revoir
   si WorldDB fournit les vrais maillots de champion. Autres saisons si WorldDB les fournit.
