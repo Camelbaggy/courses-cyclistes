@@ -64,7 +64,7 @@ PART_EQUIPES = 0.5                        # part maximale du budget pour les éq
 MAX_ECHECS = 8                            # échecs consécutifs avant d'abandonner le passage
 PROFONDEUR_P279 = 4
 PERIODE_JOURNAL = 300                     # secondes entre deux lignes de progression « en cours »
-REGLE_EQUIPES = 2                         # version des règles de rapprochement d'équipes : une entrée `null` d'une version plus ancienne est re-tentée
+REGLE_EQUIPES = 3                         # version des règles de rapprochement d'équipes : toute entrée (rattachée ou `null`) d'une version plus ancienne est re-vérifiée
 FALLBACK_LIBRE = False                    # 2e recherche sans filtre d'occupation si aucun candidat (coûte ~1 requête de plus par coureur obscur)
 MOTS_SAISON = {"season", "saison", "stagione", "temporada", "seizoen", "sezon", "sasong"}
 FICHIERS = ("coureurs", "equipes", "lignees", "images", "libelles")
@@ -148,8 +148,9 @@ def besoin(entree: Any, aujourdhui: dt.date, cle: str = "qid") -> bool:
 
 
 def besoin_equipe(entree: Any, aujourdhui: dt.date) -> bool:
-    """Comme `besoin`, et une entrée `null` établie par une règle plus ancienne (`regle` < REGLE_EQUIPES) est re-tentée aussitôt."""
-    if isinstance(entree, dict) and not entree.get("qid") and (entree.get("regle") or 1) < REGLE_EQUIPES:
+    """Comme `besoin`, et toute entrée (rattachée ou `null`) établie par une règle plus ancienne ou sans `regle` (`regle` < REGLE_EQUIPES)
+    est re-vérifiée aussitôt, sans attendre le délai ; sauf alias manuel (`preuve` = "alias", sans `regle`), jamais re-vérifié par les règles."""
+    if isinstance(entree, dict) and entree.get("preuve") != "alias" and (entree.get("regle") or 1) < REGLE_EQUIPES:
         return True
     return besoin(entree, aujourdhui)
 
@@ -1131,7 +1132,11 @@ def _tests() -> None:
     # version de règle : un `null` ancien est re-tenté, une correspondance ou un `null` récent de règle courante non
     assert besoin_equipe({"qid": None, "raison": "ambigu", "verifie": "2026-11-10"}, aujourdhui)
     assert not besoin_equipe({"qid": None, "raison": "ambigu", "regle": REGLE_EQUIPES, "verifie": "2026-11-10"}, aujourdhui)
-    assert not besoin_equipe({"qid": "Q1", "preuve": "p", "verifie": "2026-11-10"}, aujourdhui)
+    assert besoin_equipe({"qid": "Q1", "preuve": "P1998 COF ...", "verifie": "2026-11-10"}, aujourdhui)           # rattachée sans `regle` : re-vérifiée
+    assert besoin_equipe({"qid": "Q1", "preuve": "code+nom", "regle": 2, "verifie": "2026-11-10"}, aujourdhui)   # règle plus ancienne
+    assert not besoin_equipe({"qid": "Q1", "preuve": "code+nom", "regle": REGLE_EQUIPES, "verifie": "2026-11-10"}, aujourdhui)   # à jour
+    # cas Cofidis : seul candidat féminin (même sans parent P5138) -> jamais retenu
+    assert rapm(["Q801"], "Movistar Team") == (None, "aucune", "") and rapm(["Q801"], "Autre Nom") == (None, "aucune", "")
 
     # --- run_wikidata complet, reprise sur budget, priorité, alias (fichiers d'entités simulés)
     with tempfile.TemporaryDirectory() as tmp:

@@ -1273,20 +1273,27 @@ def comp_depuis_fiche(fiche: Dict) -> Optional[Dict]:
 
 
 def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: float = 40,
-                max_races: int = 0, only: str = "") -> None:
+                max_races: int = 0, only: str = "", budget_classements_min: float = 8) -> None:
     """Collecte les saisons passées `years` (de la plus récente à la plus ancienne) dans ARCHIVES_DIR/<année>/ :
     courses compactées, index, et, la saison terminée, classement UCI de fin de saison + fiches coureurs.
     Sans ASO, récits ni Gemini. Une saison `complete` n'est plus recollectée qu'au titre de la révision des temps (fiches `_temps_v` < TEMPS_VERSION
     avec temps manquants) ; sans fiche à réviser, aucune requête réseau.
     Commence par la rotation du calendrier (`migrer_saisons_anciennes` : copie vers les archives, data/ n'est jamais
-    modifié). Ne touche pas aux autres saisons, à data/state.json ni à seasons.json."""
+    modifié). Ne touche pas aux autres saisons, à data/state.json ni à seasons.json.
+    budget_classements_min : part du budget réservée à l'historique du classement UCI (E1c) : la collecte des courses s'arrête à
+    budget_min - budget_classements_min, `collecter_classements` utilise le reste (sans effet si budget_min = 0 ou <= la réserve)."""
     today = today or dt.date.today()
     t0 = time.monotonic()
     migrer_saisons_anciennes(today)
     netutil.HOST_DELAYS["dataride.uci.org"] = 2.0   # rythme « archives » : 1 requête / 2 s
 
-    def over_budget() -> bool:
+    reserve = budget_classements_min if budget_min and 0 < budget_classements_min < budget_min else 0
+
+    def over_budget_total() -> bool:
         return bool(budget_min) and (time.monotonic() - t0) / 60 > budget_min
+
+    def over_budget() -> bool:       # collecte des courses : s'arrête avant la réserve des classements
+        return bool(budget_min) and (time.monotonic() - t0) / 60 > budget_min - reserve
 
     stopped = False
     count = 0
@@ -1438,9 +1445,10 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
         _dump_if_changed(os.path.join(dossier, "index.json"), idx)
         _dump_if_changed(spath, {"complete": termine, "top10_checked": top10_cache}, ignore=())
 
-    if not only and not stopped:
-        # historique du classement UCI (E1c) : budget restant ; saisons demandées + saisons du Calendrier (courante comprise)
-        r = collecter_classements(sorted(set(years) | set(saisons_calendrier())), today, over_budget)
+    if not only:
+        # historique du classement UCI (E1c) : budget restant (la réserve), même si des courses restent à collecter ;
+        # saisons demandées + saisons du Calendrier (courante comprise)
+        r = collecter_classements(sorted(set(years) | set(saisons_calendrier())), today, over_budget_total)
         stopped = stopped or r["interrompu"]
     recap = write_archives_index()
     print(f"[ARCHIVES] récapitulatif : {[(s['season'], s['complete'], s['races']) for s in recap['seasons']]}")
@@ -1893,6 +1901,24 @@ def _tests() -> None:
             _dump(os.path.join(d24, "races", "uci-6.json"), fiche(6, 2024, 1))
             run_archive([2024], today=dt.date(2026, 11, 14), budget_min=0, max_races=1)
             assert appels == [6], appels
+            # réserve E1c : la collecte des courses s'arrête à budget - réserve, collecter_classements est quand même appelé (budget total non épuisé)
+            appels.clear()
+            vus_budget: List[bool] = []
+            vrai_mono, horloge = time.monotonic, {"t": 0.0}
+            def mono_faux():
+                return horloge["t"]
+            cl_bouchon = globals()["collecter_classements"]
+            globals()["collecter_classements"] = lambda annees, today, ob=lambda: False: vus_budget.append(ob()) or {"ecrits": 0, "restants": 0, "interrompu": False}
+            try:
+                time.monotonic = mono_faux
+                orig_migr = globals()["migrer_saisons_anciennes"]
+                globals()["migrer_saisons_anciennes"] = lambda today: horloge.__setitem__("t", 3 * 60.0)   # 3 min écoulées : > 10 - 8, < 10
+                run_archive([2024], today=dt.date(2026, 11, 14), budget_min=10, budget_classements_min=8)
+            finally:
+                time.monotonic = vrai_mono
+                globals()["migrer_saisons_anciennes"] = orig_migr
+                globals()["collecter_classements"] = cl_bouchon
+            assert appels == [] and vus_budget == [False], (appels, vus_budget)      # courses restantes non collectées, classements appelés
     finally:
         globals()["DATA_DIR"], globals()["RACES_DIR"], globals()["ARCHIVES_DIR"] = sauve[:3]
         uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds = sauve[3:]

@@ -33,6 +33,8 @@ def main() -> None:
     p.add_argument("--save-raw", default="", help="dossier où sauvegarder les réponses brutes")
     p.add_argument("--budget-min", type=float, default=40,
                    help="durée max de collecte en minutes (0 = illimitée) ; la suite au passage suivant")
+    p.add_argument("--budget-classements", type=float, default=8,
+                   help="mode archives : minutes du --budget-min réservées à l'historique du classement UCI (la collecte des courses s'arrête avant)")
     p.add_argument("--archive", default="", metavar="SAISONS",
                    help="mode archives : saisons passées (« 2021-2025 », « 2023 », « 2021,2023 ») collectées dans "
                         "ARCHIVES_DIR (data/archives/ par défaut ; dépôt d'archives en production), sans notification ni Gemini ; --budget-min, --max-races et --only s'appliquent")
@@ -60,7 +62,7 @@ def main() -> None:
         return
     if a.archive:
         collector.run_archive(parse_saisons(a.archive), today=today, budget_min=a.budget_min,
-                              max_races=a.max_races, only=a.only)
+                              max_races=a.max_races, only=a.only, budget_classements_min=a.budget_classements)
         return   # jamais de notification en mode archives
     collector.run(a.season, today=today, only=a.only, max_races=a.max_races,
                   budget_min=a.budget_min)
