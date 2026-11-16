@@ -303,6 +303,61 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   "classes": [libellés P31], "sitelinks": {fr, en, es, it, nl, de: titre}, "logo": {"url", "page", "auteur", "licence", "licence_url"} (seulement avec
   licence lisible), "equipes": [ids d'équipes-saisons, récentes d'abord], "saisons": [première, dernière]}}`, uniquement les lignées portant au moins
   une équipe-saison rapprochée.
+  **R2a, données des articles d'équipe** :
+  - `equipes/<année>.json` : chaque équipe-saison gagne **`meme_nom`** (`[id, …]`, années croissantes) = ids des AUTRES saisons portant EXACTEMENT le même
+    slug de libellé (id = `<slug>-<année>`) : aucune preuve de continuité (deux équipes homonymes peuvent n'avoir rien de commun), l'interface l'affiche
+    « même nom en … » ; absent s'il n'y en a pas (sélections nationales comprises). **`mouvements`** `{"arrivees": [rider_id], "departs": [rider_id]}`
+    seulement si l'équipe-saison de l'année précédente (année − 1) au même slug existe ET que les deux portent la même lignée Wikidata ; sinon absent.
+  - `coureurs/<lettre>.json` : la saison d'un coureur porte déjà `equipe` (et `equipes`) = ids d'équipes-saisons ; ils existent TOUS dans
+    `equipes/<année>.json` de la même saison (sélections nationales comprises ; vérifié par `encyclopedie.py --test` et sur les archives réelles : 37 790
+    références, 0 inconnue). Nouveau : **`lignee`** (QID) dans la saison du coureur quand l'équipe-saison principale (`equipe`) en a une
+    (toujours égal à `equipes/<année>.json[equipe].lignee`).
+  - `equipes/index.json` : la clé du QID est **`lignee`** (déjà présente, inchangée ; pas de clé `l`) ; `lignees_index.json` et `lignees.json` inchangés.
+  - **`equipes/lignees/<QID>.json`** (un fichier par lignée de `lignees.json`, ~10 Ko en moyenne, 91 Ko au maximum, 3,3 Mo au total sur les archives
+    2017-2026) : `{"qid", "nom" (libellé Wikidata, à défaut libellé de l'équipe-saison la plus récente), "noms": [{"nom", "debut", "fin"?}] (P1448 daté,
+    précision de la source), "codes": [{"code", "debut", "fin"?}] (P1998), "pays"? (ISO3, seulement si le P17 correspond à un seul code de `PAYS_NOMS`),
+    "pays_nom"? (libellé P17), "cats"? (niveaux P31 distincts, ordre WT, Pro, Cont ; P31 n'est pas daté), "sitelinks"? `{langue: titre}` (fr, en, es, it,
+    nl, de), "logo"? `{url, page, auteur?, licence, licence_url?}` (licence lisible seulement),
+    "saisons": {"<année>": {"id" (équipe-saison), "libelle", "code_uci"?, "effectif": [{"rider_id", "n"?, "f"?, "jours", "v"}] (jours décroissants,
+    `n` nom, `f` drapeau, `v` victoires), "victoires": [{"date", "race_id", "course", "label", "classification" (stage|gc), "rider_id"}] (récentes
+    d'abord), "grands_tours"? `{tour|giro|vuelta: {rank, rider_id, race_id}}`, "totaux": {wins, gc_wins, riders, jours}, "autres"? [ids]}}` (années
+    décroissantes ; contenu STRICTEMENT repris de `equipes/<année>.json`, sans second calcul ; `autres` = autres équipes-saisons de la même lignée la
+    même année si Wikidata en rattache plusieurs : la plus active est détaillée, aucune sur les archives actuelles),
+    "mouvements": {"<année>": {"arrivees": [rider_id], "departs": [rider_id], "depuis": <année précédente présente>}}` (années décroissantes ; une entrée
+    par saison de la lignée SAUF la plus ancienne ; comparaison de l'effectif de deux saisons CONSÉCUTIVES PRÉSENTES dans la lignée, `depuis` > année − 1
+    quand une saison manque dans nos données : **constatés dans nos données, à la saison près ; un coureur peut avoir couru peu de jours, ou ne pas
+    figurer dans nos classements ; ce n'est pas un transfert officiel** ; les doublons de rider_id non fusionnés apparaissent comme départ + arrivée),
+    "totaux_lignee": {"saisons": [première, dernière], "victoires" (somme des `totaux.wins`), "coureurs" (rider_id distincts), "grands_tours_gagnes"
+    (nombre de classements généraux de grand tour de rang 1 de l'équipe)}}`. Clés absentes = pas de donnée. Les équipes-saisons sans lignée n'ont pas de
+    fichier de lignée (tout est dans `equipes/<année>.json`).
+  - **Id d'équipe-saison à partir d'un libellé brut** (miroir JS pour les lignes de résultats qui n'ont que le libellé d'équipe) : `id = slugify(libellé) +
+    "-" + année de la saison`. `netutil.slugify(nom)` = `normalize(nom).replace(" ", "-")` ; `normalize` : (1) `unicodedata.normalize("NFKD", nom or "")` ;
+    (2) encodage ASCII avec `ignore` : tout caractère non ASCII restant est SUPPRIMÉ (les accents se décomposent en lettre + diacritique, le diacritique
+    tombe ; mais **ł, ß, ø, æ, đ, œ… n'ont pas de décomposition et disparaissent** : « Perła » -> « pera », « OßWALD » -> « owald »), tirets
+    typographiques compris (– — : supprimés ; les espaces voisins font le séparateur) ; (3) minuscules ; (4) toute suite de caractères hors `[a-z0-9]`
+    (espaces, `|`, `&`, `'`, `.`, `/`, `:`, tirets…) devient UN espace ; (5) trim + espaces multiples réduits ; (6) espaces -> `-`. Attention à l'ORDRE : le
+    passage en ASCII précède le remplacement par des espaces, donc un caractère non ASCII sans décomposition n'est PAS un séparateur (« Pauwels Sauzen –
+    Bingoal » : le tiret demi-cadratin, supprimé, laisse les deux espaces voisins -> un seul séparateur ; « Perła » reste collé). Chaîne vide ou sans
+    caractère alphanumérique -> `""`. Le libellé utilisé est celui de la ligne de résultat (variantes de casse / ponctuation d'une même équipe ->
+    même slug) ; la saison est celle de la fiche de course. Couples réels (constante `encyclopedie.COUPLES_SLUG`, testés par `encyclopedie.py --test`) :
+
+    | libellé | slug |
+    |---|---|
+    | `Groupama - FDJ` | `groupama-fdj` |
+    | `Arkea-B&B Hotels` | `arkea-b-b-hotels` |
+    | `Team Dauner D&DQ \| Akkon` | `team-dauner-d-dq-akkon` |
+    | `Amore E Vita \| P:` | `amore-e-vita-p` |
+    | `Canel's - Java` | `canel-s-java` |
+    | `Akros - Excelsior - Thömus` | `akros-excelsior-thomus` |
+    | `Aviludo - Louletano - Loulé` | `aviludo-louletano-loule` |
+    | `7ELEVEN Cliqq - AIR21 by Roadbike Philippines` | `7eleven-cliqq-air21-by-roadbike-philippines` |
+    | `AP Hotels & Resorts /tavira/ SC Farense` | `ap-hotels-resorts-tavira-sc-farense` |
+    | `Pauwels Sauzen – Bingoal` (U+2013) | `pauwels-sauzen-bingoal` |
+    | `Lubelskie Perła Polski` | `lubelskie-pera-polski` |
+    | `RAD-NET OßWALD` | `rad-net-owald` |
+    | `Heizomat RAD-Net.de` | `heizomat-rad-net-de` |
+
+    Un libellé dont le slug donne un id absent de `equipes/<année>.json` (équipe sans classement collecté cette saison) : pas de lien.
 - **`coureurs/index.json`** (liste de tous les coureurs, rider_id canoniques, triée par `id`, ~2,2 Mo / ~0,5 Mo gzip sur 2017-2026) :
   `[{"id", "n" (nom), "f"? (code drapeau), "nat"? (ISO3), "eq"? (libellé de l'équipe principale de la dernière saison du coureur), "eqid"? (id d'équipe-saison),
   "s": [première, dernière saison], "v" (victoires totales), "p" (podiums), "uci"? (meilleur rang UCI de fin de saison, `uci_rank` des saisons),
