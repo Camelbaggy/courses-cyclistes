@@ -11,11 +11,11 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
   UCI, Français à la une, « ce jour-là »).
 - Articles coureur (portrait cadré sur le visage, palmarès, saisons, grands tours, classement UCI, parcours), épreuve
   (palmarès UCI + historique Wikidata depuis l'origine, records), édition (podium, participants, pays).
-- **En cours (R2b, branche `ccr-6eb51b68-vzkhg2`, non fusionné)** : articles d'équipe (`#equipe/<QID>` lignée et
-  `#equipe/<id équipe-saison>`), équipes cliquables partout, miroir JS de `netutil.slugify`, et **frise « Équipes » de la
-  fiche coureur simplifiée** demandée par le propriétaire : une ligne par équipe « Nom · 2019–2022 », années seulement,
-  sources fusionnées (périodes Wikidata + nos saisons), sélections nationales à part. Agent interrompu (limite d'API) : travail partiel committé sur la branche, à reprendre et vérifier (captures 390/1024 px,
-  Movistar `#equipe/Q6175`, Merlier onglet Parcours) puis PR + fusion.
+- Articles d'équipe (R2, fusionné le 16/11) : `#equipe/<QID>` (lignée, sélecteur de saison) et `#equipe/<id équipe-saison>`,
+  équipes cliquables partout, frise « Équipes » de la fiche coureur simplifiée (« Nom · 2019–2022 »). Vérifié sur le jeu
+  fictif et sur les vraies archives (entités régénérées en local). **Les fichiers `entites/equipes/lignees/` ne sont publiés
+  qu'au prochain passage d'archives.yml** (le passage du 16/11 à 18 h 11 UTC précédait la fusion de R2a) : d'ici là,
+  `#equipe/<QID>` se replie sur l'équipe-saison de la saison demandée (via `lignees_index.json`, déjà publié).
 
 **Données** (dépôt d'archives `Camelbaggy/courses-cyclistes-archives`, Pages) :
 - Saisons UCI archivées : 2018-2025 complètes, 2017 partielle, 2016 puis T3 2011-2015 à venir (archives.yml nocturne,
@@ -41,7 +41,7 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
 
 ## Prochaines étapes
 
-1. Finir R2b (voir ci-dessus) et fusionner.
+1. Vérifier après le passage nocturne d'archives.yml que `entites/equipes/lignees/` est publié (Movistar `#equipe/Q6175`).
 2. R3 : pages Saison (`#saison/<année>`), navbox partout, finitions ; « ce jour-là » plus riche.
 3. Textes d'introduction Wikipédia (fr d'abord, synthèse multilingue courte) pour coureurs, équipes, épreuves.
 4. Étendre l'historique Wikidata aux ~150 autres épreuves suivies (`historique.py --proposer`, même preuve).

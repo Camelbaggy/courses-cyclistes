@@ -2344,7 +2344,14 @@ async function chargerCoursesEquipe(eq) {
 async function construireEquipe(r) {
   if (r.qid) {
     const [L] = await Promise.all([chargerOptionnel(`entites/equipes/lignees/${r.qid}.json`), chargerPays()]);
-    if (!L || !L.saisons || !Object.keys(L.saisons).length) return { cle: r.qid, vide: true };
+    if (!L || !L.saisons || !Object.keys(L.saisons).length) {
+      // article de lignée pas encore publié : repli sur l'équipe-saison de la saison demandée (à défaut la plus récente) d'après lignees_index.json
+      await chargerLigneesIdx();
+      const ids = ((state.lgIdx || {})[r.qid] || {}).eq || [];
+      const id = (r.s != null && ids.find(x => x.endsWith(`-${r.s}`))) || ids[0];
+      if (!id) return { cle: r.qid, vide: true };
+      return construireEquipe({ id, sansRedirection: true });
+    }
     const eq = modeleLignee(L);
     await chargerCoursesEquipe(eq);
     return eq;
@@ -2353,7 +2360,7 @@ async function construireEquipe(r) {
   const [F] = await Promise.all([chargerEquipesSaison(y), chargerPays()]);
   const e = aPropre(F, r.id) ? F[r.id] : null;
   if (!e) return { cle: r.id, vide: true };
-  if (e.lignee) {
+  if (e.lignee && !r.sansRedirection) {
     let L = null;
     try { L = await chargerOptionnel(`entites/equipes/lignees/${e.lignee}.json`); } catch (x) { L = null; }
     if (L && L.saisons && L.saisons[y] && L.saisons[y].id === r.id) return { cle: r.id, redirect: hrefLignee(e.lignee, y) };
