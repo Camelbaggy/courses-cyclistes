@@ -8,7 +8,8 @@
 et écrit dans `<archives_dir>/entites/` (JSON compact, seulement si le contenu change, ordre déterministe) :
 
     coureurs/<lettre>.json     {rider_id: fiche}           lettre = 1re lettre a-z du rider_id canonique, sinon « _ »
-    equipes/<année>.json       {id d'équipe-saison: fiche} + equipes/index.json (liste compacte) + equipes/lignees.json (QID -> lignée Wikidata)
+    equipes/<année>.json       {id d'équipe-saison: fiche} + equipes/index.json (liste compacte) + equipes/lignees.json (QID -> lignée Wikidata)  + equipes/lignees_index.json
+    coureurs/index.json, courses/index.json  index compacts pour les pages de liste
     courses/<lettre>.json      {clé d'édition: fiche}      lettre = 1re lettre a-z de la clé, sinon « _ »
     coureurs_historiques/<NN>.json  {« wd-Q… »: fiche légère}  coureurs d'avant nos données (palmarès Wikidata) ; NN = 2 derniers chiffres du QID
     saisons/<année>.json       statistiques de la saison
@@ -49,6 +50,7 @@ import collector
 import historique
 import netutil
 import riders
+import selection
 import uci
 import wikidata
 
@@ -88,7 +90,7 @@ PAYS_NOMS: Dict[str, Tuple[str, ...]] = {
     "BRU": ("Brunei", "Brunei"), "BUL": ("Bulgarie", "Bulgaria"), "BUR": ("Burkina Faso", "Burkina Faso"),
     "CAM": ("Cambodge", "Cambodia"), "CAN": ("Canada", "Canada"), "CAY": ("Îles Caïmans", "Cayman Islands"),
     "CGO": ("Congo", "Congo", "Republic of the Congo"), "CHA": ("Tchad", "Chad"), "CHI": ("Chili", "Chile"),
-    "CHN": ("Chine", "China"), "CIV": ("Côte d'Ivoire", "Cote D'ivoire", "Ivory Coast"),
+    "CHN": ("Chine", "China", "République populaire de Chine"), "CIV": ("Côte d'Ivoire", "Cote D'ivoire", "Ivory Coast"),
     "CMR": ("Cameroun", "Cameroon"), "COD": ("RD Congo", "DRC Congo", "Democratic Republic of the Congo"),
     "COL": ("Colombie", "Colombia"), "COM": ("Comores", "Comoros"), "CPV": ("Cap-Vert", "Cape Verde"),
     "CRC": ("Costa Rica", "Costa Rica"), "CRO": ("Croatie", "Croatia"), "CUB": ("Cuba", "Cuba"),
@@ -98,7 +100,7 @@ PAYS_NOMS: Dict[str, Tuple[str, ...]] = {
     "EGY": ("Égypte", "Egypt"), "ERI": ("Érythrée", "Eritrea"), "ESA": ("Salvador", "El Salvador"),
     "ESP": ("Espagne", "Spain"), "EST": ("Estonie", "Estonia"), "ETH": ("Éthiopie", "Ethiopia"),
     "FIJ": ("Fidji", "Fiji"), "FIN": ("Finlande", "Finland"), "FRA": ("France", "France"),
-    "GAB": ("Gabon", "Gabon"), "GAM": ("Gambie", "Gambia"), "GBR": ("Grande-Bretagne", "Great Britain"),
+    "GAB": ("Gabon", "Gabon"), "GAM": ("Gambie", "Gambia"), "GBR": ("Grande-Bretagne", "Great Britain", "Royaume-Uni"),
     "GEO": ("Géorgie", "Georgia"), "GER": ("Allemagne", "Germany"), "GHA": ("Ghana", "Ghana"),
     "GRE": ("Grèce", "Greece"), "GRN": ("Grenade", "Grenada"), "GUA": ("Guatemala", "Guatemala"),
     "GUI": ("Guinée", "Guinea"), "GUM": ("Guam", "Guam"), "GUY": ("Guyana", "Guyana"), "HAI": ("Haïti", "Haiti"),
@@ -173,6 +175,38 @@ def _est_nationale(libelle: str, nationalites: Iterable[Optional[str]]) -> Optio
         return None
     nat = next(iter(nats))
     return nat if nat in codes else None
+
+
+_RE_FEMININ = re.compile(r"\b(women|woman|femme|femmes|feminin|feminine|feminines)\b")
+
+
+def _niveau_equipe(libelle: str) -> Optional[str]:
+    """Niveau UCI d'UNE classe Wikidata (P31) d'une lignée : « WT » (WorldTeam), « Pro » (ProTeam / Professional Continental),
+    « Cont » (Continental), sinon None (groupes sportifs, clubs, équipes féminines… : jamais devinés)."""
+    n = netutil.normalize(libelle)
+    if _RE_FEMININ.search(n):
+        return None
+    sq = n.replace(" ", "")
+    if "worldteam" in sq or "worldtour" in sq:
+        return "WT"
+    if "proteam" in sq or "professionalcontinental" in sq or "continentaleprofessionnelle" in sq:
+        return "Pro"
+    if "continental" in sq:
+        return "Cont"
+    return None
+
+
+def _niveaux_lignee(classes: Optional[Iterable[str]]) -> List[str]:
+    """Niveaux distincts (ordre WT, Pro, Cont) portés par les classes P31 d'une lignée. P31 n'est PAS daté dans notre cache :
+    une lignée qui a été Continental puis ProTeam porte les deux niveaux ; « cat » n'est donné que s'il n'y en a qu'un."""
+    vus = {_niveau_equipe(c) for c in classes or ()}
+    return [n for n in ("WT", "Pro", "Cont") if n in vus]
+
+
+def _code_pays_wikidata(pays: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Code ISO3 (PAYS_NOMS) du pays P17 d'une lignée, seulement si le libellé français correspond à UN SEUL code."""
+    codes = _PAYS_PAR_NOM.get(netutil.normalize((pays or {}).get("libelle") or ""))
+    return next(iter(codes)) if codes and len(codes) == 1 else None
 
 
 def _dk(race: Dict[str, Any]) -> Tuple[str, str]:
@@ -635,7 +669,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                     ent["f"] = code_flag
             EQ_INDEX.append(_sans_vide({"id": tid, "name": nom, "season": an, "wins": fiche["totaux"]["wins"],
                                         "riders": fiche["totaux"]["riders"], "nationale": True if nat else None,
-                                        "lignee": lig}))
+                                        "pays": nat, "lignee": lig}))
         equipes = dict(sorted(equipes.items()))
         equipes_total += len(equipes)
         ecrire(os.path.join(sortie, "equipes", f"{an}.json"), equipes)
@@ -801,7 +835,27 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         lettres.setdefault(_lettre(cid), {})[cid] = out
     for lettre, contenu in sorted(lettres.items()):
         ecrire(os.path.join(sortie, "coureurs", f"{lettre}.json"), contenu)
-    _nettoyer(os.path.join(sortie, "coureurs"), {f"{l}.json" for l in lettres})
+    # index compact des coureurs (liste des pages Coureurs) : clés courtes, une clé absente = pas de donnée
+    derniere = annees[-1] if annees else None
+    idx_coureurs: List[Dict[str, Any]] = []
+    for lettre in sorted(lettres):
+        for cid, f in lettres[lettre].items():
+            if not f.get("name"):
+                continue
+            sais = f["saisons"]
+            ys = sorted(int(y) for y in sais)
+            dern = sais[str(ys[-1])] if ys else {}
+            rangs = [x["uci_rank"] for x in sais.values() if x.get("uci_rank") is not None]
+            idx_coureurs.append(_sans_vide({
+                "id": cid, "n": f["name"], "f": f.get("flag"), "nat": f.get("nationality"),
+                "eq": dern.get("team"), "eqid": dern.get("equipe"), "s": [ys[0], ys[-1]] if ys else None,
+                "v": f["totaux"]["wins"], "p": f["totaux"]["podiums"], "uci": min(rangs) if rangs else None,
+                "fr": True if f.get("nationality") == "FRA" else None,
+                "act": True if ys and ys[-1] == derniere else None,
+                "photo": True if (f.get("wikidata") or {}).get("image") else None}))
+    idx_coureurs.sort(key=lambda x: x["id"])
+    ecrire(os.path.join(sortie, "coureurs", "index.json"), idx_coureurs)
+    _nettoyer(os.path.join(sortie, "coureurs"), {f"{l}.json" for l in lettres} | {"index.json"})
 
     # ---- coureurs historiques (légers) : fichier d'après les deux derniers chiffres du QID (« wd-Q123456 » -> 56.json)
     legers_fichiers: Dict[str, Dict[str, Any]] = {}
@@ -813,7 +867,6 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
 
     # ---- finalisation des équipes (index)
     EQ_INDEX.sort(key=lambda t: (-t["season"], t["name"], t["id"]))
-    ecrire(os.path.join(sortie, "equipes", "index.json"), EQ_INDEX)
     # lignées Wikidata : seulement celles qui portent au moins une équipe-saison rapprochée (preuve dans le cache)
     lignees_out: Dict[str, Any] = {}
     for qid in sorted(LIGNEES_EQ):
@@ -821,7 +874,28 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         lignees_out[qid] = dict(wikidata.fiche_lignee(WD["lignees"].get(qid), WD["images"]),
                                 equipes=[t for _a, t in eqs], saisons=[min(a for a, _ in eqs), max(a for a, _ in eqs)])
     ecrire(os.path.join(sortie, "equipes", "lignees.json"), lignees_out)
-    _nettoyer(os.path.join(sortie, "equipes"), equipes_ecrites | {"index.json", "lignees.json"})
+    # catégorie / pays des équipes-saisons : seulement ce que Wikidata (lignée rapprochée) établit ; P31 non daté -> « cat » absent si plusieurs niveaux
+    niveaux_l = {q: _niveaux_lignee(lg.get("classes")) for q, lg in lignees_out.items()}
+    pays_l = {q: _code_pays_wikidata(lg.get("pays")) for q, lg in lignees_out.items()}
+    for t in EQ_INDEX:
+        q = t.get("lignee")
+        if q and len(niveaux_l.get(q) or ()) == 1:
+            t["cat"] = niveaux_l[q][0]
+        if not t.get("pays") and q and pays_l.get(q):      # sélection nationale : pays = celui de ses coureurs (déjà posé)
+            t["pays"] = pays_l[q]
+    ecrire(os.path.join(sortie, "equipes", "index.json"), EQ_INDEX)
+    noms_eq = {t["id"]: (t["name"], t["season"]) for t in EQ_INDEX}
+    lignees_idx: Dict[str, Any] = {}
+    for qid, lg in lignees_out.items():
+        ids = lg["equipes"]
+        recent = max(ids, key=lambda i: (noms_eq[i][1], i)) if ids else None
+        lignees_idx[qid] = _sans_vide({
+            "n": lg.get("libelle") or (noms_eq[recent][0] if recent else None), "s": lg["saisons"], "eq": ids,
+            "cat": niveaux_l[qid][0] if len(niveaux_l[qid]) == 1 else None,
+            "cats": niveaux_l[qid] if len(niveaux_l[qid]) > 1 else None,
+            "pays": pays_l[qid], "pays_nom": (lg.get("pays") or {}).get("libelle")})
+    ecrire(os.path.join(sortie, "equipes", "lignees_index.json"), lignees_idx)
+    _nettoyer(os.path.join(sortie, "equipes"), equipes_ecrites | {"index.json", "lignees.json", "lignees_index.json"})
     _nettoyer(os.path.join(sortie, "saisons"), saisons_ecrites)
 
     # ---- finalisation des courses
@@ -858,7 +932,26 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         lettres_c.setdefault(_lettre(cle), {})[cle] = fiche
     for lettre, contenu in sorted(lettres_c.items()):
         ecrire(os.path.join(sortie, "courses", f"{lettre}.json"), contenu)
-    _nettoyer(os.path.join(sortie, "courses"), {f"{l}.json" for l in lettres_c})
+    # index compact des épreuves (liste des pages Courses) : clés courtes, une clé absente = pas de donnée
+    idx_courses: List[Dict[str, Any]] = []
+    for lettre in sorted(lettres_c):
+        for cle, f in lettres_c[lettre].items():
+            eds = f["editions"]                                   # plus récente d'abord
+            nom = max(f["noms"].items(), key=lambda kv: (max(kv[1]), kv[0]))[0]
+            saisons_uci = sorted({e["season"] for e in eds})
+            cl = f["classes"][max(f["classes"], key=int)] if f.get("classes") else None
+            der = eds[0]
+            vq = next((p for p in der.get("podium") or [] if p["rank"] == 1), None)
+            h = [x["annee"] for x in (f.get("historique") or []) if x.get("annee")]
+            idx_courses.append(_sans_vide({
+                "k": cle, "n": nom, "pays": f["pays"], "f": f.get("flag"), "cl": cl,
+                "cat": selection.categorie_classe(cl) if cl else None, "type": f.get("type"),
+                "s": [saisons_uci[0], saisons_uci[-1]], "h": min(h) if h else None, "ed": len(eds),
+                "der": _sans_vide({"saison": der["season"], "race_id": der.get("race_id"),
+                                   "vainqueur": _sans_vide({"id": vq["id"], "nom": vq.get("name")}) if vq else None})}))
+    idx_courses.sort(key=lambda x: x["k"])
+    ecrire(os.path.join(sortie, "courses", "index.json"), idx_courses)
+    _nettoyer(os.path.join(sortie, "courses"), {f"{l}.json" for l in lettres_c} | {"index.json"})
 
     # ---- pays
     pays_out: Dict[str, Any] = {}
@@ -1128,7 +1221,8 @@ def _tests() -> None:
             "equipe-a-2024": {"qid": "Q8001", "preuve": "p", "verifie": "2026-11-01"}, "equipe-a-2025": {"qid": "Q8001", "preuve": "p", "verifie": "2026-11-01"},
             "belgium-2025": {"qid": None, "raison": "aucune", "verifie": "2026-11-01"}})
         collector._dump(os.path.join(wdc, "lignees.json"), {"Q8001": {"libelle": "Équipe Alpha (lignée)", "noms": [{"nom": "Equipe A", "debut": "2019"}],
-                                                                   "logo": "L.svg", "verifie": "2026-11-01"}})
+                                                                   "logo": "L.svg", "verifie": "2026-11-01",
+                                                                   "pays": {"qid": "Q142", "libelle": "France"}, "classes": ["UCI ProTeam", "UCI ProTeam"]}})
         # historique du classement UCI (E1c) : instantanés écrits par collector.collecter_classements ; alias appliqués saison par saison
         cl = os.path.join(A, "entites", "classements")
         collector._dump(os.path.join(cl, "2023", "2023-06-06.json"), {"date": "2023-06-06", "nom": "UCI World Ranking", "moment_id": 1, "raisons": ["après Tour"],
@@ -1194,6 +1288,7 @@ def _tests() -> None:
         lg = L("equipes/lignees.json")
         assert lg == {"Q8001": {"libelle": "Équipe Alpha (lignée)", "noms": [{"nom": "Equipe A", "debut": "2019"}],
                                 "equipes": ["equipe-a-2025", "equipe-a-2024"], "saisons": [2024, 2025],
+                                "pays": {"qid": "Q142", "libelle": "France"}, "classes": ["UCI ProTeam", "UCI ProTeam"],
                                 "logo": {"url": "https://x.example/l.svg", "page": "https://x.example/lp", "licence": "Public domain"}}}, lg   # sans licence_url
         wd = cd[dup]["wikidata"]
         assert wd["qid"] == "Q9001" and wd["lieu"]["libelle"] == "Test-sur-Mer" and wd["taille"] == 1.8 and wd["wikipedia"] == {"fr": "Jean Dupont"}
@@ -1205,6 +1300,28 @@ def _tests() -> None:
         assert L("coureurs/m.json")[martin]["saisons"]["2023"]["equipe"] == "france-2023"   # seule équipe connue
         idx = L("equipes/index.json")
         assert idx == sorted(idx, key=lambda t: (-t["season"], t["name"], t["id"])) and any(t.get("nationale") for t in idx)
+        # index compacts (pages de liste) : équipes (cat / pays de Wikidata), lignées, coureurs, courses
+        assert next(t for t in idx if t["id"] == "equipe-a-2025")["cat"] == "Pro" and next(t for t in idx if t["id"] == "equipe-a-2025")["pays"] == "FRA"
+        assert next(t for t in idx if t["id"] == "equipe-a-2024")["lignee"] == "Q8001" and "cat" not in next(t for t in idx if t["id"] == "equipe-a-2023")
+        assert all("cat" not in t and "pays" not in t for t in idx if not t.get("lignee") and not t.get("nationale"))
+        assert next(t for t in idx if t.get("nationale"))["pays"] in PAYS_NOMS
+        assert L("equipes/lignees_index.json") == {"Q8001": {"n": "Équipe Alpha (lignée)", "s": [2024, 2025], "eq": ["equipe-a-2025", "equipe-a-2024"],
+                                                             "cat": "Pro", "pays": "FRA", "pays_nom": "France"}}
+        assert [_niveau_equipe(x) for x in ("UCI WorldTeam", "UCI ProTeam", "UCI Professional Continental Team", "équipe continentale",
+                                            "UCI Women's ProTeam", "équipe de club", "Groupe Sportif II")] == ["WT", "Pro", "Pro", "Cont", None, None, None]
+        assert _niveaux_lignee(["équipe continentale", "UCI ProTeam", "UCI ProTeam"]) == ["Pro", "Cont"] and _niveaux_lignee([]) == []
+        assert _code_pays_wikidata({"libelle": "France"}) == "FRA" and _code_pays_wikidata({"libelle": "Atlantide"}) is None and _code_pays_wikidata(None) is None
+        ic = L("coureurs/index.json")
+        assert ic == sorted(ic, key=lambda x: x["id"]) and len({x["id"] for x in ic}) == len(ic) and "index" not in {x["id"] for x in ic}
+        i_dup = next(x for x in ic if x["id"] == dup)
+        assert i_dup["n"] == "Jean Dupont" and i_dup["s"][0] <= i_dup["s"][1] and i_dup["v"] == cd[dup]["totaux"]["wins"] and i_dup["photo"] is True
+        assert i_dup["eqid"] == cd[dup]["saisons"][str(i_dup["s"][1])]["equipe"] and (i_dup.get("fr") is True) == (cd[dup].get("nationality") == "FRA")
+        assert all(("act" in x) == (x["s"][1] == max(rap["saisons"])) and (x["id"] == dup) == ("photo" in x) for x in ic)
+        icc = L("courses/index.json")
+        assert icc == sorted(icc, key=lambda x: x["k"]) and "index" not in {x["k"] for x in icc}
+        i_tdf = next(x for x in icc if x["k"] == "tour de france|FRA")
+        assert i_tdf["n"] == "Tour de France" and i_tdf["pays"] == "FRA" and i_tdf["cl"] == "2.UWT" and i_tdf["cat"] == "WT" and i_tdf["ed"] == 2 and i_tdf["s"] == [2023, 2024]
+        assert i_tdf["der"] == {"saison": 2024, "race_id": L("courses/t.json")["tour de france|FRA"]["editions"][0]["race_id"], "vainqueur": {"id": dup, "nom": "Jean Dupont"}} and "h" not in i_tdf, i_tdf
         # courses : Tour de France 2023-2025 (la course en cours 2025 n'est pas une édition), records
         cc = L("courses/t.json")["tour de france|FRA"]
         assert [e["season"] for e in cc["editions"]] == [2024, 2023] and cc["noms"] == {"Tour de France": [2023, 2024]}

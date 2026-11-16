@@ -291,11 +291,27 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   coureurs classés de la saison (`ranking.json`, clé `team_code`) dont le libellé d'équipe a le même slug que l'id ; plusieurs codes : absent
   (anomalie `code_uci_multiple`) ; jamais pour une sélection nationale. **`lignee`** (QID Wikidata) : si `wikidata/equipes.json` la prouve
   (voir ci-dessous). `equipes/index.json` : liste `[{"id", "name", "season", "wins",
-  "riders", "nationale"?, "lignee"?}]` triée saison décroissante puis nom. **`equipes/lignees.json`** : `{QID: {"libelle", "noms": [{"nom", "debut",
+  "riders", "nationale"?, "lignee"?, "cat"?, "pays"?}]` triée saison décroissante puis nom ; `cat` (« WT » WorldTeam, « Pro » ProTeam / Professional
+  Continental, « Cont » Continental) vient des classes P31 de la lignée Wikidata (`lignees.json`) et n'est donné QUE si la lignée ne porte qu'un
+  niveau (P31 n'est pas daté : une lignée Continental puis ProTeam porte les deux, `cat` absent, voir `lignees_index.json` `cats`) ; groupes sportifs,
+  clubs, équipes féminines : jamais de `cat` ; `pays` = code ISO3 : celui des coureurs pour une sélection nationale, sinon le P17 de la lignée
+  (si son libellé français correspond à un seul code de `PAYS_NOMS`) ; sans lignée, ni `cat` ni `pays`. **`equipes/lignees_index.json`** (index
+  compact des lignées) : `{QID: {"n" (libellé Wikidata, à défaut nom de l'équipe-saison la plus récente), "s": [première, dernière saison], "eq": [ids
+  d'équipes-saisons, récentes d'abord], "cat"? (niveau unique), "cats"? (plusieurs niveaux, ordre WT, Pro, Cont ; « cat la plus récente » n'est pas
+  établissable sans P31 daté), "pays"? (ISO3), "pays_nom"? (libellé français P17)}}`. **`equipes/lignees.json`** : `{QID: {"libelle", "noms": [{"nom", "debut",
   "fin"}] (P1448, datés à la précision de la source : année, mois ou jour), "codes": [{"code", "debut", "fin"}] (P1998), "pays": {"qid", "libelle"},
   "classes": [libellés P31], "sitelinks": {fr, en, es, it, nl, de: titre}, "logo": {"url", "page", "auteur", "licence", "licence_url"} (seulement avec
   licence lisible), "equipes": [ids d'équipes-saisons, récentes d'abord], "saisons": [première, dernière]}}`, uniquement les lignées portant au moins
   une équipe-saison rapprochée.
+- **`coureurs/index.json`** (liste de tous les coureurs, rider_id canoniques, triée par `id`, ~2,2 Mo / ~0,5 Mo gzip sur 2017-2026) :
+  `[{"id", "n" (nom), "f"? (code drapeau), "nat"? (ISO3), "eq"? (libellé de l'équipe principale de la dernière saison du coureur), "eqid"? (id d'équipe-saison),
+  "s": [première, dernière saison], "v" (victoires totales), "p" (podiums), "uci"? (meilleur rang UCI de fin de saison, `uci_rank` des saisons),
+  "fr"? (true si FRA), "act"? (true si présent dans la saison la plus récente des données), "photo"? (true si image Wikidata sous licence lisible)}]`.
+  Coureurs sans nom exclus ; coureurs historiques (`wd-Q…`) non inclus.
+- **`courses/index.json`** (liste des épreuves, triée par clé, ~0,15 Mo) : `[{"k" (clé d'édition), "n" (nom le plus récent), "pays", "f"?, "cl"? (classe UCI la
+  plus récente), "cat"? (`selection.categorie_classe(cl)` : WT, Pro, .1, .2), "type"? (`one_day` / `stage_race`), "s": [première, dernière saison UCI],
+  "h"? (première année de l'historique Wikidata, si présent), "ed" (nombre d'éditions UCI), "der": {"saison", "race_id", "vainqueur"?: {"id", "nom"?}}
+  (dernière édition terminée)}]`.
 - **`courses/<lettre>.json`** (lettre = 1re lettre a-z de la clé, sinon `_`) : `{clé d'édition: {"noms": {variante: [saisons]}, "pays", "flag",
   "classes": {année: uci_class}, "type", "editions": [{"season", "race_id", "start_date", "end_date", "podium": [{"rank", "id", "name", "nat",
   "flag", "team"}] (rangs 1-3 du général final, ou du classement d'un jour), "best_french": {"id", "name", "flag", "rank", "classification"}}]
