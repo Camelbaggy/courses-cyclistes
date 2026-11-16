@@ -47,7 +47,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   };
   const archives = conf.archives ? `&archives=${conf.archives}` : '';
   const url = (hash) => conf.reel ? `http://127.0.0.1:${conf.port}/index.html?x=1${archives}${hash || ''}`
-                                  : `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}${hash || ''}`;
+                                  : `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}&maillots=tools/fixtures/maillots${hash || ''}`;
   const ok = (nom, cond, detail) => { console.log(cond ? 'OK   ' : 'ECHEC', nom, detail === undefined ? '' : JSON.stringify(detail)); if (!cond) echecs.push(nom); };
 
   async function pret(page, sel) {
@@ -262,7 +262,12 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     const liensEq = await page.$$eval('#table .team-head a.tlink', l => l.map(a => a.getAttribute('href')));
     ok("participants : titre d'équipe cliquable (équipe existante seulement)", liensEq.length > 0 && liensEq.every(h => h.startsWith('#equipe/')), liensEq);
     ok('participants : cartes repliées par défaut', (await page.$$('#table .team-card .rows')).length === 0);
-    ok('participants : logo de lignée affiché (saison sous le nom actuel)', (await page.$$('#table .tc-logo img')).length > 0);
+    ok('participants : logo de lignée affiché (saison sous le nom actuel)', (await page.$$('#table .tc-logo:not(.maillot) img')).length > 0);
+    const mail = await page.$$eval('#table .team-card', l => l.map(c => [c.querySelector('.tn').textContent.trim(), !!c.querySelector('.tc-logo.maillot img')]));
+    const aMaillot = n => (mail.find(x => x[0] === n) || [])[1];
+    ok('participants : maillot WorldDB (même nom, même code)', aMaillot('Victor Team') === true && aMaillot('Bravo Cycling') === true, mail);
+    ok('participants : pas de maillot si le code UCI diffère', aMaillot('Golf Team') === false);
+    ok('participants : crédit WorldDB', (await page.$eval('#table', e => e.textContent)).includes('Maillots : WorldDB'));
     await page.click('#table .team-card .tc-tog'); await page.waitForTimeout(200);
     ok('participants : un clic ouvre une carte', (await page.$$('#table .team-card.ouvert .rows .row')).length > 0 && (await page.$$('#table .team-card.ouvert')).length === 1);
     await page.click('[data-action="part-tous"]'); await page.waitForTimeout(200);

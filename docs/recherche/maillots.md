@@ -16,7 +16,15 @@ Lotto Dstny, Alpecin-Deceuninck, UAE, TotalEnergies, Arkéa, Corendon-Circus, Q3
   récentes), rendu à reconstituer, licence à vérifier fichier par fichier.
 - **Logos** (P154 des lignées) : 19 lignées sur 328 en ont un sous licence lisible (les logos sont surtout des marques non libres).
 
-## Décision
+## Mise à jour : maillots WorldDB (16 novembre 2026)
+
+Le propriétaire a obtenu l'accord des auteurs de la base WorldDB (textures Pro Cycling Manager) pour publier leurs maillots, crédit « WorldDB ».
+Sources (saison 2025 : 236 équipes, 160 champions nationaux, 494 maillots distinctifs de 123 courses, gabarit unique 1200x826) dans le dépôt privé
+Camelbaggy/maillots-pcm ; `tools/maillots.py` n'en publie que le buste vu de face (`maillots/`, 3,6 Mo). Équipes reliées par le code UCI (174 équipes-saisons
+2025 sur 204) ; affichage sur toute la période où l'équipe garde le même nom et le même code (décision du propriétaire). Cela remplace la décision ci-dessous
+pour les équipes.
+
+## Décision (avant l'accord WorldDB)
 
 - Liste des participants : logo de lignée quand il existe, affiché seulement pour les saisons sous le nom actuel (`logo_depuis`),
   sinon initiales. Aucun maillot pour l'instant.
