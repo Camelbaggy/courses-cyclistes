@@ -141,3 +141,45 @@ France 2018-2026 continu.
 | Q1542681 | cholet pays de la loire\|FRA | cholet agglo tour |
 | Q894986 | boucles de la mayenne credit mutuel\|FRA | boucles de la mayenne |
 | Q1025846 | tour du limousin nouvelle aquitaine\|FRA | tour du limousin perigord nouvelle aquitaine |
+
+### Ajout du 17 novembre 2026 : courses renommées des maillots distinctifs (25 groupes)
+
+Demandé par le propriétaire (les maillots WorldDB restent quand la course change de nom ; les palmarès sont regroupés de la même façon).
+Preuve, sonde `tools/essais/essai_alias_courses.py` (`[essai:alias_courses]`, run 43976590338, 461 requêtes, 8 min) : séries candidates
+cherchées sur toutes les dénominations du groupe, puis concordance des vainqueurs de NOS éditions avec Wikidata sur **toutes les années**
+(certaines dénominations n'ont servi qu'un an) ; retenu seulement si UNE série donne au moins une concordance et **aucune discordance pour
+chaque clé**, et au moins 2 concordances au total. Canonique = clé qui a le plus d'éditions. Vérifié sur une génération réelle d'`encyclopedie`
+(AlUla Tour 2020-2025, Tour of Britain 2017-2025, Route d'Occitanie 2017-2025, Langkawi 2017-2025 : une seule épreuve chacune).
+
+| Série Wikidata | Clé canonique | Clés rattachées |
+|---|---|---|
+| Q290588 | etoile de besseges tour du gard\|FRA | etoile de besseges |
+| Q1092873 | circuit des ardennes\|FRA | circuit des ardennes international |
+| Q955021 | region pays de la loire tour\|FRA | circuit cycliste sarthe pays de la loire |
+| Q3009575 | czech tour\|CZE | sazka tour |
+| Q160696 | deutschland tour\|GER | lidl deutschland tour |
+| Q1519385 | istarsko proljece istrian spring trophy\|CRO | istrian spring tour |
+| Q1146627 | okolo slovenska tour de slovaquie\|SVK | tour de slovaquie |
+| Q681555 | alpes isere tour\|FRA | rhone alpes isere tour |
+| Q2357535 | international tour of rhodes\|GRE | tour of rhodes powered by rodos palace |
+| Q1401155 | tour alsace\|FRA | tour d alsace |
+| Q84318914 | alula tour\|KSA | saudi tour |
+| Q15233563 | tour of sharjah\|UAE | sharjah tour |
+| Q1519109 | cro race\|CRO | tour of croatia |
+| Q505799 | postnord danmark rundt tour of denmark\|DEN | postnord tour of denmark |
+| Q327365 | volta a portugal em bicicleta\|POR | volta a portugal santander, volta a portugal em bicicleta edicao especial |
+| Q1572415 | la route d occitanie la depeche du midi\|FRA | route d occitanie, route du sud la depeche du midi (+ la route d occitanie cic) |
+| Q22677272 | tour de la provence\|FRA | tour cycliste international la provence |
+| Q505810 | skoda tour de luxembourg\|LUX | skoda tour luxembourg |
+| Q918091 | tour of britain\|GBR | lloyds bank tour of britain men, ovo energy tour of britain, lloyds tour of britain men |
+| Q27997365 | gree tour of guangxi\|CHN | tour of guangxi |
+| Q775110 | petronas le tour de langkawi\|MAS | le tour de langkawi |
+| Q181266 | itzulia basque country\|ESP | vuelta ciclista al pais vasco |
+| Q1533156 | tour poitou charentes en nouvelle aquitaine\|FRA | tour du poitou charentes … vienne, tpc en nouvelle aquitaine |
+| Q1431283 | volta ao algarve em bicicleta\|POR | volta ao algarve cofidis |
+| Q2120129 | volta a la comunitat valenciana\|ESP | volta comunitat valenciana |
+
+**Non regroupés** (pas de preuve, à revoir à la main si besoin) : une discordance sur une année — Tour du Loir-et-Cher (E. Provost 2018),
+Tour of Qinghai Lake (2024), Presidential Tour of Turkey (2019), Visit South Aegean Islands (2025, série Wikidata peut-être différente
+du South Aegean Tour) ; aucune série trouvée par la recherche — 4 Jours de Dunkerque (2017), Tour du Limousin (2017), Tour of Thailand
+(3 graphies). Les maillots WorldDB de ces courses restent affichés sur toutes leurs dénominations (`COURSES_WORLDDB`).
