@@ -111,9 +111,9 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 | Historique (fait côté code ; mesures réelles : docs/recherche/historique_avant_2009.md §10) | Palmarès (vainqueur + podium) de toute l'histoire des épreuves suivies depuis Wikidata : `series_historiques.json` (séries prouvées par concordance des vainqueurs 2019-2025), `historique.py` (cache `entites/historique/`, `run_pipeline.py --historique`), `encyclopedie.construire` fusionne les années absentes de nos éditions UCI (`historique`, `records_historique`, coureurs historiques `wd-Q…`, `palmares_historique`) | cache, entités, sondages vérifiés |
 | E2 (fait) | Pages coureur + recherche globale + première couche du design (jetons, composants : voir CLAUDE.md « Design et composants ») | captures 390 px et 1024 px (`tools/apercu.py`) |
 | E3 (fait) | Page épreuve (`#epreuve/<clé>` : palmarès, records, historique) et fiche d'édition enrichie (podium, navigation, participants, pays) | captures 390 px et 1024 px (`tools/apercu.py`) |
-| E4 | Pages équipe (selon les lignées établies en E0) | captures |
-| E5 | Saison, classement UCI avec historique, pays | captures |
-| E6 | Portail d'accueil | captures |
+| R1 (fait) | Refonte « encyclopédie » : coquille (menu, barre du bas), routeur à pages plein écran, gabarit d'article, accueil portail, Courses (toutes saisons, épreuves), liste des équipes-saisons, annuaire des coureurs, Classements (UCI, saisons, instantanés) | captures `tools/apercu.py` (fictif et réel) |
+| R2 | Articles équipe (lignées) : les noms d'équipe deviennent des liens | captures |
+| R3 | Articles saison, navbox de série et de classement, pays | captures |
 | E7 | Enrichissements externes validés (Wikidata, Wikipédia, photos) | captures, crédits |
 
 ### Historique du classement UCI : estimations (E1c)

@@ -840,7 +840,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     idx_coureurs: List[Dict[str, Any]] = []
     for lettre in sorted(lettres):
         for cid, f in lettres[lettre].items():
-            if not f.get("name"):
+            if not re.search(r"[^\W_]", f.get("name") or ""):   # nom vide ou fait de ponctuation seule (« - - ») : pas de ligne dans l'annuaire
                 continue
             sais = f["saisons"]
             ys = sorted(int(y) for y in sais)

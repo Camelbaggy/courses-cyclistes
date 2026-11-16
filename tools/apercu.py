@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Captures d'écran de index.html (390x844) sur le jeu de données fictif tools/fixtures/data.
+"""Captures d'écran de index.html (encyclopédie : accueil, courses, épreuves, éditions, équipes, coureurs, classements, recherche).
 
-Sert le dépôt en local (http.server, port libre, dans un thread) puis pilote Chromium avec Playwright
-(paquet Python s'il existe, sinon Node via NODE_PATH). Journalise les erreurs console et détecte tout
-débordement horizontal.
+Sert un dossier en local (http.server, port libre, dans un thread) puis pilote Chromium avec Playwright (Node via NODE_PATH).
+Chaque page est capturée à 390 px (mobile, suffixe -m) et 1024 px (suffixe -d) ; le script journalise les erreurs console,
+détecte tout débordement horizontal, vérifie la navigation arrière, l'ancienne URL ?archive= et les zones tactiles de la barre du bas.
 
-    python tools/apercu.py <dossier_de_sortie> [--data tools/fixtures/data] [--sombre] [--nav]
+    python tools/apercu.py <dossier_de_sortie> [--data tools/fixtures/data]            # jeu fictif (par défaut)
+    python tools/apercu.py <dossier_de_sortie> --reel <dossier_servi> [--archives archives]   # données réelles (captures vrai-*)
 
-Le dossier de sortie est obligatoire (créé s'il n'existe pas) : aucun chemin par défaut.
+`--reel` : le dossier servi contient index.html, `data` et `archives` (liens vers les vraies données, lecture seule) ;
+le paramètre ?archives= est transmis à la page. Le dossier de sortie est obligatoire (créé s'il n'existe pas).
 """
 import argparse
 import functools
@@ -32,341 +34,208 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const opts = { headless: true };
   if (conf.chromium) opts.executablePath = conf.chromium;
   const browser = await chromium.launch(opts);
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1,
-                                          colorScheme: conf.scheme });
-  await ctx.route('https://flagcdn.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: FLAG_SVG }));
-  const page = await ctx.newPage();
-  const erreurs = [];
-  page.on('console', m => { if (['error', 'warning'].includes(m.type())) erreurs.push(`[console.${m.type()}] ${m.text()} ${m.location().url || ''}`); });
-  page.on('pageerror', e => erreurs.push(`[pageerror] ${e.message}`));
-  page.on('requestfailed', r => { if (!r.url().includes('flagcdn')) erreurs.push(`[requestfailed] ${r.url()}`); });
-  const base = `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}`;
-  const sortie = conf.sortie, suf = conf.suffixe;
-  const EP = '#epreuve/' + encodeURIComponent('grand prix de test sur mer fictif|FRA');
-  const debord = [];
-  async function verifie(nom) {
+  const sortie = conf.sortie;
+  const erreurs = [], debord = [], echecs = [];
+  const nouveauContexte = async (w, h) => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, colorScheme: 'dark' });
+    await ctx.route('https://flagcdn.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: FLAG_SVG }));
+    const page = await ctx.newPage();
+    page.on('console', m => { if (['error', 'warning'].includes(m.type())) erreurs.push(`[console.${m.type()}] ${m.text()} ${m.location().url || ''}`); });
+    page.on('pageerror', e => erreurs.push(`[pageerror] ${e.message}`));
+    page.on('requestfailed', r => { if (!r.url().includes('flagcdn')) erreurs.push(`[requestfailed] ${r.url()}`); });
+    return { ctx, page };
+  };
+  const archives = conf.archives ? `&archives=${conf.archives}` : '';
+  const url = (hash) => conf.reel ? `http://127.0.0.1:${conf.port}/index.html?x=1${archives}${hash || ''}`
+                                  : `http://127.0.0.1:${conf.port}/index.html?data=${conf.data}${hash || ''}`;
+  const ok = (nom, cond, detail) => { console.log(cond ? 'OK   ' : 'ECHEC', nom, detail === undefined ? '' : JSON.stringify(detail)); if (!cond) echecs.push(nom); };
+
+  async function pret(page, sel) {
+    await page.waitForSelector(sel || '#main .pg, #main .art, #main .home, #main .errbox', { timeout: 20000 });
+    await page.waitForFunction(() => !document.querySelector('#main .loading, #main [aria-busy="true"]'), null, { timeout: 20000 });
+    await page.waitForTimeout(200);
+  }
+  async function verifie(page, nom) {
     const r = await page.evaluate(() => {
-      const sheet = ['search', 'rsheet', 'esheet', 'sheet'].map(i => document.getElementById(i)).find(e => e.classList.contains('open')) || document.getElementById('sheet');
-      const ouvert = sheet.classList.contains('open');
-      const el = ouvert ? sheet : document.documentElement;
       const pires = [];
-      document.querySelectorAll(ouvert ? `#${sheet.id} *` : 'header.top *, main *').forEach(n => {
+      document.querySelectorAll('header.top *, main *, .bnav *').forEach(n => {
         const b = n.getBoundingClientRect();
-        if (b.width > 0 && b.right > window.innerWidth + 1 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs,.tbl-wrap')) pires.push(n.className || n.tagName);
+        if (b.width > 0 && b.right > window.innerWidth + 1 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs,.tbl-wrap,.sr-only,.sr')) pires.push(n.className || n.tagName);
       });
-      return { sw: el.scrollWidth, cw: el.clientWidth, pires: pires.slice(0, 5) };
+      const d = document.documentElement;
+      return { sw: d.scrollWidth, cw: d.clientWidth, pires: pires.slice(0, 5) };
     });
     if (r.sw > r.cw + 1 || r.pires.length) debord.push(`${nom}: scrollWidth=${r.sw} clientWidth=${r.cw} ${r.pires.join(',')}`);
   }
-  async function ouvreOnglet(k) {
-    // clique l'onglet k de la fiche coureur s'il existe (sinon ne fait rien)
-    const b = await page.$(`#rtabs [data-rtab="${k}"]`);
-    if (b) { await b.click(); await page.waitForTimeout(120); }
-  }
-  async function cap(nom, full) {
+  async function cap(page, nom, suf, opt) {
+    opt = opt || {};
     await page.waitForTimeout(250);
-    await verifie(nom);
-    await page.screenshot({ path: `${sortie}/${nom}${suf}.png`, fullPage: !!full });
-    console.log('capture', `${nom}${suf}.png`);
+    if (opt.defile) { await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await page.waitForTimeout(600); await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(250); }
+    await verifie(page, nom + suf);
+    await page.screenshot({ path: `${sortie}/${conf.prefixe}${nom}${suf}.png`, fullPage: opt.plein !== false });
+    console.log('capture', `${conf.prefixe}${nom}${suf}.png`);
   }
-  async function hauteurRsheet(nom) {
-    // fiche coureur : même principe que hauteurFiche, sur #rsheet (largeur de la fenêtre conservée)
-    const vp = page.viewportSize();
-    const h = await page.evaluate(() => document.getElementById('rsheet-body').scrollHeight + 70);
-    await page.setViewportSize({ width: vp.width, height: Math.min(Math.max(h, 844), 4000) });
-    await cap(nom);
-    await page.setViewportSize(vp);
-  }
-  async function hauteurEsheet(nom) {
-    // page épreuve : même principe sur #esheet
-    const vp = page.viewportSize();
-    const h = await page.evaluate(() => document.getElementById('esheet-body').scrollHeight + 70);
-    await page.setViewportSize({ width: vp.width, height: Math.min(Math.max(h, 844), 4000) });
-    await cap(nom);
-    await page.setViewportSize(vp);
-  }
-  async function ouvreOngletEp(k) {
-    const b = await page.$(`#etabs [data-etab="${k}"]`);
-    if (b) { await b.click(); await page.waitForTimeout(120); }
-  }
-  async function hauteurFiche(nom) {
-    // la fiche défile dans #sheet : on agrandit temporairement la fenêtre pour une capture complète
-    const h = await page.evaluate(() => document.getElementById('sheet-body').scrollHeight + 60);
-    await page.setViewportSize({ width: 390, height: Math.min(h, 4000) });
-    await cap(nom);
-    await page.setViewportSize({ width: 390, height: 844 });
+  async function visite(page, hash, attente) {
+    await page.goto(url(hash));
+    await pret(page, attente);
   }
 
-  await page.goto(base); await page.waitForSelector('.card');
-  await cap('01-recents', true);
-  // Calendrier : saison en cours, puis autre saison ; Résultats / À venir ; filtre WT
-  await page.click('.tab[data-tab="calendrier"]'); await page.waitForSelector('#cal-saisons'); await page.waitForSelector('.cal-item');
-  await cap('02a-calendrier-resultats', true);
-  await page.click('[data-calvue="avenir"]'); await cap('02b-calendrier-avenir-vide', false);
-  const saisons = await page.$$eval('[data-calsaison]', b => b.map(x => x.dataset.calsaison));
-  for (const y of saisons.slice(0, 2)) {
-    await page.click(`[data-calsaison="${y}"]`); await page.waitForTimeout(400);
-    await page.click('[data-calvue="resultats"]'); await cap(`02c-calendrier-${y}-resultats`, false);
-    await page.click('[data-calvue="avenir"]'); await cap(`02d-calendrier-${y}-avenir`, false);
+  /* ---------- captures de chaque page, à deux largeurs ---------- */
+  async function parcours(w, h, suf) {
+    const { ctx, page } = await nouveauContexte(w, h);
+    const EP = '#epreuve/' + encodeURIComponent(conf.epreuve);
+    const pas = conf.reel ? [
+      ['01-accueil', '#/', { defile: true }],
+      ['02-coureurs', '#coureurs', {}],
+      ['03-courses-2018', '#courses/2018', {}],
+      ['04-epreuve-tdf', EP, {}],
+      ['05-coureur-pogacar', '#coureur/' + conf.coureur, {}],
+    ] : [
+      ['01-accueil', '#/', { defile: true }],
+      ['02a-courses-resultats', '#courses/2026', {}],
+      ['02b-courses-avenir', '#courses/2027?vue=avenir', {}],
+      ['02c-courses-epreuves', '#courses/epreuves', {}],
+      ['02d-courses-archive', '#courses/2024', {}],
+      ['03a-epreuve', EP, {}],
+      ['03b-epreuve-navbox-ouvert', EP, { navbox: true }],
+      ['04a-edition-archive', '#course/fx-a24-tour-hc', {}],
+      ['04b-edition-en-cours', '#course/fx-tour-test', {}],
+      ['05-equipes', '#equipes', {}],
+      ['06a-coureurs-liste', '#coureurs', {}],
+      ['06b-coureurs-francais-filtre', '#coureurs?nat=FRA', {}],
+      ['06c-coureurs-vue-francais', '#coureurs?vue=francais', {}],
+      ['07a-coureur', '#coureur/' + conf.coureur, {}],
+      ['07b-coureur-palmares', '#coureur/' + conf.coureur, { onglet: 'palmares' }],
+      ['08a-classements-uci', '#classements/uci', {}],
+      ['08b-classements-saison', '#classements/uci/2024', {}],
+      ['08c-classements-fdj', '#classements/fdj', {}],
+      ['09-recherche', '#recherche/ebauche', {}],
+    ];
+    for (const [nom, hash, o] of pas) {
+      try {
+        await visite(page, hash);
+        if (o.navbox) { const d = await page.$('details.navbox > summary'); if (d) await d.click(); }
+        if (o.onglet) { const b = await page.$(`#rtabs [data-rtab="${o.onglet}"]`); if (b) await b.click(); }
+        await cap(page, nom, suf, o);
+      } catch (e) { echecs.push(`capture ${nom}${suf}: ${e.message}`); console.log('ECHEC capture', nom, suf, e.message); }
+    }
+    if (suf === '-d') {
+      // menu horizontal visible, barre du bas absente ; en mobile l'inverse, zones tactiles >= 44 px
+      await visite(page, '#/');
+      ok('1024 px : menu horizontal visible', await page.evaluate(() => getComputedStyle(document.getElementById('dnav')).display !== 'none'));
+      ok('1024 px : barre du bas masquée', await page.evaluate(() => getComputedStyle(document.getElementById('bnav')).display === 'none'));
+    } else {
+      await visite(page, '#/');
+      ok('390 px : barre du bas visible, menu horizontal masqué', await page.evaluate(() => getComputedStyle(document.getElementById('bnav')).display !== 'none' && getComputedStyle(document.getElementById('dnav')).display === 'none'));
+      const hs = await page.$$eval('#bnav a', l => l.map(a => Math.round(a.getBoundingClientRect().height)));
+      ok('390 px : zones tactiles de la barre du bas >= 44 px', hs.length === 5 && hs.every(x => x >= 44), hs);
+      const pos = await page.evaluate(() => { const b = document.getElementById('bnav').getBoundingClientRect(); return Math.round(window.innerHeight - b.bottom); });
+      ok('390 px : barre du bas collée en bas', pos === 0, pos);
+      const safe = await page.evaluate(() => getComputedStyle(document.getElementById('bnav')).paddingBottom);
+      console.log('padding-bas barre (safe-area, 0 hors iPhone) :', safe);
+    }
+    await ctx.close();
   }
-  await page.click('.chip[data-cat="WT"]'); await cap('02e-calendrier-avenir-wt', false);
-  await page.click('.chip[data-cat="all"]');
-  // Classements : UCI (recherche, Français, plus), FDJ Series
-  await page.click('.tab[data-tab="classements"]'); await page.waitForSelector('.row.uc, .empty');
-  await cap('03a-classement-uci', false);
-  if (await page.$('#uc-q')) {
-    await page.click('[data-action="uc-more"]').catch(() => {}); await cap('03b-uci-plus', false);
-    await page.click('[data-action="uc-fr"]'); await cap('03c-uci-francais', false);
-    await page.click('[data-action="uc-fr"]'); await page.fill('#uc-q', 'ebauche'); await cap('03d-uci-recherche', false);
-    await page.fill('#uc-q', '');
-    const lien = await page.$('#uc-list .rlink');
-    if (lien) { await lien.click(); await page.waitForSelector('#rsheet.open .tile'); await cap('03e-uci-fiche-coureur', false);
-      await ouvreOnglet('saison'); await cap('03e2-uci-fiche-coureur-saison', false); await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300); }
+  await parcours(390, 844, '-m');
+  await parcours(1024, 800, '-d');
+
+  /* ---------- navigation, retour arrière, anciennes URL (mobile) ---------- */
+  if (!conf.reel) {
+    const { ctx, page } = await nouveauContexte(390, 844);
+    const hash = () => page.evaluate(() => location.hash);
+    const accueil = async () => ['', '#/'].includes(await hash());
+    const titre = () => page.title();
+    await visite(page, '#/');
+    ok('accueil : titre', (await titre()) === 'Courses cyclistes', await titre());
+    // carte d'un dernier résultat -> édition -> retour
+    await page.evaluate(() => window.scrollTo(0, 300)); await page.waitForTimeout(150);
+    const y0 = await page.evaluate(() => Math.round(window.scrollY));
+    await page.click('#main .home .card.click'); await page.waitForSelector('#main .art .podium, #main .art .stage-head, #main .art .card');
+    ok('carte -> #course/...', (await hash()).startsWith('#course/'), await hash());
+    ok('édition : titre de document', (await titre()).endsWith('· Courses cyclistes') && (await titre()) !== 'Courses cyclistes', await titre());
+    ok("édition : fil d'Ariane", (await page.$$eval('.crumbs a', l => l.map(a => a.textContent))).join('>') .startsWith('Accueil>Courses'), await page.$$eval('.crumbs a', l => l.map(a => a.textContent)));
+    await page.goBack(); await page.waitForSelector('#main .home'); await page.waitForTimeout(400);
+    const y1 = await page.evaluate(() => Math.round(window.scrollY));
+    ok('retour -> accueil, défilement restauré', (await accueil()) && Math.abs(y1 - y0) < 40, { hash: await hash(), y0, y1 });
+    // menu bas : Courses -> Épreuves -> épreuve -> coureur -> retours
+    await page.click('#bnav a[data-nav="courses"]'); await pret(page);
+    ok('menu Courses', (await hash()) === '#courses', await hash());
+    await page.click('[data-cgo*="epreuves"]'); await pret(page, '#ep-list .crow');
+    ok('vue Épreuves (replace)', (await hash()).startsWith('#courses/epreuves'), await hash());
+    await page.fill('#ep-q', 'demonstration'); await page.waitForTimeout(250);
+    ok('recherche épreuve filtre la liste', (await page.$$('#ep-list .crow')).length === 1, await page.$$eval('#ep-list .crow .nm', l => l.map(x => x.textContent)));
+    ok('recherche épreuve dans le hash', (await hash()).includes('q=demonstration'), await hash());
+    await page.click('#ep-list .crow'); await pret(page, '#main .art');
+    ok('épreuve ouverte', (await hash()).startsWith('#epreuve/'), await hash());
+    ok('épreuve : titre', /Omloop de/.test(await titre()), await titre());
+    await page.goBack(); await pret(page, '#ep-list');
+    ok('retour -> liste filtrée conservée', (await hash()).includes('q=demonstration') && (await page.$eval('#ep-q', e => e.value)) === 'demonstration', await hash());
+    await page.goBack(); await pret(page, '#main .home');
+    ok('retour -> accueil (le changement de vue n\'a pas créé d\'entrée d\'historique)', await accueil(), await hash());
+    // filtre en page ne pollue pas l'historique : accueil -> coureurs, filtre FRA, retour = accueil
+    await page.click('#bnav a[data-nav="coureurs"]'); await pret(page, '#co-list .crow');
+    await page.click('[data-cgo*="nat=FRA"]'); await pret(page, '#co-list .crow');
+    ok('filtre Français dans le hash', (await hash()).includes('nat=FRA'), await hash());
+    const nFr = await page.$$eval('#co-list .crow', l => l.length), nTous = 0;
+    ok('filtre Français : lignes FR seulement', (await page.$$('#co-list .crow:not(.fr)')).length === 0 && nFr > 0, nFr);
+    await page.goBack(); await pret(page, '#main .home');
+    ok("un filtre ne crée pas d'entrée d'historique", await accueil(), await hash());
+    // lien profond ntfy
+    await visite(page, '#course/fx-tour-test/7', '#main .art');
+    ok('lien profond #course/<id>/<étape>', await page.evaluate(() => !!document.querySelector('.stage-chip.active')) && (await hash()) === '#course/fx-tour-test/7', await hash());
+    // anciennes URL
+    await page.goto(`http://127.0.0.1:${conf.port}/index.html?data=${conf.data}&archive=2024`); await pret(page);
+    ok('ancienne URL ?archive=2024', (await hash()) === '#courses/2024' && !(await page.evaluate(() => location.search)).includes('archive'), { h: await hash(), s: await page.evaluate(() => location.search) });
+    ok('?archive=2024 : saison 2024 affichée', (await page.$eval('#cs-saison', e => e.options[e.selectedIndex].text)).startsWith('2024'));
+    await page.goto(`http://127.0.0.1:${conf.port}/index.html?data=${conf.data}&saison=2027`); await pret(page);
+    ok('ancienne URL ?saison=2027', (await hash()) === '#courses/2027', await hash());
+    // page inconnue
+    await visite(page, '#nimportequoi', '#main .pg');
+    ok('page introuvable', (await page.$eval('#main', e => e.textContent)).includes("n'existe pas"));
+    // recherche : saisie -> hash, résultat -> coureur, retour = recherche
+    await visite(page, '#recherche');
+    await page.fill('#sr-q', 'paul epure'); await page.waitForSelector('#sr-body .sr-item.nav');
+    ok('recherche : hash mis à jour', (await hash()) === '#recherche/paul%20epure', await hash());
+    await page.click('#sr-body .sr-item.nav'); await pret(page, '#main .art');
+    ok('résultat -> coureur', (await hash()).startsWith('#coureur/'), await hash());
+    await page.goBack(); await page.waitForSelector('#sr-body .sr-item.nav');
+    ok('retour -> recherche conservée', (await page.$eval('#sr-q', e => e.value)) === 'paul epure', await hash());
+    // retour arrière sur coureur -> édition -> épreuve
+    await visite(page, '#coureur/epure-paul-19970711', '#main .art .tile');
+    await page.click('[data-rtab="palmares"]'); await page.waitForSelector('.res');
+    await page.click('.res'); await pret(page, '#main .art');
+    ok('palmarès -> édition', (await hash()).startsWith('#course/'), await hash());
+    await page.goBack(); await page.waitForSelector('#main .art .tile');
+    ok('retour -> coureur', (await hash()).startsWith('#coureur/'), await hash());
+    await ctx.close();
   }
-  await page.click('[data-clsub="fdj"]'); await cap('03f-classement-fdj', true);
-  await page.click('.tab[data-tab="francais"]'); await page.waitForSelector('.fr-card'); await cap('04a-francais', false);
-  await page.evaluate(() => document.querySelector('details.nc') && (document.querySelector('details.nc').open = true));
-  await cap('04b-francais-complet', true);
-  await page.click('.fr-card'); await page.waitForSelector('#rsheet.open .tile'); await cap('04c-francais-fiche', false);
-  await ouvreOnglet('saison'); await cap('04c2-francais-fiche-saison', false);
-  await page.click('#rsheet [data-action="back"]'); await page.waitForTimeout(300);
-  // fiche coureur ouverte depuis le calendrier d'une autre saison (riders-<saison>)
-  await page.goto(base + '&saison=' + saisons[0]); await page.waitForSelector('.card');
-  await page.click('.tab[data-tab="calendrier"]'); await page.click(`[data-calsaison="${saisons[0]}"]`); await page.waitForSelector('.cal-item');
-  await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
-  const rl = await page.$('#sheet .rlink'); if (rl) { await rl.click(); await page.waitForSelector('#rsheet.open .tile'); await ouvreOnglet('saison'); await cap('05-fiche-coureur-saison', false); }
-  await page.goto(base); await page.waitForSelector('.card');
-  await cap('01-recents', true);
-  // Archives : onglet par défaut (saison la plus récente), liste vide si aucune archive
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel, .empty');
-  await page.waitForSelector('.cal-item, .empty, .errbox'); await cap('06a-archives', true);
-  if (conf.navonly) { await browser.close(); console.log('ERREURS_CONSOLE', JSON.stringify(erreurs)); console.log('DEBORDEMENTS', JSON.stringify(debord)); return; }
 
-  // Archives (jeu fictif) : autre saison via le select, filtre, fiches course et coureur d'archive
-  await page.selectOption('#arch-sel', '2023'); await page.waitForSelector('.arch-note'); await cap('06b-archives-2023-en-cours', true);
-  await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
-  await page.click('[data-acat="Pro"]'); await cap('06c-archives-filtre-pro', false);
-  await page.click('[data-acat="all"]');
-  console.log('url archives :', await page.evaluate(() => location.search));
-  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .card');
-  await cap('07a-archive-fiche-etapes', false);
-  await hauteurFiche('07b-archive-fiche-complete');
-  const rlA = await page.$('#sheet .rlink'); await rlA.click(); await page.waitForSelector('#rsheet.open .tile');
-  await ouvreOnglet('saison'); await cap('07c-archive-fiche-coureur', false);
-  await page.click('#rsheet [data-action="back"]'); await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
-  await page.goto(base + '&archive=2023'); await page.waitForSelector('.cal-item');
-  await page.click('.cal-item.click, button.cal-item'); await page.waitForSelector('#sheet.open .card');
-  const rlB = await page.$('#sheet .rlink'); await rlB.click(); await page.waitForSelector('#rsheet.open .hero, #rsheet.open .vide');
-  await cap('07d-archive-coureur-sans-riders', false);
-  console.log('2023 : onglet Saison absent (fiche non publiée) :', !(await page.$('#rtabs [data-rtab="saison"]')));
-  // lien direct vers une course d'archive (404 volontaire sur races/, puis recherche dans les archives)
-  const avantA = erreurs.length;
-  await page.goto(base + '#course/fx-a24-classique-hc'); await page.waitForSelector('#sheet.open .card');
-  await cap('07e-archive-lien-direct', false);
-  const rlC = await page.$('#sheet .rlink'); await rlC.click(); await page.waitForSelector('#rsheet.open .tile'); await ouvreOnglet('saison');
-  const saison = await page.evaluate(() => document.getElementById('rsheet-body').textContent.includes('Palmarès de la saison 2024'));
-  console.log('lien direct archive : fiche coureur de la saison 2024 :', saison);
-  console.log('ERREURS_ATTENDUES (404 lien direct)', JSON.stringify(erreurs.splice(avantA)));
-  await page.goto(base);
-
-  // fiche course par étapes (étape la plus récente)
-  await page.goto(base + '#course/fx-tour-test'); await page.waitForSelector('#sheet.open .card');
-  await cap('10-fiche-etape', false);
-  await hauteurFiche('11-fiche-etape-complete');
-  await page.click('[data-sub="gc"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('12-fiche-general', false);
-  await page.click('[data-action="fronly"]'); await cap('13-general-francais', false);
-  await page.click('[data-action="fronly"]');
-  await page.click('[data-sub="abandons"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('14-fiche-abandons', false);
-  // contre-la-montre, montagne sans résumé, prologue
-  await page.click('[data-stage-sel="5"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, 0)); await cap('15-clm', false);
-  await page.click('[data-stage-sel="3"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, 0)); await cap('16-montagne-sans-resume', false);
-  await page.click('[data-stage-sel="0"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, 0)); await cap('17-prologue', false);
-  // classique pavés et course .1 française
-  await page.goto(base + '#course/fx-classique-paves'); await page.waitForSelector('#sheet.open .card');
-  await hauteurFiche('20-classique-paves');
-  await page.goto(base + '#course/fx-gp-test-sur-mer'); await page.waitForSelector('#sheet.open .card');
-  await cap('21-course-1-fr', false);
-  // E3 : fiche d'édition (Calendrier : GP Test-sur-Mer 2026) avec podium et navigation vers l'édition précédente
-  await page.waitForSelector('#ednav-slot .ednav');
-  await cap('21b-edition-entete', false);
-  console.log('navigation fiche 2026 : precedente =', await page.$eval('#ednav-slot .prev', e => e.dataset.open), ', suivante =', !!(await page.$('#ednav-slot .next')), '(attendu : fx-a24-gp-fr, false)');
-  console.log('podium (3 attendus) :', await page.$$eval('#sheet-body .pod', l => l.length));
-  await page.click('#ednav-slot .prev'); await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr') && document.querySelector('#sheet-body .pod'));
-  await page.waitForSelector('#ednav-slot .ednav');
-  console.log('fiche 2024 : precedente =', await page.$eval('#ednav-slot .prev', e => e.dataset.open), ', suivante =', await page.$eval('#ednav-slot .next', e => e.dataset.open), '(attendu : fx-a23-gp-fr, fx-gp-test-sur-mer)');
-  await cap('21c-edition-2024-entete', false);
-  await hauteurFiche('21d-edition-2024-complete');
-  // onglets Participants / Pays d'une course d'un jour
-  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('21e-participants-un-jour', false);
-  await page.click('[data-action="fronly"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('21f-participants-francais', false);
-  console.log('participants francais seulement : lignes non francaises =', await page.$$eval('.team-card .row:not(.fr)', l => l.length), '(attendu 0)');
-  await page.click('[data-action="fronly"]');
-  await page.click('[data-sub="pays"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('21g-pays-un-jour', false);
-  // lien « Toutes les éditions » -> page épreuve ; retour
-  await page.evaluate(() => document.getElementById('sheet').scrollTo(0, 0));
-  await page.click('#ednav-slot .all'); await page.waitForSelector('#esheet.open .hero'); await page.waitForSelector('#esheet.open .tbl');
-  console.log('toutes les editions ->', await page.evaluate(() => decodeURIComponent(location.hash)));
-  await cap('21h-epreuve-depuis-edition', false);
-  await page.goBack(); await page.waitForFunction(() => location.hash.startsWith('#course/')); await page.waitForTimeout(300);
-  console.log('retour : fiche edition ouverte, epreuve fermee =', await page.evaluate(() => document.getElementById('sheet').classList.contains('open') && !document.getElementById('esheet').classList.contains('open')));
-  // course par étapes d'archive avec sélection nationale : Participants et Pays (ouverture depuis l'onglet Archives : pas de 404)
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel'); await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
-  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .pod');
-  await cap('26a-tour-entete-podium', false);
-  await page.waitForTimeout(400);
-  console.log('tour 2024 : navigation (attendu absente) =', !(await page.$('#ednav-slot .ednav')));
-  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card');
-  await page.waitForFunction(() => document.querySelector('.team-head .badge')); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('26b-participants-tour', false);
-  console.log('selection nationale signalee :', await page.$$eval('.team-head', l => l.filter(x => x.querySelector('.badge')).map(x => x.querySelector('.tn').textContent)));
-  await hauteurFiche('26c-participants-tour-complet');
-  await page.click('[data-action="fronly"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('26d-participants-tour-francais', false);
-  console.log('tour : lignes non francaises avec filtre =', await page.$$eval('.team-card .row:not(.fr)', l => l.length), '(attendu 0)');
-  await page.click('[data-action="fronly"]');
-  await page.click('[data-sub="pays"]'); await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('26e-pays-tour', false);
-  await page.click('#sheet [data-action="back"]'); await page.waitForTimeout(300);
-  // page épreuve (Grand Prix de Test-sur-Mer : 4 éditions, records, noms et classes qui changent) : chaque onglet
-  await page.goto(base + EP); await page.waitForSelector('#esheet.open .hero'); await page.waitForSelector('#esheet.open .tbl');
-  await cap('27a-epreuve-palmares', false);
-  await hauteurEsheet('27b-epreuve-palmares-complet');
-  console.log('onglets epreuve :', (await page.$$eval('#etabs .subtab', b => b.map(x => x.dataset.etab))).join(','));
-  await ouvreOngletEp('records'); await hauteurEsheet('27c-epreuve-records');
-  await ouvreOngletEp('historique'); await hauteurEsheet('27d-epreuve-historique');
-  await ouvreOngletEp('palmares');
-  console.log('tuiles epreuve :', JSON.stringify(await page.$$eval('#esheet .kpis .tile', l => l.map(x => x.textContent.replace(/\s+/g, ' ').trim()))));
-  // année -> fiche d'édition (l'épreuve se ferme) ; retour ; nom de coureur -> fiche coureur ; retour conserve l'épreuve
-  await page.click('#econtent .tbl button.cell[data-open="fx-a24-gp-fr"]'); await page.waitForFunction(() => location.hash.includes('fx-a24-gp-fr')); await page.waitForSelector('#sheet.open .pod');
-  console.log('annee -> edition, epreuve fermee =', await page.evaluate(() => !document.getElementById('esheet').classList.contains('open')));
-  await page.goBack(); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(300);
-  await page.click('#econtent .tbl .rlink'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
-  await cap('27e-epreuve-vers-coureur', false);
-  await page.goBack(); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(250);
-  console.log('retour : epreuve ouverte, coureur ferme =', await page.evaluate(() => document.getElementById('esheet').classList.contains('open') && !document.getElementById('rsheet').classList.contains('open')));
-  // épreuve inconnue et épreuve à une seule édition (sans onglet Records ni Historique)
-  await page.goto(base + '#epreuve/' + encodeURIComponent('grand prix inconnu fictif|FRA')); await page.waitForSelector('#esheet.open .vide');
-  await cap('27f-epreuve-inconnue', false);
-  await page.goto(base + '#epreuve/' + encodeURIComponent('tour des maquettes fictif|FRA')); await page.waitForSelector('#esheet.open .tbl');
-  console.log('epreuve a une edition : onglets =', (await page.$$eval('#etabs .subtab', b => b.map(x => x.dataset.etab))).join(','));
-  await cap('27g-epreuve-une-edition', false);
-  // lien secondaire depuis le palmarès d'un coureur
-  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile');
-  await ouvreOnglet('palmares'); await page.waitForSelector('#rcontent .res-ep');
-  await page.evaluate(() => document.querySelector('#rcontent .res-ep').scrollIntoView({ block: 'center' }));
-  await cap('27h-coureur-palmares-lien-epreuve', false);
-  console.log('liens epreuve dans le palmares :', await page.$$eval('#rcontent .res-ep', l => l.length));
-  await page.click('#rcontent .res-ep'); await page.waitForSelector('#esheet.open .tbl');
-  console.log('coureur -> epreuve :', await page.evaluate(() => decodeURIComponent(location.hash)));
-  // fiche coureur E2 : Paul Épure (archives 2022-2024 + Calendrier 2026-2027, Wikidata fictif, grands tours fictifs)
-  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .hero');
-  await page.waitForSelector('#rsheet.open .tile');
-  await cap('23a-coureur-apercu', false);
-  await hauteurRsheet('23a2-coureur-apercu-complet');
-  const onglets = await page.$$eval('#rtabs .subtab', b => b.map(x => x.dataset.rtab));
-  console.log('onglets de la fiche :', onglets.join(','));
-  for (const k of onglets.filter(x => x !== 'apercu')) {
-    await page.click(`#rtabs [data-rtab="${k}"]`); await page.waitForTimeout(150);
-    await hauteurRsheet(`23-coureur-${k}`);
+  /* ---------- mesures sur la liste des coureurs (données réelles) ---------- */
+  if (conf.reel) {
+    const { ctx, page } = await nouveauContexte(390, 844);
+    const reponses = [];
+    page.on('response', async r => { if (r.url().includes('coureurs/index.json')) { try { const b = await r.body(); reponses.push({ octets: b.length, enc: r.headers()['content-encoding'] || '' }); } catch (e) {} } });
+    const t0 = Date.now();
+    await page.goto(url('#coureurs'));
+    await page.waitForSelector('#co-list .crow', { timeout: 60000 });
+    const t1 = Date.now();
+    const n = await page.evaluate(() => document.getElementById('co-count').textContent);
+    console.log('MESURE liste des coureurs : première ligne affichée après', t1 - t0, 'ms ;', n, ';', JSON.stringify(reponses));
+    const t2 = Date.now();
+    await page.fill('#co-q', 'pogacar'); await page.waitForFunction(() => document.querySelectorAll('#co-list .crow').length > 0 && document.querySelectorAll('#co-list .crow').length < 20);
+    console.log('MESURE recherche « pogacar » (saisie -> liste filtrée) :', Date.now() - t2, 'ms ;', await page.$$eval('#co-list .crow .nm', l => l.slice(0, 5).map(x => x.textContent)));
+    const t3 = Date.now();
+    await page.fill('#co-q', ''); await page.click('[data-cgo*="nat=FRA"]'); await page.waitForFunction(() => location.hash.includes('nat=FRA'));
+    await page.waitForTimeout(100);
+    console.log('MESURE filtre Français :', Date.now() - t3, 'ms ;', await page.evaluate(() => document.getElementById('co-count').textContent));
+    await ctx.close();
   }
-  await page.click('#rtabs [data-rtab="palmares"]'); await page.click('[data-action="pal-vic"]'); await cap('23p-palmares-victoires', false);
-  await page.click('[data-action="pal-vic"]');
-  await page.click('[data-pcat="Pro"]').catch(() => {}); await cap('23q-palmares-filtre-pro', false);
-  await page.click('#rcontent .res'); await page.waitForFunction(() => location.hash.startsWith('#course/'));
-  await page.waitForSelector('#sheet.open .card'); await page.waitForTimeout(300);
-  console.log('palmares -> fiche course :', await page.evaluate(() => location.hash));
-  await page.goBack(); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(300);
-  console.log('retour : onglet conserve =', await page.$eval('#rtabs .active', e => e.dataset.rtab));
-  // coureur sans photo ni Wikidata (archives 2024 + 2026)
-  await page.goto(base + '#coureur/demo-paul-19961228'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
-  await cap('24a-coureur-sans-wikidata', false);
-  await ouvreOnglet('uci'); await cap('24b-coureur-sans-wikidata-uci', false);
-  console.log('sans Wikidata : photo =', !!(await page.$('.hero-photo img')), ', credit =', !!(await page.$('.credit')));
-  // coureur du Calendrier seulement (aucune archive)
-  await page.goto(base + '#coureur/echantillon-antoine-19920222'); await page.waitForSelector('#rsheet.open .hero'); await page.waitForTimeout(250);
-  await cap('24c-coureur-calendrier-seul', false);
-  // coureur sans aucune donnée
-  const avantX = erreurs.length;
-  await page.goto(base + '#coureur/inconnu-x-19900101'); await page.waitForSelector('#rsheet.open .vide');
-  console.log('sans archives :', await page.$eval('#rsheet-body', e => e.textContent.trim()));
-  await cap('23d-coureur-vide', false);
-  console.log('ERREURS_ATTENDUES (404 entites/coureurs/i.json)', JSON.stringify(erreurs.splice(avantX).length));
-  // squelette de chargement (réseau ralenti) : on retient les requêtes de l'entité
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.route('**/entites/coureurs/e.json', async r => { await new Promise(x => setTimeout(x, 900)); await r.continue(); });
-  await page.evaluate(() => { location.hash = '#coureur/epure-paul-19970711'; });
-  await page.waitForSelector('.rpage[aria-busy]'); await cap('25-squelette-coureur', false);
-  await page.waitForSelector('#rsheet.open .tile'); await page.unroute('**/entites/coureurs/e.json');
-
-  // recherche globale
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.click('#open-search'); await page.waitForSelector('#search.open .sr-hint'); await cap('30a-recherche-vide', false);
-  await page.fill('#sr-q', 'e'); await page.waitForTimeout(150); await cap('30b-recherche-une-lettre', false);
-  await page.fill('#sr-q', 'epure'); await page.waitForSelector('#sr-body .sr-item'); await cap('30c-recherche-coureurs', false);
-  console.log('hash recherche :', await page.evaluate(() => location.hash));
-  await page.fill('#sr-q', 'test'); await page.waitForSelector('#sr-body .sr-item'); await cap('30d-recherche-courses', false);
-  await page.fill('#sr-q', 'alpha'); await page.waitForSelector('#sr-body .sr-item'); await cap('30e-recherche-equipe-non-cliquable', false);
-  console.log('equipes cliquables (attendu 0) :', await page.$$eval('#sr-body .sr-item.off', l => l.filter(x => x.tagName === 'BUTTON' || x.dataset.id).length));
-  await page.fill('#sr-q', 'zzzz'); await page.waitForSelector('#sr-body .sr-hint'); await cap('30f-recherche-aucun', false);
-  await page.fill('#sr-q', 'paul epure'); await page.waitForSelector('#sr-body .sr-item.nav');
-  console.log('resultats « paul epure » :', await page.$$eval('#sr-body .sr-item.nav .nm', l => l.map(x => x.textContent)));
-  await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp'); await cap('30g-recherche-clavier', false);
-  await page.keyboard.press('Enter'); await page.waitForFunction(() => location.hash.startsWith('#coureur/')); await page.waitForSelector('#rsheet.open .hero');
-  console.log('Entree -> ', await page.evaluate(() => location.hash));
-  await page.goBack(); await page.waitForSelector('#search.open #sr-body .sr-item');
-  console.log('retour -> recherche conservee :', await page.$eval('#sr-q', e => e.value), await page.evaluate(() => location.hash));
-  // course : dernière édition
-  await page.fill('#sr-q', 'omloop'); await page.waitForSelector('#sr-body .sr-item.nav');
-  await page.click('#sr-body .sr-item.nav'); await page.waitForFunction(() => location.hash.startsWith('#epreuve/')); await page.waitForSelector('#esheet.open .tbl');
-  console.log('course -> ', await page.evaluate(() => decodeURIComponent(location.hash)));
-  // lien direct #recherche/<texte>, puis fermeture
-  await page.goto(base + '#recherche/ebauche'); await page.waitForSelector('#search.open #sr-body .sr-item');
-  console.log('lien direct recherche, saisie :', await page.$eval('#sr-q', e => e.value));
-  await page.keyboard.press('Escape'); await page.waitForTimeout(300);
-  console.log('Echap ferme la recherche :', await page.evaluate(() => !document.getElementById('search').classList.contains('open')));
-
-  // largeur 1024 px : mise en page élargie (infobox à droite)
-  await page.setViewportSize({ width: 1024, height: 800 });
-  await page.goto(base + '#coureur/epure-paul-19970711'); await page.waitForSelector('#rsheet.open .tile'); await page.waitForTimeout(250);
-  await cap('40a-large-coureur', false);
-  await ouvreOnglet('saisons'); await cap('40b-large-saisons', false);
-  await ouvreOnglet('uci'); await cap('40c-large-uci', false);
-  await page.goto(base + EP); await page.waitForSelector('#esheet.open .tbl'); await page.waitForTimeout(250);
-  await cap('40f-large-epreuve', false);
-  await ouvreOngletEp('records'); await cap('40g-large-epreuve-records', false);
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.click('.tab[data-tab="archives"]'); await page.waitForSelector('#arch-sel'); await page.selectOption('#arch-sel', '2024'); await page.waitForSelector('.cal-item');
-  await page.click('[data-open="fx-a24-tour-hc"].cal-item'); await page.waitForSelector('#sheet.open .pod');
-  await cap('40h-large-edition-entete', false);
-  await page.click('[data-sub="participants"]'); await page.waitForSelector('.team-card'); await page.waitForTimeout(250);
-  await page.evaluate(() => document.getElementById('sheet').scrollTo(0, document.getElementById('table').offsetTop - 60));
-  await cap('40i-large-participants', false);
-  await page.goto(base); await page.waitForSelector('.card'); await page.click('#open-search'); await page.fill('#sr-q', 'test'); await page.waitForSelector('#sr-body .sr-item');
-  await cap('40d-large-recherche', false);
-  await page.goto(base); await page.waitForSelector('.card'); await cap('40e-large-recents', false);
-  await page.setViewportSize({ width: 390, height: 844 });
-  // erreur de chargement
-  const avant = erreurs.length;
-  await page.goto(base + '#course/inexistante'); await page.waitForSelector('.errbox');
-  await cap('22-erreur', false);
-  console.log('ERREURS_ATTENDUES (404 volontaire)', JSON.stringify(erreurs.splice(avant)));
-  // retour par bouton
-  await page.goto(base); await page.waitForSelector('.card');
-  await page.click('[data-open]'); await page.waitForSelector('#sheet.open'); await page.click('[data-action="back"]');
-  await page.waitForTimeout(300);
-  const ferme = await page.evaluate(() => !document.getElementById('sheet').classList.contains('open') && location.hash === '');
-  console.log('retour bouton ferme la fiche et vide le hash :', ferme);
 
   await browser.close();
   console.log('ERREURS_CONSOLE', JSON.stringify(erreurs));
   console.log('DEBORDEMENTS', JSON.stringify(debord));
+  console.log('ECHECS', JSON.stringify(echecs));
+  if (echecs.length || debord.length || erreurs.length) process.exitCode = 2;
 })().catch(e => { console.error('ECHEC', e); process.exit(1); });
 """
 
@@ -384,26 +253,29 @@ def serveur(racine):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("sortie", help="dossier de sortie des captures (obligatoire)")
-    ap.add_argument("--data", default="tools/fixtures/data", help="dossier de données relatif à la racine du dépôt")
-    ap.add_argument("--nav", action="store_true", help="seulement les onglets (données réelles : sans les fiches fictives)")
-    ap.add_argument("--sombre", action="store_true", help="thème sombre (suffixe -sombre sur les fichiers)")
+    ap.add_argument("--data", default="tools/fixtures/data", help="dossier de données relatif à la racine servie (jeu fictif)")
+    ap.add_argument("--reel", metavar="DOSSIER", help="données réelles : dossier servi (index.html, data, archives) ; captures préfixées vrai-")
+    ap.add_argument("--archives", default="archives", help="valeur de ?archives= en mode --reel")
     args = ap.parse_args()
     sortie = Path(args.sortie)
     sortie.mkdir(parents=True, exist_ok=True)
-    srv = serveur(RACINE)
+    racine = Path(args.reel) if args.reel else RACINE
+    srv = serveur(racine)
     port = srv.server_address[1]
-    print(f"[INFO] serveur local sur 127.0.0.1:{port}, captures dans {sortie}")
+    print(f"[INFO] serveur local sur 127.0.0.1:{port} ({racine}), captures dans {sortie}")
     chromium = None
     for p in sorted(Path("/opt/pw-browsers").glob("chromium-*/chrome-linux*/chrome")):
         chromium = str(p)
-    conf = {"port": port, "data": args.data, "sortie": str(sortie), "chromium": chromium,
-            "scheme": "dark" if args.sombre else "light", "suffixe": "-sombre" if args.sombre else "", "navonly": args.nav}
+    conf = {"port": port, "data": args.data, "sortie": str(sortie), "chromium": chromium, "reel": bool(args.reel),
+            "archives": args.archives if args.reel else "", "prefixe": "vrai-" if args.reel else "",
+            "epreuve": "tour de france|FRA" if args.reel else "grand prix de test sur mer fictif|FRA",
+            "coureur": "pogacar-tadej-19980921" if args.reel else "epure-paul-19970711"}
     env = dict(os.environ, NODE_PATH=NODE_PATH, APERCU_CONF=json.dumps(conf))
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
         f.write(SCRIPT_NODE)
         script = f.name
     try:
-        r = subprocess.run(["node", script], env=env, capture_output=True, text=True, timeout=300)
+        r = subprocess.run(["node", script], env=env, capture_output=True, text=True, timeout=900)
     finally:
         os.unlink(script)
     print(r.stdout)
