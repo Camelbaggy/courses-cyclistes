@@ -310,7 +310,33 @@ class _Saison:
         return e
 
 
-def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, str]) -> None:
+def _fusionner_ids(race: Dict[str, Any], fus: Dict[str, str]) -> Tuple[Dict[str, Any], Dict[str, str]]:
+    """Fusion « même saison » explicite (`_fusion_meme_saison`) : dans cette fiche, l'identifiant source devient l'identifiant canonique
+    (clés de `riders`, `id` des refs, `rider_id` des lignes) ; les cumuls de la saison réunissent donc les deux identifiants (stats,
+    palmarès, équipes). Si les deux identifiants figurent dans la même course, rien n'est changé (double comptage possible : `[WARN]`)
+    et la règle de contradiction s'applique ensuite. Retourne (fiche, {source: canonique} effectivement appliqués)."""
+    refs = race.get("riders") or {}
+    actifs: Dict[str, str] = {}
+    for src, canon in fus.items():
+        if src in refs:
+            if canon in refs:
+                print(f"[WARN] encyclopédie : fusion « {src} » -> « {canon} » ignorée dans {race.get('id')} (les deux figurent dans la course)")
+            else:
+                actifs[src] = canon
+    if not actifs:
+        return race, {}
+
+    def tr(o: Any, parent: Optional[str] = None) -> Any:
+        if isinstance(o, dict):
+            return {(actifs.get(k, k) if parent == "riders" else k):
+                    (actifs.get(v, v) if k in ("rider_id", "id") and isinstance(v, str) else tr(v, k)) for k, v in o.items()}
+        if isinstance(o, list):
+            return [tr(x, parent) for x in o]
+        return o
+    return tr(race), actifs
+
+
+def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, str], fus: Optional[Dict[str, str]] = None) -> None:
     """Réduit une fiche de course et l'ajoute aux cumuls de la saison."""
     refs = race.get("riders") or {}
     corr = uci.corrections_coureurs()
@@ -322,6 +348,10 @@ def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, s
             for c in uci.corriger_ref(rid, refs[rid]):
                 S.corrections.setdefault(rid, {})[c["champ"]] = {"uci": c["uci"], "source": c["source"]}
         race = dict(race, riders=refs)
+    if fus:
+        race, actifs = _fusionner_ids(race, fus)
+        refs = race.get("riders") or {}
+        S.corrections = {actifs.get(k, k): v for k, v in S.corrections.items()}      # clés = identifiants après fusion
     dk = _dk(race)
     fini = race.get("status") in (None, "finished")
     S.courses_total += 1
@@ -464,7 +494,7 @@ def _codes_equipes(src: Dict[str, Any]) -> Dict[str, Set[str]]:
 
 def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, now: Optional[str] = None,
                alias_coureurs: Optional[Dict[str, str]] = None, alias_courses: Optional[Dict[str, str]] = None,
-               verbose: bool = True, wikidata_dir: Optional[str] = None) -> Dict[str, Any]:
+               verbose: bool = True, wikidata_dir: Optional[str] = None, fusions: Optional[Iterable[str]] = None) -> Dict[str, Any]:
     """Génère `sortie` (défaut `<archives_dir>/entites`). Retourne un rapport (compteurs, tailles, anomalies).
     `wikidata_dir` : cache Wikidata lu (défaut `<sortie>/wikidata`)."""
     t0 = time.time()
@@ -473,6 +503,9 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     LIGNEES_EQ: Dict[str, List[Tuple[int, str]]] = {}      # QID de lignée -> [(saison, id d'équipe-saison)]
     ar = collector.charger_alias(collector.ALIAS_COUREURS) if alias_coureurs is None else alias_coureurs
     ac = collector.charger_alias(collector.ALIAS_COURSES) if alias_courses is None else alias_courses
+    if fusions is None and alias_coureurs is None:
+        fusions = collector.charger_fusions(collector.ALIAS_COUREURS)
+    fus = collector.fusions_valides(ar, fusions)      # fusions « même saison » explicitement autorisées
     now = now or dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     sources, inconnues = lister_sources(archives_dir, data_dir)
     annees = sorted(sources)
@@ -507,7 +540,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             if not race or not race.get("id") or race["id"] in vus:
                 continue
             vus.add(race["id"])
-            _traiter_course(S, race, ac)
+            _traiter_course(S, race, ac, fus)
             del race
         avert: List[str] = []
         mapping = _mapping_alias(S, ar, avert)
@@ -1224,6 +1257,45 @@ def _tests() -> None:
     finally:
         uci._CORRECTIONS = avant
         shutil.rmtree(tmp2, ignore_errors=True)
+    # --- fusion « même saison » explicite (_fusion_meme_saison) : réunion sans double comptage, refus par défaut
+    tmp3 = tempfile.mkdtemp(prefix="encyclo_fus_")
+    try:
+        A3, D3, O3 = (os.path.join(tmp3, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(os.path.join(D3, "races"))
+        can, src = "fusion-ana-marie-20000101", "fusion-ana-20000101"
+        pc, ps = ("Ana Marie Fusion", "FRA", "fr", "Équipe C", "2000-01-01"), ("Ana Fusion", "FRA", "fr", "Équipe S", "2000-01-01")
+        rs = [_course_test("uci-f1", "Course F1", "BEL", "1.1", ".1", "one_day", "2024-03-01", {src: ps}, [(None, "2024-03-01", [_ligne(src, 1)])]),
+              _course_test("uci-f2", "Course F2", "BEL", "1.1", ".1", "one_day", "2024-03-08", {src: ps}, [(None, "2024-03-08", [_ligne(src, 1)])]),
+              _course_test("uci-f3", "Course F3", "BEL", "1.1", ".1", "one_day", "2024-03-15", {can: pc}, [(None, "2024-03-15", [_ligne(can, 1)])]),
+              # course où les DEUX identifiants figurent : jamais fusionnés (double comptage possible)
+              _course_test("uci-f4", "Course F4", "BEL", "1.1", ".1", "one_day", "2024-03-22", {can: pc, src: ps},
+                           [(None, "2024-03-22", [_ligne(can, 2), _ligne(src, 3)])])]
+        for c in rs[:3]:
+            collector._dump(os.path.join(A3, "2024", "races", c["id"] + ".json"), c)
+        collector._dump(os.path.join(A3, "2024", "state.json"), {"complete": True})
+        L3 = lambda o: collector._load(os.path.join(o, "coureurs", "f.json"), {})      # noqa: E731
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False)      # par défaut : refus
+        assert set(L3(O3)) == {can, src} and L3(O3)[can]["totaux"]["wins"] == 1, set(L3(O3))
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False, fusions=[src])
+        e = L3(O3)
+        assert set(e) == {can}, set(e)
+        s24 = e[can]["saisons"]["2024"]
+        assert s24["stats"]["wins"] == 3 and s24["stats"]["race_days"] == 3 and s24["equipe"] == "equipe-s-2024", s24     # équipe principale = plus de jours
+        assert s24["equipes"] == ["equipe-s-2024", "equipe-c-2024"] and e[can]["totaux"]["wins"] == 3
+        assert len(e[can]["palmares"]) == 3 and {p["race_id"] for p in e[can]["palmares"]} == {"uci-f1", "uci-f2", "uci-f3"}
+        # une course avec les deux identifiants : fusion ignorée dans cette course, aucun double comptage, rien d'écrasé
+        collector._dump(os.path.join(A3, "2024", "races", "uci-f4.json"), rs[3])
+        construire(A3, D3, O3, now="2026-01-01T00:00:00Z", alias_coureurs={src: can}, alias_courses={}, verbose=False, fusions=[src])
+        e = L3(O3)
+        assert set(e) == {can, src} and e[can]["saisons"]["2024"]["stats"]["wins"] == 3 and e[can]["saisons"]["2024"]["stats"]["race_days"] == 4 \
+            and e[src]["saisons"]["2024"]["stats"]["race_days"] == 1 and e[src]["totaux"]["wins"] == 0      # f4 : chaque identifiant compte une fois
+        r, _ = _fusionner_ids(rs[3], {src: can})
+        assert r is rs[3]
+        r, ap = _fusionner_ids(rs[0], {src: can})
+        assert ap == {src: can} and list(r["riders"]) == [can] and r["riders"][can]["id"] == can \
+            and r["stages"][0]["results"]["stage"][0]["rider_id"] == can and rs[0]["riders"][src]["id"] == src
+    finally:
+        shutil.rmtree(tmp3, ignore_errors=True)
     print("[OK] encyclopedie.py : tests locaux réussis")
 
 

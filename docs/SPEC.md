@@ -235,7 +235,11 @@ d'une saison archivée est faite par `update.yml`, voir la rotation ci-dessous).
   `carrieres/index.json` : `{"alias", "lettres"}` (la page ne demande que les lettres présentes). Rapprochement par `rider_id`
   exact (slug + date de naissance) ; **`alias_coureurs.json`** (racine, `{}` au départ, manuel) `{"rider_id source": "rider_id
   canonique"}`, jamais deviné ; si l'alias ferait figurer deux fois le même coureur la même saison, il est ignoré pour cette
-  saison (`[WARN]`, rien n'est fusionné). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
+  saison (`[WARN]`, rien n'est fusionné), SAUF si la source figure dans la clé **`_fusion_meme_saison`** du même fichier (liste de rider_id sources
+  dont l'alias est aussi déclaré ; valeur non textuelle donc ignorée par `charger_alias`) : les deux identifiants de la saison sont alors réunis
+  (entités : réécriture de l'identifiant dans chaque fiche de course avant cumul, donc stats, palmarès et équipes réunis, équipe principale = plus de
+  jours, `equipes` liste les deux ; carrières : stats sommées, résultats réunis). Une course où les deux identifiants figurent n'est jamais fusionnée
+  (`[WARN]`, aucun double comptage). Les fichiers de lettre sans coureur sont supprimés (données dérivées).
 - La page lit `index.json` du dépôt d'archives (liste des saisons, `complete` ; base `BASE_ARCHIVES` : `?archives=`, sinon `<data>/archives` avec `?data=`, sinon l'URL publique du dépôt d'archives, voir CLAUDE.md) à l'ouverture de l'onglet Archives, puis
   `<année>/index.json`, `ranking.json` (si `complete`), et `races/<id>.json` / `riders.json` à la demande.
   `editions.json` est lu à l'ouverture d'une fiche course (encart « Éditions précédentes »), `carrieres/index.json` puis un

@@ -124,8 +124,12 @@ contre-preuve : non modifiés). Éditions : Circuit des Ardennes 2023, Turul Rom
 Tour de Wallonie 2022 et Tour of Thailand 2022 (indéterminés). **La Polynormande 2022** : l'UCI classe Rota 1er, Wikidata Bonnamour (Rota 2e) ; on garde l'UCI
 (source officielle du projet), aucune correction de classement.
 
-**Doublons de `rider_id` (9 paires, mêmes date de naissance, nationalité et mots du nom, saisons cohérentes)** : 4 ajoutés à `alias_coureurs.json`
+**Doublons de `rider_id` (9 paires, mêmes date de naissance, nationalité et mots du nom, saisons cohérentes)** : 4 ajoutés simplement à `alias_coureurs.json`
 (canonique = id aux saisons les plus nombreuses) : `solhaug-hansen-martin-20030511` -> `hansen-martin-solhaug-20030511`, `assis-moreira-lino-guilherme-20060808` ->
 `lino-guilherme-20060808`, `kamena-tshiyana-loick-20000525` -> `kamena-tshiyana-20000525`, `teshome-meron-19920713` -> `teshome-hagos-meron-19920713`.
-5 paires non ajoutées : les deux identifiants figurent la même saison (la règle de contradiction ignorerait l'alias, sans effet et avec un `[WARN]` à chaque
-génération) : D'Unienville (2023), D'Aquila Silva (2022), Zegklis (2025), Haikkal (2022), Harvey (2023).
+5 paires dont les deux identifiants figurent la même saison (la règle de contradiction ignorerait l'alias) : ajoutées ensuite avec la clé explicite
+`_fusion_meme_saison` d'`alias_coureurs.json` (aucune course n'y compte les deux identifiants ; vérifié sur les archives) : `d-unienville-thibault-19950309` ->
+`marrier-d-unienville-thibault-19950309` (2023), `d-aquila-silva-nahuel-19980221` -> `d-aquila-silva-nahuel-omar-19980221` (2022),
+`nikolaos-zegklis-19960705` -> `zegklis-nikolaos-19960705` (2025), `muhammad-danieal-haikkal-19980413` ->
+`edy-suhaidee-muhammad-danieal-haikkal-19980413` (2022, deux équipes), `harvey-james-mark-19900512` -> `harvey-james-19900512` (2023, club et sélection ;
+canonique choisi aux 3 saisons plutôt qu'au nom le plus long).
