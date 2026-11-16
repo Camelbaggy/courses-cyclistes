@@ -14,7 +14,7 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
 - **En cours (R2b, branche `ccr-6eb51b68-vzkhg2`, non fusionné)** : articles d'équipe (`#equipe/<QID>` lignée et
   `#equipe/<id équipe-saison>`), équipes cliquables partout, miroir JS de `netutil.slugify`, et **frise « Équipes » de la
   fiche coureur simplifiée** demandée par le propriétaire : une ligne par équipe « Nom · 2019–2022 », années seulement,
-  sources fusionnées (périodes Wikidata + nos saisons), sélections nationales à part. À vérifier (captures 390/1024 px,
+  sources fusionnées (périodes Wikidata + nos saisons), sélections nationales à part. Agent interrompu (limite d'API) : travail partiel committé sur la branche, à reprendre et vérifier (captures 390/1024 px,
   Movistar `#equipe/Q6175`, Merlier onglet Parcours) puis PR + fusion.
 
 **Données** (dépôt d'archives `Camelbaggy/courses-cyclistes-archives`, Pages) :
