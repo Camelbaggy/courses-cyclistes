@@ -24,6 +24,15 @@ Camelbaggy/maillots-pcm ; `tools/maillots.py` n'en publie que le buste vu de fac
 2025 sur 204) ; affichage sur toute la période où l'équipe garde le même nom et le même code (décision du propriétaire). Cela remplace la décision ci-dessous
 pour les équipes.
 
+Précisions (17 novembre 2026) :
+- `<ISO3>_maillot_champion.png` sont les tenues des **équipes nationales** (sponsors de fédération : CIC / Look pour la France, Beobank pour la
+  Belgique…), pas les maillots de champion national (le champion porte un maillot tricolore aux couleurs de son équipe de marque). Utilisées
+  pour les sélections nationales (Mondiaux 2025 : 43 sélections sur 57 ; les 14 autres n'ont pas de fichier WorldDB). Nos données ne contiennent
+  d'ailleurs que les championnats de France (les autres championnats nationaux ne sont pas collectés).
+- Maillots distinctifs : 123 courses WorldDB, 66 reliées à la main à une édition 2025 suivie (`COURSES_WORLDDB`, vérification visuelle des cas
+  renommés : Coppi e Bartali, Okolo Slovenska, Route d'Occitanie, CRO Race, Tour of the Alps, Renewi Tour, Région Pays de la Loire Tour, AlUla Tour) ;
+  les autres sont des courses non suivies en 2025 (U23, Saudi Tour avant renommage…). Affichage sur toute édition de même dénomination.
+
 ## Décision (avant l'accord WorldDB)
 
 - Liste des participants : logo de lignée quand il existe, affiché seulement pour les saisons sous le nom actuel (`logo_depuis`),

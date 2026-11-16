@@ -169,6 +169,12 @@ main { max-width: 1040px; margin: 0 auto; padding: var(--sp4) var(--sp4) var(--s
 .jerseys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .jersey { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 7px 9px; min-width: 0; }
 .jersey .dot { width: 22px; height: 22px; border-radius: 50%; flex: none; border: 1px solid rgba(0, 0, 0, .25); }
+.jersey .jimg { flex: none; width: 30px; height: 32px; display: flex; align-items: center; justify-content: center; }
+.jersey .jimg img { max-width: 30px; max-height: 32px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.ep-maillots { display: flex; justify-content: center; gap: var(--sp3); flex-wrap: wrap; }
+.ep-maillots figure { margin: 0; text-align: center; }
+.ep-maillots img { display: block; height: 64px; width: auto; margin: 0 auto 4px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+.ep-maillots figcaption { font-size: .66rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; }
 .dot.jaune { background: var(--jaune); } .dot.vert { background: var(--vert); }
 .dot.blanc { background: var(--blanc); }
 .dot.pois { background: radial-gradient(circle, var(--pois) 0 2.2px, transparent 2.6px) 0 0 / 7px 7px, #fff; }
@@ -564,6 +570,10 @@ button.mini:hover, a.mini:hover { background: var(--s2); }
 .hero-logo { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 220px; margin: 0 auto; padding: var(--sp3); border-radius: var(--r2); background: var(--blanc); }
 .hero-logo img { display: block; max-width: 100%; max-height: 110px; object-fit: contain; }
 .hero-logo:has(img.noimg) { display: none; }
+.hero-maillot { display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.hero-maillot img { display: block; height: 128px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+.hero-duo { display: flex; align-items: center; justify-content: center; gap: var(--sp4); }
+.hero-duo .hero-logo { flex: 1 1 auto; max-width: 180px; margin: 0; }
 .facts dd.lines { font-weight: 600; line-height: 1.5; }
 .facts dd .dim { color: var(--tx3); font-weight: 500; }
 .vic-list { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
@@ -988,15 +998,33 @@ function sousTitreCourse(c) {
   return parts.filter(Boolean).join(" · ");
 }
 
+const TYPES_MAILLOT = { gc: "time", points: "points", mountain: "mountain", youth: "young" };
+/** Maillots distinctifs WorldDB d'une édition : seulement si sa clé d'édition BRUTE (même dénomination) est celle de l'édition 2025 reliée
+ *  (maillots/index.json `epreuves`, table manuelle de tools/maillots.py). { cle de classement -> url } ; null sinon. */
+function maillotsCourse(nom, pays) {
+  if (state.mIdx === undefined) { demanderMaillots(); return null; }
+  const M = state.mIdx, w = M && M.epreuves && M.epreuves[cleEdition(nom, pays)];
+  return w ? maillotsWorldDb(w) : null;
+}
+function maillotsWorldDb(w) {
+  const types = ((state.mIdx || {}).courses || {})[w] || [], out = {};
+  Object.entries(TYPES_MAILLOT).forEach(([k, ty]) => { if (types.includes(ty)) out[k] = `${BASE_MAILLOTS}/courses/${w}_${ty}.webp`; });
+  return Object.keys(out).length ? out : null;
+}
 function renderMaillots(c, sel) {
-  const k = cls(c, sel);
+  const k = cls(c, sel), W = maillotsCourse(c.name, c.country);
   const defs = [["gc", "Général", "jaune"], ["points", "Points", "vert"], ["mountain", "Montagne", "pois"], ["youth", "Jeune", "blanc"]];
+  let avecImg = false;
   const items = defs.map(([cle, lab, cl]) => {
     const r = (k[cle] || []).find(x => x.rank === 1);
     const ref = r && c.riders[r.rider_id];
-    return ref ? `<div class="jersey"><span class="dot ${cl}"></span><div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${plink(ref.id || r.rider_id, ref.name)}</span></div></div>` : "";
+    if (!ref) return "";
+    const img = W && W[cle];
+    if (img) avecImg = true;
+    const pastille = img ? `<span class="jimg"><img src="${esc(img)}" alt="" loading="lazy" title="Maillot : WorldDB" onerror="this.parentNode.className='dot ${cl}';this.remove()"></span>` : `<span class="dot ${cl}"></span>`;
+    return `<div class="jersey">${pastille}<div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${plink(ref.id || r.rider_id, ref.name)}</span></div></div>`;
   }).join("");
-  return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div></div>` : "";
+  return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div>${avecImg ? `<div class="tbl-note" style="padding:4px 0 0">Maillots ${esc(state.mIdx.saison || "")} : WorldDB</div>` : ""}</div>` : "";
 }
 
 function renderParcours(st) {
@@ -1449,33 +1477,43 @@ const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
 /** Logo d'une équipe dans la liste des participants : logo Wikidata de sa lignée (lignees_index.json), seulement si la saison est couverte par le nom
  *  actuel de la lignée (`logo_depuis`) ; sinon pastille avec les initiales. Les deux index sont chargés à la demande (la liste est redessinée ensuite). */
 function redessinerParticipants() {
-  if (state.course && state.sub === "participants") { const tb = document.getElementById("table"); if (tb) tb.innerHTML = renderTable(state.course, state.sel, state.sub); }
+  if (state.course && state.route && state.route.nom === "course") renderFiche();
 }
 /** Index des maillots (maillots/index.json) : { equipes: {CODE: {nom, slug}}, parSlug: {slug: CODE} } ; absent ou illisible : null (aucun maillot). */
-function demanderMaillots() {
-  if (state.mIdx !== undefined || state.mDem) return;
-  state.mDem = true;
-  fetch(`${BASE_MAILLOTS}/index.json`).then(r => (r.ok ? r.json() : null)).catch(() => null).then(d => {
+function chargerMaillots() {
+  if (!state.mProm) state.mProm = fetch(`${BASE_MAILLOTS}/index.json`).then(r => (r.ok ? r.json() : null)).catch(() => null).then(d => {
     const parSlug = {};
     if (d && d.equipes) Object.entries(d.equipes).forEach(([c, v]) => { if (v && v.slug) parSlug[v.slug] = c; });
     state.mIdx = d ? { ...d, parSlug } : null;
-    redessinerParticipants();
+    return state.mIdx;
   });
+  return state.mProm;
+}
+function demanderMaillots() {
+  if (state.mIdx !== undefined || state.mDem) return;
+  state.mDem = true;
+  chargerMaillots().then(redessinerParticipants);
 }
 /** Maillot WorldDB d'une équipe d'une saison : même dénomination (slug du libellé) que l'équipe de la saison des maillots portant ce code,
  *  et même code UCI quand l'équipe-saison en a un (règle du propriétaire : toute la période de dénomination, tant que le code ne change pas). */
-function maillotEquipe(nom, saison) {
+/** Tenue de l'équipe nationale (WorldDB `<ISO3>_maillot_champion`, ce sont les tenues des sélections) pour une sélection nationale. */
+function maillotNation(iso3) {
+  if (state.mIdx === undefined) { demanderMaillots(); return null; }
+  return iso3 && state.mIdx && (state.mIdx.nations || []).includes(iso3) ? `${BASE_MAILLOTS}/nations/${iso3}.webp` : null;
+}
+function maillotEquipe(nom, saison, codeConnu) {
   if (!nom) return null;
   if (state.mIdx === undefined) { demanderMaillots(); return null; }
   const M = state.mIdx, code = M && M.parSlug[slugEquipe(nom)];
   if (!code) return null;
-  const q = equipeDeLibelle(nom, saison);
-  if (q && q.e.code_uci && q.e.code_uci !== code) return null;
+  const q = codeConnu === undefined ? equipeDeLibelle(nom, saison) : null, c = codeConnu !== undefined ? codeConnu : q && q.e.code_uci;
+  if (c && c !== code) return null;
   return `${BASE_MAILLOTS}/equipes/${code}.webp`;
 }
 function htmlLogoEquipe(nom, saison) {
   const vide = `<span class="tc-logo ini" aria-hidden="true">${esc(initialesEquipe(nom))}</span>`;
-  const mail = maillotEquipe(nom, saison);
+  const qn = nom ? equipeDeLibelle(nom, saison) : null;
+  const mail = qn && qn.e.nationale ? maillotNation(qn.e.pays) : maillotEquipe(nom, saison);
   if (mail) { state.partMaillot = true; return `<span class="tc-logo maillot"><img src="${esc(mail)}" alt="" loading="lazy" title="Maillot : WorldDB" onerror="this.parentNode.className='tc-logo ini';this.parentNode.textContent=${esc(JSON.stringify(initialesEquipe(nom)))}"></span>`; }
   const q = nom ? equipeDeLibelle(nom, saison) : null, lg = q && q.e.lignee;
   if (!lg) return vide;
@@ -2204,7 +2242,7 @@ function classeActuelle(C) {
   return ys.length ? C.classes[ys[ys.length - 1]] : null;
 }
 async function construireEpreuve(cle) {
-  const [F] = await Promise.all([fichierCourses(lettreId(cle)), chargerPays()]);
+  const [F] = await Promise.all([fichierCourses(lettreId(cle)), chargerPays(), chargerMaillots()]);
   const C = aPropre(F, cle) ? F[cle] : null;
   if (C) (C.editions || []).forEach(noterChemin);
   return { cle, C };
@@ -2270,11 +2308,15 @@ function articleEpreuve(ep) {
     cl ? ["Classe actuelle", cl] : null,
     C.historique_info && C.historique_info.editions ? ["Historique Wikidata", `${C.historique_info.annees[0]} → ${C.historique_info.annees[1]} · ${C.historique_info.editions} éditions`] : null,
   ].filter(Boolean);
+  const wM = state.mIdx && state.mIdx.epreuves_canon && state.mIdx.epreuves_canon[ep.cle], WM = wM ? maillotsWorldDb(wM) : null;
+  const LIB_M = { gc: "Général", points: "Points", mountain: "Montagne", youth: "Jeune" };
+  const maill = WM ? Object.entries(WM).map(([k, u]) => `<figure><img src="${esc(u)}" alt="Maillot ${esc(LIB_M[k])}" loading="lazy" onerror="this.parentNode.remove()"><figcaption>${esc(LIB_M[k])}</figcaption></figure>`).join("") : "";
   const eds = E.filter(x => x.season != null && x.race_id).concat((C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
   return {
     head: htmlArtHead({ crumbs: htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Épreuves", "#courses/epreuves"], [nom]]), titre: nom,
       sub: `${flag(C.flag, nomPays(C.pays))}<span>${esc(nomPays(C.pays))}</span>`, pills }),
-    infobox: htmlInfobox({ credit: cl && equivClasse(cl) ? `<div class="credit">Classe ${esc(cl)} : ${esc(equivClasse(cl))}</div>` : "", faits }),
+    infobox: htmlInfobox({ photo: maill ? `<div class="ep-maillots">${maill}</div>` : "",
+      credit: (maill ? `<div class="credit">Maillots ${esc(state.mIdx.saison || "")} : WorldDB</div>` : "") + (cl && equivClasse(cl) ? `<div class="credit">Classe ${esc(cl)} : ${esc(equivClasse(cl))}</div>` : ""), faits }),
     navbox: eds.length > 1 ? htmlNavbox(`Éditions · ${nom}`, htmlAnneesEditions(eds, null), false) : "",
   };
 }
@@ -2415,7 +2457,7 @@ async function chargerCoursesEquipe(eq) {
 /** Assemble l'article ; { cle, vide } si l'équipe est introuvable, { cle, redirect } pour une équipe-saison qui a une lignée. */
 async function construireEquipe(r) {
   if (r.qid) {
-    const [L] = await Promise.all([chargerOptionnel(`entites/equipes/lignees/${r.qid}.json`), chargerPays()]);
+    const [L] = await Promise.all([chargerOptionnel(`entites/equipes/lignees/${r.qid}.json`), chargerPays(), chargerMaillots()]);
     if (!L || !L.saisons || !Object.keys(L.saisons).length) {
       // article de lignée pas encore publié : repli sur l'équipe-saison de la saison demandée (à défaut la plus récente) d'après lignees_index.json
       await chargerLigneesIdx();
@@ -2429,7 +2471,7 @@ async function construireEquipe(r) {
     return eq;
   }
   const y = +r.id.slice(-4);
-  const [F] = await Promise.all([chargerEquipesSaison(y), chargerPays()]);
+  const [F] = await Promise.all([chargerEquipesSaison(y), chargerPays(), chargerMaillots()]);
   const e = aPropre(F, r.id) ? F[r.id] : null;
   if (!e) return { cle: r.id, vide: true };
   if (e.lignee && !r.sansRedirection) {
@@ -2483,12 +2525,16 @@ function tuilesEquipe(eq) {
 function articleEquipe(eq) {
   const lig = eq.type === "lignee", y = eq.y, S = eq.saisons[y];
   const lg = eq.logo, src = lg && urlMedia(lg.url), page = lg && urlMedia(lg.page);
-  const photo = src ? `<div class="hero-logo"><img src="${esc(src)}" alt="Logo de ${esc(eq.nom)}" loading="lazy"></div>` : "";
+  const mail = !S ? null : eq.nationale ? maillotNation(eq.pays) : maillotEquipe(S.libelle || eq.nom, y, S.code_uci || null);
+  const imgLogo = src ? `<div class="hero-logo"><img src="${esc(src)}" alt="Logo de ${esc(eq.nom)}" loading="lazy"></div>` : "";
+  const imgMail = mail ? `<div class="hero-maillot"><img src="${esc(mail)}" alt="Maillot ${esc(S.libelle || eq.nom)} ${esc(y)}" loading="lazy" onerror="this.parentNode.remove()"></div>` : "";
+  const photo = imgMail && imgLogo ? `<div class="hero-duo">${imgMail}${imgLogo}</div>` : imgMail || imgLogo;
   let credit = "";
   if (src) {
     const txt = [lg.auteur, lg.licence].filter(Boolean).join(", ");
     if (txt) credit = `<div class="credit">Logo : ${page ? `<a href="${esc(page)}" target="_blank" rel="noopener noreferrer">${esc(txt)}</a>` : esc(txt)}</div>`;
   }
+  if (mail) credit += `<div class="credit">Maillot ${esc(state.mIdx && state.mIdx.saison || "")} : WorldDB</div>`;
   const courant = lig ? eq.noms.filter(x => !x.fin).pop() : null;
   const paysTxt = eq.pays ? (nomPays(eq.pays) !== eq.pays ? nomPays(eq.pays) : eq.paysNom || eq.pays) : eq.paysNom;
   const codes = eq.codes.slice().reverse().map(c => `${esc(c.code)} <span class="dim">${esc(periodeWd(c.debut, c.fin))}</span>`);
