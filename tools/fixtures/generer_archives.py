@@ -172,7 +172,7 @@ def ecrire_cache_wikidata(codes):
     collector._dump(str(dossier / "equipes.json"), {"alpha-racing-2024": {"qid": "Q99900100", "preuve": f"P1998 {codes['Alpha Racing']} [fictif]", "verifie": v}})
     collector._dump(str(dossier / "lignees.json"), {"Q99900100": {
         "libelle": "Alpha Racing (fictif)", "verifie": v, "logo": "Logo fictif.svg", "pays": {"qid": "Q99900003", "libelle": "France (fictif)"},
-        "classes": ["équipe cycliste (fictif)"], "sitelinks": {"fr": "Alpha Racing (fictif)"},
+        "classes": ["UCI ProTeam (fictif)"], "sitelinks": {"fr": "Alpha Racing (fictif)"},
         "noms": [{"nom": "Alpha Cycling (fictif)", "debut": "2018", "fin": "2021"}, {"nom": "Alpha Racing (fictif)", "debut": "2022"}],
         "codes": [{"code": "FXA", "debut": "2018", "fin": "2021"}, {"code": codes["Alpha Racing"], "debut": "2022"}]}})
 
