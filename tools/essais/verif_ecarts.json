@@ -1,0 +1,933 @@
+{
+ "coureurs": [
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1996-01-01",
+   "nationalite": "TUR",
+   "nom": "Burak Abay",
+   "rider_id": "abay-burak-19960101"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-03-16",
+   "nationalite": "AZE",
+   "nom": "Ibad Abbasov",
+   "rider_id": "abbasov-ibad-20020316"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1991-01-25",
+   "nationalite": "KUW",
+   "nom": "Mohammad Alateeqi",
+   "rider_id": "alateeqi-mohammad-19910125"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-05-01",
+   "nationalite": "KSA",
+   "nom": "Alhur Alkulaif",
+   "rider_id": "alkulaif-alhur-20040501"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-10-09",
+   "nationalite": "SYR",
+   "nom": "Ibrahiem Alrefai",
+   "rider_id": "alrefai-ibrahiem-20061009"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1999-08-19",
+   "nationalite": "REF",
+   "nom": "Amir Ansari",
+   "rider_id": "ansari-amir-19990819"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2004-02-01",
+   "nationalite": "ITA",
+   "nom": "Brandon Baldacci",
+   "rider_id": "baldacci-brandon-20040201"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1990-01-04",
+   "nationalite": "POR",
+   "nom": "José Borges",
+   "rider_id": "borges-jose-19900104"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-11-27",
+   "nationalite": "AUS",
+   "nom": "Jake Cawthorn",
+   "rider_id": "cawthorn-jake-20041127"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2000-02-11",
+   "nationalite": "SLO",
+   "nom": "Nejc Čenčič",
+   "rider_id": "cencic-nejc-20000211"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2000-09-11",
+   "nationalite": "BOL",
+   "nom": "Martin Ceron",
+   "rider_id": "ceron-martin-20000911"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-05-07",
+   "nationalite": "TPE",
+   "nom": "You Cheng 張 Chang 祐誠",
+   "rider_id": "chang-you-cheng-20040507"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2000-05-29",
+   "nationalite": "SMR",
+   "nom": "Andrea Chiarucci",
+   "rider_id": "chiarucci-andrea-20000529"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-04-20",
+   "nationalite": "USA",
+   "nom": "Sean Christian",
+   "rider_id": "christian-sean-20020420"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1984-12-18",
+   "nationalite": "AUS",
+   "nom": "Jonathan Clarke",
+   "rider_id": "clarke-jonathan-19841218"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1997-08-26",
+   "nationalite": "PHI",
+   "nom": "Mervin Corpuz",
+   "rider_id": "corpuz-mervin-19970826"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1996-08-01",
+   "nationalite": "CAN",
+   "nom": "Nicolas Cote",
+   "rider_id": "cote-nicolas-19960801"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2005-01-21",
+   "nationalite": "POR",
+   "nom": "Pedro Cunha",
+   "rider_id": "cunha-pedro-20050121"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2001-04-17",
+   "nationalite": "CHN",
+   "nom": "Tiano Da Silva",
+   "rider_id": "da-silva-tiano-20010417"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2005-01-19",
+   "nationalite": "ALB",
+   "nom": "Gabriele De Fabritiis",
+   "rider_id": "de-fabritiis-gabriele-20050119"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1991-03-27",
+   "nationalite": "ROU",
+   "nom": "George-Bogdan Duca",
+   "rider_id": "duca-george-bogdan-19910327"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2004-10-06",
+   "nationalite": "SLO",
+   "nom": "Roman Ermakov",
+   "rider_id": "ermakov-roman-20041006"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-02-23",
+   "nationalite": "FRA",
+   "nom": "Lucas Faissole Durand",
+   "rider_id": "faissole-durand-lucas-20040223"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2000-04-03",
+   "nationalite": "POR",
+   "nom": "António Ferreira",
+   "rider_id": "ferreira-antonio-20000403"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2001-02-02",
+   "nationalite": "USA",
+   "nom": "Graeme Frislie",
+   "rider_id": "frislie-graeme-20010202"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-03-23",
+   "nationalite": "NGR",
+   "nom": "John Odumu Gabriel",
+   "rider_id": "gabriel-john-odumu-20020323"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2007-01-31",
+   "nationalite": "IRL",
+   "nom": "David Gaffney",
+   "rider_id": "gaffney-david-20070131"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1992-07-15",
+   "nationalite": "KSA",
+   "nom": "Abdulaziz Ghilman",
+   "rider_id": "ghilman-abdulaziz-19920715"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1979-12-06",
+   "nationalite": "FRA",
+   "nom": "Siméon Green",
+   "rider_id": "green-simeon-19791206"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1993-05-29",
+   "nationalite": "KSA",
+   "nom": "Abdulaziz Hashim",
+   "rider_id": "hashim-abdulaziz-19930529"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-06-23",
+   "nationalite": "AUS",
+   "nom": "Kobe Henderson",
+   "rider_id": "henderson-kobe-20020623"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2007-09-18",
+   "nationalite": "PAN",
+   "nom": "Manuel Herrera",
+   "rider_id": "herrera-manuel-20070918"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1985-07-21",
+   "nationalite": "AUS",
+   "nom": "Samuel Hill",
+   "rider_id": "hill-samuel-19850721"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-02-10",
+   "nationalite": "KOR",
+   "nom": "Jisub Hong",
+   "rider_id": "hong-jisub-20020210"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2003-03-08",
+   "nationalite": "MAC",
+   "nom": "Chin Pok Kam",
+   "rider_id": "kam-chin-pok-20030308"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-04-14",
+   "nationalite": "ERI",
+   "nom": "Pawlos Kiflom",
+   "rider_id": "kiflom-pawlos-20030414"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1999-05-23",
+   "nationalite": "AUS",
+   "nom": "Jaxon King",
+   "rider_id": "king-jaxon-19990523"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1997-06-15",
+   "nationalite": "BUR",
+   "nom": "Souleymane Kone",
+   "rider_id": "kone-souleymane-19970615"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2004-03-01",
+   "nationalite": "BEL",
+   "nom": "Robin Kos",
+   "rider_id": "kos-robin-20040301"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1997-10-29",
+   "nationalite": "MLI",
+   "nom": "Dramane Kouma",
+   "rider_id": "kouma-dramane-19971029"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1998-01-26",
+   "nationalite": "DEN",
+   "nom": "Mads Kristensen",
+   "rider_id": "kristensen-mads-19980126"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1999-05-13",
+   "nationalite": "FRA",
+   "nom": "Florentin Lecamus Lambert",
+   "rider_id": "lecamus-lambert-florentin-19990513"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-01-21",
+   "nationalite": "FRA",
+   "nom": "Theo Leveque",
+   "rider_id": "leveque-theo-20040121"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-10-09",
+   "nationalite": "CHN",
+   "nom": "You Li",
+   "rider_id": "li-you-20041009"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-05-05",
+   "nationalite": "CHN",
+   "nom": "Yize Liu",
+   "rider_id": "liu-yize-20060505"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2022-05-20",
+   "nationalite": "BEN",
+   "nom": "Christian Lokossou",
+   "rider_id": "lokossou-christian-20220520"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1994-04-05",
+   "nationalite": "ARG",
+   "nom": "Federico Javier López",
+   "rider_id": "lopez-federico-javier-19940405"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-08-28",
+   "nationalite": "NED",
+   "nom": "Noel Luijten",
+   "rider_id": "luijten-noel-20020828"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-02-08",
+   "nationalite": "DEN",
+   "nom": "Tobias Lund Andresen",
+   "rider_id": "lund-andresen-tobias-20020208"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2005-07-27",
+   "nationalite": "CHN",
+   "nom": "Haojun Ma",
+   "rider_id": "ma-haojun-20050727"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-05-23",
+   "nationalite": "ITA",
+   "nom": "Lorenzo Magli",
+   "rider_id": "magli-lorenzo-20020523"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-11-10",
+   "nationalite": "KSA",
+   "nom": "Mohammed Majrashi",
+   "rider_id": "majrashi-mohammed-20031110"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-06-24",
+   "nationalite": "FRA",
+   "nom": "Charles Marchandise",
+   "rider_id": "marchandise-charles-20030624"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-07-07",
+   "nationalite": "DOM",
+   "nom": "Roger Marte Valdez",
+   "rider_id": "marte-valdez-roger-20040707"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2005-04-24",
+   "nationalite": "SEN",
+   "nom": "Neriah Meunier Sow",
+   "rider_id": "meunier-sow-neriah-20050424"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-10-03",
+   "nationalite": "ITA",
+   "nom": "Alessandro Milesi",
+   "rider_id": "milesi-alessandro-20061003"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-02-26",
+   "nationalite": "ITA",
+   "nom": "Lorenzo Montanari",
+   "rider_id": "montanari-lorenzo-20040226"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1997-01-01",
+   "nationalite": "RWA",
+   "nom": "Moise Mugisha",
+   "rider_id": "mugisha-moise-19970101"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1998-01-01",
+   "nationalite": "RWA",
+   "nom": "Didier Munyaneza",
+   "rider_id": "munyaneza-didier-19980101"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-11-22",
+   "nationalite": "POR",
+   "nom": "João Oliveira",
+   "rider_id": "oliveira-joao-20021122"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1995-04-19",
+   "nationalite": "HUN",
+   "nom": "János Pelikán",
+   "rider_id": "pelikan-janos-19950419"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-09-04",
+   "nationalite": "CAN",
+   "nom": "Leonard Peloquin",
+   "rider_id": "peloquin-leonard-20030904"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1995-01-28",
+   "nationalite": "AUS",
+   "nom": "Louis Perriman",
+   "rider_id": "perriman-louis-19950128"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-12-26",
+   "nationalite": "BUL",
+   "nom": "Yordan Petrov",
+   "rider_id": "petrov-yordan-20021226"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1991-02-03",
+   "nationalite": "LAO",
+   "nom": "Ariya Phounsavath",
+   "rider_id": "phounsavath-ariya-19910203"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1999-07-09",
+   "nationalite": "BUL",
+   "nom": "Martin Popov",
+   "rider_id": "popov-martin-19990709"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2003-01-28",
+   "nationalite": "THA",
+   "nom": "Baptiste Poulard",
+   "rider_id": "poulard-baptiste-20030128"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-09-20",
+   "nationalite": "COL",
+   "nom": "Juan Diego Quintero",
+   "rider_id": "quintero-juan-diego-20060920"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1998-09-24",
+   "nationalite": "JAM",
+   "nom": "Andrew Ramsay",
+   "rider_id": "ramsay-andrew-19980924"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1984-07-05",
+   "nationalite": "GUA",
+   "nom": "Manuel Rodas",
+   "rider_id": "rodas-manuel-19840705"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-12-02",
+   "nationalite": "POR",
+   "nom": "Gonçalo Rodrigues",
+   "rider_id": "rodrigues-goncalo-20031202"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-09-27",
+   "nationalite": "GER",
+   "nom": "Maxim Roor",
+   "rider_id": "roor-maxim-20060927"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-05-08",
+   "nationalite": "PUR",
+   "nom": "Abel Rosado Arroyo",
+   "rider_id": "rosado-arroyo-abel-20030508"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-07-01",
+   "nationalite": "ITA",
+   "nom": "Francesco Giairo Rossi",
+   "rider_id": "rossi-francesco-giairo-20040701"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-04-09",
+   "nationalite": "MEX",
+   "nom": "Sebastian Ruiz",
+   "rider_id": "ruiz-sebastian-20040409"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2005-06-20",
+   "nationalite": "GER",
+   "nom": "David Sandberg",
+   "rider_id": "sandberg-david-20050620"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1997-09-18",
+   "nationalite": "ARG",
+   "nom": "Simone Sanò",
+   "rider_id": "sano-simone-19970918"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2007-02-15",
+   "nationalite": "POR",
+   "nom": "Gonçalo Santos",
+   "rider_id": "santos-goncalo-20070215"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2000-01-01",
+   "nationalite": "FRA",
+   "nom": "Jean Ousmane Sene",
+   "rider_id": "sene-jean-ousmane-20000101"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1991-12-30",
+   "nationalite": "LTU",
+   "nom": "Donatas Šertvytis",
+   "rider_id": "sertvytis-donatas-19911230"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1988-03-27",
+   "nationalite": "ZIM",
+   "nom": "Rodrick Shumba",
+   "rider_id": "shumba-rodrick-19880327"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1988-05-17",
+   "nationalite": "POR",
+   "nom": "Bruno Silva",
+   "rider_id": "silva-bruno-19880517"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2007-01-15",
+   "nationalite": "POR",
+   "nom": "João Silva",
+   "rider_id": "silva-joao-20070115"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-11-24",
+   "nationalite": "ITA",
+   "nom": "Lorenzo Slanzi",
+   "rider_id": "slanzi-lorenzo-20031124"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1999-01-19",
+   "nationalite": "IRL",
+   "nom": "Luke Smith",
+   "rider_id": "smith-luke-19990119"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-09-23",
+   "nationalite": "LAT",
+   "nom": "Renats Stals",
+   "rider_id": "stals-renats-20030923"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-07-24",
+   "nationalite": "FRA",
+   "nom": "Malo Stevant",
+   "rider_id": "stevant-malo-20020724"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-05-10",
+   "nationalite": "BEL",
+   "nom": "Daan Stevens",
+   "rider_id": "stevens-daan-20020510"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2002-12-19",
+   "nationalite": "BLR",
+   "nom": "Aliaksandr Sychuhou",
+   "rider_id": "sychuhou-aliaksandr-20021219"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2001-09-18",
+   "nationalite": "FRA",
+   "nom": "Théo Thomas",
+   "rider_id": "thomas-theo-20010918"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-11-15",
+   "nationalite": "RWA",
+   "nom": "Shadrack Ufitimana",
+   "rider_id": "ufitimana-shadrack-20061115"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1999-10-01",
+   "nationalite": "CZE",
+   "nom": "Šimon Vaníček",
+   "rider_id": "vanicek-simon-19991001"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2006-03-09",
+   "nationalite": "AUT",
+   "nom": "Paul Viehböck",
+   "rider_id": "viehbock-paul-20060309"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2005-03-06",
+   "nationalite": "CAN",
+   "nom": "Jordan Wagner",
+   "rider_id": "wagner-jordan-20050306"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "1991-01-15",
+   "nationalite": "REF",
+   "nom": "Ahmad Badreddin Wais",
+   "rider_id": "wais-ahmad-badreddin-19910115"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "1988-10-21",
+   "nationalite": "TPE",
+   "nom": "Yin Chih 王 Wang 胤之",
+   "rider_id": "wang-yin-chih-19881021"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2004-01-05",
+   "nationalite": "POL",
+   "nom": "Kajetan Wąsowicz",
+   "rider_id": "wasowicz-kajetan-20040105"
+  },
+  {
+   "controles": [
+    "naissance"
+   ],
+   "naissance": "2003-10-16",
+   "nationalite": "TPE",
+   "nom": "Shi Ru 許 Xu 仕儒",
+   "rider_id": "xu-shi-ru-20031016"
+  },
+  {
+   "controles": [
+    "nationalite"
+   ],
+   "naissance": "2002-05-08",
+   "nationalite": "MRI",
+   "nom": "Daniel Yon Hin",
+   "rider_id": "yon-hin-daniel-20020508"
+  }
+ ],
+ "vainqueurs": [
+  {
+   "course": "Circuit des Ardennes",
+   "race_id": "uci-69166",
+   "saison": 2023,
+   "vainqueur": "Mathias Bregnhøj"
+  },
+  {
+   "course": "Ethias-Tour de Wallonie",
+   "race_id": "uci-67409",
+   "saison": 2022,
+   "vainqueur": "Loïc Vliegen"
+  },
+  {
+   "course": "La Polynormande",
+   "race_id": "uci-66755",
+   "saison": 2022,
+   "vainqueur": "Lorenzo Rota"
+  },
+  {
+   "course": "The Princess Maha Chakri Sirindhorn's Cup Tour of Thailand",
+   "race_id": "uci-65605",
+   "saison": 2022,
+   "vainqueur": "Jambaljamts Sainbayar"
+  },
+  {
+   "course": "Tour de l'Ain",
+   "race_id": "uci-72259",
+   "saison": 2024,
+   "vainqueur": "Jefferson Cepeda"
+  },
+  {
+   "course": "Turul Romaniei",
+   "race_id": "uci-72399",
+   "saison": 2024,
+   "vainqueur": "Davide Toneatti"
+  }
+ ]
+}
