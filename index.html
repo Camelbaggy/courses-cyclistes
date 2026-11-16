@@ -528,6 +528,49 @@ button.mini:hover, a.mini:hover { background: var(--s2); }
   .tools .two { display: contents; }
   .tools .chips { flex: 1 1 100%; }
 }
+
+/* ================== articles d'équipe (R2b) ================== */
+.tlink { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--tx3); }
+.tlink:hover, .tlink:focus-visible { color: var(--accent); border-bottom-color: var(--accent); outline: none; }
+.crow.lk { position: relative; }
+.crow.lk:hover { background: var(--s2); }
+.crow.lk .stretch { color: inherit; text-decoration: none; }
+.crow.lk .stretch::after { content: ""; position: absolute; inset: 0; }
+.crow.lk .stretch:focus-visible { outline: none; }
+.crow.lk:has(.stretch:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.crow.lk .tlink { position: relative; z-index: 1; display: inline-block; padding: 2px 0; }
+.hero-logo { display: flex; align-items: center; justify-content: center; width: 100%; max-width: 220px; margin: 0 auto; padding: var(--sp3); border-radius: var(--r2); background: var(--blanc); }
+.hero-logo img { display: block; max-width: 100%; max-height: 110px; object-fit: contain; }
+.hero-logo:has(img.noimg) { display: none; }
+.facts dd.lines { font-weight: 600; line-height: 1.5; }
+.facts dd .dim { color: var(--tx3); font-weight: 500; }
+.vic-list { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
+.vic { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: var(--sp2); align-items: center; padding: 9px var(--sp3); border-top: 1px solid var(--line); font-size: .85rem; }
+.vic:first-child { border-top: none; }
+.vic .d { color: var(--tx3); font-size: .74rem; }
+.vic .t { min-width: 0; overflow-wrap: anywhere; }
+.vic .t a { color: var(--tx); font-weight: 700; text-decoration: none; }
+.vic .t a:hover, .vic .t a:focus-visible { color: var(--accent); outline: none; text-decoration: underline; }
+.vic .t small { display: block; color: var(--tx3); font-size: .76rem; margin-top: 1px; }
+.mv-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp3); }
+.mv-col h3 { font-size: .74rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; margin-bottom: var(--sp1); }
+.mv-col.in h3 { color: var(--ok); } .mv-col.out h3 { color: var(--bad); }
+.mv-col ul { list-style: none; background: var(--s1); border: 1px solid var(--line); border-radius: var(--r1); }
+.mv-col li { display: flex; align-items: center; gap: var(--sp2); padding: 7px var(--sp3); border-top: 1px solid var(--line); font-size: .86rem; min-height: 36px; overflow-wrap: anywhere; }
+.mv-col li:first-child { border-top: none; }
+.mv-col .none { color: var(--tx3); font-size: .84rem; padding: 8px var(--sp3); }
+details.mv-an { border: 1px solid var(--line); border-radius: var(--r2); background: var(--s1); overflow: hidden; }
+details.mv-an > summary { display: flex; align-items: baseline; gap: var(--sp2); min-height: 48px; padding: 10px var(--sp4); cursor: pointer; list-style: none; font-weight: 800; background: var(--s2); }
+details.mv-an > summary::-webkit-details-marker { display: none; }
+details.mv-an > summary small { font-weight: 600; color: var(--tx3); font-size: .76rem; margin-left: auto; text-align: right; }
+details.mv-an > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+details.mv-an .mv-body { padding: var(--sp3); }
+.meme-nom { font-size: .8rem; color: var(--tx3); }
+.meme-nom a { color: var(--tx2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.tbl td .sub-rider { display: block; font-size: .72rem; font-weight: 500; color: var(--tx3); }
+@media (min-width: 880px) {
+  .mv-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body>
@@ -660,7 +703,9 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // épreuve : données assemblées, onglet par épreuve
   nav: null, navLoading: null, eqSaison: {}, partMemo: null, ep: null, etab: "palmares", etabs: {}, epreuveOuverte: null,
   // listes (chargées à la demande) : index des coureurs, des épreuves, des équipes-saisons, compteurs ; filtres de la page Coureurs
-  cIdx: undefined, eIdx: undefined, eqIdx: undefined, entIdx: undefined, co: null };
+  cIdx: undefined, eIdx: undefined, eqIdx: undefined, entIdx: undefined, co: null,
+  // articles d'équipe : données assemblées, onglet par équipe, index des lignées (undefined = pas chargé, null = absent)
+  eq: null, eqtab: "effectif", eqtabs: {}, equipeOuverte: null, lgIdx: undefined };
 
 /* ================== éléments communs ================== */
 const CLASSES_ANCIENNES = {
@@ -1012,14 +1057,14 @@ function ligneHTML(r, cle, c, mvt) {
   let rk = r.rank != null ? String(r.rank) : "–";
   if (mvt != null && mvt !== 0) rk += `<small class="${mvt > 0 ? "up" : "down"}">${mvt > 0 ? "▲" : "▼"}${Math.abs(mvt)}</small>`;
   return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${rk}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
-    <div class="mid"><div class="nm">${ref ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(ref ? ref.team || "" : "")}</div></div>
+    <div class="mid"><div class="nm">${ref ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${ref && ref.team ? lienEquipe(ref.team, saisonCourse(c)) : ""}</div></div>
     <div class="val ${cls2}">${esc(val)}${sous ? `<small>${esc(sous)}</small>` : ""}</div></div>`;
 }
 
 function ligneEquipe(r, c) {
   const val = r.rank === 1 ? fmtTemps(r.time_s) : fmtEcart(r.gap_s);
   return `<div class="row"><div class="rk">${esc(r.rank ?? "–")}</div><span></span>
-    <div class="mid"><div class="nm">${esc(r.team)}</div><div class="tm">${esc(r.nationality || "")}</div></div>
+    <div class="mid"><div class="nm">${lienEquipe(r.team, saisonCourse(c))}</div><div class="tm">${esc(r.nationality || "")}</div></div>
     <div class="val ${r.rank === 1 ? "first" : "gap"}">${esc(val)}</div></div>`;
 }
 
@@ -1080,11 +1125,11 @@ function htmlArtHead(o) {
   return `<header class="art-head">${o.crumbs || ""}<h1 class="h-title">${esc(o.titre)}</h1>
     ${o.sub ? `<div class="art-sub">${o.sub}</div>` : ""}${o.pills ? `<div class="hero-pills">${o.pills}</div>` : ""}</header>`;
 }
-/** Infobox (à droite à partir de 880 px, en tête sur mobile, en carte) : `photo` (HTML du rond), `credit` (HTML), `faits` [[libellé, valeur]] (échappés ici),
+/** Infobox (à droite à partir de 880 px, en tête sur mobile, en carte) : `photo` (HTML du rond), `credit` (HTML), `faits` [[libellé, valeur]] (échappés ici ; un 3e élément vrai : valeur déjà en HTML échappé),
  *  `extra` (HTML : podium, chronologie). */
 function htmlInfobox(o) {
   return `<div class="hero infobox">${o.photo ? `<div class="ib-photo">${o.photo}</div>` : ""}${o.credit || ""}
-    ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
+    ${(o.faits || []).length ? `<dl class="facts">${o.faits.map(([k, v, html]) => `<dt>${esc(k)}</dt><dd${html === "lignes" ? ' class="lines"' : ""}>${html ? v : esc(v)}</dd>`).join("")}</dl>` : ""}${o.extra || ""}</div>`;
 }
 /** Boîte de navigation repliable (pied d'article) ; `corps` : HTML. */
 function htmlNavbox(titre, corps, ouvert) {
@@ -1120,6 +1165,7 @@ function renderFiche() {
   const c = state.course;
   const body = document.getElementById("main");
   if (!c || !state.route || state.route.nom !== "course") return;
+  demanderEquipes(c);   // liens vers les articles d'équipe (une fois equipes/<année>.json chargé)
   const E = etapes(c);
   const sel = state.sel;
   const stage = etapeCourante(c, sel);
@@ -1159,7 +1205,7 @@ function renderFiche() {
   });
   const infobox = htmlInfobox({
     credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "", faits,
-    extra: `${htmlPodium(c)}<div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
+    extra: `<div id="podium-slot">${htmlPodium(c)}</div><div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
   });
   const main = `<div class="stack">
     ${chips}
@@ -1304,7 +1350,7 @@ function htmlPodium(c) {
     const ref = c.riders[r.rider_id];
     return `<div class="pod"><span class="pk r${r.rank}">${esc(r.rank)}</span>
       <div class="nm">${ref ? flag(ref.flag, ref.nationality) : ""}${ref ? plink(r.rider_id, ref.name) : esc(r.bib ? "Dossard " + r.bib : "Coureur inconnu")}</div>
-      ${ref && ref.team ? `<div class="tm">${esc(ref.team)}</div>` : ""}</div>`;
+      ${ref && ref.team ? `<div class="tm">${lienEquipe(ref.team, saisonCourse(c))}</div>` : ""}</div>`;
   }).join("")}</div>`;
 }
 
@@ -1333,19 +1379,41 @@ function participantsCourse(c) {
   state.partMemo = { c, l };
   return l;
 }
-/** Équipes de la saison (entites/equipes/<année>.json) : seule source du caractère « sélection nationale » (règle de encyclopedie._est_nationale). */
+/** Équipes-saisons d'une saison (entites/equipes/<année>.json), mémorisées dans state.eqSaison ; 404 : {} (pas encore généré) ; autre erreur : exception, rien de mémorisé. */
+async function chargerEquipesSaison(y) {
+  if (state.eqSaison[y]) return state.eqSaison[y];
+  try { state.eqSaison[y] = (await chargerArchive(`entites/equipes/${y}.json`)) || {}; }
+  catch (e) { if (e.status === 404) state.eqSaison[y] = {}; else throw e; }
+  return state.eqSaison[y];
+}
+/** Demande les équipes d'une saison pour construire des liens (sélection nationale, article d'équipe) ; `apres` s'exécute une fois chargées (erreur : aucun lien). */
+function demanderEquipesAn(y, apres) {
+  if (y == null || state.eqSaison[y] !== undefined || (state.eqDem = state.eqDem || {})[y]) return;
+  state.eqDem[y] = true;
+  chargerEquipesSaison(y).catch(() => { state.eqSaison[y] = {}; }).then(() => { if (apres) apres(); });
+}
+/** Équipes de la saison d'une fiche de course : source du caractère « sélection nationale » (règle de encyclopedie._est_nationale) et des liens vers les articles d'équipe. */
 function demanderEquipes(c) {
-  const y = saisonCourse(c);
-  if (y == null || state.eqSaison[y] !== undefined) return;
-  state.eqSaison[y] = null;   // demandé
-  chargerArchive(`entites/equipes/${y}.json`).then(d => d, () => ({})).then(d => {
-    state.eqSaison[y] = d || {};
-    if (state.course === c && state.sub === "participants") { const t = document.getElementById("table"); if (t) t.innerHTML = renderTable(c, state.sel, state.sub); }
+  demanderEquipesAn(saisonCourse(c), () => {
+    if (state.course !== c) return;
+    const t = document.getElementById("table");
+    if (t) t.innerHTML = renderTable(c, state.sel, state.sub);
+    const p = document.getElementById("podium-slot"); if (p) p.innerHTML = htmlPodium(c);
   });
+}
+/** Équipe-saison (id, entrée) d'un libellé brut et d'une saison, SI elle existe dans equipes/<année>.json déjà chargé ; sinon null (pas de lien). */
+function equipeDeLibelle(libelle, saison) {
+  const id = libelle ? idEquipeSaison(libelle, saison) : null, E = state.eqSaison[saison];
+  return id && E && aPropre(E, id) ? { id, e: E[id] } : null;
+}
+/** Nom d'équipe cliquable (article d'équipe) quand l'équipe-saison existe ; sinon texte simple. */
+function lienEquipe(libelle, saison, cl) {
+  const q = equipeDeLibelle(libelle, saison);
+  return q ? `<a class="tlink${cl ? " " + cl : ""}" href="${esc(hrefEquipeSaison(q.id, saison, q.e.lignee))}">${esc(libelle)}</a>` : esc(libelle);
 }
 function selectionNationale(c, libelle) {
   const E = state.eqSaison[saisonCourse(c)];
-  const e = E && libelle ? E[`${normIdx(libelle).replace(/ /g, "-")}-${saisonCourse(c)}`] : null;
+  const e = E && libelle ? E[idEquipeSaison(libelle, saisonCourse(c))] : null;
   return e && e.nationale ? e : null;
 }
 const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
@@ -1362,14 +1430,14 @@ function htmlParticipants(c) {
   const equipes = [...G.entries()].map(([nom, l]) => { l.sort(ordre); return { nom, l, best: l.length && l[0].rang != null ? l[0].rang : null }; })
     .sort((a, b) => (a.nom === "") - (b.nom === "") || (a.best == null) - (b.best == null) || (a.best ?? 0) - (b.best ?? 0) || a.nom.localeCompare(b.nom, "fr"));
   const html = equipes.map(t => {
-    const nat = selectionNationale(c, t.nom);
+    const nat = selectionNationale(c, t.nom), lien = t.nom ? lienEquipe(t.nom, saisonCourse(c)) : "";
     const rows = t.l.map(x => {
       const ref = x.ref, fr = ref && ref.is_french;
       return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${x.rang != null ? esc(x.rang) : "–"}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
         <div class="mid"><div class="nm">${ref ? plink(x.id, ref.name) : esc(x.bib != null ? "Dossard " + x.bib : "Coureur inconnu")}</div><div class="tm">${x.bib != null ? "Dossard " + esc(x.bib) : ""}</div></div>
         <div class="val gap">${esc(x.statut || "")}</div></div>`;
     }).join("");
-    return `<div class="team-card"><div class="team-head"><span class="tn">${esc(t.nom || "Équipe non renseignée")}</span>
+    return `<div class="team-card"><div class="team-head"><span class="tn">${lien || esc(t.nom || "Équipe non renseignée")}</span>
       ${nat ? `<span class="badge fr" title="Sélection nationale (libellé égal au nom du pays)">Sélection nationale</span>` : ""}
       <span class="small muted">${t.l.length} coureur${t.l.length > 1 ? "s" : ""}${t.best != null ? ` · meilleur : ${esc(rang(t.best))}` : ""}</span></div><div class="rows">${rows}</div></div>`;
   }).join("");
@@ -2254,11 +2322,11 @@ function htmlResultats() {
     const items = vis.map(e => {
       const fl = e.f ? flag(e.f, "") : '<span class="flag" style="visibility:hidden"></span>';
       const yr = `<span class="yr">${esc(annees(e.y))}</span>`;
-      if (e.t === "c" || e.t === "r") {
+      if (e.t === "c" || e.t === "r" || e.t === "e" || e.t === "l") {
         const n = i++;
-        return `<button class="sr-item nav${S.sel === n ? " sel" : ""}" role="option" aria-selected="${S.sel === n}" id="sr-i${n}" data-sr="${e.t}" data-id="${esc(e.id)}">${fl}<span class="nm">${esc(e.n)}</span>${yr}</button>`;
+        return `<button class="sr-item nav${S.sel === n ? " sel" : ""}" role="option" aria-selected="${S.sel === n}" id="sr-i${n}" data-sr="${e.t}" data-id="${esc(e.id)}">${fl}<span class="nm">${esc(e.n)}</span>${e.t === "l" ? '<span class="badge">Lignée</span>' : e.nat ? '<span class="badge">Sélection</span>' : ""}${yr}</button>`;
       }
-      return `<div class="sr-item off" role="option" aria-disabled="true">${fl}<span class="nm">${esc(e.n)}</span>${e.t === "l" ? '<span class="badge">Lignée</span>' : e.nat ? '<span class="badge">Sélection</span>' : ""}${yr}</div>`;
+      return "";
     }).join("");
     const reste = L.length - vis.length;
     return `<div class="sr-grp"><div class="grp-title" style="margin-top:0">${esc(titre)}<span>${L.length}</span></div><div class="sr-list">${items}
@@ -2291,10 +2359,12 @@ function choisirResultat(el) {
   const t = el.dataset.sr, id = el.dataset.id;
   if (t === "c") go(hrefCoureur(id, null));
   else if (t === "r") go(hrefEpreuve(id));
+  else if (t === "e") go(`#equipe/${id}`);
+  else if (t === "l") go(hrefLignee(id, null));
 }
 /* ================== routes et navigation ================== */
 /* Une route = une page plein écran dans #main ; l'état est dans le hash (retour arrière du navigateur cohérent).
-   #/ accueil · #courses[/<année>|/epreuves][?vue=avenir&cat=…] · #epreuve/<clé> · #course/<id>[/<étape|F>] · #equipes[/<année>] ·
+   #/ accueil · #courses[/<année>|/epreuves][?vue=avenir&cat=…] · #epreuve/<clé> · #course/<id>[/<étape|F>] · #equipes[/<année>] · #equipe/<QID ou id d'équipe-saison>[?s=<année>] ·
    #coureurs[?vue=francais&q=…] · #coureur/<id>[?s=a2023|c2027] · #classements[/uci[/<année>]|/fdj] · #recherche/<texte> */
 function hrefCourse(id, etape) { return `#course/${id}${etape !== "" && etape != null ? "/" + etape : ""}`; }
 function hrefCoureur(id, ctx) { return `#coureur/${id}${ctx && ctx !== `c${state.current}` ? "?s=" + ctx : ""}`; }
@@ -2304,6 +2374,13 @@ function hrefCourses(o) {
   const p = o.vue === "epreuves" ? "/epreuves" : o.saison != null ? `/${o.saison}` : "";
   return `#courses${p}${qs(o.vue === "epreuves" ? { cat: o.cat, pays: o.pays, q: o.q } : { vue: o.vue === "avenir" ? "avenir" : "", cat: o.cat })}`;
 }
+/** Miroir EXACT de netutil.slugify (docs/SPEC.md §4.5) : NFKD, non-ASCII supprimé APRÈS décomposition (ł, ß, ø disparaissent), minuscules, hors [a-z0-9] -> espace, trim, espaces -> « - ». */
+function slugEquipe(nom) { return normIdx(nom).replace(/ /g, "-"); }
+/** Id d'équipe-saison d'un libellé brut et d'une saison (« <slug>-<année> ») ; null si le slug est vide. */
+function idEquipeSaison(libelle, saison) { const s = slugEquipe(libelle); return s && saison != null ? `${s}-${saison}` : null; }
+function hrefLignee(qid, y) { return `#equipe/${qid}${y != null ? "?s=" + y : ""}`; }
+/** Lien vers une équipe-saison : l'article de sa lignée (à la saison voulue) si elle en a une, sinon l'article de l'équipe-saison. */
+function hrefEquipeSaison(id, y, lignee) { return lignee ? hrefLignee(lignee, y) : `#equipe/${id}`; }
 function hrefEquipes(o) { return `#equipes${o.saison != null ? "/" + o.saison : ""}${qs({ cat: o.cat, q: o.q, tri: o.tri === "nom" ? "" : o.tri })}`; }
 function hrefCoureurs(o) {
   return `#coureurs${o.vue === "francais" ? "?vue=francais" : qs({ q: o.q, nat: o.nat, act: o.act, eq: o.eq, tri: o.tri === "pert" ? "" : o.tri })}`;
@@ -2326,6 +2403,8 @@ function parseRoute() {
       saison: an(seg[1]), cat: q.get("cat") || "all", pays: q.get("pays") || "", q: q.get("q") || "" };
     case "epreuve": { const cle = dec(chemin.replace(/^\/*epreuve\//, "")); return cle.length <= 200 && cle.includes("|") ? { nom: "epreuve", famille: "courses", cle } : { nom: "introuvable" }; }
     case "course": return /^[\w-]+$/.test(seg[1] || "") && (seg[2] == null || /^\w+$/.test(seg[2])) ? { nom: "course", famille: "courses", id: seg[1], etape: seg[2] ?? null } : { nom: "introuvable" };
+    case "equipe": return /^Q\d+$/.test(seg[1] || "") ? { nom: "equipe", famille: "equipes", qid: seg[1], s: an(q.get("s")) }
+      : /^[a-z0-9]+(-[a-z0-9]+)*-\d{4}$/.test(seg[1] || "") ? { nom: "equipe", famille: "equipes", id: seg[1], s: null } : { nom: "introuvable" };
     case "equipes": return { nom: "equipes", famille: "equipes", saison: an(seg[1]), cat: q.get("cat") || "all", q: q.get("q") || "", tri: q.get("tri") || "nom" };
     case "coureurs": return { nom: "coureurs", famille: "coureurs", vue: q.get("vue") === "francais" ? "francais" : "annuaire", q: q.get("q") || "", nat: q.get("nat") || "",
       act: q.get("act") || "", eq: q.get("eq") || "", tri: ["nom", "vic", "uci"].includes(q.get("tri")) ? q.get("tri") : "pert" };
@@ -2346,7 +2425,7 @@ function finPage(tok) {
   if (tok === state.routeTok && state.restaurer != null) { window.scrollTo(0, state.restaurer); state.restaurer = null; }
 }
 const PAGES = { accueil: pageAccueil, courses: pageCourses, epreuve: pageEpreuve, course: pageCourse, equipes: pageEquipes, coureurs: pageCoureurs,
-  coureur: pageCoureur, classements: pageClassements, recherche: pageRecherche, introuvable: pageIntrouvable };
+  coureur: pageCoureur, equipe: pageArticleEquipe, classements: pageClassements, recherche: pageRecherche, introuvable: pageIntrouvable };
 function routeur(opts) {
   const r = parseRoute();
   state.route = r;
@@ -2602,7 +2681,7 @@ async function pageEpreuves(r, tok) {
   finPage(tok);
 }
 
-/* ================== équipes (R1 : liste des équipes-saisons, sans article) ================== */
+/* ================== équipes : liste des équipes-saisons (chaque ligne ouvre l'article de l'équipe) ================== */
 function filtrerEquipes(r, y) {
   const q = normIdx(r.q);
   const L = (state.eqIdx || []).filter(e => e.season === y && (r.cat === "all" || (r.cat === "Sélection" ? e.nationale : e.cat === r.cat)) && (!q || normIdx(e.name).includes(q)));
@@ -2611,10 +2690,10 @@ function filtrerEquipes(r, y) {
   return L.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }
 function rowEquipe(e) {
-  return `<div class="crow">${e.pays ? drapeauIso3(e.pays) : '<span class="flag noimg"></span>'}
+  return `<a class="crow" href="${esc(hrefEquipeSaison(e.id, e.season, e.lignee))}">${e.pays ? drapeauIso3(e.pays) : '<span class="flag noimg"></span>'}
     <div><div class="nm">${esc(e.name)}${e.cat ? ` <span class="badge cat-${esc(e.cat)}">${esc(e.cat)}</span>` : ""}${e.nationale ? ' <span class="badge fr">Sélection nationale</span>' : ""}</div>
       <div class="sm">${esc([e.pays ? nomPays(e.pays) : ""].filter(Boolean).join(""))}</div></div>
-    <div class="rt"><b>${esc(e.wins || 0)} vic.</b>${esc(e.riders || 0)} coureur${(e.riders || 0) > 1 ? "s" : ""}</div></div>`;
+    <div class="rt"><b>${esc(e.wins || 0)} vic.</b>${esc(e.riders || 0)} coureur${(e.riders || 0) > 1 ? "s" : ""}</div></a>`;
 }
 function majListeEquipes() {
   const box = document.getElementById("eq-list"); if (!box) return;
@@ -2678,8 +2757,9 @@ function filtrerCoureurs(r) {
 function rowCoureur(c, tri) {
   const s = c.s || [], ys = s.length ? (s[0] === s[1] ? String(s[0]) : `${s[0]}–${s[1]}`) : "";
   const b = tri === "uci" && c.uci != null ? `UCI ${c.uci}` : c.v ? `${c.v} vic.` : "";
-  return `<a class="crow${c.fr ? " fr" : ""}" href="${esc(hrefCoureur(c.id, null))}">${flag(c.f, nomPays(c.nat))}
-    <div><div class="nm">${esc(c.n)}</div><div class="sm">${esc(c.eq || "")}</div></div><div class="rt">${b ? `<b>${esc(b)}</b>` : ""}${esc(ys)}</div></a>`;
+  const eq = c.eq ? (c.eqid ? `<a class="tlink" href="${esc(`#equipe/${c.eqid}`)}">${esc(c.eq)}</a>` : esc(c.eq)) : "";
+  return `<div class="crow lk${c.fr ? " fr" : ""}">${flag(c.f, nomPays(c.nat))}
+    <div><a class="nm stretch" href="${esc(hrefCoureur(c.id, null))}">${esc(c.n)}</a><div class="sm">${eq}</div></div><div class="rt">${b ? `<b>${esc(b)}</b>` : ""}${esc(ys)}</div></div>`;
 }
 function majListeCoureurs() {
   const box = document.getElementById("co-list"); if (!box) return;
