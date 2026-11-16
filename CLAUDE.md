@@ -171,8 +171,9 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   équipes : filtre des classes P31 féminines (women / féminin / femmes), puis désambiguïsation « développement / réserve / U23 / continental »
   seulement si exactement un parent de premier niveau (WorldTeam / ProTeam) reste, sinon `ambigu` ; `preuve` = `code+nom` (+ `detail` lisible) ou
   `code+periode` (plus faible : UN SEUL parent porte le code sur une période à borne explicite, nom non concordant ; jamais utilisée si plusieurs
-  parents `code+nom` restent) ; `regle` = `REGLE_EQUIPES` (2) dans chaque entrée : une entrée `null` sans `regle` ou de version plus ancienne est
-  re-tentée au passage suivant (incrémenter `REGLE_EQUIPES` quand les règles changent) ; journal `[WIKIDATA] en cours : X/Y coureurs, Z requêtes, T min`
+  parents `code+nom` restent) ; `regle` = `REGLE_EQUIPES` (3) dans chaque entrée : TOUTE entrée (rattachée ou `null`) sans `regle` ou de version plus ancienne est
+  re-vérifiée au passage suivant, sans attendre 180 / 60 jours (`besoin_equipe` ; incrémenter `REGLE_EQUIPES` quand les règles changent ; v3 : filtre des classes
+  féminines appliqué aux 634 entrées du 1er passage, ex. Cofidis -> « Cofidis Women Team » à tort ; un parent féminin n'est jamais retenu, même seul candidat) ; journal `[WIKIDATA] en cours : X/Y coureurs, Z requêtes, T min`
   toutes les 5 min + synthèse avec requêtes/min ; licences sans lien (« Public domain ») conservées (`licence` sans `licence_url`).
   `encyclopedie.construire` lit le cache (champ `wikidata` des coureurs, `lignee` des équipes-saisons, `equipes/lignees.json`, entrées de recherche
   `t: "l"`). Jeu fictif : `tools/fixtures/generer_archives.py` (`entites/wikidata/`). Non testé en réel : voir PLAN_ENCYCLOPEDIE (E1b).
@@ -186,7 +187,7 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   `ARCHIVES_DIR/entites/classements/<année>/<AAAA-MM-JJ>.json` = `{date, nom, moment_id, raisons, lignes: [[rang, rider_id, points, team_code]]}` (500 premières
   lignes + tous les FRA au-delà ; `rider_id` = `uci_ranking.rider_key`, null sans date de naissance) + `index.json` `[{date, raisons, fichier}]` (liste des
   fichiers présents ; seul lui suit les raisons si elles changent) + `etat.json` `{complet: true}` (saison close depuis > 7 j, liste des courses d'archive
-  ou DataRide, ou > 30 j via le Calendrier, tout écrit : plus AUCUNE requête). **Un instantané écrit n'est jamais relu ni réécrit** (instantanés récents
+  ou DataRide, ou > 30 j via le Calendrier, tout écrit : plus AUCUNE requête). **Réserve de budget** : `run_archive(..., budget_classements_min=8)` (`--budget-classements`, défaut 8) arrête la collecte des courses à `budget - 8 min` et laisse ce temps à `collecter_classements`, appelé même quand des courses restent à collecter (sans effet si budget 0 ou <= réserve ; rien à faire = rien ne change). **Un instantané écrit n'est jamais relu ni réécrit** (instantanés récents
   d'abord, budget vérifié avant chaque lecture, reprise au passage suivant). Journal `[CLASSEMENT] <année> : N instantanés écrits, M restants`. Une saison
   en cours coûte ~3 requêtes de cadrage + 4 par nouvel instantané ; le premier remplissage (~1 600 requêtes, ~12 Mo) s'étale sur plusieurs passages nocturnes
   (l'auto-relance d'archives.yml ne regarde que les saisons non `complete` : le cron nocturne termine l'historique). `encyclopedie.construire` lit ces
