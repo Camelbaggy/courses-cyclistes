@@ -484,6 +484,11 @@ a.crow:active { background: var(--s3); }
 .crow.fr { box-shadow: inset 3px 0 0 var(--fr); }
 .crow .badge { margin-left: 4px; vertical-align: 1px; }
 .count-line { font-size: .78rem; color: var(--tx3); }
+a.res { color: var(--tx); text-decoration: none; }
+.wd-s { font-size: .55rem; font-weight: 800; color: var(--tx3); margin-left: 2px; letter-spacing: .02em; vertical-align: top; }
+.tbl a.cell:hover { text-decoration: underline; }
+.tbl td > div.small { white-space: normal; min-width: 180px; }
+a.nb-a .wd-s { color: inherit; opacity: .7; }
 /* accueil */
 .home { display: grid; gap: var(--sp5); grid-template-columns: minmax(0, 1fr); }
 .home .col { display: contents; }
@@ -1083,7 +1088,8 @@ function htmlAnneesEditions(eds, courant) {
   const dec = new Map();
   eds.forEach(x => { const d = Math.floor(x.season / 10) * 10; if (!dec.has(d)) dec.set(d, []); dec.get(d).push(x); });
   return [...dec.entries()].sort((a, b) => b[0] - a[0]).map(([d, l]) => `<div class="nb-row"><span class="nb-l">${d}</span>${l.map(x => x.race_id === courant
-    ? `<span class="nb-a" aria-current="page">${esc(x.season)}</span>` : `<a class="nb-a" href="#course/${esc(x.race_id)}">${esc(x.season)}</a>`).join("")}</div>`).join("");
+    ? `<span class="nb-a" aria-current="page">${esc(x.season)}</span>` : x.race_id ? `<a class="nb-a" href="#course/${esc(x.race_id)}">${esc(x.season)}</a>`
+    : lienWd(x.qid, `${esc(x.season)}<sup class="wd-s">WD</sup>`, "nb-a")).join("")}</div>`).join("");
 }
 /** Article : en-tête, infobox (colonne de droite à partir de 880 px), colonne principale, boîte de navigation. */
 function htmlArticle(o) {
@@ -1244,7 +1250,8 @@ async function navigationEdition(c) {
   const prev = avant[0] || null, next = apres[0] || null;
   const eds = (E.C.editions || []).filter(x => x.season != null && x.race_id).slice().sort((a, b) => ordreEdition(b, a));
   eds.forEach(noterChemin);
-  return { cle: E.cle, nom: nomRecent(E.C, E.cle), prev, next, eds };
+  const edsNav = eds.concat((E.C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
+  return { cle: E.cle, nom: nomRecent(E.C, E.cle), prev, next, eds: edsNav };
 }
 function htmlNavEdition(nav) {
   if (!nav || (!nav.prev && !nav.next)) return "";
@@ -1566,7 +1573,7 @@ async function construireCoureur(id, ctx, cle) {
   const sources = [cid, id].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid)).filter((v, i, t) => t.indexOf(v) === i);
   const cals = await fichesCalendrier(sources);
   const ent = fusionCalendrier(R.ent, cals, idx && idx.generated_at);
-  const lettres = [...new Set(((ent && ent.palmares) || []).map(x => lettreId(x.course)).filter(Boolean))];
+  const lettres = [...new Set((((ent && ent.palmares) || []).concat((ent && ent.palmares_historique) || [])).map(x => lettreId(x.course)).filter(Boolean))];
   await Promise.all(lettres.map(chargerCoursesEnt));
   return { id, cid, cle, ctx, ent, fiche: fs.d, msg: fs.msg, err: fs.err };
 }
@@ -1712,7 +1719,7 @@ function ongletsCoureur(cr) {
   const E = cr.ent, out = [];
   if (E) {
     out.push({ k: "apercu", l: "Aperçu" });
-    if ((E.palmares || []).length) out.push({ k: "palmares", l: "Palmarès" });
+    if ((E.palmares || []).length || (E.palmares_historique || []).length) out.push({ k: "palmares", l: "Palmarès" });
     if (saisonsTriees(E).length) out.push({ k: "saisons", l: "Saisons" });
     if ((E.grands_tours || []).length) out.push({ k: "gt", l: "Grands tours" });
     if ((E.historique_uci || []).length || saisonsTriees(E).some(([, s]) => s.uci_rank != null)) out.push({ k: "uci", l: "Classement UCI" });
@@ -1754,17 +1761,26 @@ function htmlApercu(cr) {
       <div class="tbl-note">Seules les courses suivies par ce site sont comptées.</div></div>` : ""}
     ${liens.length ? `<div class="card"><h2 class="h-sec">Pour en savoir plus</h2><div class="wiki-links">${liens.join("")}</div><div class="tbl-note">Wikipédia (CC BY-SA)</div></div>` : ""}`;
 }
+/** Carte d'un résultat d'historique Wikidata (avant nos données UCI) : ouvre l'épreuve ; lien discret vers la source. */
+function carteHistorique(x) {
+  const nom = nomCourse(x.course, x.season) || String(x.course || "").split("|")[0];
+  const carte = `<a class="res" href="${esc(hrefEpreuve(x.course))}"><span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
+    <span class="t"><b>${esc(nom)}</b><small>Palmarès historique</small></span><span class="d">${esc(x.season)}</span></a>`;
+  return `<div class="res-box">${carte}${urlWd(x.qid) ? lienWd(x.qid, "source : Wikidata", "res-ep") : ""}</div>`;
+}
 function htmlPalmares(cr) {
   const P = cr.ent.palmares || [], R = state.rpal;
+  const PH = (cr.ent.palmares_historique || []).map(x => ({ _h: true, season: x.annee, date: x.date || String(x.annee), course: x.course, rank: x.rang, qid: x.source_qid }));
   const cats = CATS.filter(c => P.some(x => x.category === c)).concat([...new Set(P.map(x => x.category).filter(c => c && !CATS.includes(c)))]);
   const chips = cats.length > 1 ? `<div class="chips">${["all"].concat(cats).map(c => `<button class="chip ${R.cat === c ? "active" : ""}" data-pcat="${esc(c)}">${c === "all" ? "Toutes" : esc(c)}</button>`).join("")}</div>` : "";
   const outil = `<div class="table-tools card" style="padding:8px 12px"><button class="switch" data-action="pal-vic" aria-pressed="${R.vic}"><i></i>Victoires seulement</button></div>`;
-  const L = P.filter(x => (R.cat === "all" || x.category === R.cat) && (!R.vic || x.rank === 1));
+  const L = P.filter(x => (R.cat === "all" || x.category === R.cat) && (!R.vic || x.rank === 1))
+    .concat(R.cat === "all" ? PH.filter(x => !R.vic || x.rank === 1) : []).sort((a, b) => b.season - a.season || (b.date || "").localeCompare(a.date || ""));
   const groupes = [];
   L.forEach(x => { const g = groupes[groupes.length - 1]; if (g && g.y === x.season) g.l.push(x); else groupes.push({ y: x.season, l: [x] }); });
   return `${chips}${outil}${groupes.length ? groupes.map(g => `<div><div class="grp-title" style="margin-top:0">${esc(g.y)}<span>${g.l.length} résultat${g.l.length > 1 ? "s" : ""}</span></div>
-    <div class="res-list">${g.l.map(x => carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
-    <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.</div>`;
+    <div class="res-list">${g.l.map(x => x._h ? carteHistorique(x) : carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
+    <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.${PH.length ? " Résultats « Palmarès historique » : avant nos données UCI, d'après Wikidata (CC0)." : ""}</div>`;
 }
 function htmlSaisons(cr) {
   const S = saisonsTriees(cr.ent);
@@ -1964,9 +1980,9 @@ async function pageCoureurHistorique(r, tok) {
   const cles = [...new Set(P.map(x => lettreId(x.course)))];
   await Promise.all(cles.map(chargerCoursesEnt));
   if (tok !== state.routeTok) return;
-  const lignes = P.map(x => [esc(x.annee), esc(rang(x.rang)), x.course ? `<a class="cell" href="#epreuve/${esc(encodeURIComponent(x.course))}">${esc(nomCourse(x.course, x.annee) || String(x.course).split("|")[0])}</a>` : ""]);
+  const lignes = P.map(x => [esc(x.annee), esc(rang(x.rang)), x.course ? `<a class="cell" href="#epreuve/${esc(encodeURIComponent(x.course))}">${esc(nomCourse(x.course, x.annee) || String(x.course).split("|")[0])}</a>` : "", lienWd(x.source_qid, "Wikidata", "cell")]);
   const main2 = `${htmlTuiles([{ lab: "Victoires", val: T.wins }, { lab: "Podiums", val: T.podiums }])}
-    ${P.length ? `<div><h2 class="sec-h">Palmarès</h2>${htmlTableau([{ l: "Année" }, { l: "Rang" }, { l: "Épreuve", tl: true }], lignes)}
+    ${P.length ? `<div><h2 class="sec-h">Palmarès</h2>${htmlTableau([{ l: "Année" }, { l: "Rang" }, { l: "Épreuve", tl: true }, { l: "Source", tl: true }], lignes)}
       <div class="tbl-note">Podiums des épreuves suivies, d'après Wikidata (statuts non tranchés exclus). Avant nos données UCI.</div></div>` : htmlVide("Aucun palmarès connu.")}`;
   main.innerHTML = htmlArticle({ head, infobox, main: main2 });
   finPage(tok);
@@ -1998,25 +2014,53 @@ async function construireEpreuve(cle) {
   return { cle, C };
 }
 function ongletsEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, out = [];
-  if (E.length) out.push({ k: "palmares", l: "Palmarès" });
-  if (E.length > 1 && ((R.victoires_par_coureur || []).length || Object.keys(R.victoires_par_pays || {}).length)) out.push({ k: "records", l: "Records" });
+  const C = ep.C, E = C.editions || [], H = C.historique || [], R = C.records_historique || C.records || {}, out = [];
+  if (E.length || H.length) out.push({ k: "palmares", l: "Palmarès" });
+  if (E.length + H.length > 1 && ((R.victoires_par_coureur || []).length || Object.keys(R.victoires_par_pays || {}).length)) out.push({ k: "records", l: "Records" });
   if (new Set(Object.keys(C.noms || {})).size > 1 || new Set(Object.values(C.classes || {})).size > 1) out.push({ k: "historique", l: "Historique" });
   return out;
 }
+/** Lien vers l'élément Wikidata d'une édition ou d'un coureur (QID valide seulement). */
+function urlWd(qid) { return /^Q\d+$/.test(qid || "") ? `https://www.wikidata.org/wiki/${qid}` : null; }
+function lienWd(qid, txt, cl) {
+  const u = urlWd(qid);
+  return u ? `<a class="${cl || "wd"}" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="Source : Wikidata (CC0)">${txt}</a>` : txt;
+}
+const VIDE_CELLULE = '<span class="muted">–</span>';
+function nomsHist(L) { return (L || []).map(p => plink(p.id, p.name || "Coureur")).join(", "); }
+/** Ligne du tableau Palmarès pour une année d'historique Wikidata (années absentes de nos éditions UCI) ; null si rien à montrer. Statuts jamais tranchés. */
+function ligneHistorique(h) {
+  const P = h.podium || [], D = h.detail || {}, g = r => P.filter(p => p.rang === r);
+  const cell = L => L.length ? L.map(p => `${flag(p.flag, p.nat)} ${plink(p.id, p.name || "Coureur")}`).join("<br>") : VIDE_CELLULE;
+  let v;
+  if (h.statut === "ok" && g(1).length) v = cell(g(1));
+  else if (h.statut === "non_attribue") v = `<span class="badge" title="Vainqueur non attribué (statut Wikidata)">Non attribué</span>${(D.p2321 || []).length ? `<div class="muted small">déclassé : ${nomsHist(D.p2321)}</div>` : ""}`;
+  else if (h.statut === "conflit") {
+    const a = nomsHist(D.p1346), b = nomsHist(D.p2321), idsA = (D.p1346 || []).map(p => p.id).sort().join(), idsB = (D.p2321 || []).map(p => p.id).sort().join();
+    const val = idsA === idsB ? a : [a ? `${a} <span class="muted">(vainqueur)</span>` : "", b ? `${b} <span class="muted">(classement)</span>` : ""].filter(Boolean).join(" · ");
+    v = `<span class="badge" title="Sources en désaccord (Wikidata)">contesté</span>${val ? `<div class="small">${val}</div>` : ""}`;
+  } else if (P.length) v = '<span class="muted">vainqueur inconnu</span>';
+  else return null;
+  const fr = P.filter(p => p.nat === "FRA" && p.rang != null).sort((a, b) => a.rang - b.rang)[0];
+  return { season: h.annee, cells: [lienWd(h.source_qid, `${esc(h.annee)}<sup class="wd-s">WD</sup>`, "cell"), v, cell(g(2)), cell(g(3)),
+    fr ? `${plink(fr.id, fr.name || "Coureur")} <span class="muted small">(${esc(rang(fr.rang))})</span>` : VIDE_CELLULE] };
+}
 function listeNoms(noms) { return noms.length <= 3 ? noms.join(", ") : `${noms.length}`; }
+/** Articles de la tuile « Éditions » : années UCI + années d'historique Wikidata. */
+function anneesEpreuve(C) { return (C.editions || []).map(x => x.season).concat((C.historique || []).map(h => h.annee)).filter(y => y != null); }
 function tuilesEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, ys = E.map(e => e.season);
+  const C = ep.C, E = C.editions || [], RH = C.records_historique, R = RH || C.records || {}, ys = anneesEpreuve(C);
+  const dep = RH && (RH.annees_couvertes || [])[0] != null ? ` depuis ${RH.annees_couvertes[0]}` : "";
   const vc = (R.victoires_par_coureur || []).filter(x => x.name), top = vc.length ? Math.max(...vc.map(x => x.wins)) : 0, tops = vc.filter(x => x.wins === top);
   const vp = Object.entries(R.victoires_par_pays || {}), topP = vp.length ? Math.max(...vp.map(x => x[1])) : 0, topsP = vp.filter(x => x[1] === topP).map(x => x[0]).sort();
-  const connus = E.filter(e => (e.podium || []).some(p => p.rank === 1)).length, fra = (R.victoires_par_pays || {}).FRA || 0;
+  const connus = RH ? RH.editions_avec_vainqueur : E.filter(e => (e.podium || []).some(p => p.rank === 1)).length, fra = (R.victoires_par_pays || {}).FRA || 0;
   return htmlTuiles([
-    E.length ? { lab: "Éditions", val: E.length, sub: ys.length > 1 ? `${Math.min(...ys)} → ${Math.max(...ys)}` : String(ys[0]) } : null,
-    top >= 2 ? (tops.length === 1 ? { lab: "Coureur le plus titré", val: tops[0].name, txt: true, sub: `${top} victoires` }
-      : tops.length <= 3 ? { lab: "Coureurs les plus titrés", val: tops.map(x => x.name).join(", "), txt: true, sub: `${top} victoires chacun` }
-      : { lab: "Coureurs les plus titrés", val: `${tops.length} coureurs`, sub: `${top} victoires chacun` }) : null,
-    topP >= 2 ? (topsP.length <= 3 ? { lab: topsP.length === 1 ? "Pays le plus titré" : "Pays les plus titrés", val: topsP.map(nomPays).join(", "), txt: true, sub: `${topP} victoires${topsP.length > 1 ? " chacun" : ""}` }
-      : { lab: "Pays les plus titrés", val: `${topsP.length} pays`, sub: `${topP} victoires chacun` }) : null,
+    ys.length ? { lab: "Éditions", val: ys.length, sub: Math.min(...ys) !== Math.max(...ys) ? `${Math.min(...ys)} → ${Math.max(...ys)}` : String(ys[0]) } : null,
+    top >= 2 ? (tops.length === 1 ? { lab: "Coureur le plus titré", val: tops[0].name, txt: true, sub: `${top} victoires${dep}` }
+      : tops.length <= 3 ? { lab: "Coureurs les plus titrés", val: tops.map(x => x.name).join(", "), txt: true, sub: `${top} victoires chacun${dep}` }
+      : { lab: "Coureurs les plus titrés", val: `${tops.length} coureurs`, sub: `${top} victoires chacun${dep}` }) : null,
+    topP >= 2 ? (topsP.length <= 3 ? { lab: topsP.length === 1 ? "Pays le plus titré" : "Pays les plus titrés", val: topsP.map(nomPays).join(", "), txt: true, sub: `${topP} victoires${topsP.length > 1 ? " chacun" : ""}${dep}` }
+      : { lab: "Pays les plus titrés", val: `${topsP.length} pays`, sub: `${topP} victoires chacun${dep}` }) : null,
     connus ? { lab: "Victoires françaises", val: fra, sub: `sur ${connus} édition${connus > 1 ? "s" : ""} avec vainqueur connu` } : null,
   ]);
 }
@@ -2028,9 +2072,10 @@ function articleEpreuve(ep) {
   const faits = [
     C.pays ? ["Pays", nomPays(C.pays)] : null,
     cl ? ["Classe actuelle", cl] : null,
+    C.historique_info && C.historique_info.editions ? ["Historique Wikidata", `${C.historique_info.annees[0]} → ${C.historique_info.annees[1]} · ${C.historique_info.editions} éditions`] : null,
     n ? ["Dans nos données", `${n} édition${n > 1 ? "s" : ""}${n > 1 ? ` · ${Math.min(...ys)} → ${Math.max(...ys)}` : ` · ${ys[0]}`}`] : null,
   ].filter(Boolean);
-  const eds = E.filter(x => x.season != null && x.race_id).slice().sort((a, b) => ordreEdition(b, a));
+  const eds = E.filter(x => x.season != null && x.race_id).concat((C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
   return {
     head: htmlArtHead({ crumbs: htmlCrumbs([["Accueil", "#/"], ["Courses", "#courses"], ["Épreuves", "#courses/epreuves"], [nom]]), titre: nom,
       sub: `${flag(C.flag, nomPays(C.pays))}<span>${esc(nomPays(C.pays))}</span>`, pills }),
@@ -2042,28 +2087,36 @@ function cellePodium(e, p) {
   return p ? `${flag(p.flag, p.nat)} ${plink(p.id, p.name || "Coureur", ctxSaison(e.season))}` : '<span class="muted">–</span>';
 }
 function htmlPalmaresEpreuve(ep) {
-  const E = ep.C.editions || [];
-  const rows = E.map(e => {
+  const C = ep.C, E = C.editions || [];
+  const L = E.map(e => {
     const P = e.podium || [], g = r => P.find(p => p.rank === r), bf = e.best_french;
-    return [`<button class="cell" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>`,
+    return { season: e.season, cells: [`<button class="cell" data-open="${esc(e.race_id)}" data-stage="" aria-label="Fiche de l'édition ${esc(e.season)}">${esc(e.season)}</button>`,
       cellePodium(e, g(1)), cellePodium(e, g(2)), cellePodium(e, g(3)),
-      bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : '<span class="muted">–</span>'];
-  });
-  return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true }, { l: "2e", tl: true }, { l: "3e", tl: true }, { l: "Meilleur Français", tl: true }], rows)}
-    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions terminées seulement ; l'année ouvre la fiche de l'édition.</div>`;
+      bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : VIDE_CELLULE] };
+  }).concat((C.historique || []).map(ligneHistorique).filter(Boolean)).sort((a, b) => b.season - a.season);
+  const hist = (C.historique || []).length;
+  return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true }, { l: "2e", tl: true }, { l: "3e", tl: true }, { l: "Meilleur Français", tl: true }], L.map(x => x.cells))}
+    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions UCI terminées seulement ; l'année ouvre la fiche de l'édition.</div>
+    ${hist ? `<div class="tbl-note">Années marquées <sup class="wd-s">WD</sup> : avant nos données UCI, d'après Wikidata (CC0) ; l'année ouvre l'élément Wikidata. Les statuts sont repris tels quels : « non attribué » (titre retiré, coureur déclassé indiqué s'il est connu), « contesté » (sources en désaccord, les deux valeurs sont données).</div>` : ""}`;
 }
 function htmlRecordsEpreuve(ep) {
-  const C = ep.C, E = C.editions || [], R = C.records || {}, vc = R.victoires_par_coureur || [], vp = Object.entries(R.victoires_par_pays || {});
-  const gagnant = (e, id) => (e.podium || []).find(p => p.rank === 1 && p.id === id);
+  const C = ep.C, E = C.editions || [], RH = C.records_historique, R = RH || C.records || {}, vc = R.victoires_par_coureur || [], vp = Object.entries(R.victoires_par_pays || {});
+  // vainqueurs (rang 1) de toutes les années connues : éditions UCI + années d'historique au statut « ok »
+  const V = E.map(e => ({ y: e.season, p: (e.podium || []).find(p => p.rank === 1) })).concat(RH ? (C.historique || []).filter(h => h.statut === "ok").map(h => ({ y: h.annee, p: (h.podium || []).find(p => p.rang === 1) })) : [])
+    .filter(x => x.p).sort((a, b) => b.y - a.y);
   const rc = vc.map(x => {
-    const eds = E.filter(e => gagnant(e, x.id)), p = eds.length ? gagnant(eds[0], x.id) : null;
-    return [`${p ? flag(p.flag, p.nat) + " " : ""}${plink(x.id, x.name || "Coureur", "c" + state.current)}`, esc(x.wins), esc(eds.map(e => e.season).join(", "))];
+    const w = V.filter(v => v.p.id === x.id), p = w.length ? w[0].p : null;
+    return [`${p ? flag(p.flag, p.nat) + " " : ""}${plink(x.id, x.name || "Coureur", "c" + state.current)}`, esc(x.wins), esc(w.map(v => v.y).join(", "))];
   });
   const rp = vp.sort((a, b) => b[1] - a[1] || nomPays(a[0]).localeCompare(nomPays(b[0]), "fr")).map(([iso, n]) =>
-    [`${drapeauIso3(iso)} ${esc(nomPays(iso))}`, esc(n), esc(E.filter(e => (e.podium || []).some(p => p.rank === 1 && p.nat === iso)).map(e => e.season).join(", "))]);
-  return `${rc.length ? `<div><h2 class="h-sec">Victoires par coureur</h2>${htmlTableau([{ l: "Coureur", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rc)}
-      <div class="tbl-note">Coureurs avec au moins deux victoires dans nos données.</div></div>` : ""}
-    ${rp.length ? `<div><h2 class="h-sec">Victoires par pays</h2>${htmlTableau([{ l: "Pays", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rp)}</div>` : ""}`
+    [`${drapeauIso3(iso)} ${esc(nomPays(iso))}`, esc(n), esc(V.filter(v => v.p.nat === iso).map(v => v.y).join(", "))]);
+  const dep = RH && (RH.annees_couvertes || [])[0] != null ? ` (depuis ${RH.annees_couvertes[0]})` : "";
+  const notes = RH ? [RH.non_attribuees ? `${RH.non_attribuees} édition${RH.non_attribuees > 1 ? "s" : ""} non attribuée${RH.non_attribuees > 1 ? "s" : ""}` : "", RH.conflits ? `${RH.conflits} contestée${RH.conflits > 1 ? "s" : ""}` : "",
+    RH.victoires_pays_indeterminees ? `${RH.victoires_pays_indeterminees} victoire${RH.victoires_pays_indeterminees > 1 ? "s" : ""} sans pays déterminé` : ""].filter(Boolean) : [];
+  return `${rc.length ? `<div><h2 class="h-sec">Victoires par coureur${esc(dep)}</h2>${htmlTableau([{ l: "Coureur", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rc)}
+      <div class="tbl-note">Coureurs avec au moins deux victoires${RH ? " (nos éditions UCI et palmarès Wikidata)" : " dans nos données"}.</div></div>` : ""}
+    ${rp.length ? `<div><h2 class="h-sec">Victoires par pays${esc(dep)}</h2>${htmlTableau([{ l: "Pays", tl: true }, { l: "Victoires" }, { l: "Années", w: true }], rp)}
+      ${notes.length ? `<div class="tbl-note">Hors décompte : ${esc(notes.join(" · "))}.</div>` : ""}</div>` : ""}`
     || htmlVide("Aucun record pour l'instant.");
 }
 function htmlHistoriqueEpreuve(ep) {
@@ -2224,7 +2277,7 @@ function hrefCourses(o) {
 }
 function hrefEquipes(o) { return `#equipes${o.saison != null ? "/" + o.saison : ""}${qs({ cat: o.cat, q: o.q, tri: o.tri === "nom" ? "" : o.tri })}`; }
 function hrefCoureurs(o) {
-  return `#coureurs${o.vue === "francais" ? "?vue=francais" : qs({ q: o.q, nat: o.nat, act: o.act, eq: o.eq, tri: o.tri === "nom" ? "" : o.tri })}`;
+  return `#coureurs${o.vue === "francais" ? "?vue=francais" : qs({ q: o.q, nat: o.nat, act: o.act, eq: o.eq, tri: o.tri === "pert" ? "" : o.tri })}`;
 }
 function hrefClassements(o) {
   return o.sub === "fdj" ? "#classements/fdj" : `#classements/uci${o.saison != null ? "/" + o.saison : ""}${qs({ date: o.date })}`;
@@ -2246,7 +2299,7 @@ function parseRoute() {
     case "course": return /^[\w-]+$/.test(seg[1] || "") && (seg[2] == null || /^\w+$/.test(seg[2])) ? { nom: "course", famille: "courses", id: seg[1], etape: seg[2] ?? null } : { nom: "introuvable" };
     case "equipes": return { nom: "equipes", famille: "equipes", saison: an(seg[1]), cat: q.get("cat") || "all", q: q.get("q") || "", tri: q.get("tri") || "nom" };
     case "coureurs": return { nom: "coureurs", famille: "coureurs", vue: q.get("vue") === "francais" ? "francais" : "annuaire", q: q.get("q") || "", nat: q.get("nat") || "",
-      act: q.get("act") || "", eq: q.get("eq") || "", tri: q.get("tri") || "nom" };
+      act: q.get("act") || "", eq: q.get("eq") || "", tri: ["nom", "vic", "uci"].includes(q.get("tri")) ? q.get("tri") : "pert" };
     case "coureur": return /^[\w-]+$/.test(seg[1] || "") ? { nom: "coureur", famille: "coureurs", id: seg[1], s: q.get("s") || "" } : { nom: "introuvable" };
     case "classements": return { nom: "classements", famille: "classements", sub: seg[1] === "fdj" ? "fdj" : "uci", saison: an(seg[2]), date: q.get("date") || "" };
     case "recherche": return { nom: "recherche", famille: "", q: dec(chemin.replace(/^\/*recherche\/?/, "")) };
@@ -2567,19 +2620,31 @@ async function pageEquipes(r, tok) {
 }
 
 /* ================== coureurs : annuaire et Français ================== */
+/** Ordre de la liste (calculé une fois par tri) : « pertinence » = actifs d'abord, puis meilleur rang UCI, puis victoires, puis nom ; « nom » = ordre du fichier (identifiant : nom de famille d'abord). */
+/** Actif = présent dans la saison en cours ou la suivante (les données de la toute dernière saison, en intersaison, ne couvrent que quelques courses). */
+function actif(c) { return !!(c.s && c.s[1] >= state.current); }
+function ordreCoureurs(tri) {
+  state.cOrd = state.cOrd || {};
+  if (!state.cOrd[tri]) {
+    const L = state.cIdx;
+    const parUci = (a, b) => (a.uci == null) - (b.uci == null) || (a.uci ?? 0) - (b.uci ?? 0);
+    if (tri === "vic") state.cOrd[tri] = L.slice().sort((a, b) => (b.v || 0) - (a.v || 0));
+    else if (tri === "uci") state.cOrd[tri] = L.slice().sort(parUci);
+    else if (tri === "nom") state.cOrd[tri] = L;
+    else state.cOrd[tri] = L.slice().sort((a, b) => (actif(b) - actif(a)) || parUci(a, b) || (b.v || 0) - (a.v || 0));   // stable : à égalité, ordre du fichier (nom)
+  }
+  return state.cOrd[tri];
+}
 function filtrerCoureurs(r) {
   const mots = normIdx(r.q).split(" ").filter(Boolean), eq = normIdx(r.eq);
-  const L = (state.cIdx || []).filter(c => {
+  return ordreCoureurs(r.tri).filter(c => {
     if (r.nat && c.nat !== r.nat) return false;
-    if (r.act === "1" && !c.act) return false;
-    if (r.act === "0" && c.act) return false;
+    if (r.act === "1" && !actif(c)) return false;
+    if (r.act === "0" && actif(c)) return false;
     if (eq) { if (c._e === undefined) c._e = normIdx(c.eq || ""); if (!c._e.includes(eq)) return false; }
     if (mots.length) { if (c._n === undefined) c._n = normIdx(c.n); if (!mots.every(w => c._n.includes(w))) return false; }
     return true;
   });
-  if (r.tri === "vic") return L.slice().sort((a, b) => (b.v || 0) - (a.v || 0));
-  if (r.tri === "uci") return L.slice().sort((a, b) => (a.uci == null) - (b.uci == null) || (a.uci ?? 0) - (b.uci ?? 0));
-  return L;   // le fichier est trié par identifiant (nom de famille d'abord)
 }
 function rowCoureur(c, tri) {
   const s = c.s || [], ys = s.length ? (s[0] === s[1] ? String(s[0]) : `${s[0]}–${s[1]}`) : "";
@@ -2614,6 +2679,7 @@ async function pageCoureurs(r, tok) {
   if (!state.cIdx) { main.innerHTML = `<div class="pg">${tete}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
   state.limitListe = 100;
   const N = new Map();
+  state.cIdx = state.cIdx.filter(c => /[\p{L}\p{N}]/u.test(c.n || ""));
   state.cIdx.forEach(c => { if (c.nat) N.set(c.nat, (N.get(c.nat) || 0) + 1); });
   const nats = [...N.keys()].sort((a, b) => nomPays(a).localeCompare(nomPays(b), "fr"));
   const bascule = (cle, val) => hrefCoureurs({ ...r, [cle]: r[cle] === val ? "" : val });
@@ -2621,7 +2687,7 @@ async function pageCoureurs(r, tok) {
     <div class="tools"><input class="search" id="co-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(r.q)}" autocomplete="off">
       <div class="chips">${chipHref(bascule("nat", "FRA"), "Français", r.nat === "FRA")}${chipHref(bascule("act", "1"), "Actifs", r.act === "1")}${chipHref(bascule("act", "0"), "Anciens", r.act === "0")}</div>
       <div class="two">${selectHref("co-nat", "Nationalité", [[hrefCoureurs({ ...r, nat: "" }), "Toutes nationalités", !r.nat]].concat(nats.map(n => [hrefCoureurs({ ...r, nat: n }), `${nomPays(n)} (${N.get(n)})`, r.nat === n])))}
-        ${selectHref("co-tri", "Tri", [["nom", "Nom"], ["vic", "Victoires"], ["uci", "Meilleur rang UCI"]].map(([k, l]) => [hrefCoureurs({ ...r, tri: k }), `Tri : ${l}`, r.tri === k]))}</div>
+        ${selectHref("co-tri", "Tri", [["pert", "Pertinence"], ["nom", "Nom"], ["vic", "Victoires"], ["uci", "Meilleur rang UCI"]].map(([k, l]) => [hrefCoureurs({ ...r, tri: k }), `Tri : ${l}`, r.tri === k]))}</div>
       <input class="search" id="co-eq" type="search" placeholder="Équipe (dernière saison connue)" aria-label="Filtrer par équipe" value="${esc(r.eq)}" autocomplete="off"></div>
     <div class="count-line" id="co-count"></div><div id="co-list"></div></div>`;
   majListeCoureurs();

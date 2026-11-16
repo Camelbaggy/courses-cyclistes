@@ -90,6 +90,9 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['03-courses-2018', '#courses/2018', {}],
       ['04-epreuve-tdf', EP, {}],
       ['05-coureur-pogacar', '#coureur/' + conf.coureur, {}],
+      ['06-epreuve-tdf-1903', EP, { vers: '#econtent tbody tr:last-child' }],
+      ['07-epreuve-tdf-records', EP, { etab: 'records' }],
+      ['08-coureur-historique-garin', '#coureur/wd-Q273842', {}],
     ] : [
       ['01-accueil', '#/', { defile: true }],
       ['02a-courses-resultats', '#courses/2026', {}],
@@ -98,6 +101,9 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['02d-courses-archive', '#courses/2024', {}],
       ['03a-epreuve', EP, {}],
       ['03b-epreuve-navbox-ouvert', EP, { navbox: true }],
+      ['03c-epreuve-records', EP, { etab: 'records' }],
+      ['07c-coureur-palmares-historique', '#coureur/demo-paul-19961228', { onglet: 'palmares' }],
+      ['07d-coureur-historique', '#coureur/wd-Q99900301', {}],
       ['04a-edition-archive', '#course/fx-a24-tour-hc', {}],
       ['04b-edition-en-cours', '#course/fx-tour-test', {}],
       ['05-equipes', '#equipes', {}],
@@ -116,6 +122,8 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
         await visite(page, hash);
         if (o.navbox) { const d = await page.$('details.navbox > summary'); if (d) await d.click(); }
         if (o.onglet) { const b = await page.$(`#rtabs [data-rtab="${o.onglet}"]`); if (b) await b.click(); }
+        if (o.etab) { const b = await page.$(`#etabs [data-etab="${o.etab}"]`); if (b) await b.click(); }
+        if (o.vers) { await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), o.vers); o.plein = false; }
         await cap(page, nom, suf, o);
       } catch (e) { echecs.push(`capture ${nom}${suf}: ${e.message}`); console.log('ECHEC capture', nom, suf, e.message); }
     }
