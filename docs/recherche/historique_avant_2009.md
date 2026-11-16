@@ -117,3 +117,27 @@ Source unique : Wikidata (CC0), `source_qid` = élément de l'édition. Cache `e
 - **Volume** : 3 017 éditions (comme la sonde), 2 725 coureurs en cache (2 657 avec naissance au jour, 2 548 avec nationalité, 474 rattachés à un de nos `rider_id`), 255 requêtes réelles (166 pour les éditions et la preuve, 89 pour les coureurs et pays), ~19 min au total avec les 429 (attente de 8 à 54 s, ~25 fois) ; 5,9 min pour la seconde passe seule. Cache : 1,85 Mo ; entités : `coureurs_historiques/` 1,6 Mo (2 249 coureurs), `courses/` 2,4 Mo (contre 1,0), recherche +~0,4 Mo.
 - **Statuts** (éditions de toutes les clés dédoublonnées par série) : ok 2 928, non_attribue 7 (Tour de France 1999-2005), conflit 20, inconnu 62 (dont éditions annoncées sans résultat, 62 au total à ces dates).
 - **Extension automatique** (`--proposer`, 10 épreuves essayées) : 7 retenues (Giro dell'Emilia, Gran Piemonte, Milano-Torino, Le Samyn, Dwars door Vlaanderen, Kuurne-Bruxelles-Kuurne, La Route Adélie), 3 refusées (aucune candidate, preuve insuffisante) ; 190 requêtes, 16 min, soit ~19 requêtes par épreuve (~200 épreuves : plusieurs heures, reprenables avec `--budget-min`).
+
+## 11. Équivalences de courses renommées (`alias_courses.json`, 16 novembre 2026)
+
+Validées par le propriétaire. Preuve : chaque groupe de clés pointe vers le **même élément Wikidata de la série**
+(`series_historiques.json` / `series_historiques_refusees.json`) ; canonique = la clé prouvée qui a le plus d'éditions dans nos
+données. Vérifié sur une génération réelle d'`encyclopedie` : Paris-Roubaix 2018-2026 en une seule épreuve, championnat de
+France 2018-2026 continu.
+
+| Série Wikidata | Clé canonique | Clés rattachées |
+|---|---|---|
+| Q33992 | paris roubaix\|FRA | paris roubaix hauts de france |
+| Q33970 | ronde van vlaanderen tour des flandres\|BEL | ronde van vlaanderen |
+| Q655150 | criterium du dauphine\|FRA | tour auvergne rhone alpes |
+| Q498661 | gent wevelgem in flanders fields\|BEL | in flanders fields from middelkerke to wevelgem |
+| Q599219 | e3 saxo classic\|BEL | e3 saxo bank classic, e3 binckbank classic |
+| Q506447 | omloop het nieuwsblad elite\|BEL | omloop nieuwsblad |
+| Q740787 | donostia san sebastian klasikoa\|ESP | clasica ciclista san sebastian, dssk donostia san sebastian klasikoa |
+| Q287950 | bretagne classic ouest france\|FRA | bretagne classic cic |
+| Q32435 | national road championships france\|FRA | championnats nationaux route france, … me we, national road championships france elite |
+| Q1572415 | la route d occitanie la depeche du midi\|FRA | la route d occitanie cic |
+| Q1417470 | grand prix du morbihan\|FRA | grand prix de plumelec morbihan |
+| Q1542681 | cholet pays de la loire\|FRA | cholet agglo tour |
+| Q894986 | boucles de la mayenne credit mutuel\|FRA | boucles de la mayenne |
+| Q1025846 | tour du limousin nouvelle aquitaine\|FRA | tour du limousin perigord nouvelle aquitaine |
