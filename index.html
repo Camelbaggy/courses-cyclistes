@@ -377,6 +377,7 @@ button.res:active { background: var(--s3); }
 .frise li::before { content: ""; position: absolute; left: -7px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--s1); border: 2px solid var(--accent); }
 .frise b { display: block; font-size: .92rem; }
 .frise span { font-size: .78rem; color: var(--tx3); }
+.frise .frise-sub { display: block; font-size: .72rem; color: var(--tx3); margin-top: 2px; }
 .chart-card { padding: var(--sp3); }
 .wiki-links { display: flex; flex-wrap: wrap; gap: var(--sp2); }
 .wiki-links a { text-decoration: none; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--s2); color: var(--tx); font-size: .82rem; font-weight: 600; }
@@ -446,6 +447,12 @@ a { text-underline-offset: 2px; }
 .infobox > .facts:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 .ib-photo { display: flex; justify-content: center; margin-bottom: var(--sp2); }
 .ib-photo .hero-photo { width: 96px; height: 96px; }
+.hero-portrait { position: relative; width: 160px; aspect-ratio: 4 / 5; border-radius: var(--r2); overflow: hidden; background: var(--s3); border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 2rem; color: var(--tx3); }
+.hero-portrait img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; }
+.hero-portrait img.noimg { display: none; }
+.hero-portrait:has(img.noimg) { width: 84px; aspect-ratio: 1; border-radius: 50%; font-size: 1.6rem; }
+@media (min-width: 880px) { .ib-photo .hero-portrait { width: 100%; max-width: 260px; } .ib-photo .hero-portrait:has(img.noimg) { width: 84px; } }
 .ib-title { font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--tx3); margin-bottom: var(--sp1); }
 .infobox .credit { text-align: center; }
 .sec-h { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--sp2); padding-bottom: 6px; border-bottom: 1px solid var(--line); }
@@ -1469,6 +1476,12 @@ function urlMedia(u) {
   if (/^[\w\-./%]+$/.test(u) && !u.includes("..") && !u.startsWith("/")) return `${BASE_ARCHIVES}/${u}`;
   return null;
 }
+/** Demande une vignette Commons plus large (500 px) pour le portrait ; toute autre URL est laissée telle quelle. */
+function vignetteGrande(u) {
+  if (/^https:\/\/upload\.wikimedia\.org\/.*\/thumb\/.*\/\d+px-[^/]+$/.test(u)) return u.replace(/\/\d+px-([^/]+)$/, "/500px-$1");
+  if (/^https:\/\/commons\.wikimedia\.org\/wiki\/Special:FilePath\//.test(u)) return u.replace(/([?&])width=\d+/, "$1width=500") + (/[?&]width=/.test(u) ? "" : (u.includes("?") ? "&" : "?") + "width=500");
+  return u;
+}
 function ageDe(iso) {
   const p = pd(iso); if (!p) return null;
   const n = new Date(); let a = n.getFullYear() - p.y;
@@ -1694,20 +1707,20 @@ function notesCorrections(E) {
 function articleCoureur(cr) {
   const h = identite(cr), wd = h.wd, im = wd && wd.image, src = im && urlMedia(im.url), page = im && urlMedia(im.page);
   const ini = h.name.split(/\s+/).filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
-  const photo = `<div class="hero-photo"><span aria-hidden="true">${esc(ini)}</span>${src ? `<img src="${esc(src)}" alt="Photo de ${esc(h.name)}" loading="lazy">` : ""}</div>`;
+  const photo = src ? `<div class="hero-portrait"><span aria-hidden="true">${esc(ini)}</span><img src="${esc(vignetteGrande(src))}" alt="Photo de ${esc(h.name)}" loading="lazy"></div>`
+    : `<div class="hero-photo"><span aria-hidden="true">${esc(ini)}</span></div>`;
   let credit = "";
   if (src && im) {
     const txt = [im.auteur, im.licence].filter(Boolean).join(", ");
     if (txt) credit = `<div class="credit">Photo : ${page ? `<a href="${esc(page)}" target="_blank" rel="noopener noreferrer">${esc(txt)}</a>` : esc(txt)}</div>`;
   }
-  const age = ageDe(h.birth), eq = equipeActuelle(cr), E = cr.ent, ys = E ? saisonsTriees(E).map(x => x[0]) : [];
+  const age = ageDe(h.birth), eq = equipeActuelle(cr);
   const pills = [age != null ? `${age} ans` : "", wd && wd.taille ? `${wd.taille.toFixed(2).replace(".", ",")} m` : ""].filter(Boolean).map(t => `<span class="pill">${esc(t)}</span>`).join("") +
     (h.fr ? '<span class="pill fr">France</span>' : "");
   const faits = [
     h.birth ? ["Naissance", `${dateLongue(h.birth)}${age != null ? ` (${age} ans)` : ""}`] : null,
     wd && wd.lieu && wd.lieu.libelle ? ["Lieu", wd.lieu.libelle] : null,
     eq ? [eq.y != null && state.current != null && eq.y < state.current ? "Dernière équipe" : "Équipe", eq.y != null && state.current != null && eq.y < state.current ? `${eq.team} (${eq.y})` : eq.team] : null,
-    ys.length ? ["Dans nos données", ys.length > 1 ? `${ys[ys.length - 1]} → ${ys[0]}` : String(ys[0])] : null,
   ].filter(Boolean);
   return {
     head: htmlArtHead({ crumbs: htmlCrumbs([["Accueil", "#/"], ["Coureurs", "#coureurs"], [h.name || "Coureur"]]), titre: h.name || "Coureur",
@@ -1728,8 +1741,8 @@ function ongletsCoureur(cr) {
   if (cr.fiche && identite(cr).name) out.push({ k: "saison", l: !cr.ctx.archive && cr.ctx.saison === state.current ? "Saison en cours" : `Saison ${cr.ctx.saison}` });
   return out;
 }
-/** Carte d'un résultat (ouvre l'édition) ; `ep` : ajoute, sous la carte, un lien discret vers l'épreuve si elle compte au moins deux éditions. */
-function carteResultat(x, ep) {
+/** Carte d'un résultat (ouvre l'édition). */
+function carteResultat(x) {
   noterChemin(x);
   const lab = x.label && x.label !== "Course" ? x.label : "";
   const stage = x.classification === "stage" ? "" : "F";
@@ -1738,9 +1751,7 @@ function carteResultat(x, ep) {
     <span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
     <span class="t"><b>${esc(nom)}</b><small>${x.category ? catBadge(x.category, x.uci_class) + " " : ""}${esc(lab)}</small></span>
     <span class="d">${esc(dateCourte(x.date))}<br>${esc((pd(x.date) || {}).y || "")}</span></button>`;
-  const C = ep && x.course && (state.coursesEnt[lettreId(x.course)] || {})[x.course];
-  if (!C || (C.editions || []).length < 2) return carte;
-  return `<div class="res-box">${carte}<button class="res-ep" data-epreuve="${esc(x.course)}" aria-label="Toutes les éditions : ${esc(nom)}">Toutes les éditions &rsaquo;</button></div>`;
+  return carte;
 }
 function lienWikipedia(lang, titre) {
   if (!/^[a-z]{2,3}$/.test(lang) || typeof titre !== "string" || !titre) return "";
@@ -1751,7 +1762,7 @@ function lienWikipedia(lang, titre) {
 function htmlApercu(cr) {
   const E = cr.ent, P = E.palmares || [], wd = E.wikidata || {}, S = saisonsTriees(E);
   const chiffres = [
-    ["Saisons dans nos données", S.length], ["Courses courues", aSomme(E, "races")], ["Jours de course", aSomme(E, "race_days")],
+    ["Saisons", S.length], ["Courses courues", aSomme(E, "races")], ["Jours de course", aSomme(E, "race_days")],
     ["Top 10", aSomme(E, "top10")], ["Abandons", aSomme(E, "dnf")],
   ].filter(([, v]) => v > 0);
   const liens = Object.entries(wd.wikipedia || {}).sort((a, b) => (a[0] === "fr" ? -1 : b[0] === "fr" ? 1 : a[0].localeCompare(b[0]))).map(([l, t]) => lienWikipedia(l, t)).filter(Boolean);
@@ -1779,7 +1790,7 @@ function htmlPalmares(cr) {
   const groupes = [];
   L.forEach(x => { const g = groupes[groupes.length - 1]; if (g && g.y === x.season) g.l.push(x); else groupes.push({ y: x.season, l: [x] }); });
   return `${chips}${outil}${groupes.length ? groupes.map(g => `<div><div class="grp-title" style="margin-top:0">${esc(g.y)}<span>${g.l.length} résultat${g.l.length > 1 ? "s" : ""}</span></div>
-    <div class="res-list">${g.l.map(x => x._h ? carteHistorique(x) : carteResultat(x, true)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
+    <div class="res-list">${g.l.map(x => x._h ? carteHistorique(x) : carteResultat(x)).join("")}</div></div>`).join("") : htmlVide("Aucun résultat avec ce filtre.")}
     <div class="tbl-note">Victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux.${PH.length ? " Résultats « Palmarès historique » : avant nos données UCI, d'après Wikidata (CC0)." : ""}</div>`;
 }
 function htmlSaisons(cr) {
@@ -1826,19 +1837,38 @@ function htmlUci(cr) {
   }
   return html || htmlVide("Aucun classement UCI connu.");
 }
+/** Sélection nationale : libellé d'équipe égal au nom du pays du coureur (approximation côté page de la règle `encyclopedie._est_nationale`). */
+function estSelectionNat(cr, team) {
+  const n = identite(cr).nationality, p = n && nomPays(n);
+  return !!(p && team && normIdx(team) === normIdx(p));
+}
 function htmlParcours(cr) {
   const E = cr.ent, S = saisonsTriees(E).filter(([, s]) => s.team).slice().reverse();   // anciennes d'abord
-  const blocs = [];
-  S.forEach(([y, s]) => { const b = blocs[blocs.length - 1]; if (b && b.team === s.team && b.fin + 1 === y) b.fin = y; else blocs.push({ team: s.team, deb: y, fin: y }); });
-  const nos = blocs.reverse().map(b => `<li><b>${esc(b.team)}</b><span>${b.deb === b.fin ? esc(b.deb) : `${esc(b.deb)} → ${esc(b.fin)}`}</span></li>`).join("");
+  const nat = [], clubs = [];
+  S.forEach(([y, s]) => (estSelectionNat(cr, s.team) ? nat : clubs).push([y, s.team]));
   const P54 = ((E.wikidata || {}).equipes_wd || []).filter(x => x.libelle);
-  const wd = P54.slice().sort((a, b) => (b.debut || "").localeCompare(a.debut || "")).map(x => {
-    const d = dateWd(x.debut, x.precision_debut), f = dateWd(x.fin, x.precision_fin);
+  const annee = d => { const m = /^(\d{4})/.exec(d || ""); return m ? +m[1] : null; };
+  const pris = new Set();
+  const wd = P54.map(x => {
+    const a = annee(x.debut), b = annee(x.fin), d = dateWd(x.debut, x.precision_debut), f = dateWd(x.fin, x.precision_fin);
     const t = d && f ? `${d} → ${f}` : d ? `depuis ${d}` : f ? `jusqu'en ${f}` : "";
-    return `<li><b>${esc(x.libelle)}</b>${t ? `<span>${esc(t)}</span>` : ""}</li>`;
-  }).join("");
-  return `${nos ? `<div class="card"><h2 class="h-sec">Équipes par saison</h2><ul class="frise">${nos}</ul><div class="tbl-note">D'après les courses suivies par ce site (saison près).</div></div>` : ""}
-    ${wd ? `<div class="card"><h2 class="h-sec">Parcours selon Wikidata</h2><ul class="frise">${wd}</ul><div class="tbl-note">Source : Wikidata (CC0). Dates à la précision de la source.</div></div>` : ""}`;
+    const dedans = clubs.filter(([y]) => (a == null || y >= a) && (b == null || y <= b) && (a != null || b != null));
+    dedans.forEach(([y]) => pris.add(y));
+    return { tri: x.debut || (b != null ? String(b) : ""), lib: x.libelle, t, noms: dedans.length ? String(groupeSaisons(dedans)) : "" };
+  });
+  const seuls = groupeSaisons(clubs.filter(([y]) => !pris.has(y))).map(g => ({ tri: String(g.deb), lib: g.team, t: g.deb === g.fin ? String(g.deb) : `${g.deb} → ${g.fin}`, noms: "" }));
+  const items = wd.concat(seuls).sort((a, b) => b.tri.localeCompare(a.tri));
+  const li = items.map(x => `<li><b>${esc(x.lib)}</b>${x.t ? `<span>${esc(x.t)}</span>` : ""}${x.noms ? `<small class="frise-sub">${esc(x.noms)}</small>` : ""}</li>`).join("");
+  const natL = nat.length ? `<div class="tbl-note">Sélection nationale : ${esc(nat.map(x => x[0]).reverse().join(", "))}</div>` : "";
+  return `<div class="card"><h2 class="h-sec">Équipes</h2><ul class="frise">${li}</ul>${natL}
+    <div class="tbl-note">${P54.length ? "D'après Wikidata (CC0, dates à la précision de la source) et les courses suivies par ce site." : "D'après les courses suivies par ce site (saison près)."}</div></div>`;
+}
+/** Regroupe des [année, libellé] triés (anciennes d'abord) en blocs {team, deb, fin} (récents d'abord) ; `String(blocs)` = « Libellé 2020-2021 · Autre 2022 ». */
+function groupeSaisons(L) {
+  const blocs = [];
+  L.forEach(([y, team]) => { const b = blocs[blocs.length - 1]; if (b && b.team === team && b.fin + 1 === y) b.fin = y; else blocs.push({ team, deb: y, fin: y }); });
+  const r = blocs.slice().reverse(); r.toString = function () { return this.map(b => `${b.team} ${b.deb === b.fin ? b.deb : `${b.deb}-${b.fin}`}`).reverse().join(" · "); };
+  return r;
 }
 /** Contenu de l'ancienne fiche (saison du contexte), sans l'en-tête. */
 function htmlSaison(cr) {
@@ -2073,7 +2103,6 @@ function articleEpreuve(ep) {
     C.pays ? ["Pays", nomPays(C.pays)] : null,
     cl ? ["Classe actuelle", cl] : null,
     C.historique_info && C.historique_info.editions ? ["Historique Wikidata", `${C.historique_info.annees[0]} → ${C.historique_info.annees[1]} · ${C.historique_info.editions} éditions`] : null,
-    n ? ["Dans nos données", `${n} édition${n > 1 ? "s" : ""}${n > 1 ? ` · ${Math.min(...ys)} → ${Math.max(...ys)}` : ` · ${ys[0]}`}`] : null,
   ].filter(Boolean);
   const eds = E.filter(x => x.season != null && x.race_id).concat((C.historique || []).map(h => ({ season: h.annee, qid: h.source_qid }))).sort((a, b) => b.season - a.season);
   return {
