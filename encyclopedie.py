@@ -45,6 +45,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import collector
 import netutil
 import riders
+import uci
 import wikidata
 
 TOP = 30                          # saisons : taille des classements (équipes, coureurs)
@@ -296,6 +297,7 @@ class _Saison:
         self.sans_cle = 0
         self.sans_equipe = 0
         self.gt_vus: List[Dict[str, Any]] = []
+        self.corrections: Dict[str, Dict[str, Dict[str, str]]] = {}     # rid brut -> {champ: {uci, source}} (corrections_coureurs.json)
 
     def equipe(self, libelle: str) -> Optional[Dict[str, Any]]:
         slug = netutil.slugify(libelle)
@@ -311,6 +313,15 @@ class _Saison:
 def _traiter_course(S: _Saison, race: Dict[str, Any], alias_courses: Dict[str, str]) -> None:
     """Réduit une fiche de course et l'ajoute aux cumuls de la saison."""
     refs = race.get("riders") or {}
+    corr = uci.corrections_coureurs()
+    if corr and any(rid in corr for rid in refs):
+        # erreurs de source documentées : les fiches d'archive déjà écrites gardent la valeur UCI, l'entité porte la valeur corrigée
+        refs = dict(refs)
+        for rid in [r for r in refs if r in corr]:
+            refs[rid] = dict(refs[rid])
+            for c in uci.corriger_ref(rid, refs[rid]):
+                S.corrections.setdefault(rid, {})[c["champ"]] = {"uci": c["uci"], "source": c["source"]}
+        race = dict(race, riders=refs)
     dk = _dk(race)
     fini = race.get("status") in (None, "finished")
     S.courses_total += 1
@@ -604,6 +615,10 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             for k in ("name", "nationality", "flag", "birth_date"):
                 if a.get(k):
                     c[k] = a[k]
+            for champ, v in sorted(S.corrections.get(rid, {}).items()):
+                lst = c.setdefault("corrections", [])
+                if not any(x["champ"] == champ for x in lst):
+                    lst.append({"champ": champ, "uci": v["uci"], "source": v["source"]})
             s: Dict[str, Any] = {}
             if a["equipes"]:
                 # équipe principale = équipe de marque (pas une sélection nationale) aux plus nombreux jours de course
@@ -1182,6 +1197,33 @@ def _tests() -> None:
             assert rf["compteurs"]["lignees"] == 1 and rf["compteurs"]["coureurs_wikidata"] == 1, rf["compteurs"]   # cache fictif de tools/fixtures   # (riders-2027.json du jeu d'essai est fictif : pas de contrôle de cohérence)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+    # --- corrections de source documentées (corrections_coureurs.json) : valeur corrigée dans l'entité, rider_id inchangé
+    tmp2 = tempfile.mkdtemp(prefix="encyclo_corr_")
+    avant = uci._CORRECTIONS
+    try:
+        A2, D2, O2 = (os.path.join(tmp2, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(os.path.join(D2, "races"))
+        dec, ok = "decale-ana-20000105", "ok-bob-19990101"
+        src = {"valeur": "2000-06-01", "uci": "2000-01-05", "source": "Wikidata Q1 (P569)", "date": "2026-11-16"}
+        nat = {"valeur": "RSA", "uci": "CHN", "source": "Wikidata Q2 (P27)", "date": "2026-11-16"}
+        uci._CORRECTIONS = {dec: {"birth_date": src, "nationality": nat}}
+        rc = _course_test("uci-c1", "Course Test", "BEL", "1.1", ".1", "one_day", "2024-03-01",
+                          {dec: ("Ana Decale", "CHN", "cn", "Équipe C", "2000-01-05"), ok: ("Bob Ok", "FRA", "fr", "Équipe C", "1999-01-01")},
+                          [(None, "2024-03-01", [_ligne(dec, 1), _ligne(ok, 2)])])
+        collector._dump(os.path.join(A2, "2024", "races", "uci-c1.json"), rc)
+        collector._dump(os.path.join(A2, "2024", "state.json"), {"complete": True})
+        construire(A2, D2, O2, now="2026-01-01T00:00:00Z", alias_coureurs={}, alias_courses={}, verbose=False)
+        ent = collector._load(os.path.join(O2, "coureurs", "d.json"), {})[dec]        # même clé d'entité : le rider_id n'a pas changé
+        assert ent["birth_date"] == "2000-06-01" and ent["nationality"] == "RSA" and ent["flag"] == "za", ent
+        assert ent["corrections"] == [{"champ": "birth_date", "uci": "2000-01-05", "source": "Wikidata Q1 (P569)"},
+                                      {"champ": "nationality", "uci": "CHN", "source": "Wikidata Q2 (P27)"}], ent
+        assert "corrections" not in collector._load(os.path.join(O2, "coureurs", "o.json"), {})[ok]
+        assert collector._load(os.path.join(O2, "saisons", "2024.json"), {})["victoires_par_pays"] == {"RSA": 1}
+        assert "RSA" in collector._load(os.path.join(O2, "pays.json"), {}) and "CHN" not in collector._load(os.path.join(O2, "pays.json"), {})
+        assert collector._load(os.path.join(A2, "2024", "races", "uci-c1.json"), {})["riders"][dec]["nationality"] == "CHN"   # fiche d'archive intacte
+    finally:
+        uci._CORRECTIONS = avant
+        shutil.rmtree(tmp2, ignore_errors=True)
     print("[OK] encyclopedie.py : tests locaux réussis")
 
 

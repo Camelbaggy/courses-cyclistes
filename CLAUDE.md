@@ -207,6 +207,11 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 
 ## Sources : règles et pièges vérifiés
 
+- **Corrections de source documentées** : `corrections_coureurs.json` (racine, manuel) corrige des erreurs avérées de l'UCI (date de naissance,
+  nationalité) pour l'affichage, `rider_id` inchangé (`uci.corriger_ref`, appliqué par `rider_ref`, `encyclopedie.construire`, `construire_carrieres`).
+  Uniquement avec une source citée (Wikidata + 2e source indépendante) et validées par le propriétaire ; jamais devinées. Chaque entrée porte
+  `valeur`, `uci` (valeur d'origine), `source`, `date`, `note` ; l'entité coureur expose `corrections` et la fiche l'affiche (« UCI : … · corrigé d'après … »).
+  Les fiches de course d'archive déjà écrites gardent la valeur UCI. Schéma : `docs/SPEC.md` §4.5 ; vérification : `docs/recherche/encyclopedie_sources.md`.
 - **Exclues** : ProCyclingStats et FirstCycling (CGU/robots.txt interdisent, Cloudflare). Ne pas les réintroduire.
   Aucun contournement anti-robot (pas de faux navigateur, pas de jeton récupéré dans une page).
 - **ASO et DirectVélo** : accord du propriétaire du projet. Respecter quand même robots.txt (ASO interdit `/api`,

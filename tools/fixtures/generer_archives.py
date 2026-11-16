@@ -179,7 +179,7 @@ def ecrire_cache_wikidata(codes):
 
 def ajouter_grands_tours_fictifs():
     """Le jeu fictif n'a aucun grand tour (clés d'édition exactes « tour de france|FRA »…) : on ajoute à la main, dans entites/coureurs/e.json
-    UNIQUEMENT, des entrées `grands_tours` FICTIVES pour le coureur commun (grille Giro / Tour / Vuelta de la fiche : rang, abandon, hors délai).
+    UNIQUEMENT, des entrées `grands_tours` et `corrections` FICTIVES pour le coureur commun (grille Giro / Tour / Vuelta de la fiche : rang, abandon, hors délai).
     Les race_id pointent vers des fiches fictives existantes ; ces entrées ne sont pas produites par encyclopedie.construire."""
     chemin = SORTIE / "entites" / "coureurs" / "e.json"
     d = json.loads(chemin.read_text(encoding="utf-8"))
@@ -189,6 +189,8 @@ def ajouter_grands_tours_fictifs():
         {"season": 2023, "course": "giro", "race_id": "fx-a23-omloop", "rank": 14},
         {"season": 2023, "course": "tour", "status": "OTL", "race_id": "fx-a23-gp-fr"},
         {"season": 2022, "course": "vuelta", "race_id": "fx-a22-gp-fr", "rank": 41}]
+    # correction de source FICTIVE (corrections_coureurs.json en production) : la fiche affiche la valeur UCI d'origine et la source
+    d[ID_COMMUN]["corrections"] = [{"champ": "birth_date", "uci": "1997-07-12", "source": "Wikidata Q99900 (P569)"}]
     collector._dump(str(chemin), d)
 
 

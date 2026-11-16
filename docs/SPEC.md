@@ -259,8 +259,18 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   {"date", "season", "race_id", "course" (clé d'édition), "label", "classification" (stage|gc|points|mountain|youth), "rank", "category",
   "uci_class"}], "grands_tours": [{"season", "course": "tour"|"giro"|"vuelta", "race_id", "rank"} ou {…, "status": "DNF"|"OTL"|"DSQ"} (abandon
   constaté sur une étape, absent du général final)], "totaux": {"wins", "podiums", "gc_wins", "seasons"}, "historique_uci"? [[date, rang]] (E1c, trié par date, tous les instantanés où le coureur
-  figure ; absent sans instantané)}}`. `palmares` et `grands_tours`
+  figure ; absent sans instantané), "corrections"? [{"champ": "birth_date"|"nationality", "uci": valeur UCI d'origine, "source": "Wikidata Qxxx (P569|P27)"}]
+  (erreurs de source documentées, voir ci-dessous ; absent sans correction)}}`. `palmares` et `grands_tours`
   absents si vides. Les étapes d'une course en cours comptent (comme `riders.json`) ; ses classements généraux provisoires non.
+- **Corrections de source documentées** (`corrections_coureurs.json`, racine, manuel) : `{"<rider_id>": {"birth_date"|"nationality": {"valeur",
+  "uci" (valeur UCI d'origine), "source" ("Wikidata Qxxx (P569|P27)"), "date" (de la décision), "note"}}}`. Le `rider_id` NE CHANGE PAS (clé stable : slug
+  + date UCI). La valeur corrigée est appliquée à l'affichage : `uci.rider_ref` (collecte en cours et nouvelles archives : `birth_date`, `nationality`,
+  `flag` recalculé par `netutil.flag_code`, `is_french`), `encyclopedie.construire` (entités coureurs, pays, saisons, podiums d'éditions) et
+  `collector.construire_carrieres`. Une correction n'est appliquée que si la valeur courante est celle de l'UCI d'origine (ou déjà corrigée : idempotent) ;
+  si l'UCI a changé, `[WARN]` et rien n'est appliqué. Entrée invalide (champ inconnu, source absente, date / code pays mal formé, `uci` incohérent avec
+  le `rider_id`) : ignorée avec `[WARN]`. Les fiches de course d'archive déjà écrites gardent la valeur UCI dans leurs `riders` (l'interface lit en
+  priorité l'entité coureur pour la fiche coureur ; la fiche de course affiche la valeur UCI tant qu'elle n'est pas recollectée). Le rapprochement
+  Wikidata (`wikidata.lister_coureurs`) lit la date de naissance des entités, donc la date corrigée.
 - **Grands tours** (`encyclopedie.GRANDS_TOURS`) : clés d'édition EXACTES `tour de france|FRA`, `giro d italia|ITA`, `la vuelta ciclista a
   espana|ESP` (+ graphies `vuelta a espana|ESP`, `la vuelta a espana|ESP`, absentes des données actuelles), course par étapes terminée de
   classe 2.UWT / 2.WT / 2.HC / 2.HIS / 2.CH ; jamais de motif flou (« Tour de France Saitama Criterium », « Giro Ciclistico d'Italia »,

@@ -1022,6 +1022,9 @@ def construire_carrieres(archives_dir: str, alias: Dict[str, str]) -> Dict[str, 
         # coureurs de la saison dans l'ordre : identifiants canoniques d'abord (alias contradictoires écartés)
         for rid in sorted(D["riders"], key=lambda k: (k in alias, k)):
             f = D["riders"][rid]
+            if rid in uci.corrections_coureurs():     # erreurs de source documentées (corrections_coureurs.json) ; rider_id inchangé
+                f = dict(f)
+                uci.corriger_ref(rid, f)
             cid = alias.get(rid, rid)
             if (cid, an) in vus:
                 print(f"[WARN] carrières : alias « {rid} » -> « {cid} » ignoré en {an} (le coureur canonique y figure déjà)")
