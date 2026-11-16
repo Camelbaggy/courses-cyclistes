@@ -26,7 +26,8 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
   équipes v3 (équipes féminines écartées : Cofidis 2022-2024 sera re-vérifié au prochain passage). Historique des
   épreuves (`--historique`) : 39 séries prouvées, 3 017 éditions, coureurs historiques `wd-Q…`.
 - Corrections documentées : `corrections_coureurs.json` (7 dates, 2 nationalités) ; alias : `alias_coureurs.json`
-  (9 doublons dont 5 fusions même saison), `alias_courses.json` (18 libellés renommés, preuve Wikidata).
+  (9 doublons dont 5 fusions même saison), `alias_courses.json` (48 libellés renommés, preuve Wikidata ; +30 le 17/11 pour 25 courses,
+  publiés au prochain passage d'archives.yml).
 
 ## Décisions du propriétaire à retenir
 
