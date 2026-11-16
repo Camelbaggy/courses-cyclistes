@@ -93,6 +93,13 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['06-epreuve-tdf-1903', EP, { vers: '#econtent tbody tr:last-child' }],
       ['07-epreuve-tdf-records', EP, { etab: 'records' }],
       ['08-coureur-historique-garin', '#coureur/wd-Q273842', {}],
+      ['09a-equipe-movistar-effectif', '#equipe/Q6175', {}],
+      ['09b-equipe-movistar-mouvements', '#equipe/Q6175', { qtab: 'mouvements' }],
+      ['09c-equipe-movistar-gt', '#equipe/Q6175', { qtab: 'gt' }],
+      ['09d-equipe-movistar-historique', '#equipe/Q6175', { qtab: 'historique' }],
+      ['09e-equipe-movistar-palmares', '#equipe/Q6175', { qtab: 'palmares' }],
+      ['10-equipes-2025', '#equipes/2025', {}],
+      ['11-coureur-merlier-equipes', '#coureur/' + conf.coureur2, { onglet: 'parcours' }],
     ] : [
       ['01-accueil', '#/', { defile: true }],
       ['02a-courses-resultats', '#courses/2026', {}],
@@ -107,6 +114,19 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['04a-edition-archive', '#course/fx-a24-tour-hc', {}],
       ['04b-edition-en-cours', '#course/fx-tour-test', {}],
       ['05-equipes', '#equipes', {}],
+      ['05a-equipe-bravo-effectif', '#equipe/Q99900110', {}],
+      ['05b-equipe-bravo-effectif-2023', '#equipe/Q99900110?s=2023', {}],
+      ['05c-equipe-bravo-mouvements', '#equipe/Q99900110', { qtab: 'mouvements' }],
+      ['05d-equipe-bravo-gt', '#equipe/Q99900110', { qtab: 'gt' }],
+      ['05e-equipe-bravo-historique', '#equipe/Q99900110', { qtab: 'historique' }],
+      ['05f-equipe-alpha-palmares', '#equipe/Q99900100', { qtab: 'palmares' }],
+      ['05g-equipe-alpha-historique-navbox', '#equipe/Q99900100', { qtab: 'historique', navbox: true }],
+      ['05h-equipe-saison-sans-lignee', '#equipe/charlie-team-2026', {}],
+      ['05i-equipe-saison-palmares', '#equipe/golf-team-2026', { qtab: 'palmares' }],
+      ['05j-equipe-selection-nationale', '#equipe/france-2024', {}],
+      ['05k-equipe-introuvable', '#equipe/inconnue-2024', {}],
+      ['05l-edition-participants-cliquables', '#course/fx-a24-tour-hc', { sub: 'participants' }],
+      ['05m-coureur-parcours-frise', '#coureur/epure-paul-19970711', { onglet: 'parcours' }],
       ['06a-coureurs-liste', '#coureurs', {}],
       ['06b-coureurs-francais-filtre', '#coureurs?nat=FRA', {}],
       ['06c-coureurs-vue-francais', '#coureurs?vue=francais', {}],
@@ -122,6 +142,8 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
         await visite(page, hash);
         if (o.navbox) { const d = await page.$('details.navbox > summary'); if (d) await d.click(); }
         if (o.onglet) { const b = await page.$(`#rtabs [data-rtab="${o.onglet}"]`); if (b) await b.click(); }
+        if (o.qtab) { const b = await page.$(`#qtabs [data-qtab="${o.qtab}"]`); if (b) await b.click(); }
+        if (o.sub) { const b = await page.$(`#subtabs [data-sub="${o.sub}"]`); if (b) await b.click(); await page.waitForTimeout(500); }
         if (o.etab) { const b = await page.$(`#etabs [data-etab="${o.etab}"]`); if (b) await b.click(); }
         if (o.vers) { await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), o.vers); o.plein = false; }
         await cap(page, nom, suf, o);
@@ -208,6 +230,41 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     ok('résultat -> coureur', (await hash()).startsWith('#coureur/'), await hash());
     await page.goBack(); await page.waitForSelector('#sr-body .sr-item.nav');
     ok('retour -> recherche conservée', (await page.$eval('#sr-q', e => e.value)) === 'paul epure', await hash());
+    // équipes : miroir JS de netutil.slugify (couples de docs/SPEC.md §4.5, constante encyclopedie.COUPLES_SLUG), redirection, liens
+    const couples = [["Groupama - FDJ", "groupama-fdj"], ["Arkea-B&B Hotels", "arkea-b-b-hotels"], ["Team Dauner D&DQ | Akkon", "team-dauner-d-dq-akkon"],
+      ["Amore E Vita | P:", "amore-e-vita-p"], ["Canel's - Java", "canel-s-java"], ["Akros - Excelsior - Thömus", "akros-excelsior-thomus"],
+      ["Aviludo - Louletano - Loulé", "aviludo-louletano-loule"], ["7ELEVEN Cliqq - AIR21 by Roadbike Philippines", "7eleven-cliqq-air21-by-roadbike-philippines"],
+      ["AP Hotels & Resorts /tavira/ SC Farense", "ap-hotels-resorts-tavira-sc-farense"], ["Pauwels Sauzen – Bingoal", "pauwels-sauzen-bingoal"],
+      ["Lubelskie Perła Polski", "lubelskie-pera-polski"], ["RAD-NET OßWALD", "rad-net-owald"], ["Heizomat RAD-Net.de", "heizomat-rad-net-de"], ["", ""], ["---", ""]];
+    await visite(page, '#/');
+    const slugs = await page.evaluate(c => c.map(([n]) => slugEquipe(n)), couples);
+    ok('miroir JS de netutil.slugify : couples du SPEC', couples.every(([, att], i) => slugs[i] === att), couples.map(([n, att], i) => [n, att, slugs[i]]).filter(x => x[1] !== x[2]));
+    ok('id équipe-saison depuis un libellé brut', await page.evaluate(() => idEquipeSaison("Groupama - FDJ", 2025) === "groupama-fdj-2025" && idEquipeSaison("---", 2025) === null));
+    await visite(page, '#equipe/bravo-cycling-2023', '#main .art');
+    ok("équipe-saison d'une lignée : redirigée vers la lignée", (await hash()) === '#equipe/Q99900110?s=2023', await hash());
+    ok('lignée : titre', /^Bravo Cycling/.test(await titre()), await titre());
+    ok('lignée : sélecteur de saison sur 2023', (await page.$eval('#eq-an', e => e.options[e.selectedIndex].text)) === 'Saison 2023');
+    await page.selectOption('#eq-an', { index: 0 }); await page.waitForTimeout(300);
+    ok("changement de saison : route remplacée", (await hash()).startsWith('#equipe/Q99900110?s=') && (await page.$$('#qtabs .subtab')).length >= 3, await hash());
+    ok("lignée : coureur cliquable dans l'effectif", (await page.$$('#qcontent [data-rider]')).length > 0);
+    await visite(page, '#equipe/charlie-team-2026', '#main .art');
+    ok('équipe-saison sans lignée : pas de redirection', (await hash()) === '#equipe/charlie-team-2026', await hash());
+    ok('équipe-saison sans lignée : « Même nom en » avec liens', (await page.$$('.meme-nom a')).length >= 1, await page.$$eval('.meme-nom a', l => l.map(a => a.getAttribute('href'))));
+    await visite(page, '#equipe/zzz-2024', '#main .pg');
+    ok('équipe inconnue : message propre', (await page.$eval('#main', e => e.textContent)).includes('introuvable'));
+    await visite(page, '#equipes', '#eq-list .crow');
+    await page.click('#eq-list a.crow'); await pret(page, '#main .art');
+    ok('liste des équipes -> article', (await hash()).startsWith('#equipe/'), await hash());
+    await visite(page, '#course/fx-a24-tour-hc', '#main .art');
+    await page.click('#subtabs [data-sub="participants"]'); await page.waitForTimeout(600);
+    const liensEq = await page.$$eval('#table .team-head a.tlink', l => l.map(a => a.getAttribute('href')));
+    ok("participants : titre d'équipe cliquable (équipe existante seulement)", liensEq.length > 0 && liensEq.every(h => h.startsWith('#equipe/')), liensEq);
+    await visite(page, '#recherche/bravo', '#sr-body .sr-item');
+    ok('recherche : équipes et lignées cliquables', (await page.$$eval('#sr-body .sr-item.nav[data-sr="l"], #sr-body .sr-item.nav[data-sr="e"]', l => l.length)) > 0);
+    await page.click('#sr-body .sr-item.nav[data-sr="l"]'); await pret(page, '#main .art');
+    ok('résultat lignée -> article', (await hash()).startsWith('#equipe/Q'), await hash());
+    await visite(page, '#coureurs', '#co-list .crow');
+    ok('annuaire : équipe cliquable', (await page.$$('#co-list .crow .tlink')).length > 0);
     // retour arrière sur coureur -> édition -> épreuve
     await visite(page, '#coureur/epure-paul-19970711', '#main .art .tile');
     await page.click('[data-rtab="palmares"]'); await page.waitForSelector('.res');
@@ -277,7 +334,8 @@ def main():
     conf = {"port": port, "data": args.data, "sortie": str(sortie), "chromium": chromium, "reel": bool(args.reel),
             "archives": args.archives if args.reel else "", "prefixe": "vrai-" if args.reel else "",
             "epreuve": "tour de france|FRA" if args.reel else "grand prix de test sur mer fictif|FRA",
-            "coureur": "pogacar-tadej-19980921" if args.reel else "epure-paul-19970711"}
+            "coureur": "pogacar-tadej-19980921" if args.reel else "epure-paul-19970711",
+            "coureur2": "merlier-tim-19921030" if args.reel else ""}
     env = dict(os.environ, NODE_PATH=NODE_PATH, APERCU_CONF=json.dumps(conf))
     with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as f:
         f.write(SCRIPT_NODE)

@@ -112,7 +112,7 @@ sections fixes par type ; liens partout (coureur, équipe, course, pays) ; navig
 | E2 (fait) | Pages coureur + recherche globale + première couche du design (jetons, composants : voir CLAUDE.md « Design et composants ») | captures 390 px et 1024 px (`tools/apercu.py`) |
 | E3 (fait) | Page épreuve (`#epreuve/<clé>` : palmarès, records, historique) et fiche d'édition enrichie (podium, navigation, participants, pays) | captures 390 px et 1024 px (`tools/apercu.py`) |
 | R1 (fait) | Refonte « encyclopédie » : coquille (menu, barre du bas), routeur à pages plein écran, gabarit d'article, accueil portail, Courses (toutes saisons, épreuves), liste des équipes-saisons, annuaire des coureurs, Classements (UCI, saisons, instantanés) | captures `tools/apercu.py` (fictif et réel) |
-| R2 | Articles équipe (lignées) : les noms d'équipe deviennent des liens | captures |
+| R2 (fait) | Articles équipe (lignées et équipes-saisons) : les noms d'équipe deviennent des liens ; frise d'équipes simplifiée de la fiche coureur | captures (fictif et réel) |
 | R3 | Articles saison, navbox de série et de classement, pays | captures |
 | E7 | Enrichissements externes validés (Wikidata, Wikipédia, photos) | captures, crédits |
 

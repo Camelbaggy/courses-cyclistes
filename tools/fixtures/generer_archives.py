@@ -202,6 +202,25 @@ def ajouter_grands_tours_fictifs():
     collector._dump(str(chemin), d)
 
 
+def ajouter_grands_tours_equipes_fictifs():
+    """Le jeu fictif n'a aucun grand tour : on ajoute à la main des résultats FICTIFS de grands tours à la lignée « Bravo Cycling » (onglet « Grands tours »
+    et tuile « Grands tours gagnés » de l'article d'équipe), dans `equipes/<année>.json` ET `equipes/lignees/Q99900110.json` (mêmes valeurs, comme `construire`).
+    Les race_id pointent vers des fiches fictives existantes."""
+    base = SORTIE / "entites" / "equipes"
+    gt = {"2023": {"giro": ("fx-a23-omloop", 1)}, "2024": {"tour": ("fx-a24-tour-hc", 3), "vuelta": ("fx-a24-classique-hc", 12)}}
+    lign = json.loads((base / "lignees" / "Q99900110.json").read_text(encoding="utf-8"))
+    for an, courses in gt.items():
+        chemin = base / f"{an}.json"
+        d = json.loads(chemin.read_text(encoding="utf-8"))
+        eq = d[f"bravo-cycling-{an}"]
+        premier = eq["effectif"][0]["rider_id"]
+        eq["grands_tours"] = {k: {"rank": r, "rider_id": premier, "race_id": rid} for k, (rid, r) in courses.items()}
+        lign["saisons"][an]["grands_tours"] = eq["grands_tours"]
+        collector._dump(str(chemin), d)
+    lign["totaux_lignee"]["grands_tours_gagnes"] = 1
+    collector._dump(str(base / "lignees" / "Q99900110.json"), lign)
+
+
 def ecrire_historique_fictif():
     """Petit cache FICTIF de palmarès Wikidata (entites/historique/) pour le « Grand Prix de Test-sur-Mer (fictif) » : années absentes de nos éditions UCI,
     avec les quatre statuts (ok, non_attribue, conflit, inconnu) et des coureurs historiques `wd-Q…` (identifiants fictifs Q9900…)."""
@@ -288,6 +307,7 @@ def main():
     collector.DATA_DIR = str(SORTIE.parent)    # Calendrier fictif (et non data/ réel) pour entites/ (module encyclopedie)
     recap = collector.write_archives_index("2026-11-11T00:00:00Z")
     ajouter_grands_tours_fictifs()
+    ajouter_grands_tours_equipes_fictifs()
     print([(s["season"], s["complete"], s["races"], s["size_bytes"]) for s in recap["seasons"]])
 
 
