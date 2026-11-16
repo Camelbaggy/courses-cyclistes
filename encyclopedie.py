@@ -898,7 +898,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             "n": lg.get("libelle") or (noms_eq[recent][0] if recent else None), "s": lg["saisons"], "eq": ids,
             "cat": niveaux_l[qid][0] if len(niveaux_l[qid]) == 1 else None,
             "cats": niveaux_l[qid] if len(niveaux_l[qid]) > 1 else None,
-            "pays": pays_l[qid], "pays_nom": (lg.get("pays") or {}).get("libelle")})
+            "pays": pays_l[qid], "pays_nom": (lg.get("pays") or {}).get("libelle"),
+            "logo": lg.get("logo"), "logo_depuis": _annee_nom_actuel(lg.get("noms")) if lg.get("logo") else None})
     ecrire(os.path.join(sortie, "equipes", "lignees_index.json"), lignees_idx)
     # fichiers d'équipes-saisons (`meme_nom`, `mouvements`) puis un article par lignée (`equipes/lignees/<QID>.json`)
     _completer_equipes(EQ_PAR_AN, LIGNEE_DE)
@@ -1130,6 +1131,14 @@ def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]]
         "saisons": dict(sorted(saisons.items(), reverse=True)),
         "mouvements": dict(sorted(mouvements.items(), reverse=True)),
         "totaux_lignee": {"saisons": [annees[0], annees[-1]], "victoires": victoires, "coureurs": len(coureurs), "grands_tours_gagnes": gt_gagnes}})
+
+
+def _annee_nom_actuel(noms: Any) -> Optional[int]:
+    """Année de début du nom actuel d'une lignée (entrée P1448 sans fin, la plus récente) : le logo Wikidata (P154, non daté) n'est affiché
+    dans la liste des participants que pour les saisons à partir de cette année. Aucun nom actuel daté : None (logo jamais affiché hors article)."""
+    annees = [int(n["debut"][:4]) for n in (noms or []) if isinstance(n, dict) and not n.get("fin")
+              and isinstance(n.get("debut"), str) and re.match(r"\d{4}", n["debut"])]
+    return max(annees) if annees else None
 
 
 def _drapeau_pays(S: _Saison, code: str) -> Optional[str]:
@@ -1418,7 +1427,10 @@ def _tests() -> None:
         assert all("cat" not in t and "pays" not in t for t in idx if not t.get("lignee") and not t.get("nationale"))
         assert next(t for t in idx if t.get("nationale"))["pays"] in PAYS_NOMS
         assert L("equipes/lignees_index.json") == {"Q8001": {"n": "Équipe Alpha (lignée)", "s": [2024, 2025], "eq": ["equipe-a-2025", "equipe-a-2024"],
-                                                             "cat": "Pro", "pays": "FRA", "pays_nom": "France"}}
+                                                             "cat": "Pro", "pays": "FRA", "pays_nom": "France", "logo_depuis": 2019,
+                                                             "logo": {"url": "https://x.example/l.svg", "page": "https://x.example/lp", "licence": "Public domain"}}}
+        assert _annee_nom_actuel([{"nom": "A", "debut": "2005", "fin": "2010"}, {"nom": "B", "debut": "2011-03-01"}]) == 2011
+        assert _annee_nom_actuel([{"nom": "A", "debut": "2005", "fin": "2010"}]) is None and _annee_nom_actuel(None) is None
         for _lib, _slug in COUPLES_SLUG:
             assert netutil.slugify(_lib) == _slug, (_lib, netutil.slugify(_lib), _slug)
         assert netutil.slugify("") == "" and netutil.slugify(None) == "" and netutil.slugify("  --  ") == ""

@@ -126,6 +126,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['05j-equipe-selection-nationale', '#equipe/france-2024', {}],
       ['05k-equipe-introuvable', '#equipe/inconnue-2024', {}],
       ['05l-edition-participants-cliquables', '#course/fx-a24-tour-hc', { sub: 'participants' }],
+      ['05n-edition-participants-effectifs', '#course/fx-a24-tour-hc', { sub: 'participants', tous: true }],
       ['05m-coureur-parcours-frise', '#coureur/epure-paul-19970711', { onglet: 'parcours' }],
       ['06a-coureurs-liste', '#coureurs', {}],
       ['06b-coureurs-francais-filtre', '#coureurs?nat=FRA', {}],
@@ -144,6 +145,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
         if (o.onglet) { const b = await page.$(`#rtabs [data-rtab="${o.onglet}"]`); if (b) await b.click(); }
         if (o.qtab) { const b = await page.$(`#qtabs [data-qtab="${o.qtab}"]`); if (b) await b.click(); }
         if (o.sub) { const b = await page.$(`#subtabs [data-sub="${o.sub}"]`); if (b) await b.click(); await page.waitForTimeout(500); }
+        if (o.tous) { const b = await page.$('[data-action="part-tous"]'); if (b) await b.click(); await page.waitForTimeout(300); }
         if (o.etab) { const b = await page.$(`#etabs [data-etab="${o.etab}"]`); if (b) await b.click(); }
         if (o.vers) { await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), o.vers); o.plein = false; }
         await cap(page, nom, suf, o);
@@ -259,6 +261,14 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     await page.click('#subtabs [data-sub="participants"]'); await page.waitForTimeout(600);
     const liensEq = await page.$$eval('#table .team-head a.tlink', l => l.map(a => a.getAttribute('href')));
     ok("participants : titre d'équipe cliquable (équipe existante seulement)", liensEq.length > 0 && liensEq.every(h => h.startsWith('#equipe/')), liensEq);
+    ok('participants : cartes repliées par défaut', (await page.$$('#table .team-card .rows')).length === 0);
+    ok('participants : logo de lignée affiché (saison sous le nom actuel)', (await page.$$('#table .tc-logo img')).length > 0);
+    await page.click('#table .team-card .tc-tog'); await page.waitForTimeout(200);
+    ok('participants : un clic ouvre une carte', (await page.$$('#table .team-card.ouvert .rows .row')).length > 0 && (await page.$$('#table .team-card.ouvert')).length === 1);
+    await page.click('[data-action="part-tous"]'); await page.waitForTimeout(200);
+    ok('participants : « Effectifs » ouvre toutes les cartes', await page.$$eval('#table .team-card', l => l.length > 1 && l.every(c => c.classList.contains('ouvert'))));
+    await page.click('[data-action="part-tous"]'); await page.waitForTimeout(200);
+    ok('participants : « Effectifs » referme tout', (await page.$$('#table .team-card.ouvert')).length === 0);
     await visite(page, '#recherche/bravo', '#sr-body .sr-item');
     ok('recherche : équipes et lignées cliquables', (await page.$$eval('#sr-body .sr-item.nav[data-sr="l"], #sr-body .sr-item.nav[data-sr="e"]', l => l.length)) > 0);
     await page.click('#sr-body .sr-item.nav[data-sr="l"]'); await pret(page, '#main .art');

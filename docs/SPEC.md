@@ -297,7 +297,9 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   clubs, équipes féminines : jamais de `cat` ; `pays` = code ISO3 : celui des coureurs pour une sélection nationale, sinon le P17 de la lignée
   (si son libellé français correspond à un seul code de `PAYS_NOMS`) ; sans lignée, ni `cat` ni `pays`. **`equipes/lignees_index.json`** (index
   compact des lignées) : `{QID: {"n" (libellé Wikidata, à défaut nom de l'équipe-saison la plus récente), "s": [première, dernière saison], "eq": [ids
-  d'équipes-saisons, récentes d'abord], "cat"? (niveau unique), "cats"? (plusieurs niveaux, ordre WT, Pro, Cont ; « cat la plus récente » n'est pas
+  d'équipes-saisons, récentes d'abord], "logo"? ({url, page, auteur?, licence, licence_url?} : logo Wikidata P154 à licence Commons lisible), "logo_depuis"?
+  (année de début du nom actuel P1448 sans fin : la liste des participants n'affiche le logo, non daté, que pour les saisons >= cette année ; absent = jamais),
+  "cat"? (niveau unique), "cats"? (plusieurs niveaux, ordre WT, Pro, Cont ; « cat la plus récente » n'est pas
   établissable sans P31 daté), "pays"? (ISO3), "pays_nom"? (libellé français P17)}}`. **`equipes/lignees.json`** : `{QID: {"libelle", "noms": [{"nom", "debut",
   "fin"}] (P1448, datés à la précision de la source : année, mois ou jour), "codes": [{"code", "debut", "fin"}] (P1998), "pays": {"qid", "libelle"},
   "classes": [libellés P31], "sitelinks": {fr, en, es, it, nl, de: titre}, "logo": {"url", "page", "auteur", "licence", "licence_url"} (seulement avec
