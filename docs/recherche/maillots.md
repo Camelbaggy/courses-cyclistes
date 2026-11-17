@@ -57,4 +57,9 @@ robots hors moteurs de recherche ; (2) afficher leurs images directement depuis 
 - Lecture du 17/11 : 3 216 maillots sur 16 saisons (2011-2026 ; 2027 pas encore publiée ; 2016-2026 complets, 6 à 39 avant 2016).
 - Rapprochement (même saison + code UCI, ou nom exact sans code) : 1 819 équipes-saisons sur 1 971 (92 %) de 2017 à 2026 ; manques : équipes sans
   code UCI unique dans nos données et nommées autrement (ex. Bora - Hansgrohe 2024).
+- Équipes restantes (17/11) : `codes_uci` et `renommee` (même effectif) dans l'encyclopédie, puis table manuelle `maillots/pcmmod/manuel.json`
+  (43 équipes-saisons vérifiées une à une : Team LottoNL-Jumbo 2017, Cannondale-Drapac 2017, Groupama-FDJ United 2026 [GFC, homonyme continental CGF],
+  Netcompany INEOS 2026, A Bloc CT [code ABC partagé]…). Écartés faute de certitude : Drapac Professional Cycling 2017, Prowheel Kung Shenzhen 2026,
+  Taiyuan Miogee 2020, VIB Bikes 2018, 7Eleven / Go for Gold (équipes philippines distinctes)… Couverture : 1 941 équipes-saisons sur 2 007 de 2017 à 2026
+  (96,7 %), 99,7 % des jours de course.
 

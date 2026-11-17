@@ -156,6 +156,28 @@ def table_epreuves(chemin_index):
     return brut, canon, erreurs
 
 
+def verifier_manuel(dossier):
+    """Erreurs de la table manuelle `manuel.json` : chaque entrée {id d'équipe-saison: nom | [nom, code]} doit désigner UN seul maillot du
+    fichier de sa saison (`<dossier>/<année>.json`). Sans réseau."""
+    chemin = os.path.join(dossier, "manuel.json")
+    if not os.path.exists(chemin):
+        return []
+    with open(chemin, encoding="utf-8") as f:
+        table = json.load(f)
+    erreurs = []
+    for tid, v in sorted(table.items()):
+        nom, code = (v[0], v[1]) if isinstance(v, list) else (v, None)
+        try:
+            with open(os.path.join(dossier, f"{tid[-4:]}.json"), encoding="utf-8") as f:
+                lignes = json.load(f)
+        except (OSError, ValueError):
+            lignes = []
+        n = sum(1 for x in lignes if x[0] == nom and (code is None or x[1] == code))
+        if n != 1:
+            erreurs.append(f"{tid} : « {nom} » {code or ''} -> {n} maillot(s)")
+    return erreurs
+
+
 def _tests():
     page = ('<h2 id="World Tour" class="x">World Tour</h2><div class="peloton" title="Ag2r La Mondiale [ALM]"><a><img '
             'onerror="setBackupGraphElement(this, 10381)"></a></div><div class="peloton" title="Bora &amp; Co"><img '
@@ -172,6 +194,8 @@ def _tests():
     r = lire_saison(page)
     assert r == [{"n": "Ag2r La Mondiale", "c": "ALM", "s": "ag2r-la-mondiale", "i": 10381, "niv": "World Tour"},
                  {"n": "Bora & Co", "c": None, "s": "bora-co", "i": 7, "niv": "World Tour"}], r
+    erreurs = verifier_manuel(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "maillots", "pcmmod"))
+    assert not erreurs, erreurs                     # table manuelle publiée : chaque entrée désigne un seul maillot de sa saison
     print("[OK] pcmmod.py : tests locaux réussis")
 
 
@@ -257,7 +281,8 @@ def main():
         rubriques[nom] = lues
     with open(os.path.join(a.sortie, "index.json"), "w", encoding="utf-8") as f:
         json.dump({"source": "PCM Mod", "genere": dt.date.today().isoformat(), "image": IMAGE, "saisons": toutes,
-                   "nations": rubriques["nations"], "courses": rubriques.get("courses", [])}, f, ensure_ascii=False, separators=(",", ":"))
+                   "nations": rubriques["nations"], "courses": rubriques.get("courses", []),
+                   "manuel": os.path.exists(os.path.join(a.sortie, "manuel.json"))}, f, ensure_ascii=False, separators=(",", ":"))
     print(f"[PCMMOD] {sum(saisons.values())} maillots lus, {len(toutes)} saisons -> {a.sortie}")
 
 
