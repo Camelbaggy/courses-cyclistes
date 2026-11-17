@@ -642,6 +642,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                 fiche["code_uci"] = next(iter(codes_saison[slug]))
             elif codes_saison.get(slug):
                 anomalies["code_uci_multiple"].append(f"{an} {nom} {sorted(codes_saison[slug])}")
+                fiche["codes_uci"] = sorted(codes_saison[slug])        # plusieurs codes la même saison (changement de nom en cours d'année…)
             lig = (WD["equipes"].get(tid) or {}).get("qid")
             if lig:
                 fiche["lignee"] = lig
@@ -1065,12 +1066,19 @@ def _mouvements(avant: Set[str], apres: Set[str]) -> Dict[str, List[str]]:
     return {"arrivees": sorted(apres - avant), "departs": sorted(avant - apres)}
 
 
+RENOMMEE_MIN_COUREURS = 5    # changement de nom en cours de saison : coureurs communs minimum…
+RENOMMEE_PART = 0.6          # … et part minimale de l'effectif de l'équipe-saison sans code
+
+
 def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_de: Dict[str, str]) -> None:
     """Ajoute à chaque équipe-saison (en place) :
     - `meme_nom` : ids des AUTRES saisons portant exactement le même slug de libellé (id = `<slug>-<année>`), années croissantes. Aucune preuve de
       continuité (deux équipes homonymes peuvent n'avoir rien de commun) : l'interface l'affiche « même nom en … » ;
     - `mouvements` {arrivees, departs} (rider_id) seulement si l'équipe-saison de l'année précédente au même slug existe ET que les deux portent
-      la même lignée Wikidata ; sinon absent (les lignées ont leurs propres mouvements, d'une saison présente à la suivante)."""
+      la même lignée Wikidata ; sinon absent (les lignées ont leurs propres mouvements, d'une saison présente à la suivante) ;
+    - `renommee` : id de l'équipe-saison de la MÊME saison qui porte le même effectif (changement de nom en cours de saison : Trek - Segafredo
+      -> Lidl-Trek 2023), seulement pour une équipe-saison sans code UCI : au moins RENOMMEE_MIN_COUREURS coureurs communs ET au moins
+      RENOMMEE_PART de son effectif ; la sœur au plus fort recouvrement (égalité : id le plus petit). Sert au maillot de la saison."""
     par_slug: Dict[str, List[Tuple[int, str]]] = collections.defaultdict(list)
     for an, equipes in eq_par_an.items():
         for tid in equipes:
@@ -1085,6 +1093,17 @@ def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_d
             prec = f"{slug}-{an - 1}"
             if q and lignee_de.get(prec) == q and prec in eq_par_an.get(an - 1, {}):
                 f["mouvements"] = _mouvements(_rids(eq_par_an[an - 1][prec]), _rids(f))
+        effs = {tid: set(_rids(f)) for tid, f in equipes.items() if not f.get("nationale")}
+        for tid, f in equipes.items():
+            if f.get("nationale") or f.get("code_uci") or f.get("codes_uci") or not effs.get(tid):
+                continue
+            cands = []
+            for t2, e2 in effs.items():
+                commun = len(effs[tid] & e2)
+                if t2 != tid and commun >= RENOMMEE_MIN_COUREURS and commun / len(effs[tid]) >= RENOMMEE_PART:
+                    cands.append((-commun / len(effs[tid]), t2))
+            if cands:
+                f["renommee"] = min(cands)[1]
 
 
 def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]], images: Dict[str, Any],
@@ -1112,7 +1131,7 @@ def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]]
         eff = [_sans_vide({"rider_id": x["rider_id"], "n": x.get("name"), "f": x.get("flag"), "jours": x["jours"], "v": x["wins"]})
                for x in f["effectif"]]
         saisons[str(an)] = _sans_vide({
-            "id": tid, "libelle": f["name"], "code_uci": f.get("code_uci"), "effectif": eff,
+            "id": tid, "libelle": f["name"], "code_uci": f.get("code_uci"), "codes_uci": f.get("codes_uci"), "effectif": eff,
             "victoires": [{k: v[k] for k in ("date", "race_id", "course", "label", "classification", "rider_id") if k in v} for v in f["victoires"]],
             "grands_tours": f.get("grands_tours"), "totaux": f["totaux"],
             "autres": [t for t, _ in lst[1:]] or None})
@@ -1403,6 +1422,16 @@ def _tests() -> None:
         e24, e25 = L("equipes/2024.json"), L("equipes/2025.json")
         assert e24["equipe-a-2024"]["code_uci"] == "EQA" and "code_uci" not in e24["belgium-2024"], e24
         assert "code_uci" not in e25["equipe-a-2025"] and any("A1" in x and "A2" in x for x in rap["anomalies"]["code_uci_multiple"])
+        assert e25["equipe-a-2025"]["codes_uci"] == ["A1", "A2"] and "codes_uci" not in e24["equipe-a-2024"]           # liste seulement si plusieurs
+        # changement de nom en cours de saison : même effectif (>= 5 coureurs communs et >= 60 % de l'effectif), seulement sans code UCI
+        eff = lambda ids: [{"rider_id": r} for r in ids]
+        ep = {2023: {"trek-segafredo-2023": {"effectif": eff("abcdefg")}, "lidl-trek-2023": {"code_uci": "LTK", "effectif": eff("abcdefgh")},
+                     "autre-2023": {"effectif": eff("abcdxyz")}, "codee-2023": {"code_uci": "XX", "effectif": eff("abcdefg")},
+                     "peu-2023": {"effectif": eff("abcd")}}}
+        _completer_equipes(ep, {})
+        assert ep[2023]["trek-segafredo-2023"]["renommee"] == "codee-2023"      # 100 % avec codee (7/7) > 100 %… égalité -> id le plus petit
+        assert "renommee" not in ep[2023]["lidl-trek-2023"] and "renommee" not in ep[2023]["codee-2023"]   # a un code : rien
+        assert "renommee" not in ep[2023]["autre-2023"] and "renommee" not in ep[2023]["peu-2023"]         # 4 communs / moins de 5 coureurs
         assert "code_uci" not in e24.get("autre-2024", {})                                              # TeamCode vide : absent
         # Wikidata : lignée et fiche coureur lues dans le cache (null : rien) ; logo sans licence lisible : absent
         assert e24["equipe-a-2024"]["lignee"] == "Q8001" and e25["equipe-a-2025"]["lignee"] == "Q8001" and "lignee" not in e25["belgium-2025"]

@@ -306,6 +306,9 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
   licence lisible), "equipes": [ids d'équipes-saisons, récentes d'abord], "saisons": [première, dernière]}}`, uniquement les lignées portant au moins
   une équipe-saison rapprochée.
   **R2a, données des articles d'équipe** :
+  - `equipes/<année>.json` (17/11/2026) : **`codes_uci`** (`[code, …]` triés) quand les coureurs classés de la saison portent PLUSIEURS codes (`code_uci` reste
+    absent) ; **`renommee`** (id) pour une équipe-saison SANS code : équipe-saison de la même saison au même effectif (>= 5 coureurs communs et >= 60 % de
+    son effectif ; changement de nom en cours de saison, ex. Bora - Hansgrohe -> Red Bull - Bora - Hansgrohe 2024). Servent au maillot de la saison.
   - `equipes/<année>.json` : chaque équipe-saison gagne **`meme_nom`** (`[id, …]`, années croissantes) = ids des AUTRES saisons portant EXACTEMENT le même
     slug de libellé (id = `<slug>-<année>`) : aucune preuve de continuité (deux équipes homonymes peuvent n'avoir rien de commun), l'interface l'affiche
     « même nom en … » ; absent s'il n'y en a pas (sélections nationales comprises). **`mouvements`** `{"arrivees": [rider_id], "departs": [rider_id]}`
