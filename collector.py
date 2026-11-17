@@ -109,6 +109,43 @@ def _ranking_du_jour(today: dt.date) -> Optional[Dict]:
     return cached
 
 
+def classements_fin_calendrier(today: dt.date, saisons_dispo: List[int], lire=None, bornes=None) -> List[int]:
+    """Classement UCI de FIN de saison des saisons terminées encore au Calendrier : data/ranking.json porte la saison UCI
+    du jour (2027 depuis mi-octobre 2026), donc la saison précédente, toujours au Calendrier jusqu'à son archivage, n'aurait
+    plus de classement (ni codes d'équipe -> pas de rattachement Wikidata). Pour chaque saison S de `saisons_dispo` dont la
+    saison UCI est terminée (`uci.season_bounds`, fin < today) et qui n'est pas celle de data/ranking.json, écrit
+    data/ranking-<S>.json (même source que les archives : classement le plus récent de S) s'il est absent ou sans clé
+    `team_code`. Une fois écrit avec des codes, le fichier est immuable : aucune requête ensuite. Jamais bloquant.
+    `lire(season_year=S)` et `bornes` ({année: (début, fin)}) sont injectables (tests sans réseau). Renvoie les saisons écrites."""
+    ecrites: List[int] = []
+    jour = _load(os.path.join(DATA_DIR, "ranking.json"), None)
+    saison_jour = jour.get("season") if isinstance(jour, dict) else None
+    for annee in sorted(saisons_dispo):
+        try:
+            if annee == saison_jour:
+                continue
+            chemin = os.path.join(DATA_DIR, f"ranking-{annee}.json")
+            ancien = _load(chemin, None)
+            if isinstance(ancien, dict) and any(isinstance(r, dict) and "team_code" in r for r in ancien.get("rows") or []):
+                continue                                   # déjà enregistré : immuable, aucune requête
+            if bornes is None:
+                bornes = uci.season_bounds()
+            fin = _date((bornes.get(annee) or (None, None))[1])
+            if not fin or fin >= today:                    # saison inconnue ou pas terminée
+                continue
+            rk = (lire or uci_ranking.get_ranking)(season_year=annee)
+            if not (isinstance(rk, dict) and rk.get("rows")):
+                print(f"[WARN] [CLASSEMENT] saison {annee} : classement de fin de saison indisponible")
+                continue
+            rk = dict(rk, season=annee)
+            _dump_if_changed(chemin, rk, ignore=())
+            print(f"[CLASSEMENT] saison {annee} : classement de fin de saison enregistré (data/ranking-{annee}.json, {len(rk['rows'])} lignes)")
+            ecrites.append(annee)
+        except Exception as e:   # source secondaire : jamais bloquante
+            print(f"[WARN] [CLASSEMENT] saison {annee} : classement de fin de saison non enregistré : {e}")
+    return ecrites
+
+
 ROTATION_DELAI_JOURS = 14   # une saison S est archivée quand S+1 est terminée depuis plus de 14 jours
 
 
@@ -231,10 +268,11 @@ def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optiona
     for y in seasons:
         _dump_if_changed(os.path.join(DATA_DIR, f"index-{y}.json"), indexes[y])
     write_riders_files(seasons, current, by_season, today)
+    classements_fin_calendrier(today, seasons)   # classement de fin des saisons terminées du Calendrier (jamais bloquant)
     _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"), {"current": current, "available": seasons}, ignore=())
     a_retirer = [y for y in sorted(a_archiver)
                  if noms_par_saison.get(y) or any(os.path.exists(os.path.join(DATA_DIR, f"{pre}-{y}.json"))
-                                                  for pre in ("index", "riders"))]
+                                                  for pre in ("index", "riders", "ranking"))]
     if a_retirer:   # une seule lecture réseau par passage, et seulement s'il reste des fichiers à retirer
         retirer_saisons_archivees(a_retirer, charger_index_archives(), noms_par_saison)
 
@@ -251,7 +289,7 @@ def charger_index_archives() -> Optional[Dict]:
 
 def retirer_saisons_archivees(saisons: List[int], index_archives: Optional[Dict],
                               noms_par_saison: Dict[int, List[str]]) -> List[int]:
-    """Retire de data/ (races/<id>.json, index-<S>.json, riders-<S>.json) les saisons S de `saisons` (saisons à
+    """Retire de data/ (races/<id>.json, index-<S>.json, riders-<S>.json, ranking-<S>.json) les saisons S de `saisons` (saisons à
     archiver) que `index_archives` (index public des archives) déclare `complete: true`. `index_archives` absent ou
     invalide (None) : rien n'est supprimé. Renvoie les saisons retirées."""
     if not isinstance(index_archives, dict):
@@ -267,7 +305,7 @@ def retirer_saisons_archivees(saisons: List[int], index_archives: Optional[Dict]
                 os.remove(os.path.join(RACES_DIR, fname))
             except FileNotFoundError:
                 pass
-        for nom in (f"index-{annee}.json", f"riders-{annee}.json"):
+        for nom in (f"index-{annee}.json", f"riders-{annee}.json", f"ranking-{annee}.json"):
             try:
                 os.remove(os.path.join(DATA_DIR, nom))
             except FileNotFoundError:
@@ -813,7 +851,13 @@ def charger_courses_archive(dossier: str) -> List[Dict]:
 
 
 def lire_classement_fin_saison(annee: int) -> Optional[Dict[str, Any]]:
-    """Classement UCI de fin de saison (World Ranking, à défaut « WorldTour Ranking », groupe 3) ou None. Jamais d'exception."""
+    """Classement UCI de fin de saison (World Ranking, à défaut « WorldTour Ranking », groupe 3) ou None. Jamais d'exception.
+    Réutilise data/ranking-<année>.json (classement de fin de saison enregistré par `classements_fin_calendrier`, lecture seule)
+    quand il existe, porte des `team_code` et désigne bien cette saison : aucune requête."""
+    deja = _load(os.path.join(DATA_DIR, f"ranking-{annee}.json"), None)
+    if isinstance(deja, dict) and deja.get("season") == annee and \
+            any(isinstance(r, dict) and "team_code" in r for r in deja.get("rows") or []):
+        return deja
     for groupe in (uci_ranking.GROUPE_WORLD_RANKING, 3):
         try:
             ranking = uci_ranking.get_ranking(season_year=annee, group_id=groupe)
@@ -1586,6 +1630,49 @@ def _tests_editions() -> None:
     print("[OK] collector.py : éditions et carrières")
 
 
+def _tests_classements_fin_calendrier() -> None:
+    """classements_fin_calendrier + retrait de ranking-<S>.json (sans réseau, lecture et bornes injectées)."""
+    import tempfile as _tf
+    sauve = (DATA_DIR, RACES_DIR)
+    bornes = {2026: ("2025-10-15", "2026-10-18"), 2027: ("2026-10-19", "2027-10-18")}
+    rk = {"name": "UCI World Ranking", "date": "2026-10-13", "source": "x", "season": 2026,
+          "rows": [{"rank": 1, "rider": "A B", "team": "Équipe A", "team_code": "EQA"}]}
+    appels: List[int] = []
+
+    def lire(season_year):
+        appels.append(season_year)
+        return rk
+
+    def echec(season_year):
+        appels.append(season_year)
+        raise RuntimeError("panne")
+    try:
+        with _tf.TemporaryDirectory() as tmp:
+            globals()["DATA_DIR"], globals()["RACES_DIR"] = tmp, os.path.join(tmp, "races")
+            _dump(os.path.join(tmp, "ranking.json"), {"season": 2027, "rows": [{"rank": 1, "team_code": "ZZZ"}]})
+            ch = os.path.join(tmp, "ranking-2026.json")
+            auj = dt.date(2026, 11, 17)
+            assert classements_fin_calendrier(auj, [2026, 2027], lire, bornes) == [2026] and appels == [2026]   # 2027 = saison du jour : ignorée
+            assert _load(ch, {})["rows"][0]["team_code"] == "EQA" and _load(ch, {})["season"] == 2026
+            assert classements_fin_calendrier(auj, [2026, 2027], lire, bornes) == [] and appels == [2026]       # immuable : aucune lecture
+            os.remove(ch)
+            appels.clear()
+            assert classements_fin_calendrier(dt.date(2026, 10, 18), [2026], lire, bornes) == [] and appels == []   # fin = aujourd'hui : pas terminée
+            assert classements_fin_calendrier(auj, [2030], lire, bornes) == [] and appels == []                   # saison inconnue des bornes
+            assert classements_fin_calendrier(auj, [2026], echec, bornes) == [] and appels == [2026] and not os.path.exists(ch)   # échec : rien écrit
+            _dump(ch, {"season": 2026, "rows": [{"rank": 1, "team": "X"}]})                                       # ancien sans team_code : relu
+            appels.clear()
+            assert classements_fin_calendrier(auj, [2026], lire, bornes) == [2026] and appels == [2026]
+            assert _load(ch, {})["rows"][0]["team_code"] == "EQA"
+            # retrait à la rotation
+            _dump(os.path.join(tmp, "index-2026.json"), {})
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": False}]}, {}) == [] and os.path.exists(ch)
+            assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": True}]}, {}) == [2026]
+            assert not os.path.exists(ch) and os.path.exists(os.path.join(tmp, "ranking.json"))
+    finally:
+        globals()["DATA_DIR"], globals()["RACES_DIR"] = sauve
+
+
 def _tests_classements() -> None:
     """Historique du classement UCI : choix, écriture, immuabilité, reprise sur budget, saison en cours (réponses simulées)."""
     import tempfile as _tf
@@ -1752,6 +1839,7 @@ def _tests() -> None:
     # 3) rotation N / N-1 sur un dossier temporaire (aucun réseau : classement UCI et fin de saison remplacés)
     import tempfile
     sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, finish_archive_season, _ranking_du_jour)
+    sauve_cfc = classements_fin_calendrier
     sauve_ix = charger_index_archives
     globals_ = globals()
     try:
@@ -1776,6 +1864,7 @@ def _tests() -> None:
 
             globals_["finish_archive_season"] = bouchon_fin
             globals_["_ranking_du_jour"] = lambda today: None
+            globals_["classements_fin_calendrier"] = lambda *a, **k: []   # jamais de réseau dans ces tests
             auj = dt.date(2028, 6, 1)
             assert migrer_saisons_anciennes(auj) == []                   # pas de seasons.json : rien
             for cid, an in (("uci-1", 2028), ("uci-2", 2027), ("uci-3", 2026), ("uci-4", 2026)):
@@ -1823,6 +1912,11 @@ def _tests() -> None:
             assert _load(os.path.join(a26, "state.json"), {}) == {"complete": True, "top10_checked": {}}
             assert os.path.exists(os.path.join(a26, "riders.json"))
             assert migrer_saisons_anciennes(auj) == []                   # déjà migrée : ignorée (pas de nouvelle requête)
+            # fin de saison : data/ranking-<S>.json réutilisé sans requête
+            _dump(os.path.join(tmp, "ranking-2031.json"), {"season": 2031, "rows": [{"rank": 1, "team_code": "AAA"}]})
+            _dump(os.path.join(tmp, "ranking-2032.json"), {"season": 2032, "rows": [{"rank": 1, "team": "sans code"}]})
+            assert lire_classement_fin_saison(2031)["rows"][0]["team_code"] == "AAA"
+            os.remove(os.path.join(tmp, "ranking-2031.json")); os.remove(os.path.join(tmp, "ranking-2032.json"))
             # retirer_saisons_archivees (index public injecté, aucun réseau)
             noms = {2026: ["uci-3.json", "uci-4.json"]}
             assert retirer_saisons_archivees([2026], None, noms) == []                                     # index injoignable
@@ -1879,6 +1973,7 @@ def _tests() -> None:
             assert _load(os.path.join(tmp, "seasons.json"), {})["available"] == [2028, 2027]
     finally:
         globals_["DATA_DIR"], globals_["RACES_DIR"], globals_["ARCHIVES_DIR"], globals_["finish_archive_season"], globals_["_ranking_du_jour"] = sauve
+        globals_["classements_fin_calendrier"] = sauve_cfc
         globals_["charger_index_archives"] = sauve_ix
     # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
     import tempfile as _tf
@@ -2011,6 +2106,7 @@ def _tests() -> None:
     globals()["collecter_classements"] = _reel_classements
     assert _appels_cl and all(2023 in a or 2024 in a for a in _appels_cl), _appels_cl      # run_archive appelle l'historique du classement
     _tests_classements()
+    _tests_classements_fin_calendrier()
     _tests_editions()
     print("[OK] collector.py : tests locaux réussis")
 

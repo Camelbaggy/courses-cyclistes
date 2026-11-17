@@ -57,6 +57,8 @@ data/races/<race_id>.json      détail d'une course, chargé à l'ouverture
 data/seasons.json              {"current": 2026, "available": [2026, 2025]} — sélecteur de saison de la page
 data/index-<année>.json        index de chaque saison (même schéma ; index.json = saison courante)
 data/state.json                état interne (clés déjà notifiées, horodatages) — non lu par la page
+data/ranking-<année>.json     classement UCI de fin de saison d'une saison terminée encore au Calendrier (schéma de ranking.json, `season` = année ; écrit une fois
+                               avec `team_code` par `collector.classements_fin_calendrier`, immuable, retiré à la rotation ; lu par l'encyclopédie seulement)
 ```
 
 ### 4.1 `data/index.json`
