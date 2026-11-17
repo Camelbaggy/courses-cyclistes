@@ -179,7 +179,23 @@ chaque clé**, et au moins 2 concordances au total. Canonique = clé qui a le pl
 | Q1431283 | volta ao algarve em bicicleta\|POR | volta ao algarve cofidis |
 | Q2120129 | volta a la comunitat valenciana\|ESP | volta comunitat valenciana |
 
-**Non regroupés** (pas de preuve, à revoir à la main si besoin) : une discordance sur une année — Tour du Loir-et-Cher (E. Provost 2018),
-Tour of Qinghai Lake (2024), Presidential Tour of Turkey (2019), Visit South Aegean Islands (2025, série Wikidata peut-être différente
-du South Aegean Tour) ; aucune série trouvée par la recherche — 4 Jours de Dunkerque (2017), Tour du Limousin (2017), Tour of Thailand
-(3 graphies). Les maillots WorldDB de ces courses restent affichés sur toutes leurs dénominations (`COURSES_WORLDDB`).
+**Les 7 groupes restants, examinés un par un** (sonde `tools/essais/essai_alias_detail.py`, `[essai:alias_detail]`, run 43982526231) : tous regroupés.
+- Les 4 « discordances » étaient le MÊME coureur, non reconnu par `wikidata.nom_concorde` : Asbjørn Andersen = Asbjørn Kragh Andersen (Loir-et-Cher 2018,
+  1992-04-09 des deux côtés), Felix Grossschartner = Großschartner (Turquie 2019, 1993-12-23), Alexander Hansen = Alexander Arnt Hansen (South Aegean
+  2025, 2003-05-13), Jefferson Cepeda (Qinghai 2024, même nom, naissance 1996-03-02 à l'UCI et 1996-03-03 sur Wikidata : non corrigée, pas de 2e source).
+  Le 2022 South Aegean Tour est une édition de la série Visit South Aegean Islands (Q111185909).
+- Les 3 « sans série » : la recherche par le nom long échouait ; recherche élargie : Quatre Jours de Dunkerque Q513691, Tour du Limousin Q1025846,
+  Tour de Thaïlande Q1617683 (la série féminine Q17063894 discorde partout, écartée), toutes les années concordantes.
+
+| Série Wikidata | Clé canonique | Clés rattachées |
+|---|---|---|
+| Q513691 | 4 jours de dunkerque grand prix des hauts de france\|FRA | 4 jours de dunkerque tour du nord pas de calais |
+| Q111185909 | visit south aegean islands\|GRE | south aegean tour |
+| Q1537748 | tour du loir et cher\|FRA | tour du loir et cher e provost |
+| Q1264773 | tour of qinghai lake\|CHN | tour of magnificent qinghai |
+| Q1025846 | tour du limousin nouvelle aquitaine\|FRA | tour du limousin |
+| Q1617683 | the princess maha chakri sirindhorn s cup tour of thailand\|THA | … sirindhorns cup …, … chackri sirindhorn s cup … |
+| Q930866 | presidential cycling tour of turkiye\|TUR | presidential cycling tour of turkey |
+
+Piste d'amélioration (non faite) : `nom_concorde` ne reconnaît ni un second prénom (Kragh, Arnt) ni ß = ss ; la preuve automatique des séries rate donc
+quelques concordances (sans risque de faux positif).
