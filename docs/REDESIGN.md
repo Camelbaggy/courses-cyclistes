@@ -58,9 +58,9 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
 
 ## Étapes (chacune publiable seule, captures avant / après 390 et 1024 px, `tools/apercu.py` tout OK)
 
-1. **Jetons et thème clair** : thème clair complet, bouton auto / clair / sombre, passe claire et contrôle des contrastes dans
+1. **Jetons et thème clair** (faite, PR #55) : thème clair complet, bouton auto / clair / sombre, passe claire et contrôle des contrastes dans
    `tools/apercu.py`.
-2. **Composants Liquipedia modernisés** : typographie (échelle, chiffres tabulaires), infobox à bandeau de titre et lignes
+2. **Composants Liquipedia modernisés** (faite : infobox en lignes + bandeaux, wikitable zébré `--zebra` / `--hover`, onglets, tuiles compactes, navbox en grille, `o.bandeau` optionnel, touches d'accent) : typographie (échelle, chiffres tabulaires), infobox à bandeau de titre et lignes
    libellé / valeur, tableaux « wikitable » denses, onglets, tuiles plus compactes, navbox ; mêmes fonctions JS
    (`htmlInfobox`, `htmlTableau`, `htmlOnglets`, `htmlTuiles`, `htmlNavbox`), pages inchangées sur le fond.
 3. **Navigation** : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
