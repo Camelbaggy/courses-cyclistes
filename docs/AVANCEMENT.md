@@ -1,6 +1,6 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 17 novembre 2026, 9 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 17 novembre 2026, 11 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
 ## Où on en est
@@ -19,9 +19,12 @@ Dernière mise à jour : 17 novembre 2026, 9 h 30 UTC. À lire avec `CLAUDE.md` 
   - sélections nationales : tenues des équipes nationales (les fichiers « champion » de WorldDB ne sont PAS des maillots de champion).
 
 **Données** (dépôt d'archives `Camelbaggy/courses-cyclistes-archives`, Pages) :
-- Saisons UCI archivées : 2018-2025 complètes, 2017 partielle (122 courses), puis 2016 et 2011-2015 à venir (archives.yml nocturne,
-  défaut 2011-2025, relance automatique hors 11 h-23 h UTC). Calendrier : 2026, 2027.
-- `entites/` régénéré à chaque passage d'archives (15 727 coureurs, 2 898 équipes-saisons, 328 lignées, 589 épreuves, historique UCI).
+- Saisons UCI archivées : 2016-2025 complètes (2017 : 199 courses, 2016 : 204 ; vainqueurs des grands tours, monuments et championnat de
+  France 2016-2017 contrôlés : 18 sur 18 conformes), 2015 en cours (153 courses), puis 2014-2011 (archives.yml enchaîné jour et nuit en
+  intersaison, ~25 passages le 17/11). Calendrier : 2026, 2027.
+- Historique du classement UCI : 462 instantanés (2011-2027, 23 à 34 par saison ; 2015 en cours).
+- `entites/` régénéré à chaque passage d'archives (19 079 coureurs, 3 592 équipes-saisons, 359 lignées, 664 épreuves, historique UCI ;
+  17/11 11 h UTC : les 9 167 coureurs Wikidata publiés, dont Andersen, Großschartner, Hansen, Cepeda).
 - Wikidata (`wikidata.yml`, dimanche + manuel) : 9 171 coureurs rapprochés (+787 le 17/11 avec la règle des noms v2), 1 505 équipes-saisons
   rattachées. Historique des épreuves :
   39 séries prouvées, 2 639 éditions historiques, 2 199 coureurs historiques `wd-Q…`.
@@ -82,5 +85,7 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
 
 ## Suivi automatique
 
-- Bilan programmé le 17/11 à 11 h 20 UTC (avancement archives, contrôle des vainqueurs 2016-2017, instantanés UCI,
-  re-vérification Cofidis, historique dans `entites/index.json`).
+- Bilan du 17/11 fait. Cofidis 2022-2024 : l'ancien rattachement erroné à l'équipe féminine a disparu (règle v3), mais aucune équipe masculine
+  n'est trouvée (`aucune`) : à traiter avec les lignées manquantes (étape 6). Historique des épreuves : 2 574 éditions, 2 158 coureurs `wd-Q…`
+  (baisse normale : 2016-2017 sont désormais couvertes par nos données UCI). `update.yml` : cron de 6 h 41 sauté (sans effet en intersaison).
+- Prochain bilan le 18/11 à 11 h 20 UTC (2015-2011, contrôles des vainqueurs, lignées manquantes).
