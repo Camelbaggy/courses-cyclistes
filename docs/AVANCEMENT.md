@@ -1,73 +1,70 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 17 novembre 2026, 2 h UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
 ## Où on en est
 
-**Le site est devenu une encyclopédie à la Liquipedia** (https://camelbaggy.github.io/courses-cyclistes/) :
-- Menu Accueil · Courses · Équipes · Coureurs · Classements (barre en bas sur mobile), recherche globale, vraies pages par
-  route, gabarit d'article (fil d'Ariane, infobox, onglets, navbox). Accueil = portail (derniers résultats, à venir, top 10
-  UCI, Français à la une, « ce jour-là »).
-- Articles coureur (portrait cadré sur le visage, palmarès, saisons, grands tours, classement UCI, parcours), épreuve
-  (palmarès UCI + historique Wikidata depuis l'origine, records), édition (podium, participants, pays).
-- Articles d'équipe (R2, fusionné le 16/11) : `#equipe/<QID>` (lignée, sélecteur de saison) et `#equipe/<id équipe-saison>`,
-  équipes cliquables partout, frise « Équipes » de la fiche coureur simplifiée (« Nom · 2019–2022 »). Vérifié sur le jeu
-  fictif et sur les vraies archives (entités régénérées en local). **Les fichiers `entites/equipes/lignees/` ne sont publiés
-  qu'au prochain passage d'archives.yml** (le passage du 16/11 à 18 h 11 UTC précédait la fusion de R2a) : d'ici là,
-  `#equipe/<QID>` se replie sur l'équipe-saison de la saison demandée (via `lignees_index.json`, déjà publié).
+**Site : encyclopédie à la Liquipedia** (https://camelbaggy.github.io/courses-cyclistes/), étapes R1 et R2 du plan faites :
+- Menu Accueil · Courses · Équipes · Coureurs · Classements (barre en bas sur mobile), recherche globale, une page par route,
+  gabarit d'article (fil d'Ariane, infobox, onglets, navbox). Accueil = portail.
+- Articles coureur (portrait, palmarès, saisons, grands tours, classement UCI, frise « Équipes » simplifiée), épreuve (palmarès
+  UCI + historique Wikidata depuis l'origine, records), édition (podium, participants, pays), équipe (lignée Wikidata avec
+  sélecteur de saison, ou équipe-saison seule ; effectif, mouvements, palmarès, grands tours, historique des noms).
+- Participants d'une course : cartes d'équipe repliables à la Liquipedia (interrupteur « Effectifs »).
+- **Maillots WorldDB** (saison 2025, accord des auteurs, crédit « WorldDB », sources dans le dépôt privé `maillots-pcm`) :
+  - équipes : 174 équipes 2025 reliées par code UCI, affichées sur toute la période où l'équipe garde le même nom et le même code
+    (participants + infobox de l'article d'équipe) ;
+  - maillots distinctifs : 71 courses, toutes leurs dénominations (bloc « Maillots » des fiches de course, infobox des épreuves) ;
+  - sélections nationales : tenues des équipes nationales (les fichiers « champion » de WorldDB ne sont PAS des maillots de champion).
 
 **Données** (dépôt d'archives `Camelbaggy/courses-cyclistes-archives`, Pages) :
-- Saisons UCI archivées : 2018-2025 complètes, 2017 partielle, 2016 puis T3 2011-2015 à venir (archives.yml nocturne,
+- Saisons UCI archivées : 2018-2025 complètes, 2017 partielle (122 courses), puis 2016 et 2011-2015 à venir (archives.yml nocturne,
   défaut 2011-2025, relance automatique hors 11 h-23 h UTC). Calendrier : 2026, 2027.
-- `entites/` régénéré à chaque passage d'archives : coureurs, équipes-saisons, lignées, épreuves, saisons, pays, recherche,
-  index des listes, historique UCI (instantanés fin de mois + après chaque course WT ; 8 min réservées par passage).
-- Wikidata (`wikidata.yml`, dimanche + manuel) : 7 508 coureurs rapprochés, 969 équipes-saisons rattachées ; règle
-  équipes v3 (équipes féminines écartées : Cofidis 2022-2024 sera re-vérifié au prochain passage). Historique des
-  épreuves (`--historique`) : 39 séries prouvées, 3 017 éditions, coureurs historiques `wd-Q…`.
-- Corrections documentées : `corrections_coureurs.json` (7 dates, 2 nationalités) ; alias : `alias_coureurs.json`
-  (9 doublons dont 5 fusions même saison), `alias_courses.json` (56 libellés renommés, preuve Wikidata ; +38 le 17/11 pour 32 courses,
-  publiés au prochain passage d'archives.yml).
+- `entites/` régénéré à chaque passage d'archives (15 727 coureurs, 2 898 équipes-saisons, 328 lignées, 589 épreuves, historique UCI).
+- Wikidata (`wikidata.yml`, dimanche + manuel) : 8 380 coureurs rapprochés, 969 équipes-saisons rattachées. Historique des épreuves :
+  39 séries prouvées, 2 639 éditions historiques, 2 199 coureurs historiques `wd-Q…`.
+- Alias : `alias_courses.json` 56 libellés (18 + 38 le 17/11 pour 32 courses renommées, tous prouvés par une série Wikidata commune et
+  des vainqueurs concordants : Saudi Tour -> AlUla Tour, Tour of Britain / OVO / Lloyds, Route du Sud -> Occitanie… ;
+  `docs/recherche/historique_avant_2009.md` §11) ; `alias_coureurs.json` 9 doublons ; `alias_coureurs_wikidata.json` 1 rapprochement
+  manuel (Cepeda) ; `corrections_coureurs.json` 7 dates, 2 nationalités.
+- Rapprochement des noms Wikidata v2 (ß / ø / æ…, second prénom d'un seul côté) : les 6 954 coureurs non reliés seront re-tentés.
+
+## En attente de publication (passage d'archives.yml lancé à la main le 17/11 à 2 h 12 UTC)
+
+Les crons nocturnes de 0 h 23 et 1 h 23 n'ont pas tourné (GitHub les saute). Ce passage publiera :
+- `entites/equipes/lignees/` (articles de lignée, ex. Movistar `#equipe/Q6175` ; d'ici là repli sur l'équipe-saison) ;
+- les épreuves regroupées des 32 courses renommées (palmarès réunis) ;
+- `logo` / `logo_depuis` dans `lignees_index.json`.
+Le prochain `wikidata.yml` (dimanche, ou à lancer à la main) appliquera la règle des noms v2 (~7 000 requêtes, ~2 h, reprenable) et le
+rapprochement manuel de Cepeda.
 
 ## Décisions du propriétaire à retenir
 
 - Zéro hallucination ; corrections de source seulement avec source citée et validation.
 - Tout le peloton ; Wikipédia en source de texte principale (plusieurs langues), Gemini en dernier recours ; textes courts.
-- Design moderne, mobile d'abord, thème sombre ; **simplicité** : pas de lignes redondantes (« Dans nos données »
-  supprimé), pas de liens en doublon (« Toutes les éditions » sous le palmarès supprimé), listes simples.
-- Claude fusionne lui-même ses PR après vérification ; code et opérations délégués à des agents Sonnet.
-- Environnement « dashboards-sport » : accès web libre.
-- WorldDB (base PCM) : contrôle croisé seulement, jamais publiée, gardée hors des dépôts. Exception (16/11) : les maillots, publiés en buste avec crédit « WorldDB » (accord des auteurs), sources dans le dépôt privé maillots-pcm.
+- Design moderne, mobile d'abord, thème sombre ; **simplicité** : pas de lignes redondantes, pas de liens en doublon, listes simples.
+- Claude fusionne lui-même ses PR après vérification.
+- Environnement « dashboards-sport » : accès web libre (mais Wikimedia limite souvent l'IP du conteneur : sondes via GitHub Actions).
+- WorldDB (base PCM) : contrôle croisé seulement, jamais publiée, gardée hors des dépôts. Exception : les maillots (buste, crédit
+  « WorldDB », accord des auteurs), sources dans le dépôt privé `maillots-pcm`.
+- Maillots : toute la période de dénomination d'une équipe tant que le code UCI ne change pas ; maillots distinctifs conservés quand la
+  course change de nom ; buste seul (sans manches ni cuissard).
 - cyclingdb.com : réutilisation interdite sans autorisation écrite ; demande rédigée (à envoyer par le propriétaire).
 
 ## Prochaines étapes
 
-1. Vérifier après le passage nocturne d'archives.yml que `entites/equipes/lignees/` est publié (Movistar `#equipe/Q6175`).
-2. R3 : pages Saison (`#saison/<année>`), navbox partout, finitions ; « ce jour-là » plus riche.
-3. Textes d'introduction Wikipédia (fr d'abord, synthèse multilingue courte) pour coureurs, équipes, épreuves.
-4. Étendre l'historique Wikidata aux ~150 autres épreuves suivies (`historique.py --proposer`, même preuve).
-5. Lignées d'équipes manquantes (ex. Groupama-FDJ seulement 2018 rattachée) : re-vérification Wikidata v3, puis
-   propositions d'équivalences (outil `tools/audit_worlddb.py`, `equipes_propositions.md`) à faire valider.
-6. Doublons de coureurs restants (`doublons_possibles` dans le rapport d'`encyclopedie`, ex. Aranburu) : vérifier puis alias.
-7. Surveiller `update.yml` (GitHub saute des crons) avant la reprise des courses ; relance automatique si besoin.
+1. Après le passage d'archives : vérifier Movistar `#equipe/Q6175`, une épreuve regroupée (AlUla Tour, Tour of Britain), les logos.
+2. Après le prochain `wikidata.yml` : nombre de coureurs nouvellement reliés, contrôle d'un échantillon (aucun faux positif), Cepeda.
+3. R3 : pages Saison (`#saison/<année>`), navbox partout, finitions ; « ce jour-là » plus riche.
+4. Textes d'introduction Wikipédia (fr d'abord, synthèse multilingue courte) pour coureurs, équipes, épreuves.
+5. Étendre l'historique Wikidata aux ~150 autres épreuves suivies (`historique.py --proposer`, même preuve).
+6. Lignées d'équipes manquantes (ex. Groupama-FDJ) : re-vérification Wikidata v3, puis propositions d'équivalences à faire valider.
+7. Doublons de coureurs restants (`doublons_possibles` du rapport d'`encyclopedie`, ex. Aranburu) : vérifier puis alias.
+8. Maillots : autres saisons et vrais maillots de champion national si WorldDB les fournit (`tools/maillots.py`).
+9. Surveiller `update.yml` (GitHub saute des crons) avant la reprise des courses.
 
 ## Suivi automatique
 
 - Bilan programmé le 17/11 à 11 h 20 UTC (avancement archives, contrôle des vainqueurs 2016-2017, instantanés UCI,
   re-vérification Cofidis, historique dans `entites/index.json`).
-
-## Maillots (16/11/2026)
-
-- Liste des participants : cartes repliables à la Liquipedia, avec maillot WorldDB (buste) pour les équipes dont le nom et le code UCI
-  sont ceux de 2025, sinon logo de lignée ou initiales. Sources privées : Camelbaggy/maillots-pcm ; rendu : `tools/maillots.py`.
-- Fait (17/11) : maillot dans l'infobox des articles d'équipe ; maillots distinctifs (71 courses, toutes leurs dénominations, bloc « Maillots » des
-  fiches de course et infobox des épreuves) ; tenues des équipes nationales pour les sélections.
-- Maillots de champion national : PAS disponibles (les fichiers « champion » de WorldDB sont des tenues d'équipe nationale) ; à revoir
-  si WorldDB fournit les vrais maillots de champion. Autres saisons si WorldDB les fournit.
-
-## Wikidata, rapprochement des noms (17/11/2026)
-
-- Règle coureurs v2 (`REGLE_COUREURS` = 2) : ß / ø / æ… translittérés, second prénom toléré d'un côté ou de l'autre. Les 6 954 coureurs non reliés
-  sont re-tentés au prochain passage de `wikidata.yml` (~7 000 requêtes, ~2 h, reprenable) : à surveiller (nombre de coureurs reliés, aucun faux positif).
-- Rapprochement manuel : `alias_coureurs_wikidata.json` (Jefferson Cepeda -> Q21093468 ; naissance 1996-03-02 selon l'UCI et PCS, 1996-03-03 sur
-  Wikidata, erreur probable de Wikidata). Appliqué au prochain passage de `wikidata.yml`.
