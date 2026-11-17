@@ -75,6 +75,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     await page.waitForTimeout(250);
     if (opt.defile) { await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await page.waitForTimeout(600); await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(250); }
     await verifie(page, nom + suf);
+    if (process.env.APERCU_SANS_BARRE) await page.addStyleTag({ content: '.bnav, #to-top { display: none !important; }' });   // lecture des captures hautes : barre du bas masquée
     await page.screenshot({ path: `${sortie}/${conf.prefixe}${nom}${suf}.png`, fullPage: opt.plein !== false });
     console.log('capture', `${conf.prefixe}${nom}${suf}.png`);
   }
@@ -112,6 +113,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ['03a-epreuve', EP, {}],
       ['03b-epreuve-navbox-ouvert', EP, { navbox: true }],
       ['03c-epreuve-records', EP, { etab: 'records' }],
+      ['03d-epreuve-maillots', '#epreuve/' + encodeURIComponent('tour des maquettes fictif|FRA'), {}],
       ['07c-coureur-palmares-historique', '#coureur/demo-paul-19961228', { onglet: 'palmares' }],
       ['07d-coureur-historique', '#coureur/wd-Q99900301', {}],
       ['04a-edition-archive', '#course/fx-a24-tour-hc', {}],
@@ -366,6 +368,79 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     ok('épreuve : maillots distinctifs PCM Mod dans l\'infobox', (await page.$$('#main .ep-maillots figure.pcm img')).length === 4 && (await page.$eval('#main', e => e.textContent)).includes('PCM Mod'));
     await visite(page, '#epreuve/' + encodeURIComponent('omloop de demonstration fictif|BEL'), '#main .art');
     ok('épreuve sans correspondance : pas de maillots', (await page.$$('#main .ep-maillots')).length === 0);
+    // ---- étape 4d : bandeau d'équipe et bandeau d'épreuve ----
+    const bandeauEq = async (id) => {
+      await visite(page, '#equipe/' + id, '#main .art');
+      return page.evaluate(() => {
+        const b = document.querySelector('#main .id-ban.eq-ban'), ib = document.querySelector('#main .infobox'), txt = e => (e ? e.textContent : '');
+        const h1 = b && b.querySelector('h1'), nom = txt(h1).trim();
+        const ibTxt = txt(ib), pays = txt(b && b.querySelector('.art-sub')).trim();
+        const niveaux = [...(b ? b.querySelectorAll('.hero-pills .pill') : [])].map(e => e.textContent.trim());
+        return { ban: !!b, h1: !!h1 && !!nom, maillot: b ? b.querySelectorAll('.hero-maillot img').length : 0, logo: b ? b.querySelectorAll('.hero-logo img').length : 0,
+          doublons: [pays && ibTxt.includes(pays) ? 'pays' : '', nom && [...(ib ? ib.querySelectorAll('dd') : [])].some(d => d.textContent.trim() === nom) ? 'nom' : '',
+            niveaux.some(n => /WorldTeam|ProTeam|Continentale/.test(n) && ibTxt.includes(n)) ? 'niveau' : ''].filter(Boolean),
+          sels: document.querySelectorAll('#eq-an').length, selDansBan: b ? b.querySelectorAll('#eq-an').length : 0, selDansOnglet: document.querySelectorAll('#qcontent #eq-an').length,
+          creds: document.querySelectorAll('#fiche-credit').length, cred: (document.getElementById('fiche-credit') || {}).textContent,
+          solo: document.querySelector('#main .rpage').classList.contains('solo'), aside: !!document.querySelector('#main .rside'), ibVide: ib ? !ib.textContent.trim() : null };
+      });
+    };
+    for (const [id, attendu] of [['Q99900110', { maillot: true }], ['Q99900100', {}], ['charlie-team-2026', {}], ['golf-team-2026', {}], ['france-2024', { maillot: true }]]) {
+      const b = await bandeauEq(id);
+      ok(`équipe ${id} : bandeau avec h1`, b.ban && b.h1, b);
+      if (attendu.maillot) ok(`équipe ${id} : maillot dans le bandeau`, b.maillot === 1, b); else console.log('INFO ', id, ': bandeau, maillot', b.maillot, 'logo', b.logo);
+      ok(`équipe ${id} : aucun fait du bandeau répété dans l'infobox`, b.doublons.length === 0, b);
+      ok(`équipe ${id} : sélecteur de saison au plus une fois, dans le bandeau (jamais dans l'onglet)`, b.sels <= 1 && b.sels === b.selDansBan && b.selDansOnglet === 0, b);
+      ok(`équipe ${id} : crédit des maillots unique, seulement si un maillot est affiché`, b.creds === 1 && (b.maillot > 0 ? /^Maillots : /.test(b.cred || '') : !b.cred), b);
+      ok(`équipe ${id} : infobox vide => une colonne centrée (pas d'aside)`, b.solo === !b.aside, b);
+    }
+    {
+      await visite(page, '#equipe/Q99900110?s=2023', '#main .art');
+      const n0 = await page.evaluate(() => history.length);
+      await page.selectOption('#eq-an', { index: 0 }); await page.waitForTimeout(300);
+      const h = await hash(), n1 = await page.evaluate(() => history.length);
+      ok("équipe : changer de saison met ?s= dans le hash, sans entrée d'historique", /^#equipe\/Q99900110\?s=\d{4}$/.test(h) && !h.endsWith('s=2023') && n1 === n0, { h, n0, n1 });
+      ok('équipe : la saison choisie est celle du sélecteur', await page.$eval('#eq-an', e => e.options[e.selectedIndex].text === 'Saison ' + new URLSearchParams(location.hash.split('?')[1]).get('s')));
+      await visite(page, '#equipe/Q99900100', '#main .art');
+      await page.click('#qtabs [data-qtab="palmares"]'); await page.waitForTimeout(250);
+      const pal = await page.evaluate(() => ({ cartes: document.querySelectorAll('#qcontent .res').length, r1: document.querySelectorAll('#qcontent .res .rk.r1').length, filet: [...document.querySelectorAll('#qcontent .res')].filter(e => e.getAttribute('style') && e.getAttribute('style').includes('--cat:var(--c-')).length, grp: document.querySelectorAll('#qcontent .grp-title').length }));
+      ok("équipe : palmarès en cartes à pastille de rang, regroupées par année", pal.cartes > 0 && pal.r1 === pal.cartes && pal.grp > 0, pal);
+      console.log('INFO ', 'palmarès équipe : cartes à filet de catégorie', pal.filet, '/', pal.cartes);
+      await visite(page, '#equipe/Q99900110', '#main .art'); await page.click('#qtabs [data-qtab="mouvements"]'); await page.waitForTimeout(250);
+      const mv = await page.evaluate(() => { const c = e => getComputedStyle(e).color; const i = document.querySelector('#qcontent .mv-col.in h3'), o = document.querySelector('#qcontent .mv-col.out h3'), col = document.querySelector('#qcontent .mv-col');
+        return { i: i && c(i), o: o && c(o), carte: col ? getComputedStyle(col).borderTopWidth : null }; });
+      ok('équipe : mouvements en cartes, en-têtes arrivées / départs colorés', !!mv.i && !!mv.o && mv.i !== mv.o && mv.carte === '1px', mv);
+      await visite(page, '#equipe/Q99900110', '#main .art');
+      const eff = await page.evaluate(() => ({ vic: [...document.querySelectorAll('#qcontent tbody tr')].map(r => r.lastElementChild).filter(td => /^\d+$/.test(td.textContent.trim())).every(td => td.querySelector('b')) }));
+      ok('équipe : effectif, victoires > 0 en gras', eff.vic, eff);
+      const tj = await page.evaluate(() => { const t = [...document.querySelectorAll('#main .kpis .tile')].find(e => /Victoires/.test(e.textContent)); const v = t ? parseInt(t.querySelector('b').textContent, 10) : 0; return { tuile: !!t, v, jaune: t ? t.classList.contains('t-jaune') : null }; });
+      ok('équipe : tuile des victoires en jaune si > 0 (sinon neutre)', !tj.tuile || (tj.v > 0) === !!tj.jaune, tj);
+    }
+    {
+      const EPR = '#epreuve/' + encodeURIComponent(conf.epreuve);
+      await visite(page, EPR, '#main .art'); await page.waitForTimeout(300);
+      const e = await page.evaluate(() => {
+        const b = document.querySelector('#main .une.ed-ban'), ib = document.querySelector('#main .infobox'), jeton = b && b.getAttribute('style');
+        const sub = b ? b.querySelector('.une-sub').textContent : '';
+        const th = [...document.querySelectorAll('#econtent thead th .dot')].map(d => d.className), l0 = document.querySelector('#econtent tbody tr'), l1 = document.querySelectorAll('#econtent tbody tr')[1];
+        const fond = tr => tr ? getComputedStyle(tr.children[1]).backgroundColor : null, fp = tr => tr ? getComputedStyle(tr.children[0]).backgroundColor : null;
+        return { ban: !!b, h1: !!(b && b.querySelector('h1').textContent.trim()), jeton, sub, ibDoublon: !!(ib && [...ib.querySelectorAll('dt')].some(d => /Pays|Classe actuelle|Éditions/.test(d.textContent))),
+          dots: th, derniere: l0 && l0.classList.contains('tr-last'), fond0: fond(l0), fond1: fond(l1), fp0: fp(l0), tuiles: [...document.querySelectorAll('#main .kpis .tile')].map(t => [t.querySelector('small').textContent, t.classList.contains('t-jaune')]),
+          creds: document.querySelectorAll('#fiche-credit').length, cred: (document.getElementById('fiche-credit') || {}).textContent, imgs: document.querySelectorAll('#main .ep-maillots img').length,
+          solo: document.querySelector('#main .rpage').classList.contains('solo'), aside: !!document.querySelector('#main .rside') };
+      });
+      ok("épreuve : bandeau coloré avec h1, couleur de catégorie par jeton (--cat)", e.ban && e.h1 && /--cat:\s*var\(--(c-[a-z0-9]+|accent)\)/.test(e.jeton || ''), e);
+      ok("épreuve : bandeau = pays, éditions et période ; rien de répété dans l'infobox", /édition/.test(e.sub) && !e.ibDoublon, e);
+      ok("épreuve : palmarès, pastilles or / argent / bronze dans les en-têtes", e.dots.join(' ') === 'dot r1 dot r2 dot r3', e.dots);
+      ok("épreuve : dernière édition du palmarès mise en valeur (fond différent de la ligne suivante)", e.derniere && e.fond0 !== e.fond1 && e.fp0 !== 'rgba(0, 0, 0, 0)', e);
+      ok("épreuve : crédit des maillots unique", e.creds === 1 && (e.imgs > 0 ? /^Maillots : /.test(e.cred || '') : !e.cred), e);
+      ok("épreuve : infobox vide => une colonne centrée", e.solo === !e.aside, e);
+      ok("épreuve : tuile du coureur le plus titré en jaune (jamais celle du pays)", e.tuiles.every(([l, j]) => (/Coureur/.test(l)) === j), e.tuiles);
+      await visite(page, EPR, '#main .art'); await page.click('#etabs [data-etab="records"]'); await page.waitForTimeout(250);
+      const rc = await page.evaluate(() => ({ cartes: document.querySelectorAll('#econtent .rec-card').length, h: document.querySelectorAll('#econtent .rec-card > h2.h-sec').length }));
+      ok("épreuve : records en cartes à titre h2.h-sec", rc.cartes > 0 && rc.cartes === rc.h, rc);
+      await visite(page, '#epreuve/' + encodeURIComponent('tour des maquettes fictif|FRA'), '#main .art');
+      ok('épreuve avec maillots : crédit unique « Maillots : PCM Mod »', await page.$eval('#fiche-credit', c => /^Maillots : PCM Mod/.test(c.textContent)) && (await page.$$('#fiche-credit')).length === 1);
+    }
     await visite(page, '#course/fx-a24-tour-hc', '#main .art');
     await page.click('#subtabs [data-sub="participants"]'); await page.waitForTimeout(600);
     const liensEq = await page.$$eval('#table .team-head a.tlink', l => l.map(a => a.getAttribute('href')));
