@@ -319,7 +319,40 @@ details.nc summary { cursor: pointer; font-size: .8rem; font-weight: 700; color:
 .car-s .pal-row .l small { display: block; color: var(--muted); font-size: .74rem; }
 .car-pal { background: var(--bg); }
 .arch-note { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
-footer { text-align: center; color: var(--muted); font-size: .7rem; padding: 6px 16px 20px; }
+footer#foot { max-width: 1040px; margin: var(--sp5) auto 0; padding: var(--sp3) var(--sp4) var(--sp4); border-top: 1px solid var(--line); text-align: center; color: var(--tx3); font-size: .74rem; line-height: 1.5; }
+@media (min-width: 880px) { footer#foot { padding-left: 0; padding-right: 0; } }
+
+/* ---------- navigation (étape 3) : recherche d'en-tête, retour mobile, sous-navigation, haut de page ---------- */
+.hs { display: none; position: relative; align-items: center; width: 240px; flex: none; }
+@media (min-width: 880px) and (max-width: 1179px) { #maj { display: none; } }
+.hs svg { position: absolute; left: 11px; width: 16px; height: 16px; color: var(--tx3); pointer-events: none; }
+.hs input { width: 100%; height: 36px; padding: 0 12px 0 34px; border-radius: 99px; background: var(--s2); border: 1px solid var(--line); color: var(--tx); font: inherit; font-size: .88rem; }
+.hs input:focus { outline: none; border-color: var(--accent); }
+.hs input::placeholder { color: var(--tx3); }
+.hs input::-webkit-search-cancel-button { display: none; }
+#back-btn { display: none; margin-left: -8px; }
+body[data-back="1"] #back-btn { display: inline-flex; }
+body[data-back="1"] .brand span { display: none; }
+.secnav { display: inline-flex; align-self: flex-start; max-width: 100%; gap: 2px; padding: 3px; border-radius: 99px; background: var(--s2); overflow-x: auto; scrollbar-width: none; }
+.secnav::-webkit-scrollbar { display: none; }
+.secnav-b { flex: none; padding: 7px 14px; border-radius: 99px; font-size: .85rem; font-weight: 600; color: var(--tx2); white-space: nowrap; min-height: 34px; }
+.secnav-b[aria-current="page"] { background: var(--s1); color: var(--tx); box-shadow: var(--sh1); }
+.secnav-b:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#to-top { position: fixed; right: var(--sp4); bottom: calc(var(--bnav-h) + env(safe-area-inset-bottom, 0px) + 12px); z-index: 35; width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; background: var(--s2); border: 1px solid var(--line); box-shadow: var(--sh2); color: var(--tx2);
+  opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
+#to-top.on { opacity: 1; visibility: visible; }
+#to-top:hover { color: var(--tx); }
+#to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#to-top svg { width: 22px; height: 22px; }
+@media (min-width: 880px) {
+  .hs { display: flex; }
+  #open-search, #back-btn { display: none !important; }
+  body[data-back="1"] .brand span { display: inline; }
+  body[data-page="recherche"] .hs { display: none; }
+  #to-top { bottom: 24px; right: 24px; }
+}
+@media print { #to-top { display: none; } }
 
 /* ================== composants réutilisables (E2) ================== */
 .tnum, .tbl, .row .val { font-variant-numeric: tabular-nums; }
@@ -689,15 +722,18 @@ details.mv-an .mv-body { padding: var(--sp3); }
 <div id="banner"></div>
 <header class="top">
   <div class="top-in">
+    <button class="btn-ico" id="back-btn" data-action="back" aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <a class="brand" href="#/" aria-label="Courses cyclistes, accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="16.5" r="3.6"/><circle cx="18" cy="16.5" r="3.6"/><path d="M6 16.5 9.6 8h5.2l3.2 8.5M9.6 8H7.4M14.8 8l-3.1 8.5h-5.7"/></svg><span>Courses cyclistes</span></a>
     <nav class="dnav" id="dnav" aria-label="Menu principal"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
     <div class="top-r"><span id="maj"></span>
+      <label class="hs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input type="search" id="hsearch" placeholder="Coureur, équipe, course…" aria-label="Rechercher un coureur, une équipe ou une course" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <button class="btn-ico" id="theme-btn" data-action="theme" aria-label="Thème" title="Thème"></button>
       <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
 </header>
 <main id="main"><div class="loading">Chargement…</div></main>
 <footer id="foot"></footer>
+<button id="to-top" aria-label="Haut de page" title="Haut de page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
 <nav class="bnav" id="bnav" aria-label="Menu principal"><a href="#/" data-nav="accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 3.8l8.5 7.2"/><path d="M5.5 9.8V20h4.2v-5.4h4.6V20h4.2V9.8"/></svg><span>Accueil</span></a><a href="#courses" data-nav="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4.5h12.5l-2.3 4 2.3 4H5"/></svg><span>Courses</span></a><a href="#equipes" data-nav="equipes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.1"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M17.2 14.2c2.4.3 4.3 2.4 4.3 5.3"/></svg><span>Équipes</span></a><a href="#coureurs" data-nav="coureurs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.8" r="3.9"/><path d="M4.2 21c0-4.3 3.5-7.6 7.8-7.6s7.8 3.3 7.8 7.6"/></svg><span>Coureurs</span></a><a href="#classements" data-nav="classements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5h16"/><rect x="4.5" y="12" width="4.6" height="8.5" rx="1"/><rect x="9.7" y="4.5" width="4.6" height="16" rx="1"/><rect x="14.9" y="9" width="4.6" height="11.5" rx="1"/></svg><span>Classements</span></a></nav>
 
 <script>
@@ -833,7 +869,7 @@ function plink(id, texte, ctx) {
 
 const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null,
   // page affichée : route, jeton (une page lente qui finit après une navigation ne dessine plus), saison de contexte des liens coureur
-  route: null, routeTok: 0, ctxPage: null, restaurer: null, seq: 0,
+  route: null, routeTok: 0, prof: 0, premiere: true, focusSr: false, ctxPage: null, restaurer: null, seq: 0,
   // fiche course
   course: null, sel: null, sub: null, subVoulu: null, frOnly: false, partTous: false, partOuv: {}, limit: 50, courseArchive: null,
   // classements
@@ -3047,6 +3083,18 @@ function titre(t) { document.title = t ? `${t} · Courses cyclistes` : "Courses 
 function majMenu(f) {
   document.querySelectorAll("[data-nav]").forEach(a => { const on = a.dataset.nav === f; a.classList.toggle("on", on); if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
 }
+const PAGES_RETOUR = ["coureur", "epreuve", "course", "equipe", "recherche", "introuvable"];
+/** Bouton retour (mobile) et recherche d'en-tête : visibilité selon la page affichée. */
+function majNavigation(r) {
+  document.body.dataset.back = PAGES_RETOUR.includes(r.nom) ? "1" : "0";
+  document.body.dataset.page = r.nom;
+}
+/** Retour : historique de l'application s'il y en a un (navigation pendant cette visite), sinon dernier lien du fil d'Ariane, sinon l'accueil. */
+function retour() {
+  if (history.state && history.state.p > 0) { history.back(); return; }   // profondeur > 0 : une page de l'application précède celle-ci
+  const a = document.querySelector("#main .crumbs a:last-of-type");
+  go(a ? a.getAttribute("href") : "#/");
+}
 const scrollMemo = new Map();
 function nouvelleCle() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 /** Fin du dessin d'une page : retour arrière / avance = position de défilement mémorisée. */
@@ -3062,9 +3110,15 @@ function routeur(opts) {
   if (!(opts && opts.garder)) {
     const k = history.state && history.state.k;
     if (k != null) state.restaurer = scrollMemo.has(k) ? scrollMemo.get(k) : null;   // retour / avance : on revient où on était
-    else { state.restaurer = null; window.scrollTo(0, 0); history.replaceState({ k: nouvelleCle() }, "", location.href); }   // nouvelle page : en haut
+    else {   // nouvelle page : en haut ; p = profondeur dans l'historique de cette visite (0 = première page chargée)
+      state.restaurer = null; window.scrollTo(0, 0);
+      history.replaceState({ k: nouvelleCle(), p: state.premiere ? 0 : state.prof + 1 }, "", location.href);
+    }
+    state.premiere = false;
+    state.prof = (history.state && history.state.p) || 0;
   }
   majMenu(r.famille);
+  majNavigation(r);
   Promise.resolve().then(() => PAGES[r.nom](r, tok)).catch(err => {
     console.error("Page en erreur :", err);
     if (tok === state.routeTok) document.getElementById("main").innerHTML = `<div class="pg">${messageErreur(`Impossible d'afficher cette page (${err.message}).`, "retry")}</div>`;
@@ -3082,6 +3136,10 @@ function squeletteListe() { return `<div aria-busy="true">${'<div class="sk sk-l
 /** Liste déroulante dont chaque option porte une route complète (value = href) : un changement remplace la route (data-hsel). */
 function selectHref(id, label, options) {
   return `<select class="sel" id="${esc(id)}" aria-label="${esc(label)}" data-hsel>${options.map(([h, t, s]) => `<option value="${esc(h)}"${s ? " selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
+}
+/** Sous-navigation d'une page de liste (barre segmentée) : items [{l, href, on}], un clic remplace la route (data-cgo, pas d'entrée d'historique). */
+function htmlSousNav(items) {
+  return `<div class="secnav" role="navigation" aria-label="Sections">${items.map(it => `<button class="secnav-b" data-cgo="${esc(it.href)}"${it.on ? ' aria-current="page"' : ""}>${esc(it.l)}</button>`).join("")}</div>`;
 }
 function chipHref(href, label, actif) { return `<button class="chip ${actif ? "active" : ""}" data-cgo="${esc(href)}">${esc(label)}</button>`; }
 function chipsCat(cats, actuel, hrefDe) {
@@ -3212,9 +3270,9 @@ async function chargerIndexSaison(y) {
 }
 function vuesCourses(r, y, info, nR, nA) {
   const rr = { ...r, saison: y, cat: "all" };
-  return `<div class="chips">${chipHref(hrefCourses({ ...rr, vue: "resultats" }), `Résultats${nR != null ? ` (${nR})` : ""}`, r.vue === "resultats")}
-    ${info && info.cal ? chipHref(hrefCourses({ ...rr, vue: "avenir" }), `À venir${nA != null ? ` (${nA})` : ""}`, r.vue === "avenir") : ""}
-    ${chipHref(hrefCourses({ vue: "epreuves" }), "Épreuves", false)}</div>`;
+  return htmlSousNav([{ l: `Résultats${nR != null ? ` (${nR})` : ""}`, href: hrefCourses({ ...rr, vue: "resultats" }), on: r.vue === "resultats" }]
+    .concat(info && info.cal ? [{ l: `À venir${nA != null ? ` (${nA})` : ""}`, href: hrefCourses({ ...rr, vue: "avenir" }), on: r.vue === "avenir" }] : [])
+    .concat([{ l: "Épreuves", href: hrefCourses({ vue: "epreuves" }), on: false }]));
 }
 async function pageCourses(r, tok) {
   const main = document.getElementById("main");
@@ -3256,7 +3314,8 @@ async function pageCourses(r, tok) {
     ? `<details class="nc"><summary>Derniers résultats d'étape (${ix.latest.length})</summary><div class="stack" style="margin-top:8px">${ix.latest.map(it => carteEtape(it, false)).join("")}</div></details>` : "";
   const fin = !info.cal && ix.complete ? `<div class="nb-row"><a class="nb-a" href="${esc(hrefClassements({ sub: "uci", saison: y }))}">Classement UCI de fin de saison ${esc(y)}</a></div>` : "";
   main.innerHTML = `<div class="pg">${enteteListe("Courses", `Saison ${y}`)}
-    <div class="tools">${selSaison}${vuesCourses(r2, y, info, rs.length, up.length)}${chipsCat(CATS, f, c => hrefCourses({ ...r2, cat: c }))}</div>
+    ${vuesCourses(r2, y, info, rs.length, up.length)}
+    <div class="tools">${selSaison}${chipsCat(CATS, f, c => hrefCourses({ ...r2, cat: c }))}</div>
     ${note}${fin}${latest}${avenir ? "" : f === "all" ? blocVictoiresFr(ix) : ""}
     <div>${liste}</div></div>`;
   finPage(tok);
@@ -3295,13 +3354,16 @@ async function pageEpreuves(r, tok) {
   catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}${messageErreur(`Liste indisponible (${e.message}).`, "retry")}</div>`; return; }
   if (tok !== state.routeTok) return;
   const sel0 = { ...r, vue: "resultats", saison: state.current };
-  const vues = `<div class="chips">${chipHref(hrefCourses(sel0), "Résultats", false)}${(state.saisons.available || []).length ? chipHref(hrefCourses({ ...sel0, vue: "avenir" }), "À venir", false) : ""}${chipHref(hrefCourses({ vue: "epreuves" }), "Épreuves", true)}</div>`;
-  if (!E) { main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}<div class="tools">${vues}</div><div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
+  const vues = htmlSousNav([{ l: "Résultats", href: hrefCourses(sel0), on: false }]
+    .concat((state.saisons.available || []).length ? [{ l: "À venir", href: hrefCourses({ ...sel0, vue: "avenir" }), on: false }] : [])
+    .concat([{ l: "Épreuves", href: hrefCourses({ vue: "epreuves" }), on: true }]));
+  if (!E) { main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}${vues}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
   state.limitListe = 100;
   const cats = CATS.filter(c => E.some(e => catEpreuve(e) === c));
   const pays = [...new Set(E.map(e => e.pays).filter(Boolean))].sort((a, b) => nomPays(a).localeCompare(nomPays(b), "fr"));
   main.innerHTML = `<div class="pg">${enteteListe("Courses", "Épreuves")}
-    <div class="tools">${vues}
+    ${vues}
+    <div class="tools">
       <input class="search" id="ep-q" type="search" placeholder="Rechercher une épreuve" aria-label="Rechercher une épreuve" value="${esc(r.q)}" autocomplete="off">
       ${chipsCat(cats, r.cat, c => hrefCourses({ ...r, cat: c }))}
       ${selectHref("ep-pays", "Pays", [[hrefCourses({ ...r, pays: "" }), "Tous les pays", !r.pays]].concat(pays.map(p => [hrefCourses({ ...r, pays: p }), nomPays(p), r.pays === p])))}</div>
@@ -3401,8 +3463,7 @@ async function pageCoureurs(r, tok) {
   state.ctxPage = `c${state.current}`;
   const francais = r.vue === "francais";
   titre(francais ? "Coureurs français" : "Coureurs");
-  const tete = `${enteteListe("Coureurs")}<div class="subtabs clsubs">${["annuaire", "francais"].map(k =>
-    `<button class="subtab ${(francais ? "francais" : "annuaire") === k ? "active" : ""}" data-cgo="${esc(hrefCoureurs({ vue: k }))}">${k === "annuaire" ? "Annuaire" : "Français"}</button>`).join("")}</div>`;
+  const tete = `${enteteListe("Coureurs")}${htmlSousNav(["annuaire", "francais"].map(k => ({ l: k === "annuaire" ? "Annuaire" : "Français", href: hrefCoureurs({ vue: k }), on: (francais ? "francais" : "annuaire") === k })))}`;
   main.innerHTML = `<div class="pg">${tete}${squeletteListe()}</div>`;
   if (francais) {
     if (state.ridersCl === undefined) state.ridersCl = await chargerRidersCourant();
@@ -3472,7 +3533,7 @@ async function pageClassements(r, tok) {
   state.ctxPage = null;
   const fdj = r.sub === "fdj";
   titre(fdj ? "Classement FDJ United Series" : "Classement UCI");
-  const bar = `<div class="subtabs clsubs"><a class="subtab ${!fdj ? "active" : ""}" href="#classements/uci">UCI</a><a class="subtab ${fdj ? "active" : ""}" href="#classements/fdj">FDJ United Series</a></div>`;
+  const bar = htmlSousNav([{ l: "UCI", href: hrefClassements({ sub: "uci" }), on: !fdj }, { l: "FDJ United Series", href: hrefClassements({ sub: "fdj" }), on: fdj }]);
   const tete = enteteListe("Classements");
   if (fdj) { main.innerHTML = `<div class="pg">${tete}${bar}${renderFdj()}</div>`; finPage(tok); return; }
   main.innerHTML = `<div class="pg">${tete}${bar}${squeletteListe()}</div>`;
@@ -3501,7 +3562,9 @@ async function pageRecherche(r, tok) {
     <div class="sr-body" id="sr-body" role="listbox" aria-label="Résultats"></div></div>`;
   S.q = r.q;
   majRecherche();
-  if (!r.q) document.getElementById("sr-q").focus();
+  const champ = document.getElementById("sr-q");
+  if (!r.q || state.focusSr) { champ.focus(); champ.setSelectionRange(champ.value.length, champ.value.length); }
+  state.focusSr = false;
   finPage(tok);
 }
 
@@ -3535,6 +3598,7 @@ document.addEventListener("click", e => {
   else if (a === "eq-more") { state.limitListe += 100; majListeEquipes(); }
   else if (a === "retry") { routeur({ garder: true }); }
   else if (a === "theme") { changerTheme(); }
+  else if (a === "back") { retour(); }
   else if (a === "search") { if (state.route && state.route.nom === "recherche") document.getElementById("sr-q").focus(); else go("#recherche"); }
   else if (a === "sr-more") { state.sr.tout[t.dataset.grp] = true; document.getElementById("sr-body").innerHTML = htmlResultats(); }
   else if (a === "retry-sr") { cache.clear(); majRecherche(); }
@@ -3553,6 +3617,13 @@ function saisie(champ, maj) {
   return true;
 }
 document.addEventListener("input", e => {
+  if (e.target.id === "hsearch") {   // saisie dans l'en-tête : la page recherche reprend le texte et le focus
+    const v = e.target.value;
+    if (!v.trim() || e.isComposing) return;
+    e.target.value = ""; state.focusSr = true;
+    go("#recherche/" + encodeURIComponent(v));
+    return;
+  }
   if (e.target.id === "sr-q") {
     state.sr.q = e.target.value;
     const q = state.sr.q.trim();
@@ -3564,6 +3635,14 @@ document.addEventListener("input", e => {
   saisie(e.target);
 });
 document.addEventListener("keydown", e => {
+  if (e.target && e.target.id === "hsearch" && e.key === "Escape") { e.target.blur(); return; }
+  if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]"))) {
+    e.preventDefault();
+    if (state.route && state.route.nom === "recherche") document.getElementById("sr-q").focus();
+    else if (window.innerWidth >= 880) document.getElementById("hsearch").focus();
+    else go("#recherche");
+    return;
+  }
   if (e.target && e.target.id === "sr-q") {
     if (e.key === "ArrowDown") { e.preventDefault(); selectionnerResultat(state.sr.sel + 1); return; }
     if (e.key === "ArrowUp") { e.preventDefault(); selectionnerResultat(state.sr.sel < 0 ? -1 : state.sr.sel - 1); return; }
@@ -3572,6 +3651,9 @@ document.addEventListener("keydown", e => {
   const lien = e.target.closest && e.target.closest("[data-rider]");
   if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); }
 });
+const btnHaut = document.getElementById("to-top");
+window.addEventListener("scroll", () => btnHaut.classList.toggle("on", window.scrollY > 1200), { passive: true });
+btnHaut.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 window.addEventListener("scroll", () => { const k = history.state && history.state.k; if (k != null) scrollMemo.set(k, window.scrollY); }, { passive: true });
 
 /* ================== démarrage ================== */

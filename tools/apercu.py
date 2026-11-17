@@ -63,7 +63,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       const pires = [];
       document.querySelectorAll('header.top *, main *, .bnav *').forEach(n => {
         const b = n.getBoundingClientRect();
-        if (b.width > 0 && b.right > window.innerWidth + 1 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs,.tbl-wrap,.sr-only,.sr')) pires.push(n.className || n.tagName);
+        if (b.width > 0 && b.right > window.innerWidth + 1 && getComputedStyle(n).position !== 'fixed' && !n.closest('.chips,.subtabs,.secnav,.tbl-wrap,.sr-only,.sr')) pires.push(n.className || n.tagName);
       });
       const d = document.documentElement;
       return { sw: d.scrollWidth, cw: d.clientWidth, pires: pires.slice(0, 5) };
@@ -398,6 +398,77 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     await page.waitForTimeout(100);
     console.log('MESURE filtre Français :', Date.now() - t3, 'ms ;', await page.evaluate(() => document.getElementById('co-count').textContent));
     await ctx.close();
+  }
+
+  /* ---------- étape 3 : navigation (recherche d'en-tête, retour mobile, sous-navigation, haut de page, raccourci /) ---------- */
+  if (!conf.reel) {
+    {
+      const { ctx, page } = await nouveauContexte(1024, 800);
+      const hash = () => page.evaluate(() => location.hash);
+      const vis = sel => page.evaluate(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0; }, sel);
+      await visite(page, '#/');
+      ok('1024 : champ de recherche d\'en-tête visible, loupe masquée', (await vis('#hsearch')) && !(await vis('#open-search')));
+      ok('1024 : bouton retour masqué', !(await vis('#back-btn')));
+      await page.keyboard.press('/');
+      ok('touche / : focus du champ d\'en-tête', await page.evaluate(() => document.activeElement && document.activeElement.id === 'hsearch'));
+      await page.keyboard.press('Escape');
+      ok('Échap : le champ d\'en-tête perd le focus', await page.evaluate(() => document.activeElement.id !== 'hsearch'));
+      await page.click('#hsearch'); await page.keyboard.type('ebau', { delay: 40 });
+      await page.waitForSelector('#sr-q'); await page.waitForTimeout(300);
+      ok('saisie d\'en-tête -> #recherche/ebau', (await hash()) === '#recherche/ebau', await hash());
+      const sr = await page.evaluate(() => ({ v: document.getElementById('sr-q').value, f: document.activeElement.id, c: document.getElementById('sr-q').selectionStart }));
+      ok('page recherche : texte repris, focus, curseur à la fin', sr.v === 'ebau' && sr.f === 'sr-q' && sr.c === 4, sr);
+      ok('page recherche : champ d\'en-tête masqué (pas de doublon)', !(await vis('#hsearch')));
+      await visite(page, '#classements/uci', '#main .pg');
+      ok('#to-top absent en haut de page', !(await page.evaluate(() => document.getElementById('to-top').classList.contains('on'))));
+      await page.evaluate(() => window.scrollTo(0, 3000)); await page.waitForTimeout(400);
+      const h = await page.evaluate(() => document.documentElement.scrollHeight);
+      ok('#to-top présent après défilement', await page.evaluate(() => document.getElementById('to-top').classList.contains('on')), h);
+      await page.click('#to-top'); await page.waitForFunction(() => window.scrollY === 0, null, { timeout: 8000 }).catch(() => {});
+      ok('#to-top : retour en haut', (await page.evaluate(() => Math.round(window.scrollY))) === 0);
+      await page.waitForTimeout(300);
+      ok('#to-top masqué de nouveau en haut', !(await page.evaluate(() => document.getElementById('to-top').classList.contains('on'))));
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await nouveauContexte(390, 844);
+      const hash = () => page.evaluate(() => location.hash);
+      const vis = sel => page.evaluate(s => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0; }, sel);
+      await visite(page, '#/');
+      ok('390 : #hsearch masqué, loupe visible', !(await vis('#hsearch')) && (await vis('#open-search')));
+      ok('390 : #back-btn masqué sur l\'accueil', !(await vis('#back-btn')));
+      await visite(page, '#courses');
+      ok('390 : #back-btn masqué sur #courses', !(await vis('#back-btn')));
+      await page.goto('about:blank');   // ouverture directe : nouvelle page, aucune navigation préalable
+      await visite(page, '#coureur/' + conf.coureur, '#main .art');
+      ok('390 : #back-btn visible sur une fiche coureur', await vis('#back-btn'));
+      const bb = await page.$eval('#back-btn', e => { const b = e.getBoundingClientRect(); return [Math.round(b.width), Math.round(b.height)]; });
+      ok('#back-btn : zone tactile >= 40 px', bb[0] >= 40 && bb[1] >= 40, bb);
+      ok('390 : texte de la marque masqué sur une fiche', !(await vis('.brand span')));
+      // ouverture directe : retour = dernier lien du fil d'Ariane
+      await page.click('#back-btn'); await page.waitForTimeout(500);
+      ok('ouverture directe de la fiche -> retour = fil d\'Ariane (#coureurs)', (await hash()).startsWith('#coureurs'), await hash());
+      // accueil -> fiche coureur -> retour = accueil
+      await visite(page, '#/');
+      await page.evaluate(id => go('#coureur/' + id), conf.coureur); await page.waitForSelector('#main .art'); await page.waitForTimeout(300);
+      ok('accueil -> fiche : bouton retour visible', await vis('#back-btn'));
+      await page.click('#back-btn'); await page.waitForSelector('#main .home'); await page.waitForTimeout(300);
+      ok('accueil -> fiche -> retour = accueil', ['', '#/'].includes(await hash()), await hash());
+      // sous-navigation
+      await visite(page, '#courses/2026');
+      ok('.secnav sur #courses/2026', (await page.$$('#main .secnav')).length === 1 && (await page.$$('#main .secnav [aria-current="page"]')).length === 1);
+      const n0 = await page.evaluate(() => history.length);
+      await page.click('.secnav-b:has-text("À venir")'); await page.waitForTimeout(500);
+      ok('« À venir » : hash remplacé sans nouvelle entrée', (await hash()).startsWith('#courses/2026') && (await hash()).includes('vue=avenir') && (await page.evaluate(() => history.length)) === n0, [await hash(), n0]);
+      ok('« À venir » : bouton actif', (await page.$eval('.secnav [aria-current="page"]', e => e.textContent)).startsWith('À venir'));
+      await visite(page, '#classements/uci', '#main .pg');
+      ok('.secnav sur #classements/uci', (await page.$$('#main .secnav')).length === 1);
+      await page.click('.secnav-b:has-text("FDJ")'); await page.waitForTimeout(400);
+      ok('classements : FDJ via la sous-navigation', (await hash()) === '#classements/fdj', await hash());
+      await visite(page, '#coureurs', '#main .pg');
+      ok('.secnav sur #coureurs', (await page.$$('#main .secnav')).length === 1);
+      await ctx.close();
+    }
   }
 
   await browser.close();
