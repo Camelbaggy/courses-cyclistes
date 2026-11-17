@@ -64,3 +64,8 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
   fiches de course et infobox des épreuves) ; tenues des équipes nationales pour les sélections.
 - Maillots de champion national : PAS disponibles (les fichiers « champion » de WorldDB sont des tenues d'équipe nationale) ; à revoir
   si WorldDB fournit les vrais maillots de champion. Autres saisons si WorldDB les fournit.
+
+## Wikidata, rapprochement des noms (17/11/2026)
+
+- Règle coureurs v2 (`REGLE_COUREURS` = 2) : ß / ø / æ… translittérés, second prénom toléré d'un côté ou de l'autre. Les 6 954 coureurs non reliés
+  sont re-tentés au prochain passage de `wikidata.yml` (~7 000 requêtes, ~2 h, reprenable) : à surveiller (nombre de coureurs reliés, aucun faux positif).

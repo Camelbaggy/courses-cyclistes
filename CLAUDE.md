@@ -164,7 +164,7 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   d'équipes : un timeout ne perd rien, reprise immédiate) et n'appelle PAS `write_entites` (`--entites` le fait à la main ; sinon c'est le passage
   nocturne d'archives.yml qui reconstruit `entites/` en lisant le cache). 1 requête/s par hôte (wikidata.org, commons.wikimedia.org), 1 recherche par
   coureur + `wbgetentities` / Commons par lots de 50, pas de `maxlag`, abandon de l'hôte sur 403/429 (`HoteAbandonne`, cache conservé). Règles de
-  rapprochement (strictes, voir la docstring) : coureur = UN SEUL candidat vérifié (date de naissance P569 à précision jour ÉGALE + nom concordant
+  rapprochement (strictes, voir la docstring) : coureur = UN SEUL candidat vérifié (date de naissance P569 à précision jour ÉGALE + nom concordant (`nom_concorde`, règle v2 = `REGLE_COUREURS` 2 : translittération ß/ø/æ/ł… avant normalisation, jetons inclus dans un sens ou dans l'autre, le plus petit ≥ 2 jetons, jamais un simple ajout Jr / Sr / II… ; les entrées `null` de règle plus ancienne sont re-tentées aussitôt, `besoin_coureur`)
   + occupation cycliste P106 = Q2309784 ou sous-classe P279), sans date de naissance jamais rapproché ; équipe-saison = code P1998 daté contenant la
   saison + nom P1448 daté ou élément saison de l'année concordant + un seul parent ; sinon `null` (re-tenté après 60 jours ; correspondances
   re-vérifiées après 180 jours) ou `alias_equipes.json` (manuel, `{"id équipe-saison": "QID"}`). Image : licence Commons lisible obligatoire.
