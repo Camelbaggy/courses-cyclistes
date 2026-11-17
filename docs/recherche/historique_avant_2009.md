@@ -197,5 +197,6 @@ chaque clé**, et au moins 2 concordances au total. Canonique = clé qui a le pl
 | Q1617683 | the princess maha chakri sirindhorn s cup tour of thailand\|THA | … sirindhorns cup …, … chackri sirindhorn s cup … |
 | Q930866 | presidential cycling tour of turkiye\|TUR | presidential cycling tour of turkey |
 
-Piste d'amélioration (non faite) : `nom_concorde` ne reconnaît ni un second prénom (Kragh, Arnt) ni ß = ss ; la preuve automatique des séries rate donc
-quelques concordances (sans risque de faux positif).
+Amélioration faite le 17/11 (`wikidata.nom_concorde`, règle coureurs v2) : translittération ß / ø / æ / ł… et inclusion des jetons dans les deux sens
+(second prénom présent d'un seul côté), hors mentions de génération (Jr, Sr, II…). Les 6 954 coureurs non rapprochés du cache Wikidata sont re-tentés
+au passage suivant de wikidata.yml (Andersen, Großschartner, Hansen y gagnent leur QID ; Cepeda reste non relié : naissance différente d'un jour).

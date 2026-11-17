@@ -64,6 +64,8 @@ PART_EQUIPES = 0.5                        # part maximale du budget pour les éq
 MAX_ECHECS = 8                            # échecs consécutifs avant d'abandonner le passage
 PROFONDEUR_P279 = 4
 PERIODE_JOURNAL = 300                     # secondes entre deux lignes de progression « en cours »
+REGLE_COUREURS = 2                        # version des règles de rapprochement de coureurs : une entrée `null` d'une version plus ancienne est
+                                          # re-tentée aussitôt (v2 : translittération ß/ø/æ…, inclusion des jetons dans les deux sens)
 REGLE_EQUIPES = 3                         # version des règles de rapprochement d'équipes : toute entrée (rattachée ou `null`) d'une version plus ancienne est re-vérifiée
 FALLBACK_LIBRE = False                    # 2e recherche sans filtre d'occupation si aucun candidat (coûte ~1 requête de plus par coureur obscur)
 MOTS_SAISON = {"season", "saison", "stagione", "temporada", "seizoen", "sezon", "sasong"}
@@ -145,6 +147,14 @@ def besoin(entree: Any, aujourdhui: dt.date, cle: str = "qid") -> bool:
     if d is None:
         return True
     return (aujourdhui - d).days > (JOURS_VERIF if entree.get(cle) else JOURS_NULL)
+
+
+def besoin_coureur(entree: Any, aujourdhui: dt.date) -> bool:
+    """Comme `besoin`, et une entrée `null` établie par une règle plus ancienne (`regle` < REGLE_COUREURS, absente = 1) est re-tentée aussitôt
+    (les règles ne font que s'élargir : une correspondance existante reste valable jusqu'à sa re-vérification normale)."""
+    if isinstance(entree, dict) and not entree.get("qid") and (entree.get("regle") or 1) < REGLE_COUREURS:
+        return True
+    return besoin(entree, aujourdhui)
 
 
 def besoin_equipe(entree: Any, aujourdhui: dt.date) -> bool:
@@ -233,12 +243,25 @@ def noms_entite(e: Dict[str, Any]) -> List[str]:
     return [n for n in out if n]
 
 
+# Lettres que la décomposition Unicode ne ramène pas à l'ASCII (netutil.normalize les supprimerait : « Asbjørn » -> « asbjrn »,
+# « Großschartner » -> « groschartner ») : translittérées AVANT la normalisation, pour les rapprochements de noms de ce module seulement
+# (netutil.normalize, donc rider_id, slugs et clés d'édition, est inchangé).
+TRANSLITTERATION = str.maketrans({"ß": "ss", "ẞ": "SS", "ø": "o", "Ø": "O", "æ": "ae", "Æ": "AE", "œ": "oe", "Œ": "OE", "đ": "d", "Đ": "D",
+                                  "ð": "d", "Ð": "D", "ł": "l", "Ł": "L", "þ": "th", "Þ": "TH", "ı": "i"})
+
+
+# Jetons de génération : un nom Wikidata qui n'ajoute que l'un d'eux désigne une AUTRE personne (père / fils).
+GENERATIONS = {"jr", "junior", "sr", "senior", "ii", "iii", "iv", "fils", "pere"}
+
+
 def jetons(s: str) -> List[str]:
-    return netutil.normalize(s).split()
+    return netutil.normalize((s or "").translate(TRANSLITTERATION)).split()
 
 
 def nom_concorde(notre: str, candidats: Iterable[str]) -> bool:
-    """Jetons égaux (ordre indifférent), ou jetons Wikidata (au moins 2) strictement inclus dans les nôtres."""
+    """Jetons égaux (ordre indifférent), ou l'un des deux ensembles de jetons strictement inclus dans l'autre, le plus petit ayant au moins
+    2 jetons (second prénom ou nom composé présent d'un seul côté : « Alexander Hansen » / « Alexander Arnt Hansen »). Utilisé AVEC la date
+    de naissance à précision jour égale (et l'occupation cycliste pour les coureurs) : jamais seul."""
     nous = jetons(notre)
     if not nous:
         return False
@@ -247,7 +270,8 @@ def nom_concorde(notre: str, candidats: Iterable[str]) -> bool:
         j = jetons(c)
         if not j:
             continue
-        if sorted(j) == sorted(nous) or (len(set(j)) >= 2 and set(j) < sn):
+        sj = set(j)
+        if sorted(j) == sorted(nous) or (len(sj) >= 2 and sj < sn) or (len(sn) >= 2 and sn < sj and not (sj - sn) & GENERATIONS):
             return True
     return False
 
@@ -467,10 +491,10 @@ def resoudre_tranche(ctx: "Contexte", tranche: List[Dict[str, Any]]) -> Dict[str
             continue
         if s["res"] and s["res"][0] == "ok":
             qid = s["res"][1]
-            sortie[rid] = dict(qid=qid, verifie=today, naissance=naissance_jour(ents_tous[qid]),
+            sortie[rid] = dict(qid=qid, verifie=today, regle=REGLE_COUREURS, naissance=naissance_jour(ents_tous[qid]),
                                **extraire_coureur(ents_tous[qid], ctx.cache.d["libelles"]))
         else:
-            sortie[rid] = {"qid": None, "verifie": today, "raison": "ambigu" if s["res"] else "aucune"}
+            sortie[rid] = {"qid": None, "verifie": today, "regle": REGLE_COUREURS, "raison": "ambigu" if s["res"] else "aucune"}
     return sortie
 
 
@@ -788,7 +812,7 @@ def verifier_occupation(api: Api) -> bool:
 def run_coureurs(ctx: "Contexte") -> Dict[str, int]:
     fiches, sans_date = lister_coureurs(ctx.entites_dir)
     cache = ctx.cache.d["coureurs"]
-    attente = sorted((f for f in fiches if besoin(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
+    attente = sorted((f for f in fiches if besoin_coureur(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
     traites = 0
     ctx.derniere_ligne = ctx.horloge()
     if attente and verifier_occupation(ctx.api):
@@ -811,9 +835,9 @@ def run_coureurs(ctx: "Contexte") -> Dict[str, int]:
 def bilan_coureurs(ctx: "Contexte", traites: int = 0) -> Dict[str, int]:
     fiches, sans_date = lister_coureurs(ctx.entites_dir)
     cache = ctx.cache.d["coureurs"]
-    courants = [cache[f["id"]] for f in fiches if f["id"] in cache and not besoin(cache[f["id"]], ctx.aujourdhui)]
+    courants = [cache[f["id"]] for f in fiches if f["id"] in cache and not besoin_coureur(cache[f["id"]], ctx.aujourdhui)]
     return {"rapproches": sum(1 for v in courants if v.get("qid")), "sans": sum(1 for v in courants if not v.get("qid")),
-            "restants": sum(1 for f in fiches if besoin(cache.get(f["id"]), ctx.aujourdhui)), "sans_date": sans_date, "traites": traites}
+            "restants": sum(1 for f in fiches if besoin_coureur(cache.get(f["id"]), ctx.aujourdhui)), "sans_date": sans_date, "traites": traites}
 
 
 def run_wikidata(budget_min: float = 300, archives_dir: Optional[str] = None, now: Optional[dt.date] = None,
@@ -937,6 +961,14 @@ def _tests() -> None:
     assert not nom_concorde("Jonas Vinterfjord Hansen", ["Vinterfjord"])                                    # un seul jeton : pas d'inclusion
     assert not nom_concorde("Paul Épure", ["Paul Épure Jr"]) and not nom_concorde("Paul Épure", ["Pierre Épure"])
     assert nom_concorde("Jonas Vinterfjord", ["Jonas Vinterfjord"]) and not nom_concorde("", ["x y"])
+    # règle v2 : translittération et inclusion dans les deux sens (cas réels du 17/11/2026)
+    assert nom_concorde("Asbjørn Andersen", ["Asbjørn Kragh Andersen"]) and nom_concorde("Alexander Hansen", ["Alexander Arnt Hansen"])
+    assert nom_concorde("Felix Grossschartner", ["Felix Großschartner"]) and nom_concorde("Asbjorn Andersen", ["Asbjørn Andersen"])
+    assert not nom_concorde("Hansen", ["Alexander Hansen"]) and not nom_concorde("Alexander Hansen", ["Alexander Jensen"])
+    assert not nom_concorde("Paul Épure", ["Paul Épure II"]) and not nom_concorde("Paul Épure", ["Paul Arnt Épure Junior"])
+    assert jetons("Łukasz Wiśniowski") == ["lukasz", "wisniowski"] and jetons("Æbelø") == ["aebelo"]
+    assert besoin_coureur({"qid": None, "verifie": "2026-11-10"}, dt.date(2026, 11, 15)) and not besoin_coureur({"qid": None, "regle": REGLE_COUREURS, "verifie": "2026-11-10"}, dt.date(2026, 11, 15))
+    assert not besoin_coureur({"qid": "Q1", "verifie": "2026-11-10"}, dt.date(2026, 11, 15))
     assert nom_equipe_concorde("Soudal Quick Step", "Soudal Quick-Step") and nom_equipe_concorde("Team Aurore Pro", "Aurore Pro")
     assert not nom_equipe_concorde("Aurore", "Team Aurore") and not nom_equipe_concorde("Aurore Pro", "Boreale Pro")   # 1 jeton : pas d'inclusion
     assert parse_temps(_t("1997-07-11")) == ("1997-07-11", 11) and parse_temps({"time": "-0100-01-01T00:00:00Z"}) is None
