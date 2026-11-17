@@ -250,10 +250,35 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     const titre = () => page.title();
     await visite(page, '#/');
     ok('accueil : titre', (await titre()) === 'Courses cyclistes', await titre());
+    // accueil refondu (étape 4a) : bandeau, résumés repliés, maillots + crédit, tuiles de compteurs
+    await page.waitForTimeout(900);
+    ok('accueil : bandeau « À la une » présent', (await page.$$('#main .home .une')).length === 1);
+    ok('accueil : résumés repliés par défaut', (await page.$$eval('#main details.resume', l => l.length > 0 && l.every(d => !d.open))));
+    ok('accueil : carte de résultat à filet de catégorie', await page.$$eval('#main .rcard', l => l.length > 0 && l.every(c => c.style.getPropertyValue('--cat').includes('--c-'))));
+    ok('accueil : tuiles de compteurs', (await page.$$('#b-compteurs .kpis .tile')).length === 4, await page.$$eval('#b-compteurs .tile', l => l.map(t => t.textContent)));
+    console.log('INFO  accueil : prochaine course', JSON.stringify(await page.$eval('#main .home', h => { const p = h.querySelector('#b-prochaine'); return p ? p.textContent : null; })));
+    const nbMj = await page.$$eval('#main .mjs img.mj', l => l.filter(i => i.complete && i.naturalWidth > 0).length);
+    const credit = await page.$eval('#b-credit', e => e.textContent).catch(() => '');
+    console.log('INFO  accueil : maillots affichés', nbMj, 'crédit', JSON.stringify(credit));
+    ok('accueil : crédit des maillots si et seulement si un maillot est affiché', (nbMj > 0) === /^Maillots : /.test(credit), { nbMj, credit });
+    const h0 = await hash();
+    await page.click('#main details.resume summary');
+    ok('accueil : clic sur « Résumé » ouvre sans naviguer', (await page.$eval('#main details.resume', d => d.open)) && (await hash()) === h0, await hash());
+    await page.click('#main details.resume summary');
+    // mécanisme des maillots : le jeu fictif n'a aucune équipe gagnante de l'accueil dans maillots/index.json, on en place une (Bravo Cycling = FX2) puis on redessine
+    await page.evaluate(() => { state.index.latest[1].winner.team = 'Bravo Cycling'; routeur({ garder: true }); });
+    await page.waitForSelector('#main .home .rcard'); await page.waitForTimeout(900);
+    const mj2 = await page.$$eval('#main .mjs img.mj', l => l.filter(i => i.complete && i.naturalWidth > 0).length);
+    const cr2 = await page.$eval('#b-credit', e => e.textContent).catch(() => '');
+    ok('accueil : maillot WorldDB affiché + crédit « Maillots : WorldDB »', mj2 >= 1 && cr2 === 'Maillots : WorldDB', { mj2, cr2 });
+    await visite(page, '#/'); await page.waitForTimeout(500);
+    await page.click('#main .home .une'); await page.waitForSelector('#main .art');
+    ok('accueil : clic sur le bandeau -> #course/<id>', (await hash()).startsWith('#course/fx-tour-test'), await hash());
+    await page.goBack(); await page.waitForSelector('#main .home'); await page.waitForTimeout(300);
     // carte d'un dernier résultat -> édition -> retour
     await page.evaluate(() => window.scrollTo(0, 300)); await page.waitForTimeout(150);
     const y0 = await page.evaluate(() => Math.round(window.scrollY));
-    await page.click('#main .home .card.click'); await page.waitForSelector('#main .art .podium, #main .art .stage-head, #main .art .card');
+    await page.evaluate(() => document.querySelector('#main .home .rcard .rc-head').click()); await page.waitForSelector('#main .art .podium, #main .art .stage-head, #main .art .card');
     ok('carte -> #course/...', (await hash()).startsWith('#course/'), await hash());
     ok('édition : titre de document', (await titre()).endsWith('· Courses cyclistes') && (await titre()) !== 'Courses cyclistes', await titre());
     ok("édition : fil d'Ariane", (await page.$$eval('.crumbs a', l => l.map(a => a.textContent))).join('>') .startsWith('Accueil>Courses'), await page.$$eval('.crumbs a', l => l.map(a => a.textContent)));
