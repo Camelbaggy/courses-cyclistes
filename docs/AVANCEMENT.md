@@ -30,14 +30,13 @@ Dernière mise à jour : 17 novembre 2026, 2 h UTC. À lire avec `CLAUDE.md` (r�
   manuel (Cepeda) ; `corrections_coureurs.json` 7 dates, 2 nationalités.
 - Rapprochement des noms Wikidata v2 (ß / ø / æ…, second prénom d'un seul côté) : les 6 954 coureurs non reliés seront re-tentés.
 
-## En attente de publication (passage d'archives.yml lancé à la main le 17/11 à 2 h 12 UTC)
+## Publication (vérifiée le 17/11 à 3 h 20 UTC)
 
-Les crons nocturnes de 0 h 23 et 1 h 23 n'ont pas tourné (GitHub les saute). Ce passage publiera :
-- `entites/equipes/lignees/` (articles de lignée, ex. Movistar `#equipe/Q6175` ; d'ici là repli sur l'équipe-saison) ;
-- les épreuves regroupées des 32 courses renommées (palmarès réunis) ;
-- `logo` / `logo_depuis` dans `lignees_index.json`.
-Le prochain `wikidata.yml` (dimanche, ou à lancer à la main) appliquera la règle des noms v2 (~7 000 requêtes, ~2 h, reprenable) et le
-rapprochement manuel de Cepeda.
+Passage d'archives lancé à la main à 2 h 12 UTC (les crons de 0 h 23 et 1 h 23 avaient été sautés) : succès, puis relance automatique (en
+chaîne jour et nuit pendant l'intersaison). Publiés : articles de lignée (Movistar `#equipe/Q6175`), épreuves regroupées (AlUla Tour
+2020-2026, Tour of Britain 2017-2026), 19 logos ; 2017 passe de 122 à 159 courses. En attente du passage suivant (code fusionné après le
+début du passage n° 14) : `codes_uci` et `renommee` des équipes-saisons (maillots des équipes renommées en cours de saison).
+Passage Wikidata (règle des noms v2, Cepeda) lancé à la main à 2 h 15 UTC : suivi programmé vers 6 h 15 UTC.
 
 ## Intersaison (décision du 17/11/2026)
 
