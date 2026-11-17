@@ -3,6 +3,11 @@
 Dernière mise à jour : 17 novembre 2026, 11 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
+## Prochain projet : refonte du site
+
+Point de départ, contrats à ne pas casser et questions à trancher : `docs/REDESIGN.md` (préparé le 17/11, captures de référence
+`tools/apercu.py` toutes vertes).
+
 ## Où on en est
 
 **Site : encyclopédie à la Liquipedia** (https://camelbaggy.github.io/courses-cyclistes/), étapes R1 et R2 du plan faites :
