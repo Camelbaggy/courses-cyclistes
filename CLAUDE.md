@@ -104,7 +104,8 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   une saison demandée n'est pas `complete` (`archives/data/archives/<année>/state.json`, `parse_saisons` importé de
   `code/`), le workflow se relance (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau
   d'`update.yml` : limite la charge sur DataRide pendant les courses) et si le passage n'a rien changé (pas de boucle sans
-  progrès) ; le cron n'est qu'une amorce (GitHub le saute souvent). Budget 50 min (timeout 60). **Recollecte ciblée** :
+  progrès) ; le cron n'est qu'une amorce (GitHub le saute souvent) ; **`veille.yml`** (dépôt d'archives, toutes les heures à :47) relance `archives.yml` si aucun passage n'a démarré
+  depuis 20 h (entre 23 h et 11 h UTC seulement) et `wikidata.yml` si aucun depuis 8 jours, rien si un passage est en file ou en cours (si la veille elle-même est sautée trop souvent : tâche programmée côté Claude, option 2 validée par le propriétaire). Budget 50 min (timeout 60). **Recollecte ciblée** :
   `collector.archive_a_recollecter` rouvre une course
   archivée dont un classement `stage` / `gc` (étape route ou CLM individuel, ou final) a une ligne classée sans `time_s`,
   une seule fois (marque `_temps_v` = `TEMPS_VERSION`, 3 aujourd'hui ; l'incrémenter si `parse_duree` ou la lecture des

@@ -63,6 +63,8 @@ rapprochement manuel de Cepeda.
 7. Doublons de coureurs restants (`doublons_possibles` du rapport d'`encyclopedie`, ex. Aranburu) : vérifier puis alias.
 8. Maillots : autres saisons et vrais maillots de champion national si WorldDB les fournit (`tools/maillots.py`).
 9. Surveiller `update.yml` (GitHub saute des crons) avant la reprise des courses.
+10. Veille (`veille.yml`, dépôt d'archives, depuis le 17/11) : vérifier qu'elle relance bien les nuits sautées ; si elle est elle-même trop
+    souvent sautée, passer à l'option 2 (tâche programmée côté Claude, accord du propriétaire).
 
 ## Suivi automatique
 
