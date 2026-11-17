@@ -1,6 +1,6 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 17 novembre 2026, 2 h UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 17 novembre 2026, 9 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
 ## Où on en est
@@ -22,13 +22,17 @@ Dernière mise à jour : 17 novembre 2026, 2 h UTC. À lire avec `CLAUDE.md` (r�
 - Saisons UCI archivées : 2018-2025 complètes, 2017 partielle (122 courses), puis 2016 et 2011-2015 à venir (archives.yml nocturne,
   défaut 2011-2025, relance automatique hors 11 h-23 h UTC). Calendrier : 2026, 2027.
 - `entites/` régénéré à chaque passage d'archives (15 727 coureurs, 2 898 équipes-saisons, 328 lignées, 589 épreuves, historique UCI).
-- Wikidata (`wikidata.yml`, dimanche + manuel) : 8 380 coureurs rapprochés, 969 équipes-saisons rattachées. Historique des épreuves :
+- Wikidata (`wikidata.yml`, dimanche + manuel) : 9 171 coureurs rapprochés (+787 le 17/11 avec la règle des noms v2), 1 505 équipes-saisons
+  rattachées. Historique des épreuves :
   39 séries prouvées, 2 639 éditions historiques, 2 199 coureurs historiques `wd-Q…`.
 - Alias : `alias_courses.json` 56 libellés (18 + 38 le 17/11 pour 32 courses renommées, tous prouvés par une série Wikidata commune et
   des vainqueurs concordants : Saudi Tour -> AlUla Tour, Tour of Britain / OVO / Lloyds, Route du Sud -> Occitanie… ;
   `docs/recherche/historique_avant_2009.md` §11) ; `alias_coureurs.json` 9 doublons ; `alias_coureurs_wikidata.json` 1 rapprochement
   manuel (Cepeda) ; `corrections_coureurs.json` 7 dates, 2 nationalités.
-- Rapprochement des noms Wikidata v2 (ß / ø / æ…, second prénom d'un seul côté) : les 6 954 coureurs non reliés seront re-tentés.
+- Rapprochement des noms Wikidata v2 (ß / ø / æ…, second prénom d'un seul côté) : passage du 17/11 (6 h 20-9 h 20 UTC, 10 861 requêtes),
+  +787 coureurs reliés, aucun perdu. Contrôle : Andersen (Q17428009), Großschartner (Q1403486), Hansen (Q108855164), Cepeda (Q21093468,
+  alias) ; dates de naissance toutes égales aux nôtres (7 écarts = dates déjà corrigées dans `corrections_coureurs.json`) ; 4 noms sans mot
+  commun avec l'article Wikipédia, mais concordants via les alias Wikidata (Anwar Azis, Bakırcı, Bizaye Tesfu, Tavera).
 
 ## Publication (vérifiée le 17/11 à 3 h 20 UTC)
 
@@ -38,7 +42,7 @@ chaîne jour et nuit pendant l'intersaison). Publiés : articles de lignée (Mov
 début du passage n° 14) : `codes_uci` et `renommee` des équipes-saisons (maillots des équipes renommées en cours de saison).
 Passage Wikidata (règle des noms v2, Cepeda) lancé à la main à 2 h 15 UTC : échec après 11 min (la liste des coureurs lisait le nouvel
 annuaire `coureurs/index.json`, une liste, comme un fichier de lettre ; même défaut dans `historique.py` pour `courses/index.json`). Corrigé le
-17/11 (test ajouté), passage relancé.
+17/11 (PR #51, test ajouté), passage relancé à 6 h 20 UTC : succès. Publication sur le site au passage d'archives suivant (reconstruction d'`entites/`).
 
 ## Intersaison (décision du 17/11/2026)
 
@@ -62,7 +66,7 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
 ## Prochaines étapes
 
 1. Après le passage d'archives : vérifier Movistar `#equipe/Q6175`, une épreuve regroupée (AlUla Tour, Tour of Britain), les logos.
-2. Après le prochain `wikidata.yml` : nombre de coureurs nouvellement reliés, contrôle d'un échantillon (aucun faux positif), Cepeda.
+2. Après le passage d'archives qui suit : vérifier sur le site les fiches d'Andersen, Großschartner, Hansen et Cepeda (photo, parcours).
 3. R3 : pages Saison (`#saison/<année>`), navbox partout, finitions ; « ce jour-là » plus riche.
 4. Textes d'introduction Wikipédia (fr d'abord, synthèse multilingue courte) pour coureurs, équipes, épreuves.
 5. Étendre l'historique Wikidata aux ~150 autres épreuves suivies (`historique.py --proposer`, même preuve).
