@@ -575,7 +575,6 @@ a { text-underline-offset: 2px; }
 .infobox .facts:first-child { border-top: none; }
 .infobox .sec-title, .infobox .ib-title { margin: 0 calc(var(--sp4) * -1) var(--sp3); padding: 6px var(--sp4); background: var(--s2); color: var(--tx2); font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-top: 1px solid var(--line); border-left: 3px solid var(--accent); }
 .infobox > .ib-title { margin: 0; }
-.infobox .podium { margin-top: 0; }
 .ib-bandeau { background: var(--accent-soft); color: var(--tx); font-weight: 700; font-size: .9rem; text-align: center; padding: 8px var(--sp4); }
 .ib-photo { display: flex; justify-content: center; }
 .ib-photo .hero-photo { width: 96px; height: 96px; }
@@ -765,6 +764,61 @@ details.mv-an .mv-body { padding: var(--sp3); }
 @media (min-width: 880px) {
   .mv-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ================== fiche de course / édition (étape 4b) ================== */
+.ed-head { border-bottom: 0; padding-bottom: 0; }
+.ed-ban { cursor: default; }
+.ed-ban .une-nom { margin-top: 0; font-size: 1.5rem; font-weight: 800; }
+.ed-ban .une-nom .flag { width: 28px; height: 19px; }
+.ed-ban .une-sub { margin-top: var(--sp2); }
+.ed-ban .une-prog { max-width: 420px; }
+@media (min-width: 880px) { .ed-ban .une-nom { font-size: 1.75rem; } }
+/* fiche d'édition : une seule colonne à toutes les largeurs (le bandeau porte l'essentiel) ; l'infobox (type, note de classe, éditions voisines) passe après le contenu */
+.art-ed .rside { order: 2; }
+@media (min-width: 880px) { .art-ed { max-width: 820px; margin: 0 auto; } .art-ed .rpage { display: flex; flex-direction: column; } .art-ed .rmain { max-width: none; width: 100%; } .art-ed .rside { position: static; max-width: 420px; } }
+#podium-slot:empty { display: none; }
+#podium-slot .h-sec { margin-top: 0; }
+.podium { align-items: end; margin-top: var(--sp2); }
+.pod { display: flex; flex-direction: column; align-items: center; padding: var(--sp3) var(--sp2); box-shadow: var(--sh1); }
+.pod.r1 { padding-top: var(--sp6); padding-bottom: var(--sp4); box-shadow: var(--sh2); }
+.pod .pk { border-radius: 999px; min-width: 30px; height: 30px; margin-bottom: var(--sp2); }
+.pod .mjs { height: 44px; margin-bottom: 2px; }
+.pod .nm { margin-top: 2px; width: 100%; }
+@media (min-width: 360px) { .podium .pod.r2 { order: 1; } .podium .pod.r1 { order: 2; } .podium .pod.r3 { order: 3; } }
+/* sélecteur d'étapes : numéro en gras, date courte dessous, type en petit badge ; puce active = couleur de catégorie */
+#stage-chips { position: relative; }
+.stage-chip { flex-direction: column; justify-content: center; gap: 1px; min-width: 56px; min-height: 48px; }
+.stage-chip b { font-size: .95rem; font-weight: 800; }
+.stage-chip span { font-size: .68rem; white-space: nowrap; }
+.stage-chip i { font-style: normal; font-size: .58rem; font-weight: 800; letter-spacing: .05em; padding: 0 6px; border-radius: 99px; background: var(--s3); color: var(--tx2); }
+.stage-chip.active { background: var(--cat, var(--accent)); border-color: var(--cat, var(--accent)); color: #fff; }
+.stage-chip.active i { background: rgba(0, 0, 0, .3); color: #fff; }
+.stage-chip.fin { margin-left: auto; }
+/* en-tête d'étape */
+.stage-head.card { padding: var(--sp3) var(--sp4); }
+.stage-head .sc-win { display: flex; align-items: center; gap: var(--sp3); margin-top: var(--sp3); padding-top: var(--sp3); border-top: 1px dashed var(--line); }
+.sc-who { flex: 1; min-width: 0; }
+.sc-who small { display: block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--tx3); }
+.sc-who .nm { font-weight: 800; font-size: .98rem; margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sc-who .tm { font-size: .78rem; color: var(--tx2); overflow-wrap: anywhere; }
+.sc-tm { font-variant-numeric: tabular-nums; font-size: .95rem; white-space: nowrap; }
+.sc-win .mjs { height: 44px; }
+/* maillots distinctifs : 2 colonnes (4 dès 880 px), image plus grande, libellé discret, porteur en gras */
+.jerseys { gap: var(--sp2); }
+@media (min-width: 880px) { .jerseys { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.jersey { gap: 10px; padding: 8px 10px; }
+.jersey .jimg { width: 42px; height: 48px; }
+.jersey .jimg img { max-width: 42px; max-height: 48px; }
+.jersey .jimg.pcm { width: 42px; height: auto; }
+.jersey .dot { width: 32px; height: 32px; }
+.jersey .t small { font-size: .6rem; }
+.jersey .t span { font-weight: 800; }
+/* classements : pastilles or / argent / bronze */
+.row .rk.r1, .row .rk.r2, .row .rk.r3 { border-radius: 999px; color: #111827; padding: 2px 0; align-self: center; }
+.row .rk.r1 { background: var(--jaune); } .row .rk.r2 { background: var(--argent); } .row .rk.r3 { background: var(--bronze); }
+.row .rk.r1 small, .row .rk.r2 small, .row .rk.r3 small { color: inherit; }
+.card > .h-sec:first-child { margin-top: 0; }
+#fiche-credit { margin-top: var(--sp3); }
 </style>
 </head>
 <body>
@@ -1212,17 +1266,15 @@ function maillotsWorldDb(w) {
 function renderMaillots(c, sel) {
   const k = cls(c, sel), MC = maillotsCourse(c.name, c.country, saisonCourse(c)), W = MC && MC.imgs, pcm = MC && MC.src === "PCM Mod";
   const defs = [["gc", "Général", "jaune"], ["points", "Points", "vert"], ["mountain", "Montagne", "pois"], ["youth", "Jeune", "blanc"]];
-  let avecImg = false;
   const items = defs.map(([cle, lab, cl]) => {
     const r = (k[cle] || []).find(x => x.rank === 1);
     const ref = r && c.riders[r.rider_id];
     if (!ref) return "";
     const img = W && W[cle];
-    if (img) avecImg = true;
-    const pastille = img ? `<span class="jimg${pcm ? " pcm" : ""}"><img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" title="Maillot : ${esc(MC.src)}" onerror="this.parentNode.className='dot ${cl}';this.remove()"></span>` : `<span class="dot ${cl}"></span>`;
+    const pastille = img ? `<span class="jimg${pcm ? " pcm" : ""}"><img src="${esc(img)}" alt="" loading="lazy" referrerpolicy="no-referrer" title="Maillot : ${esc(MC.src)}" data-src="${esc(MC.src)}" onerror="this.parentNode.className='dot ${cl}';this.remove();majCreditAccueil()"></span>` : `<span class="dot ${cl}"></span>`;
     return `<div class="jersey">${pastille}<div class="t"><small>${lab}</small><span>${flag(ref.flag, ref.nationality)} ${plink(ref.id || r.rider_id, ref.name)}</span></div></div>`;
   }).join("");
-  return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div>${avecImg ? `<div class="tbl-note" style="padding:4px 0 0">Maillots ${pcm ? `${esc(saisonCourse(c) ?? "")} : PCM Mod` : `${esc((state.mIdx || {}).saison || "")} : WorldDB`}</div>` : ""}</div>` : "";
+  return items ? `<div><div class="sec-title">Maillots</div><div class="jerseys">${items}</div></div>` : "";
 }
 
 function renderParcours(st) {
@@ -1248,16 +1300,16 @@ function renderParcours(st) {
 
 function renderResume(st) {
   if (!st) return "";
-  if (!st.ai_summary) return `<div class="card"><div class="sec-title">Résumé</div><div class="small muted">Résumé non disponible pour cette étape.</div></div>`;
+  if (!st.ai_summary) return `<div class="card"><h2 class="h-sec">Résumé</h2><div class="small muted">Résumé non disponible pour cette étape.</div></div>`;
   const tag = st.summary_source === "gemini" ? "IA" : st.summary_source === "fallback" ? "automatique" : "";
-  return `<div class="card"><div class="sec-title">Résumé${tag ? `<span class="ai-tag">${tag}</span>` : ""}</div>
+  return `<div class="card"><h2 class="h-sec">Résumé${tag ? `<span class="ai-tag">${tag}</span>` : ""}</h2>
     <div style="font-size:.92rem;line-height:1.55">${esc(st.ai_summary)}</div></div>`;
 }
 
 function renderFrancaisEnVue(st) {
   const H = (st && st.french_highlights) || [];
   if (!H.length) return "";
-  return `<div class="card"><div class="sec-title">Les Français</div>${H.map(h => `<div class="hl"><div class="l">${flag(h.rider.flag, h.rider.nationality)}<span><b>${plink(h.rider.id, h.rider.name)}</b></span></div>
+  return `<div class="card"><h2 class="h-sec">Les Français</h2>${H.map(h => `<div class="hl"><div class="l">${flag(h.rider.flag, h.rider.nationality)}<span><b>${plink(h.rider.id, h.rider.name)}</b></span></div>
     <div class="r">${h.stage_rank != null ? rang(h.stage_rank) : ""}${h.gc_rank != null ? ` · ${rang(h.gc_rank)} au gén.${h.gc_gap_s ? " " + fmtEcart(h.gc_gap_s) : ""}` : ""}</div></div>`).join("")}</div>`;
 }
 
@@ -1310,14 +1362,14 @@ function ligneHTML(r, cle, c, mvt) {
   }
   let rk = r.rank != null ? String(r.rank) : "–";
   if (mvt != null && mvt !== 0) rk += `<small class="${mvt > 0 ? "up" : "down"}">${mvt > 0 ? "▲" : "▼"}${Math.abs(mvt)}</small>`;
-  return `<div class="row ${fr ? "fr" : ""}"><div class="rk">${rk}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
+  return `<div class="row ${fr ? "fr" : ""}"><div class="rk${r.status ? "" : rangClasse(r.rank)}">${rk}</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
     <div class="mid"><div class="nm">${ref ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${ref && ref.team ? lienEquipe(ref.team, saisonCourse(c)) : ""}</div></div>
     <div class="val ${cls2}">${esc(val)}${sous ? `<small>${esc(sous)}</small>` : ""}</div></div>`;
 }
 
 function ligneEquipe(r, c) {
   const val = r.rank === 1 ? fmtTemps(r.time_s) : fmtEcart(r.gap_s);
-  return `<div class="row"><div class="rk">${esc(r.rank ?? "–")}</div><span></span>
+  return `<div class="row"><div class="rk${rangClasse(r.rank)}">${esc(r.rank ?? "–")}</div><span></span>
     <div class="mid"><div class="nm">${lienEquipe(r.team, saisonCourse(c))}</div><div class="tm">${esc(r.nationality || "")}</div></div>
     <div class="val ${r.rank === 1 ? "first" : "gap"}">${esc(val)}</div></div>`;
 }
@@ -1399,7 +1451,7 @@ function htmlAnneesEditions(eds, courant) {
 }
 /** Article : en-tête, infobox (colonne de droite à partir de 880 px), colonne principale, boîte de navigation. */
 function htmlArticle(o) {
-  return `<article class="art">${o.head}<div class="rpage"><aside class="rside">${o.infobox}</aside><div class="rmain">${o.main}</div></div>${o.navbox || ""}</article>`;
+  return `<article class="art${o.cls ? " " + o.cls : ""}">${o.head}<div class="rpage"><aside class="rside">${o.infobox}</aside><div class="rmain">${o.main}</div></div>${o.navbox || ""}</article>`;
 }
 
 /* ---- article d'une édition ---- */
@@ -1425,18 +1477,14 @@ function renderFiche() {
   const stage = etapeCourante(c, sel);
   let chips = "";
   if (c.race_type === "stage_race") {
-    chips = `<div class="chips" id="stage-chips">${E.map(s => {
-      const active = String(s.number) === String(sel);
-      const sous = s.type === "itt" ? "CLM" : s.type === "ttt" ? "CLE" : dateCourte(s.date).replace(/\.$/, "");
-      return `<button class="chip stage-chip ${active ? "active" : ""}" data-stage-sel="${esc(s.number)}"><b>${esc(libelleChip(s))}</b><span>${esc(sous)}</span></button>`;
-    }).join("")}${c.final ? `<button class="chip stage-chip ${sel === "F" ? "active" : ""}" data-stage-sel="F"><b>Final</b><span>général</span></button>` : ""}</div>`;
+    chips = `<div class="chips" id="stage-chips" style="${catStyle(c.category)}">${E.map(s => {
+      const active = String(s.number) === String(sel), tp = s.type === "itt" ? "CLM" : s.type === "ttt" ? "CLE" : "", d = dateCourte(s.date).replace(/\.$/, "");
+      return `<button class="chip stage-chip ${active ? "active" : ""}" data-stage-sel="${esc(s.number)}"><b>${esc(libelleChip(s))}</b>${d ? `<span>${esc(d)}</span>` : ""}${tp ? `<i>${tp}</i>` : ""}</button>`;
+    }).join("")}${c.final ? `<button class="chip stage-chip fin ${sel === "F" ? "active" : ""}" data-stage-sel="F"><b>Final</b><span>général</span></button>` : ""}</div>`;
   }
   const tabs = onglets(c, sel);
   if (!tabs.find(t => t.cle === state.sub)) state.sub = (tabs[0] || {}).cle || null;
-  const entete = stage
-    ? `<div class="stage-head">${stage.number == null ? "" : `<h2>${esc(stage.name)}${stage.start || stage.finish ? ` · ${esc(stage.start || "")}${stage.start && stage.finish && stage.start !== stage.finish ? " → " + esc(stage.finish) : ""}` : ""}</h2>`}
-        <div class="sub">${esc(dateLongue(stage.date))}${stage.type && c.race_type === "stage_race" ? " · " + esc(TYPES[stage.type] || "") : ""}</div></div>`
-    : sel === "F" ? `<div class="stage-head"><h2>Classements finaux</h2><div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div></div>` : "";
+  const entete = htmlEnteteEtape(c, stage, sel);
   const tp = c.race_type === "stage_race" ? `<span class="badge ${c.status === "in_progress" ? "live" : ""}">${c.status === "in_progress" ? "en cours" : "terminée"}</span>` : "";
   const subtabs = tabs.length ? `<div class="subtabs" id="subtabs">${tabs.map(t => `<button class="subtab ${t.cle === state.sub ? "active" : ""}" data-sub="${esc(t.cle)}">${esc(t.lab)}</button>`).join("")}</div>` : "";
   const nPart = state.sub === "participants" ? participantsCourse(c).filter(x => !state.frOnly || (x.ref && x.ref.is_french)).length : 0;
@@ -1446,23 +1494,24 @@ function renderFiche() {
       <span class="small muted">${esc(compte)}</span></div>` : "";
   const an = saisonCourse(c);
   const dates = c.race_type === "stage_race" || c.start_date !== c.end_date ? `${plage(c.start_date, c.end_date)}${an != null ? " " + an : ""}` : dateLongue(c.start_date);
+  const prog = c.race_type === "stage_race" && c.status === "in_progress" ? htmlProgression(c.stages_done, c.stages_total) : "";
+  // le bandeau montre pays, dates, classe, statut et progression : l'infobox ne garde que le reste
   const faits = [
-    c.country ? ["Pays", nomPays(c.country)] : null,
-    dates.trim() ? ["Dates", dates] : null,
-    c.uci_class ? ["Classe UCI", c.uci_class] : null,
     c.race_type ? ["Type", TYPES_EPREUVE[c.race_type] || ""] : null,
-    c.race_type === "stage_race" ? ["Étapes", `${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""}`] : null,
+    c.race_type === "stage_race" && !prog ? ["Étapes", `${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""}`] : null,
   ].filter(x => x && x[1]);
-  const head = htmlArtHead({
-    crumbs: `<div id="crumbs-slot">${crumbsEdition(c)}</div>`, titre: c.name,
-    sub: `${flag(c.flag, c.country)}<span>${esc(nomPays(c.country))}</span><span>·</span><span>${esc(plage(c.start_date, c.end_date))}</span>`,
-    pills: `${catBadge(c.category, c.uci_class)}${tp}`,
-  });
+  const head = `<header class="art-head ed-head"><div id="crumbs-slot">${crumbsEdition(c)}</div>
+    <div class="une ed-ban" style="${catStyle(c.category)}">
+      <h1 class="une-nom">${flag(c.flag, c.country)}<span>${esc(c.name)}</span></h1>
+      <div class="une-sub"><span>${esc([nomPays(c.country), dates.trim()].filter(Boolean).join(" · "))}</span>${catBadge(c.category, c.uci_class)}${tp}</div>
+      ${prog}
+    </div></header>`;
   const infobox = htmlInfobox({
     credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "", faits,
-    extra: `<div id="podium-slot">${htmlPodium(c)}</div><div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
+    extra: `<div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
   });
   const main = `<div class="stack">
+    <div id="podium-slot">${htmlPodium(c)}</div>
     ${chips}
     ${entete}
     ${c.race_type === "stage_race" ? renderMaillots(c, sel) : ""}
@@ -1472,11 +1521,25 @@ function renderFiche() {
     ${tabs.length ? `<div class="card table-card">${subtabs}${outils}<div id="table">${renderTable(c, sel, state.sub)}</div></div>`
       : '<div class="card"><div class="empty">Classement non publié</div></div>'}
   </div>`;
-  body.innerHTML = htmlArticle({ head, infobox, main, navbox: `<div id="navbox-slot">${navboxEdition(c)}</div>` });
+  body.innerHTML = htmlArticle({ cls: "art-ed", head, infobox, main, navbox: `<div id="navbox-slot">${navboxEdition(c)}</div><p class="home-credit" id="fiche-credit"></p>` });
   document.title = `${c.name}${an != null && !c.name.includes(String(an)) ? " " + an : ""} · Courses cyclistes`;
   majNavEdition(c);
-  const ch = document.querySelector("#stage-chips .active");
-  if (ch && ch.scrollIntoView) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
+  const ch = document.querySelector("#stage-chips .active");   // puce active visible : on ne fait défiler que le conteneur, jamais la page
+  if (ch) { const box = document.getElementById("stage-chips"); box.scrollLeft = ch.offsetLeft - box.clientWidth / 2 + ch.clientWidth / 2; }
+  majMaillotsAccueil();
+}
+/** En-tête d'une étape (course par étapes) : carte « Étape N · départ → arrivée », date, type, distance ; vainqueur de l'étape seulement s'il figure dans les données. */
+function htmlEnteteEtape(c, stage, sel) {
+  if (c.race_type !== "stage_race") return "";
+  if (!stage) return sel === "F" ? `<div class="card stage-head"><h2>Classements finaux</h2><div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div></div>` : "";
+  const rt = stage.route || {}, sub = [dateLongue(stage.date), TYPES[stage.type], rt.distance_km != null ? `${num(rt.distance_km)} km` : ""].filter(Boolean).join(" · ");
+  const w = ((stage.results || {}).stage || []).find(r => r.rank === 1 && !r.status && r.rider_id), ref = w && c.riders[w.rider_id];
+  const win = ref ? `<div class="sc-win"><div class="sc-who"><small>Vainqueur de l'étape</small>
+      <div class="nm">${flag(ref.flag, ref.nationality)}${plink(w.rider_id, ref.name)}${ref.is_french ? ' <span class="badge fr">FR</span>' : ""}</div>
+      ${ref.team ? `<div class="tm">${lienEquipe(ref.team, saisonCourse(c))}</div>` : ""}</div>
+      ${w.time_s != null ? `<b class="sc-tm">${esc(fmtTemps(w.time_s))}</b>` : ""}${ref.team ? slotMaillot(ref.team, saisonCourse(c)) : ""}</div>` : "";
+  return `<div class="card stage-head">${stage.number == null ? "" : `<h2>${esc(stage.name)}${stage.start || stage.finish ? ` · ${esc(stage.start || "")}${stage.start && stage.finish && stage.start !== stage.finish ? " → " + esc(stage.finish) : ""}` : ""}</h2>`}
+    ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}${win}</div>`;
 }
 
 /* ================== clés d'édition, navigation entre éditions, podium, participants (E3) ================== */
@@ -1601,9 +1664,9 @@ function podiumCourse(c) {
 function htmlPodium(c) {
   const P = podiumCourse(c);
   if (!P.length) return "";
-  return `<div class="sec-title">Podium</div><div class="podium">${P.map(r => {
+  return `<h2 class="h-sec">Podium</h2><div class="podium">${P.map(r => {
     const ref = c.riders[r.rider_id];
-    return `<div class="pod"><span class="pk r${r.rank}">${esc(r.rank)}</span>
+    return `<div class="pod r${r.rank}"><span class="pk r${r.rank}">${esc(r.rank)}</span>${ref && ref.team ? slotMaillot(ref.team, saisonCourse(c)) : ""}
       <div class="nm">${ref ? flag(ref.flag, ref.nationality) : ""}${ref ? plink(r.rider_id, ref.name) : esc(r.bib ? "Dossard " + r.bib : "Coureur inconnu")}</div>
       ${ref && ref.team ? `<div class="tm">${lienEquipe(ref.team, saisonCourse(c))}</div>` : ""}</div>`;
   }).join("")}</div>`;
@@ -1654,6 +1717,8 @@ function demanderEquipes(c) {
     const t = document.getElementById("table");
     if (t) t.innerHTML = renderTable(c, state.sel, state.sub);
     const p = document.getElementById("podium-slot"); if (p) p.innerHTML = htmlPodium(c);
+    const sh = document.querySelector("#main .stage-head"); if (sh) sh.outerHTML = htmlEnteteEtape(c, etapeCourante(c, state.sel), state.sel);
+    majMaillotsAccueil();
   });
 }
 /** Équipe-saison (id, entrée) d'un libellé brut et d'une saison, SI elle existe dans equipes/<année>.json déjà chargé ; sinon null (pas de lien). */
@@ -3227,18 +3292,19 @@ const CAT_JETON = { WT: "--c-wt", Pro: "--c-pro", FDJ: "--c-fdj", "1": "--c-1", 
 function catStyle(c) { const j = CAT_JETON[(c || "").replace(/[^\w]/g, "")]; return j ? `--cat:var(${j})` : ""; }
 /** Emplacement de maillot d'une équipe (rempli par majMaillotsAccueil une fois les fichiers chargés) ; rien sans équipe ni année. */
 function slotMaillot(equipe, date) {
-  const p = pd(date);
-  return equipe && p ? `<span class="mjs" data-eq="${esc(equipe)}" data-y="${p.y}"></span>` : "";
+  const y = typeof date === "number" ? date : (pd(date) || {}).y;
+  return equipe && y ? `<span class="mjs" data-eq="${esc(equipe)}" data-y="${y}"></span>` : "";
 }
+/** Crédit unique des maillots affichés (accueil : #b-credit ; fiche de course : #fiche-credit, maillots d'équipe + maillots distinctifs). */
 function majCreditAccueil() {
-  const c = document.getElementById("b-credit");
+  const c = document.getElementById("b-credit") || document.getElementById("fiche-credit");
   if (!c) return;
-  const src = new Set([...document.querySelectorAll("#main .mjs img.mj")].map(i => i.dataset.src));
+  const src = new Set([...document.querySelectorAll("#main .mjs img.mj, #main .jerseys img[data-src]")].map(i => i.dataset.src));
   const L = ["PCM Mod", "WorldDB"].filter(x => src.has(x));
   c.textContent = L.length ? `Maillots : ${L.join(" · ")}` : "";
 }
 function majMaillotsAccueil() {
-  if (!state.route || state.route.nom !== "accueil") return;
+  if (!state.route || (state.route.nom !== "accueil" && state.route.nom !== "course")) return;
   document.querySelectorAll("#main .mjs[data-eq]").forEach(sl => {
     const y = +sl.dataset.y;
     demanderEquipesAn(y, majMaillotsAccueil);
@@ -3251,14 +3317,19 @@ function majMaillotsAccueil() {
   majCreditAccueil();
 }
 /** Bandeau « À la une » : course en cours (la première), sinon le dernier résultat ; vide s'il n'y a ni l'un ni l'autre. */
+/** Barre de progression des étapes (bandeau de l'accueil et de la fiche) ; vide sans nombre d'étapes courues et total. */
+function htmlProgression(fait, tot) {
+  if (fait == null || !tot) return "";
+  const prog = Math.min(100, Math.round(fait / tot * 100));
+  return `<span class="une-prog"><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(tot)}" aria-valuenow="${esc(fait)}" aria-label="Étapes courues"><i style="width:${prog}%"></i></span><span>${esc(fait)} / ${esc(tot)} étapes</span></span>`;
+}
 function htmlUne(x, it) {
   if (x) {
-    const fait = x.stages_done, tot = x.stages_total, prog = x.race_type === "stage_race" && fait != null && tot ? Math.min(100, Math.round(fait / tot * 100)) : null;
     return `<button class="une o0" style="${catStyle(x.category)}" data-open="${esc(x.id)}" data-stage="">
       <span class="une-tag">EN COURS</span>
       <span class="une-nom">${flag(x.flag, x.country)}<span>${esc(x.name)}</span></span>
       <span class="une-sub"><span>${esc(plage(x.start_date, x.end_date))}</span>${catBadge(x.category, x.uci_class)}</span>
-      ${prog != null ? `<span class="une-prog"><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(tot)}" aria-valuenow="${esc(fait)}" aria-label="Étapes courues"><i style="width:${prog}%"></i></span><span>${esc(fait)} / ${esc(tot)} étapes</span></span>` : ""}
+      ${x.race_type === "stage_race" ? htmlProgression(x.stages_done, x.stages_total) : ""}
       ${x.leader ? `<span class="une-ligne"><span>Leader : <b>${esc(x.leader.name)}</b>${x.leader.team ? ` <span class="eq">· ${esc(x.leader.team)}</span>` : ""}</span>${slotMaillot(x.leader.team, x.start_date)}</span>` : ""}
     </button>`;
   }
