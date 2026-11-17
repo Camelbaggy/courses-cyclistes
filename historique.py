@@ -628,8 +628,8 @@ def nos_vainqueurs(entites_dir: str, cles: Optional[Iterable[str]] = None) -> Di
     out: Dict[str, Dict[int, List[Tuple[str, str]]]] = {}
     dossier = os.path.join(entites_dir, "courses")
     for f in sorted(os.listdir(dossier)) if os.path.isdir(dossier) else []:
-        data = collector._load(os.path.join(dossier, f), {}) if f.endswith(".json") else {}
-        for cle, c in (data or {}).items():
+        data = collector._load(os.path.join(dossier, f), {}) if f.endswith(".json") and f != "index.json" else {}
+        for cle, c in (data if isinstance(data, dict) else {}).items():
             if voulues is not None and cle not in voulues:
                 continue
             par: Dict[int, List[Tuple[str, str]]] = {}
@@ -777,7 +777,8 @@ def proposer_series(ctx: Ctx, entites_dir: str, deja: Iterable[str] = (), epreuv
     fiches: Dict[str, Dict[str, Any]] = {}
     dossier = os.path.join(entites_dir, "courses")
     for f in sorted(os.listdir(dossier)) if os.path.isdir(dossier) else []:
-        fiches.update({k: v for k, v in (collector._load(os.path.join(dossier, f), {}) or {}).items()})
+        data = collector._load(os.path.join(dossier, f), {}) if f.endswith(".json") and f != "index.json" else {}
+        fiches.update(data if isinstance(data, dict) else {})
     cles = [c for c in (sorted(epreuves) if epreuves is not None else sorted(fiches))
             if c in fiches and c not in deja and len(fiches[c].get("editions") or []) >= min_editions]
     retenues: Dict[str, Dict[str, Any]] = {}

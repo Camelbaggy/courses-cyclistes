@@ -36,7 +36,9 @@ Passage d'archives lancé à la main à 2 h 12 UTC (les crons de 0 h 23 et 1 h 2
 chaîne jour et nuit pendant l'intersaison). Publiés : articles de lignée (Movistar `#equipe/Q6175`), épreuves regroupées (AlUla Tour
 2020-2026, Tour of Britain 2017-2026), 19 logos ; 2017 passe de 122 à 159 courses. En attente du passage suivant (code fusionné après le
 début du passage n° 14) : `codes_uci` et `renommee` des équipes-saisons (maillots des équipes renommées en cours de saison).
-Passage Wikidata (règle des noms v2, Cepeda) lancé à la main à 2 h 15 UTC : suivi programmé vers 6 h 15 UTC.
+Passage Wikidata (règle des noms v2, Cepeda) lancé à la main à 2 h 15 UTC : échec après 11 min (la liste des coureurs lisait le nouvel
+annuaire `coureurs/index.json`, une liste, comme un fichier de lettre ; même défaut dans `historique.py` pour `courses/index.json`). Corrigé le
+17/11 (test ajouté), passage relancé.
 
 ## Intersaison (décision du 17/11/2026)
 

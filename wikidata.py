@@ -504,8 +504,8 @@ def lister_coureurs(entites_dir: str) -> Tuple[List[Dict[str, Any]], int]:
     dossier = os.path.join(entites_dir, "coureurs")
     out, sans = [], 0
     for f in sorted(os.listdir(dossier)) if os.path.isdir(dossier) else []:
-        data = collector._load(os.path.join(dossier, f), {}) if f.endswith(".json") else {}
-        for rid, c in (data or {}).items():
+        data = collector._load(os.path.join(dossier, f), {}) if f.endswith(".json") and f != "index.json" else {}
+        for rid, c in (data if isinstance(data, dict) else {}).items():
             if not c.get("name"):
                 continue
             if not c.get("birth_date"):
@@ -1221,6 +1221,7 @@ def _tests() -> None:
     # --- run_wikidata complet, reprise sur budget, priorité, alias (fichiers d'entités simulés)
     with tempfile.TemporaryDirectory() as tmp:
         ent = os.path.join(tmp, "entites")
+        collector._dump(os.path.join(ent, "coureurs", "index.json"), [["epure-paul-19970711", "Paul Épure"]])   # annuaire (liste) : ignoré
         collector._dump(os.path.join(ent, "coureurs", "e.json"), {
             "epure-paul-19970711": {"name": "Paul Épure", "birth_date": "1997-07-11", "saisons": {"2024": {"uci_rank": 40}}, "totaux": {"wins": 2}},
             "doublon-luc-19950505": {"name": "Luc Doublon", "birth_date": "1995-05-05", "saisons": {"2023": {}}, "totaux": {"wins": 9}},
