@@ -309,10 +309,13 @@ def lister_sources(archives_dir: str, data_dir: str) -> Tuple[Dict[int, Dict[str
             p = os.path.join(data_dir, f"riders-{an}.json")
             s["riders"] = p if os.path.exists(p) else None
         if not s["ranking"]:
-            p = os.path.join(data_dir, "ranking.json")
-            rk = collector._load(p, None) if os.path.exists(p) else None
-            if rk and rk.get("season") == an:       # classement du jour : seulement pour la saison qu'il désigne
-                s["ranking"] = p
+            # classement de fin de saison enregistré (data/ranking-<an>.json) d'abord, puis classement du jour
+            for nom in (f"ranking-{an}.json", "ranking.json"):
+                p = os.path.join(data_dir, nom)
+                rk = collector._load(p, None) if os.path.exists(p) else None
+                if rk and rk.get("season") == an:   # seulement pour la saison que le fichier désigne
+                    s["ranking"] = p
+                    break
     return out, inconnues
 
 
@@ -1658,6 +1661,20 @@ def _tests() -> None:
             and r["stages"][0]["results"]["stage"][0]["rider_id"] == can and rs[0]["riders"][src]["id"] == src
     finally:
         shutil.rmtree(tmp3, ignore_errors=True)
+    # classement de fin de saison du Calendrier : data/ranking-<an>.json prioritaire (si sa saison == an), sinon ranking.json du jour
+    with tempfile.TemporaryDirectory() as t4:
+        d4 = os.path.join(t4, "data")
+        for an in (2026, 2027):
+            collector._dump(os.path.join(d4, "races", f"uci-{an}.json"), {"id": f"uci-{an}", "season": an})
+        collector._dump(os.path.join(d4, "ranking.json"), {"season": 2027, "rows": []})
+        src, _ = lister_sources(os.path.join(t4, "absent"), d4)
+        assert src[2027]["ranking"] == os.path.join(d4, "ranking.json") and src[2026]["ranking"] is None
+        collector._dump(os.path.join(d4, "ranking-2026.json"), {"season": 2025, "rows": []})      # saison incohérente : ignoré
+        assert lister_sources(os.path.join(t4, "absent"), d4)[0][2026]["ranking"] is None
+        collector._dump(os.path.join(d4, "ranking-2026.json"), {"season": 2026, "rows": []})
+        src, _ = lister_sources(os.path.join(t4, "absent"), d4)
+        assert src[2026]["ranking"] == os.path.join(d4, "ranking-2026.json")
+        assert src[2027]["ranking"] == os.path.join(d4, "ranking.json")
     print("[OK] encyclopedie.py : tests locaux réussis")
 
 
