@@ -65,7 +65,7 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
    (`htmlInfobox`, `htmlTableau`, `htmlOnglets`, `htmlTuiles`, `htmlNavbox`), pages inchangées sur le fond.
 3. **Navigation** (faite, PR #57 : recherche inline `#hsearch` + raccourci « / » dès 880 px, bouton retour mobile `#back-btn`, `htmlSousNav` / `.secnav` pour Courses, Classements et Coureurs, `#to-top`, pied de page soigné) : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
 4. **Pages une à une** : accueil (4a, faite, PR #58 : bandeau « À la une », prochaine course, cartes à filet de catégorie, résumés repliés, maillots + crédit, tuiles de compteurs) ; fiche de course /
-   étape (4b, faite, PR #59 : bandeau coloré, infobox sans redondance et après le contenu sur mobile, podium 2-1-3 avec maillots, puces d'étapes, carte d'étape, crédit unique) ; fiche coureur (4c, faite : bandeau d'identité portrait + équipe avec maillot, infobox sans doublon, graphique victoires / podiums par saison, palmarès à filet de catégorie, sparkline à aire, maillots du parcours, crédit unique) ; à venir : article d'équipe, page d'épreuve.
+   étape (4b, faite, PR #59 : bandeau coloré, infobox sans redondance et après le contenu sur mobile, podium 2-1-3 avec maillots, puces d'étapes, carte d'étape, crédit unique) ; fiche coureur (4c, faite, PR #60 : bandeau d'identité portrait + équipe avec maillot, infobox sans doublon, graphique victoires / podiums par saison, palmarès à filet de catégorie, sparkline à aire, maillots du parcours, crédit unique) ; article d'équipe et page d'épreuve (4d, faites : bandeau d'équipe maillot / logo / pays / niveaux / code / sélecteur de saison unique, bandeau coloré d'épreuve à la couleur de la catégorie actuelle, infobox sans doublon et absente si vide, tuiles jaunes, palmarès d'épreuve à pastilles de rang et dernière édition en valeur, palmarès d'équipe en cartes, mouvements en cartes, records en cartes, crédit maillots unique).
 
 ## Questions posées au démarrage (tranchées ci-dessus)
 
@@ -80,3 +80,17 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
 - Collecte des archives 2015-2011 (automatique, jour et nuit pendant l'intersaison) ; bilan quotidien programmé à 11 h 20 UTC
   (prochain le 18/11 : contrôles des vainqueurs, lignées manquantes dont Cofidis 2022-2024) ; voir `docs/AVANCEMENT.md`.
 - Reprise des courses mi-janvier 2027 (Tour Down Under le 19/01) : `update.yml` doit tourner normalement d'ici là.
+
+## Bilan de la refonte (fin de l'étape 4d, 17/11/2026)
+
+Faites : 1 jetons et thème clair, 2 composants Liquipedia modernisés, 3 navigation, 4a accueil, 4b fiche de course, 4c fiche coureur, 4d article d'équipe et page
+d'épreuve. Briques communes : bandeaux `.une` / `.id-ban`, `catStyle` (`--cat`), pastilles de rang, `slotMaillot` + crédit unique `#fiche-credit`, `htmlArticle` (infobox vide =
+une colonne), `htmlTuiles` (`t-jaune`), `htmlTableau` (`dot`, `cls` de ligne). Contrôles : `tools/apercu.py` (`APERCU_SANS_BARRE=1` masque la barre du bas pour lire les
+captures hautes ; trois contrôles de barre échouent alors, c'est normal).
+
+Pistes restantes remarquées :
+- Pages Équipes, Coureurs, Classements, Courses (listes) et Recherche : refonte non faite (seule la coquille et la sous-navigation ont changé).
+- Le niveau (WorldTeam / ProTeam) d'une équipe est celui de la lignée entière (`cats`), pas de la saison : le bandeau ne peut pas dire le niveau exact de la saison affichée tant que les entités n'exposent pas un niveau par équipe-saison.
+- Fixtures : aucune équipe avec maillot ET logo, et les victoires d'équipe n'ont pas de classe d'année (cartes sans filet de catégorie) : à couvrir avec des données réelles (`--reel`).
+- Les tables « Codes UCI » de l'infobox d'équipe gardent la mise en forme libellé / valeur centrée héritée de l'étape 2.
+- Cartes de palmarès en `div role="link"` (Entrée gérée dans le gestionnaire clavier) : le même gabarit pourrait servir à d'autres listes.
