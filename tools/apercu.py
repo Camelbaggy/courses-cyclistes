@@ -2,7 +2,9 @@
 """Captures d'écran de index.html (encyclopédie : accueil, courses, épreuves, éditions, équipes, coureurs, classements, recherche).
 
 Sert un dossier en local (http.server, port libre, dans un thread) puis pilote Chromium avec Playwright (Node via NODE_PATH).
-Chaque page est capturée à 390 px (mobile, suffixe -m) et 1024 px (suffixe -d) ; le script journalise les erreurs console,
+Chaque page est capturée à 390 px (mobile, suffixe -m) et 1024 px (suffixe -d), en thème sombre ; une passe en préférence système
+claire (suffixe -c, 390 px, quelques pages + l'accueil à 1024 px) et des contrôles de thème (fond, bouton auto/clair/sombre, contraste
+des jetons) complètent le jeu (hors --reel) ; le script journalise les erreurs console,
 détecte tout débordement horizontal, vérifie la navigation arrière, l'ancienne URL ?archive= et les zones tactiles de la barre du bas.
 
     python tools/apercu.py <dossier_de_sortie> [--data tools/fixtures/data]            # jeu fictif (par défaut)
@@ -36,8 +38,8 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const browser = await chromium.launch(opts);
   const sortie = conf.sortie;
   const erreurs = [], debord = [], echecs = [];
-  const nouveauContexte = async (w, h) => {
-    const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, colorScheme: 'dark' });
+  const nouveauContexte = async (w, h, schema) => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, colorScheme: schema || 'dark' });
     await ctx.route('https://flagcdn.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: FLAG_SVG }));
     await ctx.route('https://pcmmod.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect x="22" y="7" width="213" height="242" fill="#e11d48"/></svg>' }));
     const page = await ctx.newPage();
@@ -171,6 +173,74 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   }
   await parcours(390, 844, '-m');
   await parcours(1024, 800, '-d');
+
+  /* ---------- thème clair : captures (suffixe -c) et contrôles ---------- */
+  if (!conf.reel) {
+    const EPC = '#epreuve/' + encodeURIComponent(conf.epreuve);
+    const clair = [
+      ['c01-accueil', '#/', { defile: true }], ['c02-courses', '#courses/2026', {}], ['c03-epreuve', EPC, {}],
+      ['c03b-courses-archive', '#courses/2024', {}], ['c04-edition', '#course/fx-a24-tour-hc', {}], ['c05-coureur', '#coureur/' + conf.coureur, {}],
+      ['c06-equipe', '#equipe/Q99900110', {}], ['c07-classements-uci', '#classements/uci', {}],
+    ];
+    for (const [w, h, suf, liste] of [[390, 844, '-c', clair], [1024, 800, '-c', [['c01-accueil-d', '#/', { defile: true }]]]]) {
+      const { ctx, page } = await nouveauContexte(w, h, 'light');
+      for (const [nom, hash, o] of liste) {
+        try { await visite(page, hash); await cap(page, nom, w === 390 ? suf : '', o); }
+        catch (e) { echecs.push(`capture ${nom}: ${e.message}`); console.log('ECHEC capture', nom, e.message); }
+      }
+      await ctx.close();
+    }
+    const lum = (page) => page.evaluate(() => {
+      const m = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).map(Number);
+      const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(m[0]) + .7152 * f(m[1]) + .0722 * f(m[2]);
+    });
+    const fond = async (schema) => { const { ctx, page } = await nouveauContexte(390, 844, schema); await visite(page, '#/'); const l = await lum(page); await ctx.close(); return l; };
+    const lc = await fond('light'), ls = await fond('dark');
+    ok('thème : préférence claire -> fond clair', lc > 0.8, lc);
+    ok('thème : préférence sombre -> fond sombre', ls < 0.1, ls);
+    {
+      const { ctx, page } = await nouveauContexte(390, 844, 'light');
+      await visite(page, '#/');
+      const etat = () => page.evaluate(() => ({ t: document.documentElement.dataset.theme || null, al: document.getElementById('theme-btn').getAttribute('aria-label'), meta: document.querySelector('meta[name="theme-color"]').content }));
+      const e0 = await etat();
+      ok('thème : bouton en auto au départ', e0.t === null && /automatique/.test(e0.al) && e0.meta === '#f4f6f9', e0);
+      await page.click('#theme-btn');
+      const e1 = await etat(); const l1 = await lum(page);
+      ok('thème : 1er clic = clair forcé', e1.t === 'light' && /clair/.test(e1.al) && l1 > 0.8, [e1, l1]);
+      await page.click('#theme-btn');
+      const e2 = await etat(); const l2 = await lum(page);
+      ok('thème : 2e clic = sombre forcé (système clair)', e2.t === 'dark' && /sombre/.test(e2.al) && l2 < 0.1 && e2.meta === '#0a0e15', [e2, l2]);
+      await page.reload(); await pret(page);
+      const e3 = await etat(); const l3 = await lum(page);
+      ok('thème : le choix survit au rechargement', e3.t === 'dark' && l3 < 0.1, [e3, l3]);
+      await page.click('#theme-btn');
+      const e4 = await etat(); const st = await page.evaluate(() => localStorage.getItem('theme'));
+      ok('thème : 3e clic = retour en auto', e4.t === null && st === null && /automatique/.test(e4.al), [e4, st]);
+      const larg = await page.evaluate(() => { const r = document.getElementById('theme-btn').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+      ok('thème : bouton >= 40 px', larg[0] >= 40 && larg[1] >= 40, larg);
+      // contraste WCAG des jetons dans chaque thème
+      for (const th of ['light', 'dark']) {
+        const echs = await page.evaluate((th) => {
+          document.documentElement.dataset.theme = th;
+          const cs = getComputedStyle(document.documentElement);
+          const p = document.createElement('i'); document.body.appendChild(p);
+          const rgb = (v) => { p.style.color = v; const m = getComputedStyle(p).color.match(/[\d.]+/g).map(Number); return m; };
+          const jeton = (n) => rgb(cs.getPropertyValue(n).trim());
+          const L = (c) => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+          const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+          const mauvais = [];
+          for (const t of ['--tx', '--tx2', '--tx3', '--accent']) for (const f of ['--bg', '--s1', '--s2']) { const c = cr(jeton(t), jeton(f)); if (c < 4.5) mauvais.push(`${t} sur ${f} = ${c.toFixed(2)}`); }
+          for (const f of ['--c-wt', '--c-pro', '--c-fdj', '--c-1', '--c-2', '--c-ch']) { const c = cr([255, 255, 255], jeton(f)); if (c < 4.5) mauvais.push(`#fff sur ${f} = ${c.toFixed(2)}`); }
+          { const c = cr(jeton('--on-accent'), jeton('--accent')); if (c < 4.5) mauvais.push(`--on-accent sur --accent = ${c.toFixed(2)}`); }
+          p.remove(); delete document.documentElement.dataset.theme;
+          return mauvais;
+        }, th);
+        ok(`thème ${th} : contraste des jetons >= 4,5`, echs.length === 0, echs);
+      }
+      await ctx.close();
+    }
+  }
 
   /* ---------- navigation, retour arrière, anciennes URL (mobile) ---------- */
   if (!conf.reel) {

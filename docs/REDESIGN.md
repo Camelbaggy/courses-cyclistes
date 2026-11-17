@@ -47,7 +47,27 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
 - Piste : refonte par étapes (jetons et coquille, puis composants, puis pages une à une), chaque étape publiable seule,
   captures avant / après à 390 et 1024 px.
 
-## Questions à trancher au démarrage
+## Décisions du propriétaire (17/11/2026)
+
+1. Objectif : **style visuel ET navigation** (réorganisation des pages et menus là où c'est utile ; toute route existante reste
+   valide ou est redirigée).
+2. Thème : **sombre + clair**, choisi selon la préférence du système, avec un bouton pour forcer l'un ou l'autre.
+3. Référence : **Liquipedia modernisé** (infobox, navbox, tableaux denses, avec une finition plus soignée).
+4. Pages prioritaires : accueil, fiche de course, fiche coureur, articles d'équipe et pages d'épreuve (toutes).
+5. Non tranché, par défaut : page unique `index.html` sans build (pas de découpage en fichiers).
+
+## Étapes (chacune publiable seule, captures avant / après 390 et 1024 px, `tools/apercu.py` tout OK)
+
+1. **Jetons et thème clair** : thème clair complet, bouton auto / clair / sombre, passe claire et contrôle des contrastes dans
+   `tools/apercu.py`.
+2. **Composants Liquipedia modernisés** : typographie (échelle, chiffres tabulaires), infobox à bandeau de titre et lignes
+   libellé / valeur, tableaux « wikitable » denses, onglets, tuiles plus compactes, navbox ; mêmes fonctions JS
+   (`htmlInfobox`, `htmlTableau`, `htmlOnglets`, `htmlTuiles`, `htmlNavbox`), pages inchangées sur le fond.
+3. **Navigation** : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
+4. **Pages une à une** : accueil (portail plus compact : derniers résultats en liste, résumés repliés), fiche de course /
+   étape (cible des liens ntfy), fiche coureur, article d'équipe, page d'épreuve.
+
+## Questions posées au démarrage (tranchées ci-dessus)
 
 1. Objectif : nouveau style visuel seulement, ou aussi navigation / organisation des pages ?
 2. Thème : rester sombre seul, ou ajouter un thème clair (et suivre la préférence système) ?
