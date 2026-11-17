@@ -494,6 +494,58 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
       ok('.secnav sur #coureurs', (await page.$$('#main .secnav')).length === 1);
       await ctx.close();
     }
+    // fiche de course / édition (étape 4b) : bandeau coloré, infobox après le contenu sur mobile, podium 2-1-3, puces, pastilles, crédit unique
+    for (const [w, h, suf] of [[390, 844, '390'], [1024, 800, '1024']]) {
+      const { ctx, page } = await nouveauContexte(w, h);
+      for (const id of ['fx-tour-test', 'fx-a24-tour-hc']) {
+        if (id === 'fx-a24-tour-hc') await visite(page, '#courses/2024', '#main .pg');   // l'index 2024 connu : pas de requête 404 vers data/races
+        await visite(page, '#course/' + id, '#main .art');
+        await page.waitForTimeout(500);
+        const b = await page.evaluate(() => {
+          const e = document.querySelector('#main .ed-ban');
+          if (!e) return null;
+          const T = s => { const x = document.querySelector(s); return x ? x.getBoundingClientRect() : null; };
+          const l = T('#table'), sc = T('#stage-chips'), ib = T('#main .infobox'), rm = T('#main .rmain');
+          const ibTxt = (document.querySelector('#main .infobox') || {}).textContent || '';
+          return { cat: e.getAttribute('style') || '', bg: getComputedStyle(e).backgroundImage.slice(0, 20), h1: !!e.querySelector('h1'), nom: e.querySelector('h1').textContent,
+            prog: !!e.querySelector('.une-prog'), ibTop: ib && Math.round(ib.top), ibLeft: ib && Math.round(ib.left), rmLeft: rm && Math.round(rm.left), tblTop: l && Math.round(l.top),
+            chipsTop: sc && Math.round(sc.top), ibDates: /Dates|Classe UCI|Pays/.test(ibTxt), ibTxt: ibTxt.slice(0, 120) };
+        });
+        ok(`fiche ${id} ${suf} : bandeau coloré, --cat posé par jeton, h1`, !!b && /--cat:\s*var\(--c-/.test(b.cat) && b.bg.startsWith('linear-gradient') && b.h1, b);
+        ok(`fiche ${id} ${suf} : aucun fait du bandeau répété dans l'infobox (Dates / Classe UCI / Pays)`, !!b && !b.ibDates, b && b.ibTxt);
+        ok(`fiche ${id} ${suf} : barre de progression seulement pour une course par étapes en cours`, !!b && b.prog === (id === 'fx-tour-test'), b && b.prog);
+        if (w === 390) ok(`fiche ${id} 390 : infobox sous la liste des résultats`, !!b && b.ibTop > b.tblTop && (b.chipsTop == null || b.ibTop > b.chipsTop), b);
+        else ok(`fiche ${id} 1024 : une colonne, infobox sous les résultats`, !!b && b.ibTop > b.tblTop, b);
+      }
+      await visite(page, '#course/fx-a24-tour-hc', '#main .art'); await page.waitForTimeout(500);
+      const pod = await page.evaluate(() => {
+        const c = [...document.querySelectorAll('#podium-slot .pod')];
+        const r = c.map(e => ({ rk: e.querySelector('.pk').textContent.trim(), x: Math.round(e.getBoundingClientRect().left), t: Math.round(e.getBoundingClientRect().top), flag: !!e.querySelector('.flag'), lien: !!e.querySelector('a'), mj: !!e.querySelector('.mjs img.mj') }));
+        return { n: c.length, ordre: r.slice().sort((a, b) => a.x - b.x).map(x => x.rk).join(''), r1t: (r.find(x => x.rk === '1') || {}).t, autres: Math.min(...r.filter(x => x.rk !== '1').map(x => x.t)), r };
+      });
+      ok(`fiche archive ${suf} : podium à 3 cartes, 1er au centre (ordre visuel 2-1-3) et plus haut`, pod.n === 3 && pod.ordre === '213' && pod.r1t < pod.autres, pod);
+      ok(`fiche archive ${suf} : podium avant le sélecteur d'étapes`, await page.evaluate(() => { const p = document.querySelector('#podium-slot'), c = document.querySelector('#stage-chips'); return !c || p.getBoundingClientRect().top < c.getBoundingClientRect().top; }));
+      ok(`fiche archive ${suf} : maillot d'équipe sur le podium (emplacement rempli)`, pod.r.some(x => x.mj), pod.r);
+      const pil = await page.evaluate(() => ['1', '2', '3'].map(n => { const e = document.querySelector('#table .rows .row .rk.r' + n); return e ? getComputedStyle(e).backgroundColor !== 'rgba(0, 0, 0, 0)' && getComputedStyle(e).borderRadius !== '0px' : false; }));
+      ok(`fiche archive ${suf} : pastilles de rang 1-3 dans la liste`, pil.every(Boolean), pil);
+      const cr = await page.evaluate(() => ({ n: document.querySelectorAll('#fiche-credit').length, t: document.getElementById('fiche-credit').textContent, note: [...document.querySelectorAll('#main .tbl-note')].filter(e => /^Maillots/.test(e.textContent)).length }));
+      ok(`fiche archive ${suf} : une seule ligne de crédit maillots (distinctifs + équipes fusionnés)`, cr.n === 1 && /^Maillots : /.test(cr.t) && cr.t.includes('PCM Mod') && cr.note === 0, cr);
+      const j = await page.evaluate(() => { const g = document.querySelector('#main .jerseys'); return g ? { cols: getComputedStyle(g).gridTemplateColumns.split(' ').length, img: Math.round(document.querySelector('.jersey .jimg').getBoundingClientRect().height) } : null; });
+      ok(`fiche ${suf} : maillots distinctifs en grille ${w === 390 ? 2 : 4} colonnes, image de 48 px`, !!j && j.cols === (w === 390 ? 2 : 4) && j.img >= 46, j);
+      await visite(page, '#course/fx-tour-test', '#main .art'); await page.waitForTimeout(500);
+      const ch = await page.evaluate(() => {
+        const box = document.getElementById('stage-chips'), a = box.querySelector('.stage-chip.active'), fin = box.querySelector('.stage-chip.fin');
+        const R = box.getBoundingClientRect(), A = a.getBoundingClientRect();
+        return { dansZone: A.left >= R.left - 1 && A.right <= R.right + 1, fin: !fin || [...box.children].pop() === fin, bg: getComputedStyle(a).backgroundColor, date: !!box.querySelector('.stage-chip span'), type: !!box.querySelector('.stage-chip i'), scrollY: Math.round(window.scrollY) };
+      });
+      ok(`fiche en cours ${suf} : puce active visible dans son conteneur, date et badge de type, page non défilée`, ch.dansZone && ch.date && ch.type && ch.scrollY === 0 && ch.bg !== 'rgba(0, 0, 0, 0)', ch);
+      await visite(page, '#course/fx-tour-test/7', '#main .art'); await page.waitForTimeout(400);
+      const ch7 = await page.evaluate(() => { const box = document.getElementById('stage-chips'), a = box.querySelector('.stage-chip.active'), R = box.getBoundingClientRect(), A = a.getBoundingClientRect(); return { ok: A.left >= R.left - 1 && A.right <= R.right + 1, sy: Math.round(window.scrollY) }; });
+      ok(`fiche étape 7 ${suf} : puce active visible, page non défilée`, ch7.ok && ch7.sy === 0, ch7);
+      const eh = await page.evaluate(() => { const e = document.querySelector('#main .stage-head'); return e ? { h2: (e.querySelector('h2') || {}).textContent, vain: !!e.querySelector('.sc-win .nm .rlink'), temps: !!e.querySelector('.sc-tm') } : null; });
+      ok(`fiche étape 7 ${suf} : carte d'étape avec vainqueur (nom, temps)`, !!eh && /^Étape 7/.test(eh.h2) && eh.vain && eh.temps, eh);
+      await ctx.close();
+    }
   }
 
   await browser.close();
