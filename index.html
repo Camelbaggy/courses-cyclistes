@@ -431,6 +431,11 @@ button.res:active { background: var(--s3); }
 .tc-logo img { max-width: 30px; max-height: 30px; object-fit: contain; }
 .tc-logo.maillot { background: none; width: 34px; height: 38px; border-radius: 0; }
 .tc-logo.maillot img { max-width: 36px; max-height: 38px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+.tc-logo.maillot.pcm, .hero-maillot.pcm { position: relative; overflow: hidden; aspect-ratio: 213 / 242; }
+.tc-logo.maillot.pcm { width: 34px; height: auto; }
+.hero-maillot.pcm { height: 140px; width: auto; }
+.tc-logo.maillot.pcm img, .hero-maillot.pcm img { position: absolute; max-width: none; max-height: none; width: 120.19%; height: auto;
+  left: -10.33%; top: -2.89%; filter: none; }
 .tc-logo.ini { background: var(--s3); color: var(--tx2); font-size: .7rem; font-weight: 800; letter-spacing: .02em; }
 .pill-fr { display: inline-flex; align-items: center; gap: 4px; font-size: .74rem; color: var(--tx2); flex: 0 0 auto; }
 .pill-fr img { width: 16px; height: auto; border-radius: 2px; }
@@ -1501,6 +1506,44 @@ function maillotNation(iso3) {
   if (state.mIdx === undefined) { demanderMaillots(); return null; }
   return iso3 && state.mIdx && (state.mIdx.nations || []).includes(iso3) ? `${BASE_MAILLOTS}/nations/${iso3}.webp` : null;
 }
+/* Maillots PCM Mod (https://pcmmod.com, accord des administrateurs, crédit « PCM Mod ») : image affichée directement depuis leur site ;
+   seule la table saison -> [nom, code UCI, slug, identifiant d'image] est publiée ici (maillots/pcmmod/<année>.json, tools/pcmmod.py). */
+const PCM_IMAGE = "https://pcmmod.com/img/backup_graph_element/{id}.png";
+function demanderPcm(saison) {
+  state.pcm = state.pcm || {};
+  if (saison == null || state.pcm[saison] !== undefined || (state.pcmDem = state.pcmDem || {})[saison]) return;
+  state.pcmDem[saison] = true;
+  // liste des saisons publiées d'abord (index.json, une seule fois) : aucune requête pour une saison absente
+  state.pcmIdx = state.pcmIdx || fetch(`${BASE_MAILLOTS}/pcmmod/index.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
+  state.pcmIdx.then(ix => (ix && (ix.saisons || []).includes(+saison)
+    ? fetch(`${BASE_MAILLOTS}/pcmmod/${saison}.json`).then(r => (r.ok ? r.json() : null)).catch(() => null) : null)).then(d => {
+    state.pcm[saison] = Array.isArray(d) ? d : null;
+    if (state.route && state.route.nom === "equipe") renderEquipe(); else redessinerParticipants();
+  });
+}
+/** Maillot PCM Mod de l'équipe POUR CETTE SAISON : même code UCI (départagé par le nom si plusieurs équipes le portent), ou, sans code connu,
+ *  même nom exact (slug) ; sinon null. `undefined` tant que la saison n'est pas chargée. */
+function maillotPcm(nom, saison, code) {
+  state.pcm = state.pcm || {};
+  if (state.pcm[saison] === undefined) { demanderPcm(saison); return undefined; }
+  const L = state.pcm[saison];
+  if (!L) return null;
+  const s = slugEquipe(nom);
+  let c = code ? L.filter(x => x[1] === code) : [];
+  if (c.length > 1) c = c.filter(x => x[2] === s);
+  if (!code) c = L.filter(x => x[2] === s);
+  return c.length === 1 ? PCM_IMAGE.replace("{id}", encodeURIComponent(c[0][3])) : null;
+}
+/** Maillot d'une équipe-saison : PCM Mod (maillot de l'année) d'abord, sinon WorldDB (maillot 2025 étendu à la période de dénomination).
+ *  { u, src: "PCM Mod" | "WorldDB" } ou null. */
+function maillotPourEquipe(nom, saison, codeConnu) {
+  if (!nom) return null;
+  const code = codeConnu !== undefined ? codeConnu : ((equipeDeLibelle(nom, saison) || {}).e || {}).code_uci || null;
+  const p = maillotPcm(nom, saison, code);
+  if (p) return { u: p, src: "PCM Mod" };
+  const w = maillotEquipe(nom, saison, codeConnu);
+  return w ? { u: w, src: "WorldDB" } : null;
+}
 function maillotEquipe(nom, saison, codeConnu) {
   if (!nom) return null;
   if (state.mIdx === undefined) { demanderMaillots(); return null; }
@@ -1513,8 +1556,12 @@ function maillotEquipe(nom, saison, codeConnu) {
 function htmlLogoEquipe(nom, saison) {
   const vide = `<span class="tc-logo ini" aria-hidden="true">${esc(initialesEquipe(nom))}</span>`;
   const qn = nom ? equipeDeLibelle(nom, saison) : null;
-  const mail = qn && qn.e.nationale ? maillotNation(qn.e.pays) : maillotEquipe(nom, saison);
-  if (mail) { state.partMaillot = true; return `<span class="tc-logo maillot"><img src="${esc(mail)}" alt="" loading="lazy" title="Maillot : WorldDB" onerror="this.parentNode.className='tc-logo ini';this.parentNode.textContent=${esc(JSON.stringify(initialesEquipe(nom)))}"></span>`; }
+  const nat = qn && qn.e.nationale ? maillotNation(qn.e.pays) : null;
+  const mail = nat ? { u: nat, src: "WorldDB" } : qn && qn.e.nationale ? null : maillotPourEquipe(nom, saison);
+  if (mail) {
+    (state.partMaillot = state.partMaillot || {})[mail.src] = true;
+    return `<span class="tc-logo maillot${mail.src === "PCM Mod" ? " pcm" : ""}"><img src="${esc(mail.u)}" alt="" loading="lazy" title="Maillot : ${esc(mail.src)}" referrerpolicy="no-referrer" onerror="this.parentNode.className='tc-logo ini';this.parentNode.textContent=${esc(JSON.stringify(initialesEquipe(nom)))}"></span>`;
+  }
   const q = nom ? equipeDeLibelle(nom, saison) : null, lg = q && q.e.lignee;
   if (!lg) return vide;
   if (state.lgIdx === undefined) { if (!state.lgDem) { state.lgDem = true; chargerLigneesIdx().then(redessinerParticipants); } return vide; }
@@ -1558,7 +1605,7 @@ function htmlParticipants(c) {
   }).join("");
   const prov = c.race_type === "stage_race" && c.status === "in_progress";
   return html + `<div class="tbl-note" style="padding:0 var(--sp3) var(--sp3)">Rang : ${c.race_type === "stage_race" ? `classement général${prov ? " provisoire" : " final"}` : "classement de la course"} ;
-    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.${state.partMaillot ? " Maillots : WorldDB (maillots de la saison 2025, montrés pour toute la période où l'équipe porte le même nom et le même code UCI)." : ""}${state.partLogo ? " Logos : Wikimedia Commons (auteur et licence au survol et sur l'article de l'équipe), logo actuel de l'équipe affiché seulement pour les saisons sous son nom actuel." : ""}</div>`;
+    statut : abandon constaté (DNF), hors délai (OTL), disqualifié (DSQ) ou non-partant (DNS). Équipes triées par meilleur résultat ; coureurs issus des classements de la fiche.${state.partMaillot && state.partMaillot["PCM Mod"] ? " Maillots : PCM Mod (maillot de la saison, affiché depuis pcmmod.com)." : ""}${state.partMaillot && state.partMaillot.WorldDB ? " Maillots : WorldDB (maillots 2025, montrés pour toute la période où l'équipe porte le même nom et le même code UCI ; sélections : tenues des équipes nationales)." : ""}${state.partLogo ? " Logos : Wikimedia Commons (auteur et licence au survol et sur l'article de l'équipe), logo actuel de l'équipe affiché seulement pour les saisons sous son nom actuel." : ""}</div>`;
 }
 function htmlPays(c) {
   const L = participantsCourse(c);
@@ -1610,7 +1657,7 @@ async function pageCourse(r, tok) {
     try {
       const [{ d, annee }] = await Promise.all([chargerCourse(id), chargerPays()]);
       if (tok !== state.routeTok) return;   // l'utilisateur est parti entre-temps
-      state.course = d; state.courseArchive = annee; state.partOuv = {}; state.partLogo = false; state.partMaillot = false;
+      state.course = d; state.courseArchive = annee; state.partOuv = {}; state.partLogo = false; state.partMaillot = null;
     } catch (e) {
       if (tok !== state.routeTok) return;
       console.error("Chargement de la course échoué :", e);
@@ -2525,16 +2572,19 @@ function tuilesEquipe(eq) {
 function articleEquipe(eq) {
   const lig = eq.type === "lignee", y = eq.y, S = eq.saisons[y];
   const lg = eq.logo, src = lg && urlMedia(lg.url), page = lg && urlMedia(lg.page);
-  const mail = !S ? null : eq.nationale ? maillotNation(eq.pays) : maillotEquipe(S.libelle || eq.nom, y, S.code_uci || null);
+  const mailN = S && eq.nationale ? maillotNation(eq.pays) : null;
+  const mailO = mailN ? { u: mailN, src: "WorldDB" } : !S || eq.nationale ? null : maillotPourEquipe(S.libelle || eq.nom, y, S.code_uci || null);
+  const mail = mailO && mailO.u;
   const imgLogo = src ? `<div class="hero-logo"><img src="${esc(src)}" alt="Logo de ${esc(eq.nom)}" loading="lazy"></div>` : "";
-  const imgMail = mail ? `<div class="hero-maillot"><img src="${esc(mail)}" alt="Maillot ${esc(S.libelle || eq.nom)} ${esc(y)}" loading="lazy" onerror="this.parentNode.remove()"></div>` : "";
+  const imgMail = mail ? `<div class="hero-maillot${mailO.src === "PCM Mod" ? " pcm" : ""}"><img referrerpolicy="no-referrer" src="${esc(mail)}" alt="Maillot ${esc(S.libelle || eq.nom)} ${esc(y)}" loading="lazy" onerror="this.parentNode.remove()"></div>` : "";
   const photo = imgMail && imgLogo ? `<div class="hero-duo">${imgMail}${imgLogo}</div>` : imgMail || imgLogo;
   let credit = "";
   if (src) {
     const txt = [lg.auteur, lg.licence].filter(Boolean).join(", ");
     if (txt) credit = `<div class="credit">Logo : ${page ? `<a href="${esc(page)}" target="_blank" rel="noopener noreferrer">${esc(txt)}</a>` : esc(txt)}</div>`;
   }
-  if (mail) credit += `<div class="credit">Maillot ${esc(state.mIdx && state.mIdx.saison || "")} : WorldDB</div>`;
+  if (mail) credit += mailO.src === "PCM Mod" ? `<div class="credit">Maillot ${esc(y)} : <a href="https://pcmmod.com/" target="_blank" rel="noopener noreferrer">PCM Mod</a></div>`
+    : `<div class="credit">Maillot ${esc(state.mIdx && state.mIdx.saison || "")} : WorldDB</div>`;
   const courant = lig ? eq.noms.filter(x => !x.fin).pop() : null;
   const paysTxt = eq.pays ? (nomPays(eq.pays) !== eq.pays ? nomPays(eq.pays) : eq.paysNom || eq.pays) : eq.paysNom;
   const codes = eq.codes.slice().reverse().map(c => `${esc(c.code)} <span class="dim">${esc(periodeWd(c.debut, c.fin))}</span>`);

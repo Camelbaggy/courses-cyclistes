@@ -45,3 +45,16 @@ Précisions (17 novembre 2026) :
   sinon initiales. Aucun maillot pour l'instant.
 - Piste éventuelle (à valider avec le propriétaire) : maillots reconstitués à partir des motifs « Kit body » + couleurs du wikicode,
   pour les seules équipes où un motif libre existe ; couverture faible, coût élevé.
+
+## PCM Mod (17 novembre 2026)
+
+https://pcmmod.com (« Real Jerseys », 1951-2027, hommes et femmes, classés par niveau ; aussi maillots distinctifs et nations). Accord des
+administrateurs (obtenu par le propriétaire via WorldDB) pour : (1) lire les pages par programme, malgré leur `robots.txt` qui interdit les
+robots hors moteurs de recherche ; (2) afficher leurs images directement depuis leur site. Crédit : « PCM Mod ».
+- Une page par saison (`/jersey/realsteams.php?year=AAAA&is_femin=0`) donne pour chaque équipe « Nom [CODE] » et l'identifiant du rendu
+  (`setBackupGraphElement(this, ID)`) ; les adresses `img/userUpload/…` de la page répondent 404, le rendu de secours
+  `/img/backup_graph_element/<ID>.png` (256 x 256, ~80 Ko, maillot dans la zone 22..235 x 7..249) est servi sans restriction d'origine.
+- Lecture du 17/11 : 3 216 maillots sur 16 saisons (2011-2026 ; 2027 pas encore publiée ; 2016-2026 complets, 6 à 39 avant 2016).
+- Rapprochement (même saison + code UCI, ou nom exact sans code) : 1 819 équipes-saisons sur 1 971 (92 %) de 2017 à 2026 ; manques : équipes sans
+  code UCI unique dans nos données et nommées autrement (ex. Bora - Hansgrohe 2024).
+

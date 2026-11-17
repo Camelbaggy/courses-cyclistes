@@ -39,6 +39,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
   const nouveauContexte = async (w, h) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, colorScheme: 'dark' });
     await ctx.route('https://flagcdn.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: FLAG_SVG }));
+    await ctx.route('https://pcmmod.com/**', r => r.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect x="22" y="7" width="213" height="242" fill="#e11d48"/></svg>' }));
     const page = await ctx.newPage();
     page.on('console', m => { if (['error', 'warning'].includes(m.type())) erreurs.push(`[console.${m.type()}] ${m.text()} ${m.location().url || ''}`); });
     page.on('pageerror', e => erreurs.push(`[pageerror] ${e.message}`));
@@ -281,6 +282,9 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     ok('participants : maillot WorldDB (même nom, même code)', aMaillot('Victor Team') === true && aMaillot('Bravo Cycling') === true, mail);
     ok('participants : pas de maillot si le code UCI diffère', aMaillot('Golf Team') === false);
     ok('participants : tenue de l\'équipe nationale pour une sélection', aMaillot('France') === true);
+    const pcm = await page.$$eval('#table .team-card', l => l.filter(c => c.querySelector('.tc-logo.maillot.pcm img')).map(c => c.querySelector('.tn').textContent.trim()));
+    ok('participants : maillot PCM Mod de la saison (code UCI départagé par le nom)', pcm.length === 1 && pcm[0] === 'Hôtel Cycling', pcm);
+    ok('participants : crédit PCM Mod', (await page.$eval('#table', e => e.textContent)).includes('PCM Mod'));
     ok('participants : crédit WorldDB', (await page.$eval('#table', e => e.textContent)).includes('Maillots : WorldDB'));
     await page.click('#table .team-card .tc-tog'); await page.waitForTimeout(200);
     ok('participants : un clic ouvre une carte', (await page.$$('#table .team-card.ouvert .rows .row')).length > 0 && (await page.$$('#table .team-card.ouvert')).length === 1);
