@@ -809,10 +809,49 @@ def verifier_occupation(api: Api) -> bool:
     return ok
 
 
-def run_coureurs(ctx: "Contexte") -> Dict[str, int]:
+ALIAS_COUREURS = os.path.join(collector.RACINE, "alias_coureurs_wikidata.json")
+
+
+def charger_alias_coureurs(chemin: Optional[str] = None) -> Dict[str, str]:
+    """Rapprochements MANUELS coureur -> QID (`alias_coureurs_wikidata.json`, racine du code) : {rider_id: {"qid", "source", "date", "note"}}.
+    Réservés aux cas où la règle automatique échoue sur une erreur AVÉRÉE de Wikidata (ex. date de naissance décalée), source citée,
+    validés par le propriétaire ; jamais devinés."""
+    brut = collector._load(chemin or ALIAS_COUREURS, {}) or {}
+    out = {}
+    for rid, v in brut.items() if isinstance(brut, dict) else []:
+        q = v.get("qid") if isinstance(v, dict) else v
+        if isinstance(rid, str) and isinstance(q, str) and re.fullmatch(r"Q\d+", q):
+            out[rid] = q
+    return out
+
+
+def appliquer_alias_coureurs(ctx: "Contexte", fiches: List[Dict[str, Any]], alias: Dict[str, str]) -> int:
+    """Écrit dans le cache les rapprochements manuels (`preuve` = "alias") après contrôle : l'élément existe, est un cycliste (P106) et son nom
+    concorde avec le nôtre (seule la date de naissance peut différer). Relu à chaque re-vérification normale (180 jours). Renvoie le nombre écrit."""
+    cache, today = ctx.cache.d["coureurs"], ctx.aujourdhui.isoformat()
+    noms = {f["id"]: f["name"] for f in fiches}
+    a_lire = {rid: q for rid, q in alias.items() if rid in noms
+              and ((cache.get(rid) or {}).get("qid") != q or (cache.get(rid) or {}).get("preuve") != "alias" or besoin(cache.get(rid), ctx.aujourdhui))}
+    if not a_lire:
+        return 0
+    ents = lire_entites(ctx.api, list(a_lire.values()), "claims|labels|aliases|sitelinks")
+    ok = {rid: q for rid, q in a_lire.items() if ents.get(q) and est_cycliste(ents[q], ctx.sous) and nom_concorde(noms[rid], noms_entite(ents[q]))}
+    for rid in set(a_lire) - set(ok):
+        print(f"[WARN] [WIKIDATA] alias coureur {rid} -> {a_lire[rid]} refusé (élément illisible, non cycliste ou nom discordant)")
+    charger_libelles(ctx.api, ctx.cache, [x for q in ok.values() for x in qids_a_libeller(ents[q])])
+    for rid, q in ok.items():
+        cache[rid] = dict(qid=q, verifie=today, preuve="alias", naissance=naissance_jour(ents[q]), **extraire_coureur(ents[q], ctx.cache.d["libelles"]))
+    resoudre_images(ctx, [cache[rid]["image"] for rid in ok if cache[rid].get("image")])
+    return len(ok)
+
+
+def run_coureurs(ctx: "Contexte", alias: Optional[Dict[str, str]] = None) -> Dict[str, int]:
     fiches, sans_date = lister_coureurs(ctx.entites_dir)
     cache = ctx.cache.d["coureurs"]
-    attente = sorted((f for f in fiches if besoin_coureur(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
+    alias = charger_alias_coureurs() if alias is None else alias
+    if alias and verifier_occupation(ctx.api):
+        appliquer_alias_coureurs(ctx, fiches, alias)
+    attente = sorted((f for f in fiches if f["id"] not in alias and besoin_coureur(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
     traites = 0
     ctx.derniere_ligne = ctx.horloge()
     if attente and verifier_occupation(ctx.api):
@@ -1065,6 +1104,15 @@ def _tests() -> None:
         faux2 = FauxWikimedia(ents, recherches, commons, echec_apres=1)
         ctx2 = Contexte(Api(faux2), Cache(os.path.join(tmp, "w2")), tmp, aujourdhui, 0)
         assert resoudre_tranche(ctx2, liste[:2]) == {}
+        # rapprochement MANUEL (alias_coureurs_wikidata.json) : date de naissance différente acceptée, mais cycliste + nom concordant exigés
+        ctx3 = Contexte(Api(FauxWikimedia(ents, recherches, commons)), Cache(os.path.join(tmp, "w3")), tmp, aujourdhui, 0)
+        n = appliquer_alias_coureurs(ctx3, liste, {"date-marc-19900202": "Q105", "footeux-tom-19930303": "Q108", "seule-ana-19990909": "Q105"})
+        c3 = ctx3.cache.d["coureurs"]
+        assert n == 1 and c3["date-marc-19900202"]["qid"] == "Q105" and c3["date-marc-19900202"]["preuve"] == "alias"
+        assert c3["date-marc-19900202"]["naissance"] == "1990-01-01"                                  # la valeur Wikidata reste visible
+        assert "footeux-tom-19930303" not in c3 and "seule-ana-19990909" not in c3                     # non cycliste ; nom discordant
+        assert appliquer_alias_coureurs(ctx3, liste, {"date-marc-19900202": "Q105"}) == 0             # déjà à jour : aucune requête
+        assert charger_alias_coureurs(os.path.join(tmp, "absent.json")) == {}
 
     # --- équipes : code + période + nom
     def equipe(q, nom, codes, noms=(), parent=None, label=None):

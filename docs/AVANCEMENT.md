@@ -69,3 +69,5 @@ Dernière mise à jour : 16 novembre 2026. À lire avec `CLAUDE.md` (règles, ar
 
 - Règle coureurs v2 (`REGLE_COUREURS` = 2) : ß / ø / æ… translittérés, second prénom toléré d'un côté ou de l'autre. Les 6 954 coureurs non reliés
   sont re-tentés au prochain passage de `wikidata.yml` (~7 000 requêtes, ~2 h, reprenable) : à surveiller (nombre de coureurs reliés, aucun faux positif).
+- Rapprochement manuel : `alias_coureurs_wikidata.json` (Jefferson Cepeda -> Q21093468 ; naissance 1996-03-02 selon l'UCI et PCS, 1996-03-03 sur
+  Wikidata, erreur probable de Wikidata). Appliqué au prochain passage de `wikidata.yml`.
