@@ -144,6 +144,41 @@ def saisons_a_archiver(seasons_dispo: List[int], index_par_saison: Dict[int, Dic
     return out
 
 
+INTERSAISON_MARGE_JOURS = 3   # courses en cours, finies depuis <= 3 jours (recollecte d'update.yml) ou débutant dans <= 3 jours
+
+
+def periode_de_courses(index_par_saison: Dict[int, Dict], today: dt.date, marge: int = INTERSAISON_MARGE_JOURS) -> bool:
+    """Vrai si le Calendrier montre une course en cours, finie depuis au plus `marge` jours (encore recollectée par
+    update.yml) ou qui commence dans au plus `marge` jours (courses courues ET à venir de chaque index). Faux en
+    intersaison : archives.yml peut alors tourner aussi en journée (créneau d'update.yml libre). Sans index lisible :
+    Vrai (prudence). Fonction pure."""
+    vus = False
+    for ix in index_par_saison.values():
+        if not isinstance(ix, dict):
+            continue
+        for r in list(ix.get("races") or []) + list(ix.get("upcoming") or []):
+            if not isinstance(r, dict):
+                continue
+            debut = _date(r.get("start_date"))
+            fin = _date(r.get("end_date")) or debut
+            if debut is None:
+                continue
+            vus = True
+            if r.get("status") == "in_progress":
+                return True
+            if debut <= today + dt.timedelta(days=marge) and fin >= today - dt.timedelta(days=marge):
+                return True
+    return not vus
+
+
+def periode_de_courses_depuis(data_dir: Optional[str] = None, today: Optional[dt.date] = None) -> bool:
+    """`periode_de_courses` sur les index du Calendrier de `data_dir` (seasons.json `available`)."""
+    d = data_dir or DATA_DIR
+    dispo = (_load(os.path.join(d, "seasons.json"), {}) or {}).get("available") or []
+    ix = {y: _load(os.path.join(d, f"index-{y}.json"), None) for y in dispo}
+    return periode_de_courses({y: v for y, v in ix.items() if v}, today or dt.date.today())
+
+
 def write_riders_files(seasons: List[int], current: int, by_season: Dict[int, List[Dict]],
                        today: dt.date) -> None:
     """Fiches coureurs (data/riders-<année>.json) : saison courante recalculée à chaque passage avec le classement
@@ -1758,6 +1793,14 @@ def _tests() -> None:
             d = dt.date
             ix_ = {2027: {"races": [{"end_date": "2027-10-20"}], "upcoming": []}}
             assert saisons_a_archiver([2026], ix_, d(2027, 11, 3)) == []                  # 14 jours exactement : pas encore
+            # intersaison : journée libre pour archives.yml seulement sans course proche (en cours, finie ou à venir à 3 jours près)
+            cal = {2027: {"races": [{"start_date": "2026-10-21", "end_date": "2026-10-25", "status": "finished"}],
+                          "upcoming": [{"start_date": "2027-01-19", "end_date": "2027-01-24"}]}}
+            assert not periode_de_courses(cal, d(2026, 11, 17)) and not periode_de_courses(cal, d(2027, 1, 15))
+            assert periode_de_courses(cal, d(2027, 1, 16)) and periode_de_courses(cal, d(2027, 1, 20)) and periode_de_courses(cal, d(2027, 1, 27))
+            assert periode_de_courses(cal, d(2026, 10, 28)) and not periode_de_courses(cal, d(2026, 10, 29))
+            assert periode_de_courses({2027: {"races": [{"start_date": "2026-01-01", "status": "in_progress"}]}}, d(2026, 11, 17))
+            assert periode_de_courses({}, d(2026, 11, 17)) and periode_de_courses({2027: {"races": []}}, d(2026, 11, 17))   # rien de lisible : prudence
             assert saisons_a_archiver([2026], ix_, d(2027, 11, 4)) == [2026]
             assert saisons_a_archiver([2026], {2027: {"races": [{"start_date": "2027-10-20"}]}}, d(2027, 11, 4)) == [2026]   # start_date à défaut
             assert saisons_a_archiver([2026], {2027: {"races": [{"end_date": "2027-03-01"}], "upcoming": [{"end_date": "2027-12-01"}]}}, d(2027, 11, 4)) == []
