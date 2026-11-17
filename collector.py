@@ -219,13 +219,22 @@ def periode_de_courses_depuis(data_dir: Optional[str] = None, today: Optional[dt
 def write_riders_files(seasons: List[int], current: int, by_season: Dict[int, List[Dict]],
                        today: dt.date) -> None:
     """Fiches coureurs (data/riders-<année>.json) : saison courante recalculée à chaque passage avec le classement
-    UCI du jour (ainsi que la suivante pendant l'intersaison) ; saisons passées calculées une seule fois."""
+    UCI du jour (ainsi que la suivante pendant l'intersaison) ; saisons passées calculées une seule fois.
+    Une saison terminée qui a son classement de fin de saison (data/ranking-<S>.json, `classements_fin_calendrier`) prend
+    ce classement-là, et non celui du jour (qui désigne la saison UCI suivante) ; une saison passée déjà écrite avec un
+    autre classement est recalculée une fois avec lui (la date du classement est notée dans le fichier : pas de boucle)."""
     ranking = _ranking_du_jour(today)
     for y in seasons:
         path = os.path.join(DATA_DIR, f"riders-{y}.json")
+        fin = _load(os.path.join(DATA_DIR, f"ranking-{y}.json"), None)
+        if not (isinstance(fin, dict) and fin.get("season") == y and fin.get("rows")):
+            fin = None
         if y < current and os.path.exists(path):
-            continue
-        data = riders.build_riders(by_season.get(y, []), ranking if y >= current else None, season=y)
+            meta = (_load(path, {}) or {}).get("ranking") or {}
+            if not fin or meta.get("date") == fin.get("date"):
+                continue
+        rk = fin or (ranking if y >= current else None)
+        data = riders.build_riders(by_season.get(y, []), rk, season=y)
         _dump_if_changed(path, data)
 
 
@@ -267,8 +276,8 @@ def write_season_indexes(current: int, computed: Dict[int, Dict], today: Optiona
     seasons = [y for y in candidates if y not in a_archiver]
     for y in seasons:
         _dump_if_changed(os.path.join(DATA_DIR, f"index-{y}.json"), indexes[y])
+    classements_fin_calendrier(today, seasons)   # classement de fin des saisons terminées du Calendrier (jamais bloquant), avant les fiches coureurs
     write_riders_files(seasons, current, by_season, today)
-    classements_fin_calendrier(today, seasons)   # classement de fin des saisons terminées du Calendrier (jamais bloquant)
     _dump_if_changed(os.path.join(DATA_DIR, "seasons.json"), {"current": current, "available": seasons}, ignore=())
     a_retirer = [y for y in sorted(a_archiver)
                  if noms_par_saison.get(y) or any(os.path.exists(os.path.join(DATA_DIR, f"{pre}-{y}.json"))
@@ -1669,6 +1678,30 @@ def _tests_classements_fin_calendrier() -> None:
             assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": False}]}, {}) == [] and os.path.exists(ch)
             assert retirer_saisons_archivees([2026], {"seasons": [{"season": 2026, "complete": True}]}, {}) == [2026]
             assert not os.path.exists(ch) and os.path.exists(os.path.join(tmp, "ranking.json"))
+            # fiches coureurs : une saison terminée prend son classement de fin de saison, pas celui du jour (saison suivante)
+            global _ranking_du_jour
+            sauve_rj = _ranking_du_jour
+            jour = {"name": "UCI World Ranking", "date": "2026-11-17", "source": "x", "season": 2027, "rows": [{"rank": 1, "rider": "C D", "team_code": "ZZZ"}]}
+            _ranking_du_jour = lambda today: jour
+            try:
+                _dump(ch, rk)                                                            # ranking-2026.json du 13/10
+                rp = os.path.join(tmp, "riders-2026.json")
+                write_riders_files([2026, 2027], 2026, {}, auj)                          # intersaison : 2026 encore courante
+                assert _load(rp, {})["ranking"]["date"] == "2026-10-13"
+                assert _load(os.path.join(tmp, "riders-2027.json"), {})["ranking"]["date"] == "2026-11-17"
+                _dump(rp, dict(_load(rp, {}), ranking={"date": "2026-11-17"}))            # écrit autrefois avec le classement du jour
+                write_riders_files([2026, 2027], 2027, {}, auj)                          # 2026 passée : recalculée une fois
+                assert _load(rp, {})["ranking"]["date"] == "2026-10-13"
+                m = os.path.getmtime(rp)
+                os.utime(rp, (1, 1))
+                write_riders_files([2026, 2027], 2027, {}, auj)                          # déjà au bon classement : intacte
+                assert os.path.getmtime(rp) == 1 and m != 1
+                os.remove(ch)
+                os.remove(rp)
+                write_riders_files([2026, 2027], 2027, {}, auj)                          # passée sans classement de fin : aucun
+                assert _load(rp, {})["ranking"] is None
+            finally:
+                _ranking_du_jour = sauve_rj
     finally:
         globals()["DATA_DIR"], globals()["RACES_DIR"] = sauve
 
