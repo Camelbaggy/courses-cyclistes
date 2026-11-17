@@ -4,10 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content="#0a0e15" />
 <title>Courses cyclistes</title>
 <meta name="description" content="Encyclopédie du cyclisme sur route : résultats, calendrier, classements, coureurs et courses.">
+<script>
+/* thème forcé mémorisé : posé avant le premier rendu (pas de flash) */
+try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
-/* ---------- jetons de design (thème sombre unique) ----------
+/* ---------- jetons de design (thème sombre par défaut, thème clair : préférence système ou choix forcé) ----------
    fond / surfaces étagées / bordure / texte ; une couleur d'accent ; catégories ; maillots ; espacements 4-8-12-16-24-32 ; rayons 8 / 14 */
 :root {
   --bg: #0a0e15;       /* fond de page */
@@ -29,14 +34,40 @@
   --sp1: 4px; --sp2: 8px; --sp3: 12px; --sp4: 16px; --sp5: 24px; --sp6: 32px;
   --r1: 8px; --r2: 14px;
   --sh1: 0 1px 2px rgba(0, 0, 0, .35); --sh2: 0 8px 24px rgba(0, 0, 0, .45);
+  --bar-bg: rgba(10, 14, 21, .94);  /* fond translucide de l'en-tête */
+  --on-accent: #0a0e15; /* texte posé sur --accent (accent clair : texte sombre, contraste AA) */
   --bar-h: 56px;       /* hauteur de l'en-tête (onglets collants dessous) */
   --bnav-h: 58px;      /* hauteur de la barre de navigation du bas (mobile) */
   /* noms historiques conservés (pages existantes) */
   --card: var(--s1); --elev: var(--s2); --border: var(--line); --text: var(--tx); --muted: var(--tx3);
   --fr: var(--accent); --fr-bg: rgba(106, 169, 255, .12); --shadow: var(--sh1);
 }
+/* thème clair : mêmes jetons redéfinis (écrits deux fois : choix forcé, puis préférence système) */
+:root[data-theme="light"] {
+  --bg: #f4f6f9; --s1: #ffffff; --s2: #eef2f7; --s3: #e2e8f0; --line: #d3dae4;
+  --tx: #0f172a; --tx2: #334155; --tx3: #566173;
+  --accent: #1d5fd1; --accent-soft: rgba(29, 95, 209, .10);
+  --ok: #047857; --warn: #b45309; --bad: #b91c1c;
+  --jaune: #eab308; --blanc: #ffffff; --argent: #cbd5e1; --bronze: #d6945a; --vert: #16a34a; --pois: #dc2626;
+  --sh1: 0 1px 2px rgba(15, 23, 42, .08); --sh2: 0 8px 24px rgba(15, 23, 42, .12);
+  --bar-bg: rgba(255, 255, 255, .92); --fr-bg: rgba(29, 95, 209, .08); --on-accent: #fff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f6f9; --s1: #ffffff; --s2: #eef2f7; --s3: #e2e8f0; --line: #d3dae4;
+    --tx: #0f172a; --tx2: #334155; --tx3: #566173;
+    --accent: #1d5fd1; --accent-soft: rgba(29, 95, 209, .10);
+    --ok: #047857; --warn: #b45309; --bad: #b91c1c;
+    --jaune: #eab308; --blanc: #ffffff; --argent: #cbd5e1; --bronze: #d6945a; --vert: #16a34a; --pois: #dc2626;
+    --sh1: 0 1px 2px rgba(15, 23, 42, .08); --sh2: 0 8px 24px rgba(15, 23, 42, .12);
+    --bar-bg: rgba(255, 255, 255, .92); --fr-bg: rgba(29, 95, 209, .08); --on-accent: #fff;
+    color-scheme: light;
+  }
+}
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { color-scheme: dark; }
+:root[data-theme="dark"] { color-scheme: dark; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
   background: var(--bg); color: var(--text); line-height: 1.45; font-size: 15px;
@@ -50,7 +81,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 /* ---------- en-tête, menu principal, barre du bas ---------- */
 header.top {
   position: sticky; top: 0; z-index: 30; height: var(--bar-h);
-  background: rgba(10, 14, 21, .94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  background: var(--bar-bg); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 .top-in { max-width: 1040px; margin: 0 auto; height: 100%; padding: 0 var(--sp4); display: flex; align-items: center; gap: var(--sp3); }
@@ -119,7 +150,7 @@ main { max-width: 1040px; margin: 0 auto; padding: var(--sp4) var(--sp4) var(--s
   flex: none; font-size: .8rem; font-weight: 600; padding: 6px 12px; border-radius: 99px;
   background: var(--card); border: 1px solid var(--border); color: var(--muted);
 }
-.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .stage-chip { border-radius: 10px; padding: 4px 11px; text-align: center; line-height: 1.2; min-width: 52px; }
 .stage-chip b { display: block; font-size: .85rem; }
 .stage-chip span { display: block; font-size: .65rem; opacity: .85; font-weight: 500; }
@@ -176,7 +207,7 @@ main { max-width: 1040px; margin: 0 auto; padding: var(--sp4) var(--sp4) var(--s
 .ep-maillots img { display: block; height: 64px; width: auto; margin: 0 auto 4px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
 .ep-maillots figcaption { font-size: .66rem; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; }
 .dot.jaune { background: var(--jaune); } .dot.vert { background: var(--vert); }
-.dot.blanc { background: var(--blanc); }
+.dot.blanc { background: var(--blanc); border-color: var(--line); }
 .dot.pois { background: radial-gradient(circle, var(--pois) 0 2.2px, transparent 2.6px) 0 0 / 7px 7px, #fff; }
 .jersey .t { min-width: 0; line-height: 1.2; }
 .jersey .t small { display: block; font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -501,7 +532,7 @@ details.navbox > summary:focus-visible { outline: 2px solid var(--accent); outli
 .nb-a { display: inline-flex; align-items: center; min-height: 32px; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); background: var(--s2); color: var(--tx);
   font-size: .8rem; font-weight: 600; text-decoration: none; font-variant-numeric: tabular-nums; }
 .nb-a:hover { border-color: var(--accent); }
-.nb-a[aria-current] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.nb-a[aria-current] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .pg-title { font-size: 1.45rem; line-height: 1.15; letter-spacing: -.02em; font-weight: 800; }
 .pg-sub { color: var(--tx3); font-size: .85rem; margin-top: 2px; }
 .tools { display: flex; flex-direction: column; gap: var(--sp2); }
@@ -621,6 +652,7 @@ details.mv-an .mv-body { padding: var(--sp3); }
     <a class="brand" href="#/" aria-label="Courses cyclistes, accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="16.5" r="3.6"/><circle cx="18" cy="16.5" r="3.6"/><path d="M6 16.5 9.6 8h5.2l3.2 8.5M9.6 8H7.4M14.8 8l-3.1 8.5h-5.7"/></svg><span>Courses cyclistes</span></a>
     <nav class="dnav" id="dnav" aria-label="Menu principal"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
     <div class="top-r"><span id="maj"></span>
+      <button class="btn-ico" id="theme-btn" data-action="theme" aria-label="Thème" title="Thème"></button>
       <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
 </header>
@@ -631,6 +663,32 @@ details.mv-an .mv-body { padding: var(--sp3); }
 <script>
 "use strict";
 /* ================== configuration & utilitaires ================== */
+/* ---------- thème : auto (système) / clair / sombre ---------- */
+const THEME_ICONES = {
+  auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>',
+  light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>',
+  dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'
+};
+const THEME_LIBELLES = { auto: "automatique (suit le système)", light: "clair", dark: "sombre" };
+const themeSysteme = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+function themeChoisi() { const t = document.documentElement.dataset.theme; return t === "light" || t === "dark" ? t : "auto"; }
+function majTheme() {
+  const m = themeChoisi();
+  const effectif = m === "auto" ? (themeSysteme && themeSysteme.matches ? "light" : "dark") : m;
+  const mt = document.querySelector('meta[name="theme-color"]'); if (mt) mt.setAttribute("content", effectif === "light" ? "#f4f6f9" : "#0a0e15");
+  const b = document.getElementById("theme-btn"); if (!b) return;
+  const lib = `Thème : ${THEME_LIBELLES[m]} — changer`;
+  b.innerHTML = THEME_ICONES[m]; b.setAttribute("aria-label", lib); b.title = lib;
+}
+function changerTheme() {
+  const suivant = { auto: "light", light: "dark", dark: "auto" }[themeChoisi()];
+  if (suivant === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = suivant;
+  try { if (suivant === "auto") localStorage.removeItem("theme"); else localStorage.setItem("theme", suivant); } catch (e) {}
+  majTheme();
+}
+if (themeSysteme && themeSysteme.addEventListener) themeSysteme.addEventListener("change", majTheme);
+majTheme();
+
 const PARAMS = new URLSearchParams(location.search);
 const BASE = (() => {
   const d = PARAMS.get("data") || "data";
@@ -3436,6 +3494,7 @@ document.addEventListener("click", e => {
   else if (a === "ep-more") { state.limitListe += 100; majListeEpreuves(); }
   else if (a === "eq-more") { state.limitListe += 100; majListeEquipes(); }
   else if (a === "retry") { routeur({ garder: true }); }
+  else if (a === "theme") { changerTheme(); }
   else if (a === "search") { if (state.route && state.route.nom === "recherche") document.getElementById("sr-q").focus(); else go("#recherche"); }
   else if (a === "sr-more") { state.sr.tout[t.dataset.grp] = true; document.getElementById("sr-body").innerHTML = htmlResultats(); }
   else if (a === "retry-sr") { cache.clear(); majRecherche(); }

@@ -262,7 +262,7 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 
 Refonte en préparation : point de départ et contrats à préserver dans `docs/REDESIGN.md`.
 
-Encyclopédie à la Liquipedia (R1), page autonome sans dépendance ni build, thème sombre unique, drapeaux flagcdn.com ; toute donnée insérée passe par `esc()`. Mobile ~390 px d'abord, puis 1024 px.
+Encyclopédie à la Liquipedia (R1), page autonome sans dépendance ni build, thème sombre ou clair (préférence système, bouton `#theme-btn`), drapeaux flagcdn.com ; toute donnée insérée passe par `esc()`. Mobile ~390 px d'abord, puis 1024 px.
 **Coquille** : en-tête collant (marque, menu horizontal à partir de 880 px, recherche) + barre fixe en bas sur mobile (5 icônes SVG, 58 px, `safe-area-inset-bottom`) ; menu
 Accueil · Courses · Équipes · Coureurs · Classements (`data-nav`, `majMenu`). Plus de feuilles superposées : chaque route est une page plein écran dans `#main`.
 **Routeur** (hash, `parseRoute` / `routeur` / `PAGES`) : `#/` accueil · `#courses[/<année>|/epreuves][?vue=avenir&cat=…&pays=…&q=…]` · `#epreuve/<clé encodée>` · `#course/<race_id>[/<étape|F>]`
@@ -277,7 +277,7 @@ est mémorisé par entrée d'historique (`history.state.k`, `scrollMemo`, `finPa
 *Classements* (UCI actuel, fin de saison d'une archive, instantanés `entites/classements/` ; FDJ United Series) · *Recherche* (page, plus d'overlay). Index absents (pas encore générés) : message « généré chaque nuit ».
 **Gabarit d'article** (coureur, épreuve, édition) : `htmlArticle({head, infobox, main, navbox})` = fil d'Ariane (`htmlCrumbs`) + titre (`htmlArtHead`) ; infobox `htmlInfobox` (colonne de droite à 880 px, en tête sur mobile) ; colonne principale (tuiles, onglets de sous-pages, sections) ;
 `htmlNavbox` repliable en pied (épreuve : éditions par décennie ; édition : toutes les éditions de l'épreuve, chargées sans bloquer la page, avec précédente / suivante dans l'infobox). Chaque article a `crumbs`, `titre()` et son squelette.
-Vérification : `python tools/apercu.py <dossier> [--data …]` (captures `-m` 390 px et `-d` 1024 px de chaque page, erreurs console, débordements, retour arrière, anciennes URL, barre du bas) ; `--reel <dossier servi>` pour les vraies données
+Vérification : `python tools/apercu.py <dossier> [--data …]` (captures `-m` 390 px et `-d` 1024 px de chaque page, passe en préférence claire `-c` (`c01-accueil-c`…) et contrôles de thème : fond, bouton, contraste WCAG des jetons, erreurs console, débordements, retour arrière, anciennes URL, barre du bas) ; `--reel <dossier servi>` pour les vraies données
 (`index.html` + liens `data` et `archives` ; `?archives=archives` ; captures `vrai-*`, mesures de la liste des coureurs).
 Base des archives (`BASE_ARCHIVES`) : `?archives=<url https ou dossier relatif>` ; sinon `<data>/archives` si `?data=` est donné ; sinon GitHub Pages du dépôt d'archives (CORS ouvert). Toute lecture d'archive passe par
 `chargerArchive(chemin)` ; site injoignable : message + Réessayer. Les clés null sont absentes des archives (absent = null) ; anciennes classes HC / CH / CPE / AU1 / MNM : libellé d'origine + info-bulle. `cleEdition` DOIT rester alignée avec `collector.cle_edition`,
@@ -285,7 +285,7 @@ Base des archives (`BASE_ARCHIVES`) : `?archives=<url https ou dossier relatif>`
 
 ### Design et composants (E2, plan encyclopédie)
 
-Jetons CSS sur `:root` (thème sombre unique, ne pas coder de couleur en dur) : surfaces `--bg` / `--s1` / `--s2` / `--s3`, bordure `--line`, texte `--tx` / `--tx2` / `--tx3`,
+Jetons CSS sur `:root` (deux thèmes, ne pas coder de couleur en dur ; le bloc `:root` = thème sombre par défaut ; le clair redéfinit les mêmes jetons dans `:root[data-theme="light"]` ET `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) }`, à garder identiques ; `--bar-bg` = fond de l'en-tête, `--on-accent` = texte sur `--accent` ; le bouton `#theme-btn` (délégation `data-action="theme"`) cycle auto -> clair -> sombre -> auto, choix mémorisé dans `localStorage` `theme` (absent = auto) et posé sur `<html data-theme>` par un script du `<head>` avant le premier rendu ; `<meta name="theme-color">` suit le thème effectif) : surfaces `--bg` / `--s1` / `--s2` / `--s3`, bordure `--line`, texte `--tx` / `--tx2` / `--tx3`,
 accent `--accent`, catégories `--c-wt` / `--c-pro` / `--c-fdj` / `--c-1` / `--c-2` / `--c-ch` (badges `cat-WT`, `cat-1`…, texte blanc, contraste AA), maillots `--jaune`…, espacements `--sp1..6`
 (4/8/12/16/24/32), rayons `--r1` 8 / `--r2` 14, ombres `--sh1/2`, `--bar-h` (barre des fiches). Les anciens noms (`--card`, `--elev`, `--border`, `--muted`…) sont des alias. Chiffres tabulaires dans les tableaux.
 Composants (fonctions JS + classes) : `htmlInfobox` / `.hero.infobox` (portrait rectangulaire 4:5 `.hero-portrait`, `object-position: 50% 15%`, vignette Commons demandée à 500 px par `vignetteGrande` ; sans photo : initiales dans un petit cercle `.hero-photo` ; crédit, `.facts` ; pas de ligne « Dans nos données ») et `htmlArtHead` (fil d'Ariane + titre), `htmlTuiles` / `.kpis` (2 colonnes à 390 px, une valeur absente = pas de tuile),
