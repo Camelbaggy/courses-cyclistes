@@ -39,6 +39,12 @@ Les crons nocturnes de 0 h 23 et 1 h 23 n'ont pas tourné (GitHub les saute). Ce
 Le prochain `wikidata.yml` (dimanche, ou à lancer à la main) appliquera la règle des noms v2 (~7 000 requêtes, ~2 h, reprenable) et le
 rapprochement manuel de Cepeda.
 
+## Intersaison (décision du 17/11/2026)
+
+Pas de course avant mi-janvier : la collecte des archives restantes (2017 partielle, 2016, 2011-2015) tourne aussi en journée pour être
+finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Automatique (`collector.periode_de_courses`) : la restriction
+11 h-23 h UTC revient seule dès qu'une course du Calendrier est à 3 jours près (Tour Down Under le 19/01/2027 : dès le 16/01).
+
 ## Décisions du propriétaire à retenir
 
 - Zéro hallucination ; corrections de source seulement avec source citée et validation.
