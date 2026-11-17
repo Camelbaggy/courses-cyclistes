@@ -67,8 +67,9 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
 5. Étendre l'historique Wikidata aux ~150 autres épreuves suivies (`historique.py --proposer`, même preuve).
 6. Lignées d'équipes manquantes (ex. Groupama-FDJ) : re-vérification Wikidata v3, puis propositions d'équivalences à faire valider.
 7. Doublons de coureurs restants (`doublons_possibles` du rapport d'`encyclopedie`, ex. Aranburu) : vérifier puis alias.
-8. Maillots : PCM Mod en place pour les équipes (maillot de chaque saison, 2011-2026) ; à relancer `tools/pcmmod.py` quand 2027 sera publiée,
-   puis éventuellement leurs maillots distinctifs et de nations (rubriques existantes, à rapprocher).
+8. Maillots PCM Mod : équipes (maillot de chaque saison, 95 % des équipes-saisons 2017-2025, avec codes multiples et changements de nom
+   en cours de saison publiés au prochain passage d'archives), sélections nationales, maillots distinctifs de 142 courses (chaque année).
+   À relancer `tools/pcmmod.py` quand 2027 sera publiée chez eux.
 9. Surveiller `update.yml` (GitHub saute des crons) avant la reprise des courses.
 10. Veille (`veille.yml`, dépôt d'archives, depuis le 17/11) : vérifier qu'elle relance bien les nuits sautées ; si elle est elle-même trop
     souvent sautée, passer à l'option 2 (tâche programmée côté Claude, accord du propriétaire).
