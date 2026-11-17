@@ -1538,7 +1538,7 @@ function fichierPcm(chemin, rubrique, annee) {
   state.pcmFDem[chemin] = true;
   state.pcmIdx = state.pcmIdx || fetch(`${BASE_MAILLOTS}/pcmmod/index.json`).then(r => (r.ok ? r.json() : null)).catch(() => null);
   state.pcmIdx.then(ix => {
-    const ok = ix && (!rubrique || (rubrique === "nations" ? ix.nations === true : (ix[rubrique] || []).includes(+annee)));
+    const ok = ix && (!rubrique || (rubrique === "nations" || rubrique === "manuel" ? ix[rubrique] === true : (ix[rubrique] || []).includes(+annee)));
     return ok ? fetch(`${BASE_MAILLOTS}/pcmmod/${chemin}`).then(r => (r.ok ? r.json() : null)).catch(() => null) : null;
   }).then(d => { state.pcmF[chemin] = d || null; redessinerPcm(); });
   return undefined;
@@ -1572,8 +1572,21 @@ function maillotPcm(nom, saison, code, codes) {
 }
 /** Maillot d'une équipe-saison : PCM Mod (maillot de l'année) d'abord, sinon WorldDB (maillot 2025 étendu à la période de dénomination).
  *  { u, src: "PCM Mod" | "WorldDB" } ou null. */
+/** Table MANUELLE `maillots/pcmmod/manuel.json` {id d'équipe-saison: nom exact du maillot PCM Mod de la même saison | [nom, code]} : cas vérifiés à la
+ *  main que les règles ne résolvent pas (équipes sans code UCI et nommées autrement, codes partagés…). Prioritaire. */
+function maillotManuel(nom, saison) {
+  const M = fichierPcm("manuel.json", "manuel"), v = M && M[idEquipeSaison(nom, saison)];
+  if (!v) return null;
+  state.pcm = state.pcm || {};
+  if (state.pcm[saison] === undefined) { demanderPcm(saison); return null; }
+  const [n, c] = Array.isArray(v) ? v : [v, null], L = state.pcm[saison] || [];
+  const x = L.filter(e => e[0] === n && (!c || e[1] === c));
+  return x.length === 1 ? PCM_IMAGE.replace("{id}", encodeURIComponent(x[0][3])) : null;
+}
 function maillotPourEquipe(nom, saison, codeConnu, codesConnus) {
   if (!nom) return null;
+  const man = maillotManuel(nom, saison);
+  if (man) return { u: man, src: "PCM Mod" };
   const e = codeConnu !== undefined ? null : ((equipeDeLibelle(nom, saison) || {}).e || {});
   const code = codeConnu !== undefined ? codeConnu : e.code_uci || null, codes = codeConnu !== undefined ? codesConnus : e.codes_uci;
   let p = maillotPcm(nom, saison, code, codes);

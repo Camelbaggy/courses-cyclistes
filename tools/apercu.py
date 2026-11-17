@@ -284,7 +284,7 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     ok('participants : tenue de l\'équipe nationale pour une sélection', aMaillot('France') === true);
     ok('participants : tenue nationale PCM Mod', (await page.$$eval('#table .team-card', l => l.filter(c => c.querySelector('.tn').textContent.trim() === 'France' && c.querySelector('.maillot.pcm')).length)) === 1);
     const pcm = await page.$$eval('#table .team-card', l => l.filter(c => c.querySelector('.tc-logo.maillot.pcm img')).map(c => c.querySelector('.tn').textContent.trim()));
-    ok('participants : maillot PCM Mod de la saison (code UCI départagé par le nom)', pcm.filter(n => n !== 'France').join() === 'Hôtel Cycling', pcm);
+    ok('participants : maillot PCM Mod de la saison (code UCI départagé par le nom ; table manuelle)', pcm.filter(n => n !== 'France').sort().join() === 'Hôtel Cycling,Écho Cycling', pcm);
     ok('participants : crédit PCM Mod', (await page.$eval('#table', e => e.textContent)).includes('PCM Mod'));
     ok('participants : crédit WorldDB', (await page.$eval('#table', e => e.textContent)).includes('Maillots : WorldDB'));
     await page.click('#table .team-card .tc-tog'); await page.waitForTimeout(200);
