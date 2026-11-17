@@ -63,8 +63,8 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
 2. **Composants Liquipedia modernisés** (faite, PR #56 : infobox en lignes + bandeaux, wikitable zébré `--zebra` / `--hover`, onglets, tuiles compactes, navbox en grille, `o.bandeau` optionnel, touches d'accent) : typographie (échelle, chiffres tabulaires), infobox à bandeau de titre et lignes
    libellé / valeur, tableaux « wikitable » denses, onglets, tuiles plus compactes, navbox ; mêmes fonctions JS
    (`htmlInfobox`, `htmlTableau`, `htmlOnglets`, `htmlTuiles`, `htmlNavbox`), pages inchangées sur le fond.
-3. **Navigation** (faite : recherche inline `#hsearch` + raccourci « / » dès 880 px, bouton retour mobile `#back-btn`, `htmlSousNav` / `.secnav` pour Courses, Classements et Coureurs, `#to-top`, pied de page soigné) : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
-4. **Pages une à une** : accueil (portail plus compact : derniers résultats en liste, résumés repliés), fiche de course /
+3. **Navigation** (faite, PR #57 : recherche inline `#hsearch` + raccourci « / » dès 880 px, bouton retour mobile `#back-btn`, `htmlSousNav` / `.secnav` pour Courses, Classements et Coureurs, `#to-top`, pied de page soigné) : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
+4. **Pages une à une** : accueil (4a, fait : bandeau « À la une », prochaine course, cartes à filet de catégorie, résumés repliés, maillots + crédit, tuiles de compteurs) ; à venir : fiche de course /
    étape (cible des liens ntfy), fiche coureur, article d'équipe, page d'épreuve.
 
 ## Questions posées au démarrage (tranchées ci-dessus)

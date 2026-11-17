@@ -637,10 +637,59 @@ a.nb-a .wd-s { color: inherit; opacity: .7; }
 .home .col { display: contents; }
 .blk { min-width: 0; }
 .blk-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp3); margin-bottom: var(--sp2); }
-.blk-h h2 { font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--tx2); }
+.blk-h h2 { font-size: 1rem; font-weight: 800; color: var(--tx); }
+.blk-h h2::before { content: ""; display: inline-block; width: 4px; height: 1em; border-radius: 2px; background: var(--accent); margin-right: 8px; vertical-align: -.12em; }
 .blk-h a { font-size: .8rem; font-weight: 700; color: var(--accent); text-decoration: none; white-space: nowrap; padding: 6px 0; }
 .blk-h a:hover { text-decoration: underline; }
-.o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; } .o6 { order: 6; } .o7 { order: 7; }
+.o0 { order: 0; } .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; } .o6 { order: 6; } .o7 { order: 7; } .o8 { order: 8; }
+/* bandeau « À la une » (couleur de catégorie posée par --cat = jeton, texte blanc) */
+.une { display: block; width: 100%; text-align: left; color: #fff; cursor: pointer; border: 0; border-radius: var(--r2); padding: var(--sp4); box-shadow: var(--sh1);
+  background: var(--cat, var(--c-wt));
+  background: linear-gradient(135deg, var(--cat, var(--c-wt)), color-mix(in srgb, var(--cat, var(--c-wt)) 70%, #000)); }
+@media (hover: hover) { .une:hover { box-shadow: var(--sh2); } }
+.une:focus-visible, .rcard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.une-tag { display: inline-block; font-size: .68rem; font-weight: 800; letter-spacing: .1em; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .3); }
+.une-nom { display: flex; align-items: center; gap: 8px; margin-top: var(--sp2); font-size: 1.35rem; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.une-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: .88rem; font-weight: 600; }
+.une .badge { color: #fff; background: rgba(0, 0, 0, .3); border-color: rgba(255, 255, 255, .55); }
+.une-prog { display: flex; align-items: center; gap: var(--sp3); margin-top: var(--sp3); font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.une-prog .bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(0, 0, 0, .3); overflow: hidden; }
+.une-prog .bar i { display: block; height: 100%; background: #fff; border-radius: 3px; }
+.une-ligne { display: flex; align-items: center; gap: var(--sp2); margin-top: var(--sp3); font-size: .95rem; }
+.une-ligne .mjs { margin-left: auto; }
+.une-ligne .eq { font-size: .78rem; font-weight: 600; }
+.prochaine { min-height: 1.3em; font-size: .85rem; color: var(--tx2); padding: 0 var(--sp1); margin-top: calc(var(--sp3) * -1); }
+.prochaine b { color: var(--tx); }
+/* maillot d'équipe (rempli après chargement des fichiers PCM Mod / WorldDB ; absent = emplacement masqué) */
+.mjs { display: inline-block; height: 28px; flex: none; position: relative; }
+.mjs:empty { display: none; }
+.mjs img.mj { height: 100%; width: auto; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .4)); }
+.mjs.pcm { aspect-ratio: 213 / 242; overflow: hidden; }
+.mjs.pcm img.mj { position: absolute; max-width: none; width: 120.19%; height: auto; left: -10.33%; top: -2.89%; filter: none; }
+.une .mjs { height: 36px; }
+/* derniers résultats : filet de catégorie, résumé replié */
+.rcard { background: var(--s1); border: 1px solid var(--line); border-left: 4px solid var(--cat, var(--line)); border-radius: var(--r2); padding: 10px var(--sp3); box-shadow: var(--sh1); cursor: pointer; transition: box-shadow .15s, transform .15s; }
+@media (hover: hover) { .rcard:hover { box-shadow: var(--sh2); transform: translateY(-1px); } }
+.rc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rc-sub { color: var(--tx3); font-size: .82rem; margin: 2px 0 4px; }
+.rcard .winner-line { margin-top: 4px; }
+.rcard .winner-line .mjs { margin-left: auto; }
+.rcard .pill-label { width: 76px; }
+.resume { margin-top: 6px; border-top: 1px dashed var(--line); }
+.resume summary { cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--accent); padding: 8px 0 4px; }
+.resume p { font-size: .9rem; line-height: 1.5; padding: 4px 0 2px; cursor: auto; }
+.mini.mini-cat { box-shadow: inset 4px 0 0 var(--cat, transparent); }
+.home .rows .row.uc:nth-child(-n+3) .rk { border-radius: 999px; color: #111827; padding: 2px 0; }
+.home .rows .row.uc:nth-child(1) .rk { background: var(--jaune); }
+.home .rows .row.uc:nth-child(2) .rk { background: var(--argent); }
+.home .rows .row.uc:nth-child(3) .rk { background: var(--bronze); }
+.home-count .kpis { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp2); }
+.home-count .kpis .tile { padding: 6px 4px 8px; text-align: center; }
+.home-count .kpis .tile:last-child:nth-child(odd) { grid-column: auto; }
+.home-count .kpis .tile b { display: block; font-size: 1.05rem; }
+.home-count .kpis .tile small { font-size: .6rem; }
+.home-credit { font-size: .74rem; color: var(--tx3); text-align: center; }
+.home-credit:empty { display: none; }
 .summary.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .minis { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r2); overflow: hidden; }
 .mini { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: var(--sp2); align-items: center; width: 100%; text-align: left; min-height: 52px;
@@ -651,12 +700,12 @@ button.mini:hover, a.mini:hover { background: var(--s2); }
 .mini .t { min-width: 0; }
 .mini .t b { display: block; font-size: .88rem; line-height: 1.25; overflow-wrap: anywhere; }
 .mini .t small { display: block; font-size: .74rem; color: var(--tx3); overflow-wrap: anywhere; }
-.home-count { font-size: .78rem; color: var(--tx3); text-align: center; padding-top: var(--sp2); }
-.home-count b { color: var(--tx2); font-variant-numeric: tabular-nums; }
+.home-count { text-align: center; }
 .note-warn { font-size: .8rem; color: var(--warn); border: 1px solid var(--warn); border-radius: 10px; padding: 7px 10px; }
 @media (min-width: 880px) {
   .home { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--sp5) var(--sp6); align-items: start; }
   .home .col { display: flex; flex-direction: column; gap: var(--sp5); min-width: 0; }
+  .home > .une, .home > .prochaine, .home > .home-count, .home > .home-credit, .home > .blk { grid-column: 1 / -1; }
   .pg-wide { max-width: 1040px; }
   .tools { flex-direction: row; flex-wrap: wrap; align-items: center; }
   .tools .search { flex: 1 1 260px; width: auto; }
@@ -1626,6 +1675,7 @@ const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
 /** Logo d'une équipe dans la liste des participants : logo Wikidata de sa lignée (lignees_index.json), seulement si la saison est couverte par le nom
  *  actuel de la lignée (`logo_depuis`) ; sinon pastille avec les initiales. Les deux index sont chargés à la demande (la liste est redessinée ensuite). */
 function redessinerParticipants() {
+  if (state.route && state.route.nom === "accueil") majMaillotsAccueil();
   if (state.course && state.route && state.route.nom === "course") renderFiche();
 }
 /** Index des maillots (maillots/index.json) : { equipes: {CODE: {nom, slug}}, parSlug: {slug: CODE} } ; absent ou illisible : null (aucun maillot). */
@@ -1659,7 +1709,8 @@ function maillotNation(iso3) {
 const PCM_IMAGE = "https://pcmmod.com/img/backup_graph_element/{id}.png";
 function redessinerPcm() {
   const n = state.route && state.route.nom;
-  if (n === "equipe") renderEquipe();
+  if (n === "accueil") majMaillotsAccueil();
+  else if (n === "equipe") renderEquipe();
   else if (n === "epreuve") renderEpreuve();
   else if (n === "course" && state.course) renderFiche();
 }
@@ -1741,10 +1792,15 @@ function maillotEquipe(nom, saison, codeConnu) {
   if (c && c !== code) return null;
   return `${BASE_MAILLOTS}/equipes/${code}.webp`;
 }
+/** Maillot d'une équipe-saison (tenue de l'équipe nationale pour une sélection) ; null / undefined tant que les fichiers ne sont pas chargés. */
+function maillotDeLibelle(nom, saison) {
+  const qn = nom ? equipeDeLibelle(nom, saison) : null;
+  return qn && qn.e.nationale ? maillotNation(qn.e.pays) : maillotPourEquipe(nom, saison);
+}
 function htmlLogoEquipe(nom, saison) {
   const vide = `<span class="tc-logo ini" aria-hidden="true">${esc(initialesEquipe(nom))}</span>`;
   const qn = nom ? equipeDeLibelle(nom, saison) : null;
-  const mail = qn && qn.e.nationale ? maillotNation(qn.e.pays) : maillotPourEquipe(nom, saison);
+  const mail = maillotDeLibelle(nom, saison);
   if (mail) {
     (state.partMaillot = state.partMaillot || {})[mail.src] = true;
     return `<span class="tc-logo maillot${mail.src === "PCM Mod" ? " pcm" : ""}"><img src="${esc(mail.u)}" alt="" loading="lazy" title="Maillot : ${esc(mail.src)}" referrerpolicy="no-referrer" onerror="this.parentNode.className='tc-logo ini';this.parentNode.textContent=${esc(JSON.stringify(initialesEquipe(nom)))}"></span>`;
@@ -3166,8 +3222,77 @@ async function courseAVenir() {
   }));
   return [].concat(...L).sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
 }
+const CAT_JETON = { WT: "--c-wt", Pro: "--c-pro", FDJ: "--c-fdj", "1": "--c-1", "2": "--c-2", Champ: "--c-ch" };   // même correspondance que les badges cat-*
+/** Style inline `--cat:var(<jeton>)` d'une catégorie connue (aucune couleur en dur) ; vide sinon. */
+function catStyle(c) { const j = CAT_JETON[(c || "").replace(/[^\w]/g, "")]; return j ? `--cat:var(${j})` : ""; }
+/** Emplacement de maillot d'une équipe (rempli par majMaillotsAccueil une fois les fichiers chargés) ; rien sans équipe ni année. */
+function slotMaillot(equipe, date) {
+  const p = pd(date);
+  return equipe && p ? `<span class="mjs" data-eq="${esc(equipe)}" data-y="${p.y}"></span>` : "";
+}
+function majCreditAccueil() {
+  const c = document.getElementById("b-credit");
+  if (!c) return;
+  const src = new Set([...document.querySelectorAll("#main .mjs img.mj")].map(i => i.dataset.src));
+  const L = ["PCM Mod", "WorldDB"].filter(x => src.has(x));
+  c.textContent = L.length ? `Maillots : ${L.join(" · ")}` : "";
+}
+function majMaillotsAccueil() {
+  if (!state.route || state.route.nom !== "accueil") return;
+  document.querySelectorAll("#main .mjs[data-eq]").forEach(sl => {
+    const y = +sl.dataset.y;
+    demanderEquipesAn(y, majMaillotsAccueil);
+    const m = maillotDeLibelle(sl.dataset.eq, y);
+    if (!m || sl.dataset.u === m.u) return;
+    sl.dataset.u = m.u;
+    sl.className = "mjs" + (m.src === "PCM Mod" ? " pcm" : "");
+    sl.innerHTML = `<img class="mj" src="${esc(m.u)}" data-src="${esc(m.src)}" alt="" loading="lazy" referrerpolicy="no-referrer" title="Maillot : ${esc(sl.dataset.eq)} (${esc(m.src)})" onerror="this.remove();majCreditAccueil()">`;
+  });
+  majCreditAccueil();
+}
+/** Bandeau « À la une » : course en cours (la première), sinon le dernier résultat ; vide s'il n'y a ni l'un ni l'autre. */
+function htmlUne(x, it) {
+  if (x) {
+    const fait = x.stages_done, tot = x.stages_total, prog = x.race_type === "stage_race" && fait != null && tot ? Math.min(100, Math.round(fait / tot * 100)) : null;
+    return `<button class="une o0" style="${catStyle(x.category)}" data-open="${esc(x.id)}" data-stage="">
+      <span class="une-tag">EN COURS</span>
+      <span class="une-nom">${flag(x.flag, x.country)}<span>${esc(x.name)}</span></span>
+      <span class="une-sub"><span>${esc(plage(x.start_date, x.end_date))}</span>${catBadge(x.category, x.uci_class)}</span>
+      ${prog != null ? `<span class="une-prog"><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${esc(tot)}" aria-valuenow="${esc(fait)}" aria-label="Étapes courues"><i style="width:${prog}%"></i></span><span>${esc(fait)} / ${esc(tot)} étapes</span></span>` : ""}
+      ${x.leader ? `<span class="une-ligne"><span>Leader : <b>${esc(x.leader.name)}</b>${x.leader.team ? ` <span class="eq">· ${esc(x.leader.team)}</span>` : ""}</span>${slotMaillot(x.leader.team, x.start_date)}</span>` : ""}
+    </button>`;
+  }
+  if (!it) return "";
+  const c = courseParId(it.race_id), w = it.winner, sn = it.stage_number == null ? "" : it.stage_number;
+  return `<button class="une o0" style="${catStyle(c && c.category)}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
+    <span class="une-tag">DERNIER RÉSULTAT</span>
+    <span class="une-nom">${flag(c && c.flag, c && c.country)}<span>${esc(it.race_name)}</span></span>
+    <span class="une-sub"><span>${esc(it.label)} · ${esc(dateCourte(it.date))}</span>${c ? catBadge(c.category, c.uci_class) : ""}</span>
+    ${w ? `<span class="une-ligne"><span>Vainqueur : <b>${esc(w.name)}</b>${w.team ? ` <span class="eq">· ${esc(w.team)}</span>` : ""}</span>${slotMaillot(w.team, it.date)}</span>` : ""}
+  </button>`;
+}
+/** Carte d'un dernier résultat de l'accueil : filet de catégorie, maillot du vainqueur, résumé replié. Cliquable (div) : le résumé et les liens coureur n'ouvrent pas la course. */
+function carteAccueil(it) {
+  const c = courseParId(it.race_id), sn = it.stage_number == null ? "" : it.stage_number, w = it.winner, bf = it.best_french;
+  return `<div class="rcard" role="link" tabindex="0" style="${catStyle(c && c.category)}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
+    <div class="rc-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>${c ? catBadge(c.category, c.uci_class) : ""}</div>
+    <div class="rc-sub">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
+    ${w ? `<div class="winner-line"><span class="pill-label">Vainqueur</span>${flag(w.flag, w.nationality)}
+      <div class="who"><div class="nm">${plink(w.id, w.name)}${w.is_french ? ' <span class="badge fr">FR</span>' : ""}</div><div class="small muted">${esc(w.team || "")}</div></div>${slotMaillot(w.team, it.date)}</div>` : ""}
+    ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
+    ${it.ai_summary ? `<details class="resume"><summary>Résumé</summary><p>${esc(it.ai_summary)}</p></details>` : ""}
+  </div>`;
+}
+/** Ligne « Prochaine course » : première course à venir qui commence aujourd'hui ou plus tard ; vide sinon. */
+function htmlProchaine(L) {
+  const auj = new Date(), t0 = Date.UTC(auj.getFullYear(), auj.getMonth(), auj.getDate());
+  const u = L.find(x => { const p = pd(x.start_date); return p && Date.UTC(p.y, p.m - 1, p.d) >= t0; });
+  if (!u) return "";
+  const p = pd(u.start_date), n = Math.round((Date.UTC(p.y, p.m - 1, p.d) - t0) / 864e5);
+  return `Prochaine course : <b>${esc(u.name)}</b> · ${esc(plage(u.start_date, u.end_date))} · ${n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} jours`}`;
+}
 function blocAvenir(L) {
-  const lignes = L.slice(0, 8).map(u => `<div class="mini"><span class="d">${esc(plage(u.start_date, u.end_date))}</span>
+  const lignes = L.slice(0, 8).map(u => `<div class="mini${catStyle(u.category) ? " mini-cat" : ""}" style="${catStyle(u.category)}"><span class="d">${esc(plage(u.start_date, u.end_date))}</span>
     <span class="t"><b>${flag(u.flag, u.country)} ${esc(u.name)}</b></span>${catBadge(u.category, u.uci_class)}</div>`).join("");
   const y = L.length ? L[0]._y : null;
   return `<div class="blk-h"><h2>Courses à venir</h2><a href="${esc(hrefCourses({ saison: y, vue: "avenir" }))}">Calendrier</a></div>
@@ -3228,29 +3353,35 @@ async function pageAccueil(r, tok) {
   titre(null);
   state.ctxPage = `c${state.current}`;
   const cours = (ix.races || []).filter(x => x.status === "in_progress");
-  const derniers = (ix.latest || []).slice(0, 6);
-  const enCours = cours.length ? `<section class="blk o1"><div class="blk-h"><h2>Courses en cours</h2><a href="#courses">Courses</a></div><div class="minis">${cours.map(x => `<button class="mini" data-open="${esc(x.id)}" data-stage="">
+  const une = htmlUne(cours[0], cours.length ? null : (ix.latest || [])[0]);
+  const dansUne = !cours.length && une ? 1 : 0;       // le dernier résultat est dans le bandeau : pas de doublon dans la liste
+  const derniers = (ix.latest || []).slice(dansUne, 6);
+  const autres = cours.slice(1);
+  const enCours = autres.length ? `<section class="blk o1"><div class="blk-h"><h2>Aussi en cours</h2><a href="#courses">Courses</a></div><div class="minis">${autres.map(x => `<button class="mini${catStyle(x.category) ? " mini-cat" : ""}" style="${catStyle(x.category)}" data-open="${esc(x.id)}" data-stage="">
       <span class="d">${esc(plage(x.start_date, x.end_date))}</span><span class="t"><b>${flag(x.flag, x.country)} ${esc(x.name)}</b><small>${x.race_type === "stage_race" ? `${esc(x.stages_done)}${x.stages_total ? "/" + esc(x.stages_total) : ""} étapes` : "course d'un jour"}${x.leader ? ` · leader : ${esc(x.leader.name)}` : ""}</small></span>
       ${catBadge(x.category, x.uci_class)}</button>`).join("")}</div></section>` : "";
   const fr = blocFrancais(ix);
   main.innerHTML = `<h1 class="sr">Courses cyclistes : accueil</h1><div class="home">
+    ${une}<p class="prochaine o0" id="b-prochaine">&nbsp;</p>
     <div class="col">${enCours}
       <section class="blk o2"><div class="blk-h"><h2>Derniers résultats</h2><a href="#courses">Tous les résultats</a></div>
-        ${derniers.length ? `<div class="stack">${derniers.map(it => carteEtape(it, true)).join("")}</div>` : '<div class="empty card">Aucun résultat récent.</div>'}</section>
+        ${derniers.length ? `<div class="stack">${derniers.map(carteAccueil).join("")}</div>` : '<div class="empty card">Aucun résultat récent.</div>'}</section>
       <section class="blk o6" id="b-jour"></section></div>
     <div class="col"><section class="blk o3" id="b-venir"><div class="blk-h"><h2>Courses à venir</h2></div>${squeletteListe().replace(/5\)/, "3)")}</section>
       <section class="blk o4" id="b-uci"><div class="blk-h"><h2>Classement UCI</h2></div>${squeletteListe()}</section>
       ${fr ? `<section class="blk o5">${fr}</section>` : ""}</div>
-    <div class="home-count o7" id="b-compteurs"></div></div>`;
+    <div class="home-count o7" id="b-compteurs"></div><p class="home-credit o8" id="b-credit"></p></div>`;
   const remplit = (id, html) => { const b = document.getElementById(id); if (b && tok === state.routeTok) { if (html) b.innerHTML = html; else b.remove(); } };
-  courseAVenir().then(L => remplit("b-venir", blocAvenir(L)));
+  const pv = courseAVenir();
+  pv.then(L => remplit("b-venir", blocAvenir(L)));
+  pv.then(L => { const h = htmlProchaine(L), b = document.getElementById("b-prochaine"); if (b && tok === state.routeTok) { if (h) b.innerHTML = h; else b.remove(); } });
   chargerRanking().then(R => remplit("b-uci", R && (R.rows || []).length ? blocUciAccueil(R) : ""));
   chargerEntIdx().then(I => {
     const c = I && I.compteurs;
-    remplit("b-compteurs", c ? [["coureurs", "coureurs"], ["courses", "épreuves"], ["editions", "éditions"], ["saisons", "saisons"]].filter(([k]) => c[k] != null)
-      .map(([k, l]) => `<b>${esc(num(c[k]))}</b> ${l}`).join(" · ") : "");
+    remplit("b-compteurs", c ? htmlTuiles([["coureurs", "Coureurs"], ["courses", "Épreuves"], ["editions", "Éditions"], ["saisons", "Saisons"]].map(([k, l]) => ({ lab: l, val: c[k] == null ? null : num(c[k]) }))) : "");
   });
   surVisible(document.getElementById("b-jour"), () => ceJourLa().then(L => { if (tok === state.routeTok) remplit("b-jour", L.length ? blocCeJourLa(L) : ""); }).catch(() => remplit("b-jour", "")));
+  majMaillotsAccueil();
   finPage(tok);
 }
 
@@ -3572,6 +3703,7 @@ async function pageRecherche(r, tok) {
 document.addEventListener("click", e => {
   const lien = e.target.closest("[data-rider]");
   if (lien) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); return; }
+  if (e.target.closest("details.resume")) return;   // le résumé s'ouvre / se ferme sans ouvrir la course
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
   if (t.dataset.cgo) { remplacer(t.dataset.cgo); return; }
@@ -3635,6 +3767,7 @@ document.addEventListener("input", e => {
   saisie(e.target);
 });
 document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target && e.target.classList && e.target.classList.contains("rcard")) { e.preventDefault(); e.target.click(); return; }
   if (e.target && e.target.id === "hsearch" && e.key === "Escape") { e.target.blur(); return; }
   if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]"))) {
     e.preventDefault();
