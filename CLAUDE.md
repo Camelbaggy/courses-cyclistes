@@ -102,10 +102,11 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   (le `data/` de `code/` n'est lu que pour la rotation ; le workflow prend le code de `main` : fusionner ici avant de relancer là-bas) et commit `data/` du dépôt d'archives (boucle de 5 essais
   `pull --rebase -X theirs` + `push`, attente aléatoire 5-20 s, échec explicite). **Auto-relance** : après le commit, si
   une saison demandée n'est pas `complete` (`archives/data/archives/<année>/state.json`, `parse_saisons` importé de
-  `code/`), le workflow se relance (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC (créneau
-  d'`update.yml` : limite la charge sur DataRide pendant les courses) et si le passage n'a rien changé (pas de boucle sans
+  `code/`), le workflow se relance (`gh workflow run`, `permissions: actions: write`) sauf entre 11 h et 23 h UTC PENDANT LA SAISON (créneau
+  d'`update.yml` : limite la charge sur DataRide pendant les courses ; en intersaison, `collector.periode_de_courses` faux = aucune course du Calendrier
+  en cours, finie ou à venir à 3 jours près, la journée est libre et la collecte enchaîne jour et nuit) et si le passage n'a rien changé (pas de boucle sans
   progrès) ; le cron n'est qu'une amorce (GitHub le saute souvent) ; **`veille.yml`** (dépôt d'archives, toutes les heures à :47) relance `archives.yml` si aucun passage n'a démarré
-  depuis 20 h (entre 23 h et 11 h UTC seulement) et `wikidata.yml` si aucun depuis 8 jours, rien si un passage est en file ou en cours (si la veille elle-même est sautée trop souvent : tâche programmée côté Claude, option 2 validée par le propriétaire). Budget 50 min (timeout 60). **Recollecte ciblée** :
+  depuis 20 h (entre 23 h et 11 h UTC seulement ; en intersaison à toute heure, et dès 1 h sans passage s'il reste des saisons incomplètes d'après l'index publié) et `wikidata.yml` si aucun depuis 8 jours, rien si un passage est en file ou en cours (si la veille elle-même est sautée trop souvent : tâche programmée côté Claude, option 2 validée par le propriétaire). Budget 50 min (timeout 60). **Recollecte ciblée** :
   `collector.archive_a_recollecter` rouvre une course
   archivée dont un classement `stage` / `gc` (étape route ou CLM individuel, ou final) a une ligne classée sans `time_s`,
   une seule fois (marque `_temps_v` = `TEMPS_VERSION`, 3 aujourd'hui ; l'incrémenter si `parse_duree` ou la lecture des
