@@ -548,6 +548,82 @@ const FLAG_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28"
     }
   }
 
+  /* ---------- étape 4c : fiche coureur (bandeau d'identité, infobox sans doublon, graphique des saisons, palmarès, parcours) ---------- */
+  if (!conf.reel) {
+    for (const [w, h, suf] of [[390, 844, 'm'], [1024, 800, 'd']]) {
+      const { ctx, page } = await nouveauContexte(w, h);
+      const T = `coureur ${suf}`;
+      await visite(page, '#coureur/' + conf.coureur, '#main .art .tile'); await page.waitForTimeout(500);
+      const b = await page.evaluate(() => {
+        const ban = document.querySelector('#main .id-ban'), ib = document.querySelector('#main .infobox');
+        const lib = ib ? [...ib.querySelectorAll('dt')].map(e => e.textContent.trim()) : [];
+        const eq = ban && ban.querySelector('.id-eq a, .id-eq');
+        const nomEq = ((ban && ban.querySelector('.id-eq a')) || {}).textContent || '';
+        const R = e => e ? e.getBoundingClientRect() : null, ph = ban && ban.querySelector('.hero-portrait, .hero-photo');
+        const sa = Object.values(state.cr.ent.saisons || {}).filter(x => x.stats && (x.stats.race_days > 0 || x.stats.wins != null || x.stats.podiums != null)).length;
+        return { h1: !!(ban && ban.querySelector('h1') && ban.querySelector('h1').textContent.trim()), ph: !!ph, phW: ph && Math.round(R(ph).width), credit: !!(ban && ban.querySelector('.id-ph .credit a')),
+          creditEnBandeau: ban && /Photo/.test((ban.querySelector('.id-ph .credit') || {}).textContent || ''),
+          ibPortrait: ib ? ib.querySelectorAll('.hero-portrait, .hero-photo, .ib-photo, img').length : 0, ibCredPhoto: ib ? /Photo :/.test(ib.textContent) : false,
+          lib, nomEq, ibTxt: ib ? ib.textContent : '', nat: ban && /France/.test((ban.querySelector('.art-sub') || {}).textContent || ''),
+          eq: !!eq, mj: ban ? ban.querySelectorAll('.id-eq .mjs').length : 0, mjImg: ban ? ban.querySelectorAll('.id-eq .mjs img.mj').length : 0,
+          tuileJaune: getComputedStyle(document.querySelector('.kpis .tile.t-jaune') || document.body).borderTopColor, tuileAcc: getComputedStyle(document.querySelectorAll('.kpis .tile')[1]).borderTopColor,
+          ibLeft: ib && Math.round(R(ib).left), rmLeft: Math.round(R(document.querySelector('#main .rmain')).left), banTop: ban && Math.round(R(ban).top), ibTop: ib && Math.round(R(ib).top),
+          banW: ban && Math.round(R(ban).width), mainW: Math.round(R(document.querySelector('#main .art')).width), sa };
+      });
+      ok(`${T} : bandeau d'identité avec h1 et portrait (ou initiales)`, b.h1 && b.ph, b);
+      ok(`${T} : portrait ${w === 390 ? 92 : 150} px de large`, b.phW === (w === 390 ? 92 : 150), b.phW);
+      ok(`${T} : crédit photo (auteur / licence liés) dans le bandeau`, b.credit && b.creditEnBandeau, b);
+      ok(`${T} : aucun portrait ni crédit photo dans l'infobox`, b.ibPortrait === 0 && !b.ibCredPhoto, b);
+      ok(`${T} : nationalité dans le bandeau, absente de l'infobox`, b.nat && !b.lib.some(l => /Nationalit|Pays/.test(l)), b.lib);
+      ok(`${T} : équipe dans le bandeau (lien), jamais répétée dans l'infobox`, b.eq && !!b.nomEq && !b.lib.some(l => /quipe/.test(l)) && !b.ibTxt.includes(b.nomEq), b);
+      ok(`${T} : emplacement de maillot dans le bandeau`, b.mj === 1, b.mj);
+      console.log('INFO ', T, ': maillot du bandeau chargé', b.mjImg);
+      ok(`${T} : tuile Victoires à filet --jaune, autres à filet d'accent`, b.tuileJaune !== b.tuileAcc, [b.tuileJaune, b.tuileAcc]);
+      if (w === 1024) ok(`${T} : deux colonnes (contenu à gauche, infobox à droite) sous le bandeau pleine largeur`, b.ibLeft > b.rmLeft + 300 && b.banW >= b.mainW - 2 && b.ibTop >= b.banTop, b);
+      else ok(`${T} : infobox sous le bandeau, une colonne`, b.ibLeft === b.rmLeft && b.ibTop > b.banTop, b);
+      // aperçu : graphique des saisons
+      const g = await page.evaluate(() => { const s = document.querySelector('#rcontent svg.bars'); return s ? { g: s.querySelectorAll('.bar-g').length, title: !!s.querySelector(':scope > title'), vb: s.getAttribute('viewBox'), w: Math.round(s.getBoundingClientRect().width), h: Math.round(s.getBoundingClientRect().height), v: s.querySelectorAll('.bv').length, an: s.querySelectorAll('.by').length,
+        fill: getComputedStyle(s.querySelector('.bv') || s).fill, jaune: getComputedStyle(document.documentElement).getPropertyValue('--jaune').trim(), h2: !!document.querySelector('#rcontent h2.h-sec'), gt: !!document.querySelector('#rcontent .grp-title') } : null; });
+      ok(`${T} : graphique des saisons (autant de groupes de barres que de saisons avec données)`, !!g && g.g === b.sa && g.title && g.v >= 1 && g.an >= 1, g);
+      ok(`${T} : « Derniers résultats marquants » en h2.h-sec (plus de grp-title)`, !!g && g.h2 && !g.gt, g);
+      // palmarès
+      await page.click('#rtabs [data-rtab="palmares"]'); await page.waitForTimeout(300);
+      const pa = await page.evaluate(() => { const L = [...document.querySelectorAll('#rcontent .res.res, #rcontent button.res')], rk = [1, 2, 3].map(n => { const e = document.querySelector('#rcontent .res .rk.r' + n); return e ? { bg: getComputedStyle(e).backgroundColor, br: getComputedStyle(e).borderRadius } : null; });
+        return { n: L.length, cat: L.filter(e => /--cat:\s*var\(--c-/.test(e.getAttribute('style') || '')).length, rk, annees: document.querySelectorAll('#rcontent .grp-title').length, bl: L[0] && getComputedStyle(L[0]).borderLeftWidth }; });
+      ok(`${T} : palmarès : pastilles de rang or / argent / bronze rondes (jetons)`, pa.rk.filter(Boolean).length >= 2 && pa.rk.filter(Boolean).every(x => x.bg !== 'rgba(0, 0, 0, 0)' && parseInt(x.br) > 10), pa);
+      ok(`${T} : palmarès : filet --cat de catégorie sur les résultats, intertitres d'année`, pa.cat >= 1 && pa.annees >= 1 && pa.bl === '4px', pa);
+      // classement UCI
+      await page.click('#rtabs [data-rtab="uci"]'); await page.waitForTimeout(300);
+      const sp = await page.evaluate(() => { const s = document.querySelector('#rcontent svg.spark'); return s ? { ar: !!s.querySelector('.ar'), ln: !!s.querySelector('.ln'), last: s.querySelectorAll('.pt.last').length, lab: (s.querySelector('.lastlab') || {}).textContent, fillAr: getComputedStyle(s.querySelector('.ar') || s).fill, ax: !!s.querySelector('.ax') } : null; });
+      ok(`${T} : sparkline UCI : aire sous la courbe, point final et son rang en étiquette`, !!sp && sp.ar && sp.ln && sp.last === 1 && /\d/.test(sp.lab || '') && sp.fillAr !== 'rgb(0, 0, 0)', sp);
+      if (w === 390) await cap(page, '07e-coureur-uci', '-' + suf);
+      // parcours : maillots + crédit unique
+      await page.click('#rtabs [data-rtab="parcours"]'); await page.waitForTimeout(500);
+      const pc = await page.evaluate(() => ({ lignes: document.querySelectorAll('#rcontent .eqlist li').length, slots: document.querySelectorAll('#rcontent .eqlist .mjs[data-eq]').length, imgs: document.querySelectorAll('#rcontent .eqlist .mjs img.mj').length,
+        cred: document.querySelectorAll('#fiche-credit').length, txt: (document.getElementById('fiche-credit') || {}).textContent, autres: [...document.querySelectorAll('#main *')].filter(e => e.children.length === 0 && /^Maillots :/.test(e.textContent) && e.id !== 'fiche-credit').length }));
+      // emplacements : seulement quand le libellé UCI d'une saison de la période est le nom affiché (rien dans le jeu fictif : noms Wikidata différents)
+      console.log('INFO ', T, ': parcours, maillots chargés', pc.imgs, '/', pc.slots);
+      // jamais le maillot d'une équipe d'un autre nom que celui de la ligne (même slug, via slugEquipe de la page)
+      const autreNom = await page.evaluate(() => [...document.querySelectorAll('#rcontent .eqlist li')].filter(li => { const s = li.querySelector('.mjs[data-eq]'), a = li.querySelector('.nm a, .nm');
+        return s && slugEquipe(s.dataset.eq) !== slugEquipe((li.querySelector('.nm a') || li.querySelector('.nm')).textContent.trim()); }).map(li => li.textContent.trim()));
+      ok(`${T} : parcours : maillot seulement pour le nom affiché sur la ligne`, autreNom.length === 0, autreNom);
+      ok(`${T} : crédit des maillots unique (#fiche-credit) quand un maillot est affiché`, pc.cred === 1 && (pc.imgs > 0 || /Maillots/.test(pc.txt)) && /^Maillots : /.test(pc.txt) && pc.autres === 0, pc);
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await nouveauContexte(1024, 800);
+      await visite(page, '#coureur/demo-antoine-19960828', '#main .art .tile'); await page.waitForTimeout(400);
+      const u = await page.evaluate(() => ({ ban: !!document.querySelector('#main .id-ban h1'), bars: document.querySelectorAll('#rcontent svg.bars').length, saisons: Object.keys(state.cr.ent.saisons || {}).length,
+        ph: !!document.querySelector('#main .id-ban .hero-photo, #main .id-ban .hero-portrait'), cred: !!document.querySelector('#main .id-ban .id-ph .credit'), solo: document.querySelector('#main .rpage').classList.contains('solo'), aside: !!document.querySelector('#main .rside') }));
+      ok('coureur d\'une seule saison : bandeau, pas de graphique des saisons, pas de crédit photo sans photo', u.ban && u.bars === 0 && u.saisons === 1 && u.ph && !u.cred, u);
+      ok('infobox vide : pas d\'aside, une colonne centrée (htmlArticle sans infobox)', await page.evaluate(() => { const h = htmlArticle({ head: '', infobox: '', main: 'x' }); return h.includes('rpage solo') && !h.includes('rside'); }) && (u.solo === !u.aside));
+      await visite(page, '#coureur/wd-Q99900301', '#main .art .tile'); await page.waitForTimeout(300);
+      const wd = await page.evaluate(() => { const ban = document.querySelector('#main .id-ban'), ib = document.querySelector('#main .infobox'); return { h1: !!(ban && ban.querySelector('h1').textContent.trim()), ph: !!(ban && ban.querySelector('.hero-photo, .hero-portrait')), ibPh: ib ? ib.querySelectorAll('.hero-portrait, .hero-photo').length : 0, nat: !!(ban && ban.querySelector('.art-sub .flag')) }; });
+      ok('fiche légère wd-Q… : bandeau d\'identité (h1, initiales, nationalité), rien dans l\'infobox', wd.h1 && wd.ph && wd.ibPh === 0 && wd.nat, wd);
+      await ctx.close();
+    }
+  }
+
   await browser.close();
   console.log('ERREURS_CONSOLE', JSON.stringify(erreurs));
   console.log('DEBORDEMENTS', JSON.stringify(debord));

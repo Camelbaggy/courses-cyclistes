@@ -65,7 +65,7 @@ Les objectifs de la refonte restent à fixer avec le propriétaire (questions en
    (`htmlInfobox`, `htmlTableau`, `htmlOnglets`, `htmlTuiles`, `htmlNavbox`), pages inchangées sur le fond.
 3. **Navigation** (faite, PR #57 : recherche inline `#hsearch` + raccourci « / » dès 880 px, bouton retour mobile `#back-btn`, `htmlSousNav` / `.secnav` pour Courses, Classements et Coureurs, `#to-top`, pied de page soigné) : en-tête et menus, fil d'Ariane, accès direct à la saison courante, liens entre pages ; routes inchangées.
 4. **Pages une à une** : accueil (4a, faite, PR #58 : bandeau « À la une », prochaine course, cartes à filet de catégorie, résumés repliés, maillots + crédit, tuiles de compteurs) ; fiche de course /
-   étape (4b, fiche de course faite : bandeau coloré, infobox sans redondance et après le contenu sur mobile, podium 2-1-3 avec maillots, puces d'étapes, carte d'étape, crédit unique) ; à venir : fiche coureur, article d'équipe, page d'épreuve.
+   étape (4b, faite, PR #59 : bandeau coloré, infobox sans redondance et après le contenu sur mobile, podium 2-1-3 avec maillots, puces d'étapes, carte d'étape, crédit unique) ; fiche coureur (4c, faite : bandeau d'identité portrait + équipe avec maillot, infobox sans doublon, graphique victoires / podiums par saison, palmarès à filet de catégorie, sparkline à aire, maillots du parcours, crédit unique) ; à venir : article d'équipe, page d'épreuve.
 
 ## Questions posées au démarrage (tranchées ci-dessus)
 
