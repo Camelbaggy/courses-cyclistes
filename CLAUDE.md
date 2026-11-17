@@ -260,6 +260,8 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
 
 ## Interface (`index.html`)
 
+Refonte en préparation : point de départ et contrats à préserver dans `docs/REDESIGN.md`.
+
 Encyclopédie à la Liquipedia (R1), page autonome sans dépendance ni build, thème sombre unique, drapeaux flagcdn.com ; toute donnée insérée passe par `esc()`. Mobile ~390 px d'abord, puis 1024 px.
 **Coquille** : en-tête collant (marque, menu horizontal à partir de 880 px, recherche) + barre fixe en bas sur mobile (5 icônes SVG, 58 px, `safe-area-inset-bottom`) ; menu
 Accueil · Courses · Équipes · Coureurs · Classements (`data-nav`, `majMenu`). Plus de feuilles superposées : chaque route est une page plein écran dans `#main`.
