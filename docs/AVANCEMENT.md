@@ -6,13 +6,11 @@ Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md`
 ## POINT DE REPRISE (18/11/2026, fin de session) : à lire en premier
 
 ### Chantiers en cours au moment de la coupure
-1. **Saison sportive = année civile** (décision du propriétaire du 18/11) : dans l'ENCYCLOPÉDIE, une course compte pour l'année de sa
-   `start_date`, pas pour la saison UCI (la saison UCI commence mi-octobre : Giro di Lombardia du 16/10/2010 est rangé dans l'archive 2011,
-   Lombardia 2009 dans 2010, Japan Cup, Chrono des Nations, Tour of Hainan… ~50 courses de fin d'année au total). Stockage inchangé (archives
-   et Calendrier par saison UCI). Un agent modifiait `encyclopedie.py` (lister_sources), `collector.write_archives_index` (editions.json,
-   carrières), `index.html` (saison affichée d'une édition), tests, CLAUDE.md : **travail NON committé** dans `/home/user/courses-cyclistes`
-   (branche `ccr-6eb51b68-vzkhg2`) s'il n'a pas été publié ; sinon voir la PR « Saison sportive = année civile ». À vérifier après publication :
-   Lombardia 2010 (Philippe Gilbert) en 2010 sur `#epreuve/…lombardia…` et dans la fiche de Gilbert.
+1. **Saison sportive = année civile : FAIT (PR #75, 18/11)**. Dans l'encyclopédie, une course compte pour l'année de sa `start_date` (Lombardia
+   2010 -> 2010) ; stockage par saison UCI inchangé ; `riders.json` / `ranking.json` / `state.json` liés à leur dossier. Publié au prochain passage
+   d'archives : vérifier `#epreuve/…lombardia…` (édition 2010 = Gilbert) et la fiche de Gilbert. Limites connues : onglet « Saison » de la fiche
+   coureur encore par saison UCI ; fil d'Ariane d'une édition reportée -> liste Courses de son année (qui ne la contient pas) ; jeu fictif
+   (`tools/fixtures/generer_archives.py`) non régénéré (contient encore une saison 2027).
 2. **Sources d'avant 2009 : 4 accords obtenus par le propriétaire le 18/11** (à reporter dans CLAUDE.md « Sources » s'ils n'y sont pas) :
    - **the-sports.org** (Vincent Duplessy) : collecteur `thesports.py` (PR #69, #71), workflow `thesports.yml` du dépôt d'archives (PR #8),
      **collecte en cours** (`data/archives/sources/thesports/`, `etat.json` : 152 courses découvertes au 1er passage, ~5 400 éditions puis
@@ -20,12 +18,15 @@ Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md`
      Paris-Nice, Tirreno, Pays basque, Dauphiné, Paris-Camembert et les renommages ; proposition `docs/recherche/thesports_courses_proposees.json`),
      des coureurs (nom + date de naissance de la fiche du site), mondiaux (page multi-courses : garder la course en ligne élite) ; étape 3 :
      affichage (pages d'épreuve / édition / coureur) avec crédit « the-sports.org ».
-   - **Mémoire du Cyclisme** (memoireducyclisme.fr, HTML statique, ≥ 3 s / requête), **CQ Ranking** (cqranking.com, dates de naissance +
-     ID UCI 1999-2008), **Museo del Ciclismo** (museociclismo.it) : 3 agents écrivaient l'étape 1 (collecteurs `mdc.py`, `cqranking.py`,
+   - **Mémoire du Cyclisme : étape 1 FAITE** (`mdc.py`, PR #74, `docs/recherche/mdc_collecte.md`) ; **collecte en cours** (`mdc.yml` du dépôt
+     d'archives, PR #9, `data/archives/sources/mdc/`, auto-relance ; 2 261 courses, ~16 000-32 000 pages de classements estimées, 3,2 s / page).
+     Ni date de naissance ni identifiant de coureur. À trancher : codes pays historiques `Hon`, `Tch`, `Rfa`, `Urs`, `Rda` (laissés vides).
+   - **CQ Ranking** (cqranking.com, dates de naissance +
+     ID UCI 1999-2008), **Museo del Ciclismo** (museociclismo.it) : 2 agents écrivaient l'étape 1 (collecteurs `cqranking.py`,
      `museo.py` + `docs/recherche/<source>_collecte.md` + fixtures), chacun dans un worktree `/home/user/courses-cyclistes/.claude/worktrees/agent-*`
-     sur une branche LOCALE (`source-mdc`, `source-cq`, `source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
+     sur une branche LOCALE (`source-cq`, `source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
      puis relire, fusionner dans la branche de travail, PR ; si les branches ont disparu, relancer l'étape 1 sur le modèle de `thesports.py`.
-     Puis workflows de collecte (modèle `thesports.yml`) et intégration (étape 2/3 communes avec the-sports).
+     Puis workflows de collecte (modèle `thesports.yml` / `mdc.yml`) et intégration (étape 2/3 communes avec the-sports).
    - **FirstCycling** : accord, mais pages de données derrière un défi Cloudflare (essais `essai_firstcycling*`, même un vrai navigateur sans
      déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
      ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
