@@ -11,12 +11,13 @@ le code et le drapeau DE L'ÉPOQUE ; jamais de conversion vers un pays actuel (l
     avec `nom` (français), `periode`, `successeurs`, `drapeau` {fichier Wikimedia Commons, a_verifier, licence} ;
   - `codes_actuels_supplementaires` : codes CIO / UCI de pays existants absents de `netutil.FLAG_CODES` (code drapeau flagcdn) ;
   - `sources.<source>.conversions` : code brut du site -> code canonique (texte, ou {"code", "jusqu_a"} : valable seulement
-    pour une année <= `jusqu_a`, sinon le code est ambigu et reste vide) ; `identite` : un code brut déjà valide
+    pour une année <= `jusqu_a` ; au-delà, `apres` s'il est donné (correction validée), sinon le code est ambigu et reste vide) ; `identite` : un code brut déjà valide
     (netutil.FLAG_CODES, supplémentaires ou pays disparus) est accepté tel quel (Museo, the-sports, CQ Ranking ; pas Mémoire du
     Cyclisme dont les parenthèses mêlent pays et clubs en casse mixte).
 
 La conversion ne dépend que du code brut (la source a déjà choisi RFA avant 1990, ALL / GER après), sauf l'exception
-explicite `jusqu_a` (Museo et Mémoire du Cyclisme réutilisent TCH / Tch pour des Tchèques après 1992).
+explicite `jusqu_a` (Museo et Mémoire du Cyclisme réutilisent TCH / Tch pour des Tchèques après 1992 : convertis en CZE,
+`apres`, décision du propriétaire du 18/11/2026).
 
 Drapeaux : `drapeau(code)` rend le code flagcdn (« fr ») d'un pays existant, ou « h-urs » pour un pays disparu ; index.html
 (`flag()`) sait afficher « h-xxx » avec le fichier Commons (`Special:FilePath/<fichier>?width=40`, drapeaux dans le domaine public :
@@ -77,7 +78,8 @@ def pays_normalise(code_brut: Optional[str], source: str, annee: Optional[int] =
     if entree is not None:
         if isinstance(entree, dict):
             if annee is not None and annee > entree["jusqu_a"]:
-                return None
+                apres = entree.get("apres")      # code après `jusqu_a` (correction validée), sinon ambigu : vide
+                return apres if apres and code_valide(apres) else None
             entree = entree["code"]
         return entree if code_valide(entree) else None
     if cfg.get("identite"):
@@ -180,7 +182,8 @@ def _tests() -> None:
     assert pays_normalise("", "museo") is None and pays_normalise(None, "mdc") is None and pays_normalise("xx", "thesports") is None
     # ambigu après 1992 : Tch / TCH
     assert pays_normalise("Tch", "mdc", 1991) == "TCH" and pays_normalise("Tch", "mdc", 1992) == "TCH"
-    assert pays_normalise("Tch", "mdc", 2001) is None and pays_normalise("TCH", "museo", 2000) is None
+    assert pays_normalise("Tch", "mdc", 2001) == "CZE" and pays_normalise("TCH", "museo", 2000) == "CZE"
+    assert pays_normalise("TCH", "museo", 1993) == "CZE" and pays_normalise("TCH", "museo", 1992) == "TCH"
     assert pays_normalise("Tch", "mdc") == "TCH" and pays_normalise("TCH", "museo", None) == "TCH"
     assert pays_normalise("RFA", "museo", 1995) == "FRG"          # la conversion ne dépend pas de la date
     # drapeaux
