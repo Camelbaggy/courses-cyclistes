@@ -256,6 +256,16 @@ champ `season` désigne la saison). Une course présente dans les deux est lue d
 `alias_coureurs.json` (règle de contradiction de `construire_carrieres`), courses : `cle_edition` + `alias_courses.json`. Clés à
 `null` absentes ; JSON compact, trié ; écriture seulement si le contenu change ; fichiers devenus inutiles supprimés.
 
+**Saison sportive = année civile de la date de la course** (décision du 18/11/2026), pas la saison UCI (mi-octobre -> mi-octobre : DataRide range
+des courses de fin d'année dans la saison suivante, ex. Giro di Lombardia du 16/10/2010 dans l'archive 2011). Toute entité par saison (`season`
+des éditions, palmarès, `saisons` des coureurs, équipes-saisons `<slug>-<année>`, `saisons/<année>.json`, `grands_tours`) suit l'année de
+`start_date` (à défaut `end_date`) lue dans l'`index.json` de la saison ; date absente ou à plus d'un an de la saison de rangement : saison du
+dossier (`collector.annee_course`). Le STOCKAGE ne change pas (dossiers d'archive par saison UCI, `data/`, rotation). `riders.json`, `ranking.json`
+(rang UCI de fin de saison) et `state.json` restent associés à la saison UCI de leur dossier : `uci_rank` d'une saison sportive = celui du dossier
+du même numéro (une saison qui n'existe que par report, sans dossier, n'a pas de rang). `editions.json` et `carrieres/` suivent la même règle
+(`collector._reports_saison` retire / ajoute les statistiques et résultats des courses reportées). Les pages `saisons/<année>.json` comptent donc
+les courses de l'année civile ; la page Courses reste découpée par fichiers (saison UCI).
+
 - **`coureurs/<lettre>.json`** (lettre = 1re lettre a-z du `rider_id` canonique, sinon `_`) : `{rider_id: {"name", "nationality",
   "flag", "birth_date" (saison la plus récente), "saisons": {"<année>" (décroissantes): {"team" (nom de l'équipe-saison principale :
   équipe de marque aux plus nombreux jours de course ; une sélection nationale seulement si c'est la seule), "equipe" (id d'équipe-saison),

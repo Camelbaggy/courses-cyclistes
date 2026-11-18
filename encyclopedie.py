@@ -260,11 +260,24 @@ def _annee(nom: str) -> Optional[int]:
 
 
 def lister_sources(archives_dir: str, data_dir: str) -> Tuple[Dict[int, Dict[str, Any]], int]:
-    """({saison: {"races": [chemins], "archive": bool, "riders": chemin|None, "ranking": chemin|None, "etat": dict}}, inconnues) :
-    chemins des fiches de course d'une saison (archives d'abord ; une course de même identifiant dans le Calendrier est
-    ignorée), de son `riders*.json` et de son classement UCI. Les fiches du Calendrier sont rangées par `season`
-    (à défaut : `index-<année>.json` qui la liste ; sans saison connue, fiche ignorée et comptée dans `inconnues`)."""
+    """({saison: {"races": [chemins], "archive": bool, "riders": chemin|None, "ranking": chemin|None, "etat": dict,
+    "entrantes": int, "sortantes": int}}, inconnues) : chemins des fiches de course d'une saison (archives d'abord ; une course de
+    même identifiant dans le Calendrier est ignorée), de son `riders*.json` et de son classement UCI.
+
+    SAISON SPORTIVE = ANNÉE CIVILE de la date de la course (décision du 18/11/2026) : la saison UCI commence mi-octobre, DataRide range donc
+    des courses de fin d'année (Giro di Lombardia du 16/10/2010 dans l'archive 2011) dans la saison suivante. Ici une fiche est rattachée à
+    l'année de sa `start_date` (dates lues dans l'index de saison, sans ouvrir les fiches ; date absente = saison du dossier). Le STOCKAGE
+    ne change pas. `riders.json` / `ranking.json` / `state.json` (rang UCI et classement de fin de saison UCI, `complete`) restent associés
+    à la saison UCI de leur dossier : la saison 2010 garde le rang UCI de fin 2010, même pour un coureur dont une course est reportée
+    depuis l'archive 2011. `entrantes` / `sortantes` = courses reçues d'un autre dossier / parties vers une autre saison.
+    Les fiches du Calendrier sont rangées par `season` (à défaut : `index-<année>.json` qui la liste ; sans saison connue, fiche ignorée
+    et comptée dans `inconnues`)."""
     out: Dict[int, Dict[str, Any]] = {}
+
+    def saison(an: int, archive: bool) -> Dict[str, Any]:
+        return out.setdefault(an, {"races": [], "archive": archive, "riders": None, "ranking": None, "etat": {},
+                                   "entrantes": 0, "sortantes": 0})
+
     if os.path.isdir(archives_dir):
         for nom in sorted(os.listdir(archives_dir)):
             an = _annee(nom)
@@ -275,11 +288,19 @@ def lister_sources(archives_dir: str, data_dir: str) -> Tuple[Dict[int, Dict[str
             fichiers = sorted(os.path.join(rdir, f) for f in os.listdir(rdir) if f.endswith(".json")) if os.path.isdir(rdir) else []
             rk = os.path.join(dossier, "ranking.json")
             rd = os.path.join(dossier, "riders.json")
-            out[an] = {"races": fichiers, "archive": True, "riders": rd if os.path.exists(rd) else None,
-                       "ranking": rk if os.path.exists(rk) else None,
-                       "etat": collector._load(os.path.join(dossier, "state.json"), {}) or {}}
+            s = saison(an, True)
+            s.update({"archive": True, "riders": rd if os.path.exists(rd) else None, "ranking": rk if os.path.exists(rk) else None,
+                      "etat": collector._load(os.path.join(dossier, "state.json"), {}) or {}})
+            ix = collector._load(os.path.join(dossier, "index.json"), {}) or {}
+            dates = {r["id"]: r for r in ix.get("races") or [] if isinstance(r, dict) and r.get("id")}
+            for f in fichiers:
+                cible = collector.annee_course(dates.get(os.path.basename(f)[:-5]) or {}, an)
+                saison(cible, True)["races"].append(f)
+                if cible != an:
+                    s["sortantes"] += 1
+                    out[cible]["entrantes"] += 1
     # Calendrier
-    par_index: Dict[str, int] = {}
+    par_index: Dict[str, Tuple[int, Dict[str, Any]]] = {}
     if os.path.isdir(data_dir):
         for f in sorted(os.listdir(data_dir)):
             m = re.fullmatch(r"index-(\d{4})\.json", f)
@@ -287,7 +308,7 @@ def lister_sources(archives_dir: str, data_dir: str) -> Tuple[Dict[int, Dict[str
                 ix = collector._load(os.path.join(data_dir, f), {}) or {}
                 for r in ix.get("races") or []:
                     if r.get("id"):
-                        par_index.setdefault(r["id"], int(m.group(1)))
+                        par_index.setdefault(r["id"], (int(m.group(1)), r))
     rdir = os.path.join(data_dir, "races")
     inconnues = 0
     if os.path.isdir(rdir):
@@ -296,14 +317,19 @@ def lister_sources(archives_dir: str, data_dir: str) -> Tuple[Dict[int, Dict[str
             if not f.endswith(".json") or f in deja:
                 continue
             rid = f[:-5]
-            an = par_index.get(rid)
+            an, meta = par_index.get(rid) or (None, {})
             if an is None:
                 an = (collector._load(os.path.join(rdir, f), {}) or {}).get("season")
             if not isinstance(an, int):
                 inconnues += 1
                 continue
-            s = out.setdefault(an, {"races": [], "archive": False, "riders": None, "ranking": None, "etat": {}})
-            s["races"].append(os.path.join(rdir, f))
+            cible = collector.annee_course(meta, an)
+            saison(cible, False)["races"].append(os.path.join(rdir, f))
+            if cible != an:
+                saison(an, False)["sortantes"] += 1
+                out[cible]["entrantes"] += 1
+    for an in [a for a, s in out.items() if not s["archive"] and not s["races"]]:
+        del out[an]          # saison du Calendrier dont toutes les courses datent d'une autre année : pas de saison sportive vide
     for an, s in out.items():
         if not s["riders"]:
             p = os.path.join(data_dir, f"riders-{an}.json")
@@ -560,7 +586,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     EQ_RECH: Dict[str, Dict[str, Any]] = {}          # slug du libellé -> entrée de recherche
     EQ_INDEX: List[Dict[str, Any]] = []
     anomalies: Dict[str, Any] = collections.defaultdict(list)
-    rapport: Dict[str, Any] = {"saisons": annees, "inconnues": inconnues}
+    rapport: Dict[str, Any] = {"saisons": annees, "inconnues": inconnues,
+                               "courses_reportees": sum(sources[a]["entrantes"] for a in annees)}     # rangées dans un autre dossier que l'année de leur date
     gt_par_saison: Dict[int, List[str]] = {}
     coherence = {"coureurs_compares": 0, "ecarts": 0, "exemples": []}
     HISTORIQUE: Dict[str, Dict[str, int]] = {}      # rider_id canonique -> {date: rang UCI} (instantanés E1c)
@@ -600,7 +627,9 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         instantanes = _lire_instantanes(archives_dir, an, lambda rid, d, rang: HISTORIQUE.setdefault(cm(rid), {}).__setitem__(d, rang))
 
         # cohérence avec riders.json (mêmes définitions : stats identiques attendues)
-        if rj and isinstance(rj.get("riders"), dict):
+        if rj and isinstance(rj.get("riders"), dict) and (src["entrantes"] or src["sortantes"]):
+            coherence["saisons_reportees"] = coherence.get("saisons_reportees", 0) + 1     # stats de riders.json = saison UCI : non comparables
+        elif rj and isinstance(rj.get("riders"), dict):
             for rid, f in rj["riders"].items():
                 a = S.coureurs.get(rid)
                 if a is None:
@@ -1636,7 +1665,9 @@ def _tests() -> None:
             assert all(bl["mouvements"][k]["arrivees"] and bl["mouvements"][k]["departs"] for k in ("2024", "2023")) and bl["totaux_lignee"]["saisons"] == [2022, 2026]
             assert set(bl["saisons"]["2024"]) >= {"id", "libelle", "effectif", "victoires", "totaux"} and bl["cats"] == ["WT"] and "pays" not in bl   # « France (fictif) » : pas de code ISO3
             eq24 = collector._load(os.path.join(sortie_fx, "equipes", "2024.json"), None)["bravo-cycling-2024"]
-            assert eq24["meme_nom"] == ["bravo-cycling-2022", "bravo-cycling-2023", "bravo-cycling-2026", "bravo-cycling-2027"] and "mouvements" in eq24
+            # (la seule course de data/index-2027.json, datée du 28/10/2026, compte pour 2026 : plus d'équipe-saison 2027)
+            assert eq24["meme_nom"] == ["bravo-cycling-2022", "bravo-cycling-2023", "bravo-cycling-2026"] and "mouvements" in eq24
+            assert 2027 not in rf["saisons"] and rf["courses_reportees"] == 1, rf["saisons"]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     # --- corrections de source documentées (corrections_coureurs.json) : valeur corrigée dans l'entité, rider_id inchangé
@@ -1705,6 +1736,59 @@ def _tests() -> None:
             and r["stages"][0]["results"]["stage"][0]["rider_id"] == can and rs[0]["riders"][src]["id"] == src
     finally:
         shutil.rmtree(tmp3, ignore_errors=True)
+    # --- saison sportive = année civile de la date : course d'octobre 2010 rangée dans l'archive 2011 (saison UCI), comptée en 2010
+    with tempfile.TemporaryDirectory() as t5:
+        A5, D5, O5 = (os.path.join(t5, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(D5)
+        gil, yan = "gilbert-phil-19820405", "yann-yann-19900101"
+        pg = lambda eq: ("Phil Gilbert", "BEL", "be", eq, "1982-04-05")   # noqa: E731
+
+        def fiche(cid, nom, debut, saison, coureurs, rows):
+            r = _course_test(cid, nom, "ITA", "1.UWT", "WT", "one_day", debut or "2000-01-01", coureurs, [(None, debut or "2000-01-01", rows)])
+            r["season"] = saison                       # saison UCI du dossier
+            if not debut:
+                r["start_date"] = r["end_date"] = None   # course sans date : saison du dossier
+            return r
+        fa = fiche("uci-a", "Course A", "2010-05-01", 2010, {gil: pg("Equipe Old")}, [_ligne(gil, 2)])
+        fz = fiche("uci-z", "Course Z", "2009-12-01", 2010, {gil: pg("Equipe Old")}, [_ligne(gil, 4)])      # saison 2009 par report seulement
+        fl = fiche("uci-l", "Giro di Test", "2010-10-16", 2011, {gil: pg("Omega Test"), yan: ("Yann Yann", "FRA", "fr", "Omega Test", "1990-01-01")},
+                   [_ligne(gil, 1), _ligne(yan, 2)])
+        fb = fiche("uci-b", "Course B", "2011-03-05", 2011, {gil: pg("Equipe Nouvelle")}, [_ligne(gil, 3)])
+        fc = fiche("uci-c", "Course C sans date", None, 2011, {gil: pg("Equipe Nouvelle")}, [_ligne(gil, 5)])
+        for an, cs in ((2010, [fa, fz]), (2011, [fl, fb, fc])):
+            for c in cs:
+                collector._dump(os.path.join(A5, str(an), "races", c["id"] + ".json"), c)
+            collector._dump(os.path.join(A5, str(an), "index.json"), {"season": an, "races": [
+                {k: c.get(k) for k in ("id", "name", "country", "uci_class", "category", "race_type", "start_date", "end_date", "status")} for c in cs]})
+            rj = riders.build_riders(cs, None, season=an)
+            rj["riders"][gil]["uci_rank"] = {2010: 5, 2011: 7}[an]       # rang UCI de fin de saison UCI, propre au dossier
+            collector._dump(os.path.join(A5, str(an), "riders.json"), rj)
+            collector._dump(os.path.join(A5, str(an), "state.json"), {"complete": True})
+        src, _ = lister_sources(A5, D5)
+        noms = lambda an: sorted(os.path.basename(p)[:-5] for p in src[an]["races"])   # noqa: E731
+        assert sorted(src) == [2009, 2010, 2011] and noms(2009) == ["uci-z"] and noms(2010) == ["uci-a", "uci-l"] and noms(2011) == ["uci-b", "uci-c"]
+        assert (src[2010]["entrantes"], src[2010]["sortantes"], src[2011]["sortantes"], src[2009]["entrantes"]) == (1, 1, 1, 1)
+        assert src[2011]["riders"] == os.path.join(A5, "2011", "riders.json") and src[2009]["riders"] is None    # riders.json : saison UCI du dossier
+        rp = construire(A5, D5, O5, now="2026-01-01T00:00:00Z", alias_coureurs={}, alias_courses={}, verbose=False)
+        assert rp["saisons"] == [2009, 2010, 2011] and rp["courses_reportees"] == 2 and rp["inconnues"] == 0
+        g = collector._load(os.path.join(O5, "coureurs", "g.json"), {})[gil]
+        assert g["saisons"]["2010"]["stats"] == {"wins": 1, "podiums": 2, "top10": 2, "race_days": 2, "races": 2}, g["saisons"]["2010"]
+        assert g["saisons"]["2010"]["equipes"] == ["equipe-old-2010", "omega-test-2010"] and g["saisons"]["2010"]["equipe"] == "omega-test-2010"
+        assert g["saisons"]["2011"]["stats"] == {"podiums": 1, "top10": 2, "race_days": 2, "races": 2} and g["saisons"]["2011"]["equipe"] == "equipe-nouvelle-2011"
+        assert (g["saisons"]["2010"]["uci_rank"], g["saisons"]["2011"]["uci_rank"]) == (5, 7) and "uci_rank" not in g["saisons"]["2009"]    # rang UCI inchangé
+        assert {p["race_id"]: p["season"] for p in g["palmares"]} == {"uci-b": 2011, "uci-l": 2010, "uci-a": 2010}
+        assert "omega-test-2010" in collector._load(os.path.join(O5, "equipes", "2010.json"), {}) \
+            and "omega-test-2011" not in collector._load(os.path.join(O5, "equipes", "2011.json"), {})
+        assert [e["season"] for e in collector._load(os.path.join(O5, "courses", "g.json"), {})["giro di test|ITA"]["editions"]] == [2010]
+        assert collector._load(os.path.join(O5, "saisons", "2010.json"), {})["courses"]["total"] == 2
+        assert collector._load(os.path.join(O5, "saisons", "2011.json"), {})["courses"]["total"] == 2          # B et C (sans date) ; plus Giro di Test
+        assert [e["season"] for e in collector.construire_editions(A5, {})["courses"]["giro di test|ITA"]] == [2010]
+        car = collector.construire_carrieres(A5, {})
+        cg, cy = car["g"][gil]["seasons"], car["y"][yan]["seasons"]
+        assert sorted(cg) == ["2009", "2010", "2011"] and sorted(cy) == ["2010"], (sorted(cg), sorted(cy))
+        assert cg["2010"]["stats"]["race_days"] == 2 and cg["2011"]["stats"]["race_days"] == 2 and cg["2010"]["uci_rank"] == 5 and cg["2011"]["uci_rank"] == 7
+        assert [x["race_id"] for x in cg["2010"]["results"]] == ["uci-l", "uci-a"] and [x["race_id"] for x in cg["2011"]["results"]] == ["uci-b"]
+        assert cg["2010"]["results"][0]["race"] == "Giro di Test"
     # classement de fin de saison du Calendrier : data/ranking-<an>.json prioritaire (si sa saison == an), sinon ranking.json du jour
     with tempfile.TemporaryDirectory() as t4:
         d4 = os.path.join(t4, "data")
