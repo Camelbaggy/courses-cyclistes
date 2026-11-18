@@ -71,7 +71,26 @@ ARCHIVES_DIR = os.environ.get("ARCHIVES_DIR") or os.path.join("data", "archives"
 SORTIE_DEFAUT = os.path.join(ARCHIVES_DIR, "sources", "mdc")
 RACINE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(RACINE, "tools", "fixtures", "mdc")
-ECHECS_MAX = 2                     # une page en erreur 2 fois n'est plus redemandée (reste absente : rien d'inventé)
+ECHECS_MAX = 2                     # une page absente (404) 2 jours différents n'est plus redemandée (reste absente : rien d'inventé)
+# Règle de comptage (voir thesports.REGLE_ECHECS) : une panne (réseau, 5xx, site abandonné) ne note rien, au plus un essai compté par page
+# et par jour ; une entrée de `introuvables.json` sans `regle` ou de règle plus ancienne est re-tentée, compteur remis à 0.
+REGLE_ECHECS = 2
+
+
+def _essais(manques: Dict[str, Dict[str, Any]], rel: str) -> int:
+    """Essais comptés de la page `rel` (0 pour une entrée de règle ancienne : à relire)."""
+    m = manques.get(rel) or {}
+    return m.get("essais", 0) if m.get("regle", 0) >= REGLE_ECHECS else 0
+
+
+def _noter_manque(manques: Dict[str, Dict[str, Any]], rel: str) -> bool:
+    """Compte un essai raté (page absente) : au plus un par jour. Retourne vrai si l'entrée a changé."""
+    maintenant = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    n = _essais(manques, rel)
+    if n and manques[rel].get("dernier_essai", "")[:10] == maintenant[:10]:
+        return False
+    manques[rel] = {"essais": n + 1, "dernier_essai": maintenant, "regle": REGLE_ECHECS}
+    return True
 
 # Rubriques lues : dossier -> page d'index (relative à la racine, lue sur l'accueil, jamais devinée si absente de l'accueil).
 SECTIONS = {"ligne": "ligne/en_ligne.html", "etapes": "etapes/etapes.html", "amateurs": "amateurs/amateurs.html",
@@ -593,6 +612,7 @@ class Session:
         self.max_pages = max_pages
         self.requetes = 0
         self.echecs = 0
+        self.absente = False        # dernière page demandée : 404 / 410 (vrai échec) ; faux = lue, ou panne passagère
         self.dernier_journal = self.t0
 
     def epuise(self) -> bool:
@@ -612,12 +632,14 @@ class Session:
         if mettre_en_cache and os.path.exists(chemin):
             with gzip.open(chemin, "rt", encoding="utf-8") as f:
                 return f.read()
+        self.absente = False
         if self.epuise() or self.hote_bloque():
             return None
         self.requetes += 1
         texte = netutil.fetch_text(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
         if texte is None:
             self.echecs += 1
+            self.absente = netutil.page_absente()
             return None
         if mettre_en_cache:
             os.makedirs(os.path.dirname(chemin), exist_ok=True)
@@ -724,15 +746,13 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
             return False
         if ed["annee"] >= avant or (depuis is not None and ed["annee"] < depuis):
             return False
-        if manques.get(ed["url"], {}).get("essais", 0) >= ECHECS_MAX:
+        if _essais(manques, ed["url"]) >= ECHECS_MAX:
             return False
         return True
 
     def tente(rel: str) -> Optional[str]:
         page = sess.page(rel, sess.garder_html)
-        if page is None and not sess.epuise() and not sess.hote_bloque():
-            m = manques.setdefault(rel, {"essais": 0})
-            m["essais"] += 1
+        if page is None and sess.absente and _noter_manque(manques, rel):     # panne passagère : rien n'est noté
             _ecrire_json(chemin_manques, manques)
         return page
 
@@ -744,7 +764,7 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
             if "lu_le" not in c or relire:
                 if sess.epuise() or sess.hote_bloque():
                     break
-                if manques.get(c["url"], {}).get("essais", 0) >= ECHECS_MAX and "lu_le" not in c:
+                if _essais(manques, c["url"]) >= ECHECS_MAX and "lu_le" not in c:
                     continue
                 page = tente(c["url"])
                 if not page:
@@ -796,7 +816,7 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
         if c.get("section") not in sections or not cible_ok(cid, c):
             continue
         if "lu_le" not in c:
-            if manques.get(c["url"], {}).get("essais", 0) < ECHECS_MAX:
+            if _essais(manques, c["url"]) < ECHECS_MAX:
                 courses_restantes += 1
             continue
         for ed in c.get("editions", []):
@@ -948,6 +968,7 @@ def _tests() -> None:
 
         def faux(url: str, *a: Any, **k: Any) -> Optional[str]:
             appels.append(url)
+            netutil.dernier_statut = 200 if url in pages else 404
             return pages.get(url)
         netutil.fetch_text = faux
         try:
@@ -961,6 +982,31 @@ def _tests() -> None:
             n = len(appels)
             r2 = lancer(d, avant=2000, cibles=["ligne-morbihan"], sections=["ligne"], depuis=1996)
             assert len(appels) == n and r2["requetes"] == 0 and r2["editions_deja"] == 1, (len(appels), n, r2)
+        finally:
+            netutil.fetch_text = orig
+    # échecs : 404 = un essai par jour, abandon après ECHECS_MAX jours ; entrée ancienne (sans `regle`) : à relire
+    mq: Dict[str, Dict[str, Any]] = {}
+    assert _noter_manque(mq, "a.html") and not _noter_manque(mq, "a.html") and mq["a.html"]["essais"] == 1
+    mq["a.html"]["dernier_essai"] = "2026-01-01T00:00:00Z"
+    assert _noter_manque(mq, "a.html") and _essais(mq, "a.html") >= ECHECS_MAX
+    mq["b.html"] = {"essais": 2}
+    assert _essais(mq, "b.html") == 0 and _noter_manque(mq, "b.html") and mq["b.html"]["essais"] == 1
+    with tempfile.TemporaryDirectory() as d:                    # panne (503 / réseau) : aucun manque noté ; 404 : un manque
+        orig = netutil.fetch_text
+        pages = {BASE: _fixture("accueil.html"), BASE + "ligne/en_ligne.html": _fixture("index_ligne.html")}
+
+        def faux2(url: str, *a: Any, **k: Any) -> Optional[str]:
+            netutil.dernier_statut = 200 if url in pages else statut_faux[0]
+            return pages.get(url)
+        statut_faux = [503]
+        netutil.fetch_text = faux2
+        try:
+            lancer(d, avant=2000, cibles=["ligne-morbihan"], sections=["ligne"], depuis=1996)
+            assert not _lire_json(os.path.join(d, "introuvables.json"), {}), "503 : rien ne doit être noté"
+            statut_faux[0] = 404
+            lancer(d, avant=2000, cibles=["ligne-morbihan"], sections=["ligne"], depuis=1996)
+            m404 = _lire_json(os.path.join(d, "introuvables.json"), {})
+            assert m404 and all(v["essais"] == 1 and v["regle"] == REGLE_ECHECS for v in m404.values()), m404
         finally:
             netutil.fetch_text = orig
     print("[MDC] tests OK")

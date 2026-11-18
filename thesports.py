@@ -617,6 +617,7 @@ class Session:
         self.max_pages = max_pages
         self.requetes = 0
         self.echecs = 0
+        self.absente = False        # dernière page demandée : 404 / 410 (vrai échec) ; faux = lue, ou panne passagère
         self.dernier_journal = self.t0
 
     def epuise(self) -> bool:
@@ -638,12 +639,14 @@ class Session:
             if os.path.exists(chemin):
                 with gzip.open(chemin, "rt", encoding="utf-8") as f:
                     return f.read()
+        self.absente = False
         if self.epuise():
             return None
         self.requetes += 1
         texte = netutil.fetch_text(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
         if texte is None:
             self.echecs += 1
+            self.absente = netutil.page_absente()
             return None
         if mettre_en_cache:
             os.makedirs(os.path.dirname(chemin), exist_ok=True)
@@ -727,20 +730,35 @@ def fiches_attendues(sortie: str) -> Tuple[Dict[int, str], int]:
     return out, sans
 
 
-ECHECS_MAX = 3   # une fiche introuvable ou illisible 3 fois de suite n'est plus redemandée (reste sans date : rien d'inventé)
+ECHECS_MAX = 3   # une fiche absente (404) ou sans titre 3 jours différents n'est plus redemandée (reste sans date : rien d'inventé)
+# Règle de comptage des échecs. Seuls comptent une page absente (404 / 410) et une page lue sans titre reconnu ; une panne
+# (réseau, 5xx, site abandonné) ne note rien ; au plus un échec par fiche et par jour. Une entrée d'échec sans `regle` ou de
+# règle plus ancienne (incident 503 du 18/11/2026 : 2 320 fiches à 3 échecs en un jour) est re-tentée, compteur remis à 0.
+REGLE_ECHECS = 2
 
 
 def _fiche_a_lire(entree: Optional[Dict[str, Any]]) -> bool:
-    """Vrai si la fiche est absente du cache, ou en échec moins de ECHECS_MAX fois (entrée sans `nom`)."""
-    return entree is None or (not entree.get("nom") and entree.get("echecs", 0) < ECHECS_MAX)
+    """Vrai si la fiche est absente du cache, ou en échec de règle ancienne, ou en échec moins de ECHECS_MAX fois (entrée sans `nom`)."""
+    if entree is None:
+        return True
+    if entree.get("nom"):
+        return False
+    if entree.get("regle", 0) < REGLE_ECHECS:
+        return True
+    return entree.get("echecs", 0) < ECHECS_MAX
 
 
 def _noter_echec(cache: Dict[str, Any], i: int) -> None:
-    """Compte un échec de lecture de la fiche `i` (page absente, réseau, titre illisible) : `{"echecs": n, "dernier_essai"}`."""
+    """Compte un échec de la fiche `i` (page absente ou sans titre ; PAS une panne réseau) : `{"echecs", "dernier_essai", "regle"}`.
+    Un seul échec par jour (date de `dernier_essai`) ; un compteur de règle ancienne repart de 0."""
     e = cache.get(str(i))
     if e and e.get("nom"):
         return
-    cache[str(i)] = {"echecs": (e or {}).get("echecs", 0) + 1, "dernier_essai": _maintenant()}
+    maintenant = _maintenant()
+    n = (e or {}).get("echecs", 0) if (e or {}).get("regle", 0) >= REGLE_ECHECS else 0
+    if n and (e or {}).get("dernier_essai", "")[:10] == maintenant[:10]:
+        return
+    cache[str(i)] = {"echecs": n + 1, "dernier_essai": maintenant, "regle": REGLE_ECHECS}
 
 
 def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]) -> int:
@@ -752,7 +770,7 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
     resume["editions_sans_fiches"] = sans
     a_lire = [i for i in sorted(attendues) if relire or _fiche_a_lire(cache.get(str(i)))]
     lues, depuis_ecriture = 0, 0
-    st = {"jour": 0, "annee": 0, "mois": 0, "absent": 0, "inconnu": 0, "conflit": 0, "pays_inconnus": 0, "echecs": 0}
+    st = {"jour": 0, "annee": 0, "mois": 0, "absent": 0, "inconnu": 0, "conflit": 0, "pays_inconnus": 0, "echecs": 0, "pannes": 0}
     inconnus: List[str] = []
     try:
         for i in a_lire:
@@ -760,9 +778,12 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
                 break
             page = sess.page(attendues[i])
             if not page:
-                st["echecs"] += 1
-                _noter_echec(cache, i)
-                depuis_ecriture += 1
+                if sess.absente:                     # 404 / 410 : vrai échec de la fiche ; sinon panne passagère, rien n'est noté
+                    st["echecs"] += 1
+                    _noter_echec(cache, i)
+                    depuis_ecriture += 1
+                else:
+                    st["pannes"] += 1
                 continue
             fiche, statut, brut = lire_fiche(page)
             lues += 1
@@ -786,7 +807,7 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
             if depuis_ecriture >= 100:
                 _ecrire_json(chemin, cache, compact=True)
                 depuis_ecriture = 0
-            sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, len(a_lire) - lues - st["echecs"]))
+            sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, len(a_lire) - lues - st["echecs"] - st["pannes"]))
     finally:
         if depuis_ecriture or (cache and not os.path.exists(chemin)):
             _ecrire_json(chemin, cache, compact=True)
@@ -1174,6 +1195,7 @@ def _tests() -> None:
                     return None
                 self.requetes += 1
                 self.demandees.append(rel)
+                self.absente = False
                 return _fixture({"46384": "fiche_ballerini.html", "54603": "fiche_sans_date.html"}.get(
                     re.search(r"spf(\d+)", rel).group(1), "fiche_wiggins.html"))
 
@@ -1188,12 +1210,45 @@ def _tests() -> None:
         assert cache["46384"]["naissance"] == "1964-12-11" and cache["46384"]["precision"] == "jour"
         assert cache["46384"]["url"].endswith("franco-ballerini-cycling-spf46384.html") and cache["46384"]["lu_le"]
         assert "naissance" not in cache["54603"] and cache["54603"]["nom"] == "Jean De Busscher"
-        # fiche en échec : comptée, retentée jusqu'à ECHECS_MAX fois puis abandonnée (jamais de date inventée)
+        # fiche en échec : un seul échec par jour ; ECHECS_MAX jours différents puis abandonnée (jamais de date inventée)
         c2: Dict[str, Any] = {}
-        for _ in range(ECHECS_MAX):
-            assert _fiche_a_lire(c2.get("7"))
+        _noter_echec(c2, 7)
+        _noter_echec(c2, 7)                                                          # 2e essai le même jour : pas de 2e échec
+        assert c2["7"]["echecs"] == 1 and c2["7"]["regle"] == REGLE_ECHECS and _fiche_a_lire(c2["7"])
+        for _ in range(ECHECS_MAX - 1):
+            c2["7"]["dernier_essai"] = "2026-01-01T00:00:00Z"                        # jours précédents
             _noter_echec(c2, 7)
         assert c2["7"]["echecs"] == ECHECS_MAX and not _fiche_a_lire(c2["7"]) and "naissance" not in c2["7"]
+        # entrée ancienne (sans `regle`, ou règle plus ancienne) : à relire, compteur remis à 0 au prochain échec
+        ancien = {"echecs": 3, "dernier_essai": "2026-11-18T11:00:00Z"}
+        assert _fiche_a_lire(ancien) and _fiche_a_lire(dict(ancien, regle=REGLE_ECHECS - 1))
+        assert not _fiche_a_lire(dict(ancien, regle=REGLE_ECHECS))
+        c2["9"] = dict(ancien)
+        _noter_echec(c2, 9)
+        assert c2["9"]["echecs"] == 1 and c2["9"]["regle"] == REGLE_ECHECS
+        # panne (503, réseau) : rien n'est noté ; 404 : un échec
+        class Panne(Session):
+            def __init__(self, *a, statut=None, **k):
+                super().__init__(*a, **k)
+                self.statut = statut
+
+            def page(self, rel, mettre_en_cache=False):
+                self.requetes += 1
+                self.absente = self.statut in (404, 410)
+                return None
+        d2 = os.path.join(d, "pannes")
+        _ecrire_json(os.path.join(d2, "editions", "s43", "1995.json"), ed_min)
+        _ecrire_json(os.path.join(d2, "coureurs.json"), {"952": dict(ancien)})
+        sp = Panne(d2, statut=503)
+        assert lire_fiches(sp, d2, False, res) == 3                                   # 952 (ancienne) + 2 autres, toutes à lire
+        assert _lire_json(os.path.join(d2, "coureurs.json"), {}) == {"952": dict(ancien)}   # 503 : rien noté, ancienne intacte
+        sp = Panne(d2, statut=404)
+        assert lire_fiches(sp, d2, False, res) == 3
+        c404 = _lire_json(os.path.join(d2, "coureurs.json"), {})
+        assert all(c404[k]["echecs"] == 1 and c404[k]["regle"] == REGLE_ECHECS for k in ("952", "46384", "54603")), c404
+        sp = Panne(d2, statut=404)
+        lire_fiches(sp, d2, False, res)                                               # même jour : toujours 1 échec
+        assert _lire_json(os.path.join(d2, "coureurs.json"), {})["952"]["echecs"] == 1
         c2["8"] = {"nom": "X Y"}
         _noter_echec(c2, 8)
         assert c2["8"] == {"nom": "X Y"} and not _fiche_a_lire(c2["8"])

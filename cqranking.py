@@ -86,7 +86,10 @@ ARCHIVES_DIR = os.environ.get("ARCHIVES_DIR") or os.path.join("data", "archives"
 SORTIE_DEFAUT = os.path.join(ARCHIVES_DIR, "sources", "cqranking")
 RACINE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(RACINE, "tools", "fixtures", "cqranking")
-ECHECS_MAX = 3                     # une fiche / page illisible 3 fois de suite n'est plus redemandée (rien d'inventé)
+ECHECS_MAX = 3                     # une fiche absente (404) ou sans titre 3 jours différents n'est plus redemandée (rien d'inventé)
+# Règle de comptage (voir thesports.REGLE_ECHECS) : une panne (réseau, 5xx, site abandonné) ne note rien, au plus un échec par fiche et
+# par jour ; une entrée d'échec sans `regle` ou de règle plus ancienne est re-tentée, compteur remis à 0.
+REGLE_ECHECS = 2
 
 
 # --------------------------------------------------------------------------------------------------
@@ -431,6 +434,7 @@ class Session:
         self.max_pages = max_pages
         self.requetes = 0
         self.echecs = 0
+        self.absente = False        # dernière page demandée : 404 / 410 (vrai échec) ; faux = lue, ou panne passagère
         self.dernier_journal = self.t0
 
     def epuise(self, fraction: float = 1.0) -> bool:
@@ -445,12 +449,14 @@ class Session:
         if self.garder_html and os.path.exists(chemin):
             with gzip.open(chemin, "rt", encoding="utf-8") as f:
                 return f.read()
+        self.absente = False
         if self.epuise():
             return None
         self.requetes += 1
         texte = netutil.fetch_text(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html"}, encoding=ENCODAGE)
         if texte is None:
             self.echecs += 1
+            self.absente = netutil.page_absente()
         elif self.garder_html:
             os.makedirs(os.path.dirname(chemin), exist_ok=True)
             with gzip.open(chemin, "wt", encoding="utf-8") as f:
@@ -595,14 +601,24 @@ def fiches_attendues(sortie: str) -> List[int]:
 
 
 def _fiche_a_lire(entree: Optional[Dict[str, Any]]) -> bool:
-    return entree is None or (not entree.get("nom") and entree.get("echecs", 0) < ECHECS_MAX)
+    if entree is None:
+        return True
+    if entree.get("nom"):
+        return False
+    if entree.get("regle", 0) < REGLE_ECHECS:
+        return True
+    return entree.get("echecs", 0) < ECHECS_MAX
 
 
 def _noter_echec(cache: Dict[str, Any], i: int) -> None:
     e = cache.get(str(i))
     if e and e.get("nom"):
         return
-    cache[str(i)] = {"echecs": (e or {}).get("echecs", 0) + 1, "dernier_essai": _maintenant()}
+    maintenant = _maintenant()
+    n = (e or {}).get("echecs", 0) if (e or {}).get("regle", 0) >= REGLE_ECHECS else 0
+    if n and (e or {}).get("dernier_essai", "")[:10] == maintenant[:10]:
+        return                                  # un seul échec par fiche et par jour
+    cache[str(i)] = {"echecs": n + 1, "dernier_essai": maintenant, "regle": REGLE_ECHECS}
 
 
 def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]) -> int:
@@ -615,7 +631,7 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
     attendus = fiches_attendues(sortie)
     a_lire = [i for i in attendus if relire or _fiche_a_lire(cache.get(str(i)))]
     lues, depuis = 0, 0
-    st = {"jour": 0, "inconnu": 0, "absent": 0, "echecs": 0, "avec_uci_id": 0, "sans_uci_id": 0}
+    st = {"jour": 0, "inconnu": 0, "absent": 0, "echecs": 0, "pannes": 0, "avec_uci_id": 0, "sans_uci_id": 0}
     inconnus: List[str] = []
     try:
         for i in a_lire:
@@ -623,9 +639,12 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
                 break
             page = sess.page("rider.asp?riderid=%d" % i)
             if not page:
-                st["echecs"] += 1
-                _noter_echec(cache, i)
-                depuis += 1
+                if sess.absente:                     # 404 / 410 : vrai échec ; sinon panne passagère, rien n'est noté
+                    st["echecs"] += 1
+                    _noter_echec(cache, i)
+                    depuis += 1
+                else:
+                    st["pannes"] += 1
                 continue
             fiche, statut, brut = lire_fiche(page)
             if not fiche.get("nom"):
@@ -652,7 +671,7 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
                 _ecrire_json(chemin, cache, compact=True)
                 _ecrire_json(chemin_eq, equipes, compact=True)
                 depuis = 0
-            sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, len(a_lire) - lues - st["echecs"]))
+            sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, len(a_lire) - lues - st["echecs"] - st["pannes"]))
     finally:
         if depuis or (cache and not os.path.exists(chemin)):
             _ecrire_json(chemin, cache, compact=True)
@@ -877,6 +896,7 @@ def _tests() -> None:
                 return None
             self.requetes += 1
             self.demandees.append(rel)
+            self.absente = False
             if rel.startswith("RaceCal.asp?year=2005&month=4"):
                 return _fixture("calendrier_2005_04.html")
             if rel.startswith("RaceCal"):
@@ -891,7 +911,8 @@ def _tests() -> None:
                 return _fixture("fiche_2568_contrini.html")
             if "riderid=11753" in rel:
                 return _fixture("fiche_11753_tchmil.html")
-            return None                                                       # tour ou fiche inconnu : échec compté
+            self.absente = True
+            return None                                                       # tour ou fiche inconnu : échec compté (404)
 
     with tempfile.TemporaryDirectory() as d:
         sess = Faux(d, max_pages=15)
@@ -935,12 +956,30 @@ def _tests() -> None:
         assert "riderid=2568" not in " ".join(sess.demandees) and restantes == 3, (sess.demandees, restantes)  # 500, 88, 77 : échec
         cache = _lire_json(os.path.join(d, "coureurs.json"), {})
         assert cache["500"]["echecs"] == 1 and "naissance" not in cache["500"]
-        # échecs : comptés puis abandonnés après ECHECS_MAX, jamais de date inventée
+        # échecs : un par jour, abandonnés après ECHECS_MAX jours, jamais de date inventée ; entrée de règle ancienne : à relire
         c2: Dict[str, Any] = {}
-        for _ in range(ECHECS_MAX):
-            assert _fiche_a_lire(c2.get("9"))
+        _noter_echec(c2, 9)
+        _noter_echec(c2, 9)
+        assert c2["9"]["echecs"] == 1 and _fiche_a_lire(c2["9"])
+        for _ in range(ECHECS_MAX - 1):
+            c2["9"]["dernier_essai"] = "2026-01-01T00:00:00Z"
             _noter_echec(c2, 9)
         assert not _fiche_a_lire(c2["9"]) and "naissance" not in c2["9"]
+        ancien = {"echecs": 3, "dernier_essai": "2026-11-18T11:00:00Z"}
+        assert _fiche_a_lire(ancien) and not _fiche_a_lire(dict(ancien, regle=REGLE_ECHECS))
+        c2["7"] = dict(ancien)
+        _noter_echec(c2, 7)
+        assert c2["7"]["echecs"] == 1 and c2["7"]["regle"] == REGLE_ECHECS
+        # panne passagère (503, réseau) : rien n'est noté
+        class Panne(Session):
+            def page(self, rel):
+                self.requetes += 1
+                self.absente = False
+                return None
+        c3 = os.path.join(d, "p")
+        _ecrire_json(chemin_course(c3, 2005, 1), {"lignes": [[1, 2568, "ITA", "LPR", "4h", 0, 80]]})
+        assert lire_fiches(Panne(c3), c3, False, res) == 1
+        assert not os.path.exists(os.path.join(c3, "coureurs.json")) or _lire_json(os.path.join(c3, "coureurs.json"), {}) == {}
         c2["8"] = {"nom": "X Y"}
         _noter_echec(c2, 8)
         assert c2["8"] == {"nom": "X Y"} and not _fiche_a_lire(c2["8"])
