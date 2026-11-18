@@ -1028,6 +1028,19 @@ def saisons_calendrier() -> List[int]:
 
 # --------------------------------------------------------------------------- éditions et carrières (archives)
 
+def annee_course(race: Optional[Dict[str, Any]], defaut: int) -> int:
+    """SAISON SPORTIVE d'une course dans l'encyclopédie (décision du 18/11/2026) = année civile de sa `start_date` (à défaut `end_date`),
+    et non la saison UCI (mi-octobre -> mi-octobre : DataRide range des courses de fin d'année dans la saison suivante, ex. Giro di
+    Lombardia du 16/10/2010 dans l'archive 2011). Sans date lisible, ou si l'année s'écarte de plus d'un an de `defaut` (saison UCI de
+    rangement : donnée douteuse), `defaut`. Le stockage (dossiers d'archive par saison UCI, Calendrier) ne change pas."""
+    for k in ("start_date", "end_date"):
+        m = re.match(r"(\d{4})-\d{2}-\d{2}", str((race or {}).get(k) or ""))
+        if m:
+            a = int(m.group(1))
+            return a if abs(a - defaut) <= 1 else defaut
+    return defaut
+
+
 def cle_edition(nom: Optional[str], pays: Optional[str]) -> Optional[str]:
     """Clé d'une « édition » d'une course : nom normalisé + « |PAYS ». Rapprochement EXACT sur cette clé, jamais flou.
     Nom en minuscules, sans accents, ponctuation (tirets, apostrophes…) remplacée par une espace, sans année
@@ -1111,7 +1124,8 @@ def _ref_reduit(ref: Optional[Dict]) -> Optional[Dict]:
 
 
 def construire_editions(archives_dir: str, alias: Dict[str, str], now: Optional[str] = None) -> Dict:
-    """editions.json : pour chaque clé d'édition (après alias), les éditions archivées, saison décroissante."""
+    """editions.json : pour chaque clé d'édition (après alias), les éditions archivées, saison décroissante. `season` = saison sportive
+    (année civile de la date de l'édition, `annee_course`), pas le dossier d'archive (saison UCI)."""
     courses: Dict[str, List[Dict]] = {}
     if os.path.isdir(archives_dir):
         for nom in os.listdir(archives_dir):
@@ -1127,7 +1141,8 @@ def construire_editions(archives_dir: str, alias: Dict[str, str], now: Optional[
                 cle = alias.get(cle, cle)
                 bf = r.get("best_french")
                 courses.setdefault(cle, []).append({
-                    "season": int(nom), "race_id": r["id"], "name": r.get("name"), "uci_class": r.get("uci_class"),
+                    "season": annee_course(r, int(nom)),       # saison sportive = année de la date (le dossier reste la saison UCI)
+                    "race_id": r["id"], "name": r.get("name"), "uci_class": r.get("uci_class"),
                     "category": r.get("category"), "race_type": r.get("race_type"), "start_date": r.get("start_date"),
                     "winner": _ref_reduit(r.get("winner")),
                     "best_french": {"rider": _ref_reduit(bf.get("rider")), "rank": bf.get("rank"),
@@ -1143,6 +1158,67 @@ def lettre_carriere(rider_id: str) -> str:
     return c if "a" <= c <= "z" else "_"
 
 
+def _reports_saison(archives_dir: str, dossiers: List[int]) -> Tuple[Dict[int, Dict[str, Dict]], Dict[int, Dict[str, Dict]], Dict[int, Dict[str, Dict]]]:
+    """Courses d'archive dont la saison sportive (année de la date, `annee_course`) diffère du dossier (saison UCI) : pour chacune, les
+    fiches de coureurs recalculées par `riders._agreger` sur la seule fiche de course. Retourne (retraits {dossier: {rider_id: agrégat}},
+    apports {saison cible: {rider_id: agrégat}}, noms {saison cible: {race_id: {"name"}}}). Seules ces courses (une cinquantaine au total)
+    sont relues ; `riders.json` reste par saison UCI, on en retire / ajoute les statistiques et résultats de ces courses."""
+    retraits: Dict[int, Dict[str, Dict]] = {}
+    apports: Dict[int, Dict[str, Dict]] = {}
+    noms: Dict[int, Dict[str, Dict]] = {}
+    for an in dossiers:
+        ix = _load(os.path.join(archives_dir, str(an), "index.json"), None) or {}
+        for r in ix.get("races") or []:
+            cible = annee_course(r, an)
+            if cible == an or not r.get("id") or r.get("status") not in (None, "finished"):
+                continue
+            race = _load(os.path.join(archives_dir, str(an), "races", f"{r['id']}.json"), None)
+            if not race:
+                continue
+            for rid, f in riders._agreger([race]).items():
+                f["_race_id"] = r["id"]
+                retraits.setdefault(an, {}).setdefault(rid, []).append(f)
+                apports.setdefault(cible, {}).setdefault(rid, []).append(f)
+            noms.setdefault(cible, {})[r["id"]] = {"name": race.get("name")}
+    return retraits, apports, noms
+
+
+def _appliquer_reports(fiches: Dict[str, Dict], retraits: Dict[str, List[Dict]], apports: Dict[str, List[Dict]]) -> None:
+    """Applique à `fiches` (riders.json d'un dossier, modifié sur place ; saison sportive = année civile) les courses reportées :
+    retire celles qui partent vers une autre saison (stats soustraites, résultats retirés, saison vide supprimée) puis ajoute celles qui
+    arrivent (fiche créée au besoin ; l'équipe d'une fiche existante est conservée, le rang UCI reste celui de la saison UCI du dossier)."""
+    for rid, lst in retraits.items():
+        f = fiches.get(rid)
+        if not f:
+            continue
+        f = fiches[rid] = dict(f)
+        ids = {a["_race_id"] for a in lst}
+        st = dict(f.get("stats") or {})
+        for a in lst:
+            for k, v in a["stats"].items():
+                if k in st:
+                    st[k] = max(0, (st[k] or 0) - v)
+        f["stats"] = st
+        f["results"] = [x for x in f.get("results") or [] if x.get("race_id") not in ids]
+        if not any(st.values()) and not f["results"] and f.get("uci_rank") is None:
+            del fiches[rid]
+    for rid, lst in apports.items():
+        f = fiches.get(rid)
+        f = dict(f) if f else {"id": rid, "stats": {}, "results": []}
+        st = dict(f.get("stats") or {})
+        res = list(f.get("results") or [])
+        for a in lst:
+            for k, v in a["stats"].items():
+                st[k] = (st.get(k) or 0) + v
+            res += a["results"]
+            for k in ("name", "nationality", "flag", "birth_date", "team"):
+                if a.get(k) and not f.get(k):
+                    f[k] = a[k]
+            f["is_french"] = bool(f.get("is_french") or a.get("is_french"))
+        f["stats"], f["results"] = st, res
+        fiches[rid] = f
+
+
 def construire_carrieres(archives_dir: str, alias: Dict[str, str], fusions: Optional[Any] = None) -> Dict[str, Dict]:
     """{lettre: {rider_id: carrière}} d'après les riders.json des saisons d'archive. Rapprochement par rider_id exact
     (slug du nom + date de naissance) après alias manuel. Un alias qui ferait apparaître deux fois le même coureur la
@@ -1151,14 +1227,18 @@ def construire_carrieres(archives_dir: str, alias: Dict[str, str], fusions: Opti
     (`_fusionner_fiches`), sauf si elles ont un résultat commun (même course : double comptage possible, `[WARN]`, non fusionnées)."""
     fus = fusions_valides(alias, fusions)
     par_coureur: Dict[str, Dict] = {}
-    annees = sorted(int(n) for n in os.listdir(archives_dir) if n.isdigit()) if os.path.isdir(archives_dir) else []
+    dossiers = sorted(int(n) for n in os.listdir(archives_dir) if n.isdigit()) if os.path.isdir(archives_dir) else []
+    retraits, apports, noms_apports = _reports_saison(archives_dir, dossiers)
+    annees = sorted(set(dossiers) | set(apports))
     vus: Dict[Tuple[str, int], str] = {}
     for an in annees:
-        D = _load(os.path.join(archives_dir, str(an), "riders.json"), None)
-        if not D or not isinstance(D.get("riders"), dict):
+        D = _load(os.path.join(archives_dir, str(an), "riders.json"), None) if an in dossiers else None
+        if (not D or not isinstance(D.get("riders"), dict)) and an not in apports:
             continue
-        noms_courses = D.get("races") or {}
+        D = D if D and isinstance(D.get("riders"), dict) else {"riders": {}}
+        noms_courses = dict(D.get("races") or {}, **noms_apports.get(an, {}))
         D["riders"] = dict(D["riders"])
+        _appliquer_reports(D["riders"], retraits.get(an) or {}, apports.get(an) or {})
         for src, canon in fus.items():
             if src in D["riders"] and canon in D["riders"]:
                 fc, fs = D["riders"][canon], D["riders"][src]
@@ -1574,6 +1654,10 @@ def _tests_editions() -> None:
             race("d", "Paris-Roubaix", "FRA", 2024, ("x-2", "X Deux")),
             race("e", "Roubaix Classique", "FRA", 2024, ("x-1", "X Un"))]})
         _dump(os.path.join(arch, "2022", "index.json"), {"races": []})
+        # saison sportive = année civile de la date (la saison UCI du dossier n'est qu'un repli)
+        assert annee_course({"start_date": "2010-10-16"}, 2011) == 2010 and annee_course({"start_date": "2011-03-05"}, 2011) == 2011
+        assert annee_course({"end_date": "2010-10-16"}, 2011) == 2010 and annee_course({}, 2011) == 2011 and annee_course(None, 2011) == 2011
+        assert annee_course({"start_date": "1999-01-01"}, 2011) == 2011 and annee_course({"start_date": "n/a"}, 2011) == 2011   # douteux : dossier
         ed = construire_editions(arch, {}, "t")
         assert [e["season"] for e in ed["courses"]["paris roubaix|FRA"]] == [2024, 2023]
         assert ed["courses"]["paris roubaix|FRA"][1]["best_french"]["rank"] == 2
