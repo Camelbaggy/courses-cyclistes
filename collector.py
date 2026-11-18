@@ -387,6 +387,27 @@ def compute_stage_highlights(race: Dict, idx: int) -> List[Dict]:
     return out
 
 
+def _gc_vainqueur(race: Dict, finished: bool) -> List[Dict]:
+    """Général qui désigne le vainqueur d'une course par étapes : le général FINAL d'une course terminée quand il a une ligne de
+    rang 1 (le général de la dernière étape peut ne pas la contenir : déclassement ; ou ne pas être la dernière étape
+    chronologique : demi-étapes mal ordonnées) ; sinon le général après la dernière étape (comportement historique)."""
+    if finished:
+        fin = ((race.get("final") or {}).get("gc")) or []
+        if _first(fin):
+            return fin
+    return _gc_after(race, len(race["stages"]) - 1)
+
+
+def _vainqueur_etapes(race: Dict, finished: bool) -> Tuple[Optional[Dict], Optional[Dict], Optional[Dict]]:
+    """(leader, winner, best_french) d'une course par étapes ; leader = winner pour une course terminée. Pure : ne modifie rien."""
+    gc = _gc_vainqueur(race, finished)
+    lead = _first(gc)
+    ref = _ref(race, lead["rider_id"]) if lead else None
+    bf = _best_french_row(race, gc)
+    best = {"rider": _ref(race, bf["rider_id"]), "rank": bf["rank"], "classification": "gc"} if bf else None
+    return ref, (ref if finished else None), best
+
+
 def finalize_race(race: Dict, today: dt.date) -> None:
     """Statut, vainqueur, leader, meilleur Français (déterministe, depuis les classements publiés)."""
     stages = race.get("stages") or []
@@ -405,15 +426,8 @@ def finalize_race(race: Dict, today: dt.date) -> None:
         if bf:
             race["best_french"] = {"rider": _ref(race, bf["rider_id"]), "rank": bf["rank"], "classification": "stage"}
     else:
-        gc = _gc_after(race, len(stages) - 1)
-        lead = _first(gc)
-        if lead:
-            race["leader"] = _ref(race, lead["rider_id"])
-            if finished:
-                race["winner"] = race["leader"]
-        bf = _best_french_row(race, gc)
-        if bf:
-            race["best_french"] = {"rider": _ref(race, bf["rider_id"]), "rank": bf["rank"], "classification": "gc"}
+        leader, winner, bf = _vainqueur_etapes(race, finished)
+        race["leader"], race["winner"], race["best_french"] = leader, winner, bf
     for i in range(len(stages)):
         stages[i]["french_highlights"] = compute_stage_highlights(race, i)
 
@@ -1430,6 +1444,47 @@ def a_reviser_saison(rdir: str, only: str = "") -> List[Dict]:
     return fiches
 
 
+def reviser_vainqueurs_saison(rdir: str, dossier_index: str, annee: int, only: str = "") -> int:
+    """Révision LOCALE (aucune requête) d'une saison d'archive : remet dans l'ordre les demi-étapes (`uci.cle_tri_etape`) puis recalcule winner / leader / best_french des courses par étapes
+    terminées depuis le général final (`_vainqueur_etapes`, mêmes règles que `finalize_race`, sans toucher au statut ni aux
+    `french_highlights`, donc sûre sur une fiche compactée : clés null absentes). Une fiche dont ces trois valeurs changent est
+    réécrite (compactée) ; l'entrée de l'index de la saison suit. Idempotent : rien à changer = aucune écriture."""
+    n = 0
+    if not os.path.isdir(rdir):
+        return 0
+    for f in sorted(os.listdir(rdir)):
+        r = _load(os.path.join(rdir, f), None) if f.endswith(".json") else None
+        if not (isinstance(r, dict) and r.get("id") and r.get("race_type") == "stage_race" and r.get("stages")
+                and r.get("status") == "finished"):
+            continue
+        if only and only.lower() not in str(r.get("name") or "").lower():
+            continue
+        modif = False
+        ordonnees = sorted(r["stages"], key=uci.cle_tri_etape)
+        if [id(x) for x in ordonnees] != [id(x) for x in r["stages"]]:
+            r["stages"] = ordonnees
+            modif = True
+            print(f"[ARCHIVES] {annee} : ordre des demi-étapes rétabli : {r.get('name')}")
+        if (r.get("final") or {}).get("gc"):
+            leader, winner, best = _vainqueur_etapes(r, True)
+
+            def sig(w: Any, l: Any, b: Any) -> Tuple:     # identifiants et rang seulement : les références archivées sont compactées
+                return ((w or {}).get("id"), (l or {}).get("id"), ((b or {}).get("rider") or {}).get("id"), (b or {}).get("rank"))
+            if sig(r.get("winner"), r.get("leader"), r.get("best_french")) != sig(winner, leader, best):
+                r["winner"], r["leader"], r["best_french"] = winner, leader, best
+                modif = True
+                print(f"[ARCHIVES] {annee} : vainqueur recalculé depuis le général final : {r.get('name')}")
+        if not modif:
+            continue
+        _dump(os.path.join(rdir, f), compact_race(r))
+        n += 1
+    if n:
+        idx = build_index(charger_courses_archive(dossier_index), annee, [], None)
+        idx["archive"], idx["complete"] = True, True
+        _dump_if_changed(os.path.join(dossier_index, "index.json"), idx)
+    return n
+
+
 def comp_depuis_fiche(fiche: Dict) -> Optional[Dict]:
     """Description de compétition (celle de `uci.list_competitions`) reconstituée depuis une fiche d'archive."""
     cid = str(fiche.get("id") or "").replace("uci-", "", 1)
@@ -1481,6 +1536,7 @@ def run_archive(years: List[int], today: Optional[dt.date] = None, budget_min: f
                     stopped = True
                     continue
                 relire_classement(annee, dossier, spath, state)
+            reviser_vainqueurs_saison(rdir, dossier, annee, only)    # local, sans requête, idempotent
             a_reviser = a_reviser_saison(rdir, only)
             if not a_reviser:
                 print(f"[ARCHIVES] {annee} : déjà complète, rien à réviser")
@@ -2092,8 +2148,63 @@ def _tests() -> None:
         globals_["DATA_DIR"], globals_["RACES_DIR"], globals_["ARCHIVES_DIR"], globals_["finish_archive_season"], globals_["_ranking_du_jour"] = sauve
         globals_["classements_fin_calendrier"] = sauve_cfc
         globals_["charger_index_archives"] = sauve_ix
-    # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
     import tempfile as _tf
+    # 3b) vainqueur d'une course par étapes terminée : général FINAL prioritaire, révision locale des archives
+    def etapes_course(gc_dern, final_gc, statut="finished"):
+        ref = lambda i, fr=False: {"id": i, "name": i.upper(), "nationality": "FRA" if fr else "BEL", "is_french": fr}
+        return {"id": "uci-9", "name": "Tour X", "race_type": "stage_race", "status": statut, "start_date": "2011-08-20",
+                "end_date": "2011-09-11", "riders": {"a": ref("a"), "b": ref("b", True), "c": ref("c")},
+                "stages": [{"number": 1, "date": "2011-09-10", "results": {"stage": [{"rank": 1, "rider_id": "c"}], "gc": gc_dern}},
+                           {"number": 2, "date": "2011-09-11", "results": {"stage": [{"rank": 1, "rider_id": "c"}], "gc": gc_dern}}],
+                "final": {"gc": final_gc} if final_gc is not None else None}
+    # général d'étape sans rang 1 (déclassement) : le final désigne le vainqueur
+    r = etapes_course([{"rank": 2, "rider_id": "b"}, {"rank": 3, "rider_id": "a"}], [{"rank": 1, "rider_id": "b"}, {"rank": 2, "rider_id": "a"}])
+    finalize_race(r, dt.date(2011, 9, 20))
+    assert r["winner"]["id"] == "b" and r["leader"]["id"] == "b" and r["best_french"]["rank"] == 1, r["winner"]
+    # dernière étape listée différente du final (demi-étapes mal ordonnées) : le final l'emporte
+    r = etapes_course([{"rank": 1, "rider_id": "c"}, {"rank": 2, "rider_id": "b"}], [{"rank": 1, "rider_id": "a"}, {"rank": 2, "rider_id": "b"}])
+    finalize_race(r, dt.date(2011, 9, 20))
+    assert r["winner"]["id"] == "a" and r["leader"]["id"] == "a" and r["best_french"]["rank"] == 2
+    # final sans rang 1 : comportement historique ; sans final : général de la dernière étape ; en cours : leader seulement, winner vide
+    r = etapes_course([{"rank": 1, "rider_id": "c"}], [{"rank": 2, "rider_id": "a"}])
+    finalize_race(r, dt.date(2011, 9, 20))
+    assert r["winner"]["id"] == "c"
+    r = etapes_course([{"rank": 1, "rider_id": "c"}], None)
+    finalize_race(r, dt.date(2011, 9, 20))
+    assert r["winner"]["id"] == "c"
+    r = etapes_course([{"rank": 1, "rider_id": "c"}], [{"rank": 1, "rider_id": "a"}], statut="in_progress")
+    finalize_race(r, dt.date(2011, 9, 11))      # final présent => terminée par définition
+    assert r["status"] == "finished" and r["winner"]["id"] == "a"
+    r = etapes_course([{"rank": 1, "rider_id": "c"}], None)
+    finalize_race(r, dt.date(2011, 9, 10))
+    assert r["status"] == "in_progress" and r["winner"] is None and r["leader"]["id"] == "c"
+    # révision locale : réécrit seulement les fiches fausses, idempotente
+    with _tf.TemporaryDirectory() as tmp:
+        dos = os.path.join(tmp, "2011")
+        faux = etapes_course([{"rank": 2, "rider_id": "b"}], [{"rank": 1, "rider_id": "b"}, {"rank": 2, "rider_id": "a"}])
+        faux.update({"season": 2011, "winner": None, "leader": None, "best_french": None})
+        juste = etapes_course([{"rank": 1, "rider_id": "a"}], [{"rank": 1, "rider_id": "a"}])
+        juste.update({"id": "uci-10", "season": 2011, "winner": {"id": "a", "name": "A"}, "leader": {"id": "a", "name": "A"}, "best_french": None})
+        _dump(os.path.join(dos, "races", "uci-9.json"), compact_race(faux))
+        _dump(os.path.join(dos, "races", "uci-10.json"), compact_race(juste))
+        avant = open(os.path.join(dos, "races", "uci-10.json"), "rb").read()
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 1
+        assert _load(os.path.join(dos, "races", "uci-9.json"), {})["winner"]["id"] == "b"
+        assert open(os.path.join(dos, "races", "uci-10.json"), "rb").read() == avant
+        ix = _load(os.path.join(dos, "index.json"), {})
+        assert {x["id"]: (x.get("winner") or {}).get("id") for x in ix["races"]} == {"uci-9": "b", "uci-10": "a"}
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 0     # idempotent
+        # demi-étapes mal ordonnées : ordre rétabli (a avant b), fiche réécrite une seule fois ; le final désigne le vainqueur
+        dem = etapes_course([{"rank": 1, "rider_id": "c"}], [{"rank": 1, "rider_id": "a"}])
+        dem["id"] = "uci-11"
+        dem["stages"] = [{"number": 3, "date": "2016-03-31", "name": "Étape 3b", "results": {"gc": [{"rank": 1, "rider_id": "c"}]}},
+                         {"number": 3, "date": "2016-03-31", "name": "Étape 3a", "results": {"gc": [{"rank": 1, "rider_id": "b"}]}}]
+        dem.update({"season": 2011, "winner": {"id": "a"}, "leader": {"id": "a"}})
+        _dump(os.path.join(dos, "races", "uci-11.json"), compact_race(dem))
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 1
+        assert [x["name"] for x in _load(os.path.join(dos, "races", "uci-11.json"), {})["stages"]] == ["Étape 3a", "Étape 3b"]
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 0
+    # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
     sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds)
     try:
         with _tf.TemporaryDirectory() as tmp:

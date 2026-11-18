@@ -599,6 +599,13 @@ def _numero_etape(nom: str) -> Tuple[Optional[int], str]:
     return None, n
 
 
+def cle_tri_etape(s: Dict[str, Any]) -> Tuple:
+    """Clé de tri des étapes : numéro (sans numéro en dernier), date, puis suffixe de demi-étape lu dans le libellé
+    (« Étape 3a » : sans suffixe < a < b < c). Sans le suffixe, 3a / 3b de même date restaient dans l'ordre de la source."""
+    m = re.match(r"^Étape\s+\d+([a-z])$", str(s.get("name") or ""))
+    return (s.get("number") is None, s.get("number") if s.get("number") is not None else 0, s.get("date") or "", m.group(1) if m else "")
+
+
 _TYPES_ETAPE = {"IRR": "road", "ITT": "itt", "TTT": "ttt"}
 
 
@@ -693,7 +700,7 @@ def get_race(competition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                        "type": _TYPES_ETAPE.get(type_code, "road"), "results": res})
 
     # Numéros manquants (nom non reconnu) : ordre chronologique, sans inventer de libellé
-    stages.sort(key=lambda s: (s["number"] is None, s["number"] if s["number"] is not None else 0, s["date"] or ""))
+    stages.sort(key=cle_tri_etape)
 
     final = None
     if un_jour:
@@ -729,6 +736,11 @@ def get_race(competition: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 # --------------------------------------------------------------------------------------------------
 
 def _tests() -> None:
+    # Tri des étapes : demi-étapes de même numéro et de même date (a < b < c), sans suffixe avant a, sans numéro en dernier
+    et = [{"number": 4, "date": "2016-04-01", "name": "Étape 4"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3b"},
+          {"number": None, "date": None, "name": "x"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3c"},
+          {"number": 3, "date": "2016-03-31", "name": "Étape 3a"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3"}]
+    assert [e["name"] for e in sorted(et, key=cle_tri_etape)] == ["Étape 3", "Étape 3a", "Étape 3b", "Étape 3c", "Étape 4", "x"]
     # Durées
     assert parse_duree("5:16:52") == 5 * 3600 + 16 * 60 + 52
     assert parse_duree("73:56:26") == 73 * 3600 + 56 * 60 + 26
