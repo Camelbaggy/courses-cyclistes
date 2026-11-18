@@ -1,0 +1,59 @@
+name: Veille update (relance des passages sautés)
+
+# GitHub retarde ou abandonne souvent les déclenchements programmés (crons) d'update.yml ('17 13-22 * * *' et '41 6 * * *').
+# Ce workflow, déclenché à :52 de chaque heure, relance update.yml quand son passage a été sauté :
+#   - entre 13 h et 23 h UTC (créneau des courses) : si le dernier passage date d'au moins 50 min. À :52, un passage de :17 qui
+#     a eu lieu date d'environ 35 min (pas de relance) ; s'il a été sauté, le dernier date d'au moins ~60 min (relance).
+#     Une relance de la veille à :52 compte comme un passage : la suivante n'a lieu qu'une heure plus tard au plus tôt ;
+#   - entre 7 h et 9 h UTC (heures 7 et 8) : si le dernier passage date d'au moins 3 h (rattrapage du cron matinal de 6 h 41) ;
+#   - hors de ces créneaux : rien.
+# Rien n'est relancé si un passage d'update.yml est en file ou en cours. Aucun accès aux données : lecture de la liste des
+# exécutions et déclenchement seulement (jeton du dépôt, pas de checkout).
+on:
+  schedule:
+    - cron: '52 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: veille-update
+  cancel-in-progress: true
+
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Relance d'update.yml si son passage a été sauté
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -u
+          # HEURE_UTC et MAINTENANT : surcharges facultatives (essais locaux)
+          maintenant=${MAINTENANT:-$(date -u +%s)}
+          heure=$((10#${HEURE_UTC:-$(date -u +%H)}))
+          if [ "$heure" -ge 13 ] && [ "$heure" -le 23 ]; then
+            seuil=50
+          elif [ "$heure" -ge 7 ] && [ "$heure" -le 8 ]; then
+            seuil=180
+          else
+            echo "[VEILLE] ${heure} h UTC : hors créneau, rien à faire"
+            exit 0
+          fi
+          wf=update.yml
+          en_cours=$(gh run list --repo "$REPO" --workflow "$wf" --limit 20 --json status \
+                       --jq '[.[] | select(.status != "completed")] | length')
+          if [ "${en_cours:-0}" != "0" ]; then echo "[VEILLE] $wf : un passage est en file ou en cours, rien à faire"; exit 0; fi
+          dernier=$(gh run list --repo "$REPO" --workflow "$wf" --limit 1 --json createdAt --jq '.[0].createdAt // ""')
+          if [ -n "$dernier" ]; then
+            age=$(( (maintenant - $(date -u -d "$dernier" +%s)) / 60 ))
+          else
+            age=999999
+          fi
+          if [ "$age" -lt "$seuil" ]; then echo "[VEILLE] $wf : dernier passage il y a ${age} min (< ${seuil} min, ${heure} h UTC), rien à faire"; exit 0; fi
+          echo "[VEILLE] $wf : dernier passage il y a ${age} min (>= ${seuil} min, ${heure} h UTC) : relance"
+          gh workflow run "$wf" --repo "$REPO" --ref main
