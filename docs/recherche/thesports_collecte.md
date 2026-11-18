@@ -153,6 +153,8 @@ Codes vus (33 + SCO), convertis en code projet par `PAYS_SITE_ISO3` : tous ident
 
 ## 8. Points ouverts
 
+0. **Résolu le 18/11/2026 (point 1 ci-dessous)** : décision du propriétaire, identification par la date de naissance de la fiche coureur (`thesports.lire_fiche`, `coureurs.json`) ; `SCO` -> `GBR`. Format constaté : `<h1>Cycling - Nom</h1>` puis `<p class="p_centre">` « Pays - 11 December 1964 » (« Pays » seul sans date), phrase « Nom (born 11 December 1964 [in Wien]) is… ». Rattachement des courses : nom identique d'office (étape 2).
+
 1. **Identification des coureurs** : le site fournit un nom, un code pays, une équipe et un id interne `spf<N>`, pas de date de naissance. Le rapprochement avec nos `rider_id` (slug + naissance) est impossible sans la fiche coureur (1 requête chacune, ~10 000 coureurs ≤ 2008 : ~6 h, texte « born 11 December 1964 » non systématique, à tester) ou sans recouper nom + nationalité + équipe + saison. À décider avant l'étape 2 ; en attendant, `id_site` est conservé.
 2. Formats de temps ambigus (points séparés 2006+, minutes seules 2003) : à lever éventuellement avec distance / vitesse du vainqueur (déterministe, non fait) ou à laisser vides.
 3. Pages d'avant 1990 non explorées (profondeur, formats `u` / `h`, noms de colonnes) ; calendriers de 1876 à 1989 non lus.
