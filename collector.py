@@ -1445,7 +1445,7 @@ def a_reviser_saison(rdir: str, only: str = "") -> List[Dict]:
 
 
 def reviser_vainqueurs_saison(rdir: str, dossier_index: str, annee: int, only: str = "") -> int:
-    """Révision LOCALE (aucune requête) d'une saison d'archive : recalcule winner / leader / best_french des courses par étapes
+    """Révision LOCALE (aucune requête) d'une saison d'archive : remet dans l'ordre les demi-étapes (`uci.cle_tri_etape`) puis recalcule winner / leader / best_french des courses par étapes
     terminées depuis le général final (`_vainqueur_etapes`, mêmes règles que `finalize_race`, sans toucher au statut ni aux
     `french_highlights`, donc sûre sur une fiche compactée : clés null absentes). Une fiche dont ces trois valeurs changent est
     réécrite (compactée) ; l'entrée de l'index de la saison suit. Idempotent : rien à changer = aucune écriture."""
@@ -1455,18 +1455,28 @@ def reviser_vainqueurs_saison(rdir: str, dossier_index: str, annee: int, only: s
     for f in sorted(os.listdir(rdir)):
         r = _load(os.path.join(rdir, f), None) if f.endswith(".json") else None
         if not (isinstance(r, dict) and r.get("id") and r.get("race_type") == "stage_race" and r.get("stages")
-                and (r.get("final") or {}).get("gc") and r.get("status") == "finished"):
+                and r.get("status") == "finished"):
             continue
         if only and only.lower() not in str(r.get("name") or "").lower():
             continue
-        leader, winner, best = _vainqueur_etapes(r, True)
-        def sig(w: Any, l: Any, b: Any) -> Tuple:     # identifiants et rang seulement : les références archivées sont compactées
-            return ((w or {}).get("id"), (l or {}).get("id"), ((b or {}).get("rider") or {}).get("id"), (b or {}).get("rank"))
-        if sig(r.get("winner"), r.get("leader"), r.get("best_french")) == sig(winner, leader, best):
+        modif = False
+        ordonnees = sorted(r["stages"], key=uci.cle_tri_etape)
+        if [id(x) for x in ordonnees] != [id(x) for x in r["stages"]]:
+            r["stages"] = ordonnees
+            modif = True
+            print(f"[ARCHIVES] {annee} : ordre des demi-étapes rétabli : {r.get('name')}")
+        if (r.get("final") or {}).get("gc"):
+            leader, winner, best = _vainqueur_etapes(r, True)
+
+            def sig(w: Any, l: Any, b: Any) -> Tuple:     # identifiants et rang seulement : les références archivées sont compactées
+                return ((w or {}).get("id"), (l or {}).get("id"), ((b or {}).get("rider") or {}).get("id"), (b or {}).get("rank"))
+            if sig(r.get("winner"), r.get("leader"), r.get("best_french")) != sig(winner, leader, best):
+                r["winner"], r["leader"], r["best_french"] = winner, leader, best
+                modif = True
+                print(f"[ARCHIVES] {annee} : vainqueur recalculé depuis le général final : {r.get('name')}")
+        if not modif:
             continue
-        r["winner"], r["leader"], r["best_french"] = winner, leader, best
         _dump(os.path.join(rdir, f), compact_race(r))
-        print(f"[ARCHIVES] {annee} : vainqueur recalculé depuis le général final : {r.get('name')}")
         n += 1
     if n:
         idx = build_index(charger_courses_archive(dossier_index), annee, [], None)
@@ -2184,6 +2194,16 @@ def _tests() -> None:
         ix = _load(os.path.join(dos, "index.json"), {})
         assert {x["id"]: (x.get("winner") or {}).get("id") for x in ix["races"]} == {"uci-9": "b", "uci-10": "a"}
         assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 0     # idempotent
+        # demi-étapes mal ordonnées : ordre rétabli (a avant b), fiche réécrite une seule fois ; le final désigne le vainqueur
+        dem = etapes_course([{"rank": 1, "rider_id": "c"}], [{"rank": 1, "rider_id": "a"}])
+        dem["id"] = "uci-11"
+        dem["stages"] = [{"number": 3, "date": "2016-03-31", "name": "Étape 3b", "results": {"gc": [{"rank": 1, "rider_id": "c"}]}},
+                         {"number": 3, "date": "2016-03-31", "name": "Étape 3a", "results": {"gc": [{"rank": 1, "rider_id": "b"}]}}]
+        dem.update({"season": 2011, "winner": {"id": "a"}, "leader": {"id": "a"}})
+        _dump(os.path.join(dos, "races", "uci-11.json"), compact_race(dem))
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 1
+        assert [x["name"] for x in _load(os.path.join(dos, "races", "uci-11.json"), {})["stages"]] == ["Étape 3a", "Étape 3b"]
+        assert reviser_vainqueurs_saison(os.path.join(dos, "races"), dos, 2011) == 0
     # 4) révision des temps d'une saison complète (uci bouchonné, dossier temporaire)
     sauve = (DATA_DIR, RACES_DIR, ARCHIVES_DIR, uci.get_race, uci.get_season_id, uci.list_competitions, uci.season_bounds)
     try:
