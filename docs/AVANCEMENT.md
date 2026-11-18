@@ -42,6 +42,13 @@ Dernière mise à jour : 18 novembre 2026, fin de session. À lire avec `CLAUDE.
    (auto-relance). Ensuite : rattachement manuel des équipes 2009-2010 sans code UCI (classement WorldTour limité aux WorldTeams, comme
    2012-2014 : proposer par continuité d'effectif, faire valider).
 
+### Incident du 18/11 après-midi (corrigé, PR #81)
+the-sports.org a répondu 503 (erreur Cloudflare ordinaire) au 2e passage : pris pour un défi anti-robot, site abandonné, relance arrêtée.
+Corrigé (503 = erreur passagère sauf marqueur explicite ; arrêt net si site abandonné ; pause 3 s). Mémoire du Cyclisme : plantage
+`KeyError: 'affiche'` corrigé. À 17 h UTC : the-sports 4 497 éditions restantes (5 370 avant), Mémoire du Cyclisme 2 009 courses + 150 éditions
+restantes, CQ Ranking 3 737 pages + 5 450 fiches, Museo 82 éditions + 4 911 fiches. Vérifier que les quatre auto-relances continuent
+(`etat.json` de chaque `data/archives/sources/<source>/`) ; une relance s'arrête si un passage ne change rien ou plante (relancer à la main).
+
 ### Fait le 17-18/11
 - **Refonte du site** (PR #55 à #61, `docs/REDESIGN.md`) : thème clair + sombre, composants Liquipedia modernisés, navigation (recherche
   d'en-tête, retour mobile, sous-navigation), accueil, fiche de course, fiche coureur, articles d'équipe, pages d'épreuve. **Reste : pages de
