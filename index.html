@@ -1099,7 +1099,7 @@ function messageErreur(msg, action) {
 /** Carte d'un dernier résultat (course, étape, vainqueur, meilleur Français, résumé) ; `court` : résumé limité à 3 lignes (accueil). */
 function carteEtape(it, court) {
   const c = courseParId(it.race_id);
-  const sn = it.stage_number == null ? "" : it.stage_number;
+  const sn = refLibelle(it.label, it.stage_number);
   const bf = it.best_french;
   return `<button class="card click" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
     <div class="card-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>
@@ -1249,7 +1249,7 @@ async function chercherArchive(id) {
 function blocVictoiresFr(ix) {
   const W = ix.french_wins || [];
   if (!W.length) return "";
-  const lignes = W.map(w => `<button class="wins-row" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
+  const lignes = W.map(w => `<button class="wins-row" data-open="${esc(w.race_id)}" data-stage="${esc(refLibelle(w.label, w.stage_number))}">
       <span class="d">${esc(dateCourte(w.date))}</span>
       <span class="l"><b>${plink(w.rider_id, w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span></button>`).join("");
   return `<details class="card table-card"${W.length <= 8 ? " open" : ""}><summary class="group-title" style="cursor:pointer">Victoires françaises · ${W.length}</summary>${lignes}</details>`;
@@ -1286,12 +1286,24 @@ function renderFrancais() {
 }
 
 /* ================== fiche course ================== */
-function etapes(c) { return (c.stages || []).slice().sort((a, b) => (a.number ?? -1) - (b.number ?? -1)); }
+/** Identifiant d'étape « <n><suffixe> » (« 3a », « 3b » ; « 3 » sans suffixe) lu dans le libellé : miroir de `uci.ref_etape`. Sans suffixe = ancien identifiant (le numéro). */
+function refLibelle(label, number) {
+  if (number == null) return "";
+  const m = /^Étape\s+(\d+)([a-z])?(?![\w])/.exec(String(label || ""));
+  return m && Number(m[1]) === number ? m[1] + (m[2] || "") : String(number);
+}
+function refEtape(s) { return s.number == null ? "F" : refLibelle(s.name, s.number); }
+/** Étape désignée par `sel` (« 3b » exacte ; « 3 » sans suffixe : celle sans suffixe, sinon la première demi-étape du numéro). */
+function trouveEtape(E, sel) {
+  const t = String(sel);
+  return E.find(s => refEtape(s) === t) || E.find(s => s.number != null && String(s.number) === t) || null;
+}
+function etapes(c) { return (c.stages || []).slice().sort((a, b) => (a.number ?? -1) - (b.number ?? -1) || refEtape(a).localeCompare(refEtape(b))); }
 function selectionDefaut(c) {
   const E = etapes(c);
   if (c.race_type !== "stage_race") return "";
   if (c.final && c.status === "finished") return "F";
-  return E.length ? String(E[E.length - 1].number) : "";
+  return E.length ? refEtape(E[E.length - 1]) : "";
 }
 function cls(c, sel) {
   const E = etapes(c);
@@ -1302,18 +1314,18 @@ function cls(c, sel) {
     return out;
   }
   if (sel === "F") return c.final || {};
-  const st = E.find(s => String(s.number) === String(sel));
+  const st = trouveEtape(E, sel);
   return (st && st.results) || {};
 }
 function etapeCourante(c, sel) {
   const E = etapes(c);
   if (c.race_type !== "stage_race") return E[0] || null;
   if (sel === "F") return null;
-  return E.find(s => String(s.number) === String(sel)) || null;
+  return trouveEtape(E, sel);
 }
 function libelleChip(s) {
   if (s.number == null) return "Course";
-  return s.number === 0 ? "Prol." : `É${s.number}`;
+  return s.number === 0 ? "Prol." : `É${refEtape(s)}`;
 }
 
 function sousTitreCourse(c) {
@@ -1408,9 +1420,9 @@ function abandons(c, sel) {
     (k.stage || []).forEach(r => { if (r.status) out.push({ ...r, _etape: null }); });
     return out;
   }
-  const jusqua = sel === "F" ? Infinity : Number(sel);
-  E.forEach(s => {
-    if (s.number > jusqua) return;
+  const iSel = sel === "F" ? -1 : E.indexOf(trouveEtape(E, sel));
+  E.forEach((s, i) => {
+    if (iSel >= 0 && i > iSel) return;
     ((s.results && s.results.stage) || []).forEach(r => { if (r.status) out.push({ ...r, _etape: s }); });
   });
   return out;
@@ -1466,7 +1478,7 @@ function renderTable(c, sel, sub) {
       if (!rows.length) return;
       html += `<div class="group-title">${esc(STATUTS[s] || s)} · ${rows.length}</div><div class="rows">${rows.map(r => {
         const ref = c.riders[r.rider_id];
-        const lib = r._etape ? (r._etape.number === 0 ? "Prologue" : `Étape ${r._etape.number}`) : "";
+        const lib = r._etape ? (r._etape.number === 0 ? "Prologue" : r._etape.name || `Étape ${r._etape.number}`) : "";
         return `<div class="row ${ref && ref.is_french ? "fr" : ""}"><div class="rk">–</div>${ref ? flag(ref.flag, ref.nationality) : "<span></span>"}
           <div class="mid"><div class="nm">${ref ? plink(r.rider_id, ref.name) : esc(r.bib ? "Dossard " + r.bib : "Coureur inconnu")}</div><div class="tm">${esc(ref ? ref.team : "")}</div></div>
           <div class="val gap">${esc(lib)}</div></div>`;
@@ -1481,7 +1493,7 @@ function renderTable(c, sel, sub) {
   // mouvements au général : comparaison avec l'étape précédente
   let prev = null;
   if (sub === "gc" && c.race_type === "stage_race" && sel !== "F") {
-    const E = etapes(c), i = E.findIndex(s => String(s.number) === String(sel));
+    const E = etapes(c), i = E.indexOf(trouveEtape(E, sel));
     if (i > 0) { prev = {}; ((E[i - 1].results || {}).gc || []).forEach(r => { prev[r.rider_id] = r.rank; }); }
   }
   const total = rows.length;
@@ -1556,8 +1568,8 @@ function renderFiche() {
   let chips = "";
   if (c.race_type === "stage_race") {
     chips = `<div class="chips" id="stage-chips" style="${catStyle(c.category)}">${E.map(s => {
-      const active = String(s.number) === String(sel), tp = s.type === "itt" ? "CLM" : s.type === "ttt" ? "CLE" : "", d = dateCourte(s.date).replace(/\.$/, "");
-      return `<button class="chip stage-chip ${active ? "active" : ""}" data-stage-sel="${esc(s.number)}"><b>${esc(libelleChip(s))}</b>${d ? `<span>${esc(d)}</span>` : ""}${tp ? `<i>${tp}</i>` : ""}</button>`;
+      const active = refEtape(s) === String(sel), tp = s.type === "itt" ? "CLM" : s.type === "ttt" ? "CLE" : "", d = dateCourte(s.date).replace(/\.$/, "");
+      return `<button class="chip stage-chip ${active ? "active" : ""}" data-stage-sel="${esc(refEtape(s))}"><b>${esc(libelleChip(s))}</b>${d ? `<span>${esc(d)}</span>` : ""}${tp ? `<i>${tp}</i>` : ""}</button>`;
     }).join("")}${c.final ? `<button class="chip stage-chip fin ${sel === "F" ? "active" : ""}" data-stage-sel="F"><b>Final</b><span>général</span></button>` : ""}</div>`;
   }
   const tabs = onglets(c, sel);
@@ -2074,8 +2086,9 @@ async function pageCourse(r, tok) {
   state.ctxPage = saisonCourse(c) != null ? `${state.courseArchive != null ? "a" : "c"}${saisonCourse(c)}` : null;
   let sel = etape != null && etape !== "" ? etape : selectionDefaut(c);
   if (c.race_type === "stage_race") {
-    const ok = sel === "F" ? !!c.final : etapes(c).some(s => String(s.number) === String(sel));
-    if (!ok) sel = selectionDefaut(c);
+    const st = sel === "F" ? null : trouveEtape(etapes(c), sel);
+    if (sel === "F" ? !c.final : !st) sel = selectionDefaut(c);
+    else if (st) sel = refEtape(st);
   } else sel = "";
   state.sel = sel;
   if (state.subVoulu) { state.sub = state.subVoulu; state.subVoulu = null; }
@@ -2599,7 +2612,7 @@ function htmlSaison(cr) {
       return `<div class="card table-card pal-group">
         <button class="pal-head" data-open="${esc(g.id)}" data-stage="">${ci ? flag(ci.flag, ci.country) : ""}<span class="n">${esc(nom)}</span>${c.category ? catBadge(c.category, c.uci_class) : ""}</button>
         ${g.items.map(x => {
-          const stage = x.classification === "stage" ? (x.stage_number == null ? "" : x.stage_number) : "F";
+          const stage = x.classification === "stage" ? refLibelle(x.label, x.stage_number) : "F";
           return `<button class="pal-row" data-open="${esc(g.id)}" data-stage="${esc(stage)}" data-vsub="${esc(x.classification)}">
             <span class="d">${esc(dateCourte(x.date))}</span><span class="l">${esc(x.label)}</span><span class="k${rangClasse(x.rank)}">${esc(x.rank)}</span></button>`;
         }).join("")}</div>`;
@@ -3488,7 +3501,7 @@ function htmlUne(x, it) {
     </button>`;
   }
   if (!it) return "";
-  const c = courseParId(it.race_id), w = it.winner, sn = it.stage_number == null ? "" : it.stage_number;
+  const c = courseParId(it.race_id), w = it.winner, sn = refLibelle(it.label, it.stage_number);
   return `<button class="une o0" style="${catStyle(c && c.category)}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
     <span class="une-tag">DERNIER RÉSULTAT</span>
     <span class="une-nom">${flag(c && c.flag, c && c.country)}<span>${esc(it.race_name)}</span></span>
@@ -3498,7 +3511,7 @@ function htmlUne(x, it) {
 }
 /** Carte d'un dernier résultat de l'accueil : filet de catégorie, maillot du vainqueur, résumé replié. Cliquable (div) : le résumé et les liens coureur n'ouvrent pas la course. */
 function carteAccueil(it) {
-  const c = courseParId(it.race_id), sn = it.stage_number == null ? "" : it.stage_number, w = it.winner, bf = it.best_french;
+  const c = courseParId(it.race_id), sn = refLibelle(it.label, it.stage_number), w = it.winner, bf = it.best_french;
   return `<div class="rcard" role="link" tabindex="0" style="${catStyle(c && c.category)}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
     <div class="rc-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>${c ? catBadge(c.category, c.uci_class) : ""}</div>
     <div class="rc-sub">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
@@ -3533,7 +3546,7 @@ function blocFrancais(ix) {
   if (!T.length) return "";
   const W = T.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5);
   return `<div class="blk-h"><h2>Français à la une</h2><a href="${esc(hrefCoureurs({ vue: "francais" }))}">Les Français</a></div>
-    <div class="minis">${W.map(w => `<button class="mini" data-open="${esc(w.race_id)}" data-stage="${esc(w.stage_number == null ? "" : w.stage_number)}">
+    <div class="minis">${W.map(w => `<button class="mini" data-open="${esc(w.race_id)}" data-stage="${esc(refLibelle(w.label, w.stage_number))}">
       <span class="d">${esc(dateCourte(w.date))}</span><span class="t"><b>${esc(w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span>
       <span class="badge fr">1er</span></button>`).join("")}</div>
     <div class="count-line" style="margin-top:6px">${T.length} victoire${T.length > 1 ? "s" : ""} française${T.length > 1 ? "s" : ""} en ${esc(ix.season ?? state.current)}</div>`;

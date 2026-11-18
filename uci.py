@@ -599,11 +599,23 @@ def _numero_etape(nom: str) -> Tuple[Optional[int], str]:
     return None, n
 
 
+def suffixe_etape(s: Dict[str, Any]) -> str:
+    """Suffixe de demi-étape lu dans le libellé (« Étape 3b » -> « b ») ; « » sans suffixe (« Étape 3 », prologue, course d'un jour)."""
+    m = re.match(r"^Étape\s+\d+([a-z])$", str(s.get("name") or ""))
+    return m.group(1) if m else ""
+
+
+def ref_etape(s: Dict[str, Any]) -> str:
+    """Identifiant d'étape « <n><suffixe> » (« 3a », « 3b » ; « 3 » sans suffixe ; « F » pour la course / le final sans numéro).
+    Une étape sans suffixe garde exactement l'ancien identifiant (son numéro) : clés de notification et liens existants inchangés."""
+    n = s.get("number")
+    return "F" if n is None else f"{n}{suffixe_etape(s)}"
+
+
 def cle_tri_etape(s: Dict[str, Any]) -> Tuple:
     """Clé de tri des étapes : numéro (sans numéro en dernier), date, puis suffixe de demi-étape lu dans le libellé
     (« Étape 3a » : sans suffixe < a < b < c). Sans le suffixe, 3a / 3b de même date restaient dans l'ordre de la source."""
-    m = re.match(r"^Étape\s+\d+([a-z])$", str(s.get("name") or ""))
-    return (s.get("number") is None, s.get("number") if s.get("number") is not None else 0, s.get("date") or "", m.group(1) if m else "")
+    return (s.get("number") is None, s.get("number") if s.get("number") is not None else 0, s.get("date") or "", suffixe_etape(s))
 
 
 _TYPES_ETAPE = {"IRR": "road", "ITT": "itt", "TTT": "ttt"}
@@ -740,6 +752,7 @@ def _tests() -> None:
     et = [{"number": 4, "date": "2016-04-01", "name": "Étape 4"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3b"},
           {"number": None, "date": None, "name": "x"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3c"},
           {"number": 3, "date": "2016-03-31", "name": "Étape 3a"}, {"number": 3, "date": "2016-03-31", "name": "Étape 3"}]
+    assert [ref_etape(e) for e in [{"number": 3, "name": "Étape 3a"}, {"number": 3, "name": "Étape 3b"}, {"number": 3, "name": "Étape 3"}, {"number": 0, "name": "Prologue"}, {"number": None, "name": "Course"}]] == ["3a", "3b", "3", "0", "F"]
     assert [e["name"] for e in sorted(et, key=cle_tri_etape)] == ["Étape 3", "Étape 3a", "Étape 3b", "Étape 3c", "Étape 4", "x"]
     # Durées
     assert parse_duree("5:16:52") == 5 * 3600 + 16 * 60 + 52
