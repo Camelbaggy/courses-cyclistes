@@ -1,12 +1,28 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 17 novembre 2026, 11 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
-## Prochain projet : refonte du site
+## Bilan du 18/11 (11 h 45 UTC)
 
-Point de départ, contrats à ne pas casser et questions à trancher : `docs/REDESIGN.md` (préparé le 17/11, captures de référence
-`tools/apercu.py` toutes vertes).
+- **Refonte du site faite** (17-18/11, PR #55 à #61 ; `docs/REDESIGN.md` : décisions, étapes, bilan) : thème clair + sombre, composants
+  Liquipedia modernisés, navigation (recherche d'en-tête, retour mobile, sous-navigation), accueil, fiche de course, fiche coureur, articles
+  d'équipe et pages d'épreuve. Reste : pages de liste (Équipes, Coureurs, Classements, Courses, Recherche).
+- **Archives 2011-2025 complètes** ; vainqueurs contrôlés par sondage contre Wikidata : 2011-2015, grands tours + 5 monuments, 40 éditions sur 40
+  conformes (+ Lombardia 2010 rangé en saison 2011 : conforme). Championnat de France absent avant 2016 (limite DataRide connue, pas de `CN`).
+  Vuelta 2011 : `winner` de l'index 2011 vide alors que `final.gc` donne Froome (Cobo déclassé) : à regarder.
+- **2009-2010 (T4) lancée** (défaut d'archives.yml étendu à 2009-2025) : 2010 complète (185 courses), 2009 en cours.
+- **Équipes** : classement de fin de saison des saisons du Calendrier (`data/ranking-2026.json`, PR #62-63) -> 206 équipes 2026 avec code UCI ;
+  `alias_equipes.json` 85 entrées validées (Cofidis 2012-2026, Groupama-FDJ, Movistar 2015-2016, 2026, 45 équipes 2012-2014) ; lignée reprise
+  par l'équipe renommée en cours de saison (43 cas). Correctif du 18/11 : coureur 2010 sans nationalité qui bloquait toute reconstruction
+  d'`entites/` (PR #70). `entites/` du 18/11 11 h UTC : 26 063 coureurs, 5 223 équipes-saisons, 418 lignées, 871 épreuves ; Wikidata :
+  2 165 équipes-saisons rattachées sur 2 340, 11 311 coureurs.
+- **Sources d'avant 2009** (`docs/recherche/sources_avant_2009.md`) : accords obtenus par le propriétaire le 18/11 : the-sports.org (collecte
+  en cours, `thesports.yml`, 152 courses découvertes au 1er passage), Mémoire du Cyclisme, CQ Ranking, Museo del Ciclismo (collecteurs en
+  écriture). FirstCycling : accord, mais défi Cloudflare sur les pages de données même avec un vrai navigateur : règle d'exception à demander
+  aux administrateurs. ProCyclingStats : même blocage Cloudflare.
+- **update.yml** : crons très souvent sautés (3 passages en 24 h au lieu de 11) ; sans effet en intersaison, à traiter avant la reprise des
+  courses (19/01/2027 : veille ou tâche programmée).
 
 ## Où on en est
 
