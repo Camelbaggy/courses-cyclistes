@@ -1,0 +1,2904 @@
+{
+ "championnats": [
+  {
+   "annees_concordantes": [
+    2007,
+    2008
+   ],
+   "annees_museo": [
+    1927,
+    2025
+   ],
+   "libelle": "Championnats du monde route (élite, en ligne)",
+   "museo_id": "2634",
+   "museo_nom": "World Championship Road Race",
+   "preuve": true,
+   "vainqueurs": {
+    "2005": {
+     "date": "2005-09-25",
+     "museo": "Tom BOONEN"
+    },
+    "2006": {
+     "date": "2006-09-24",
+     "museo": "Paolo BETTINI"
+    },
+    "2007": {
+     "cq": {
+      "categorie": "WCRR",
+      "nom": "World Championships (Stuttgart) R.R.",
+      "vainqueur": "BETTINI Paolo"
+     },
+     "date": "2007-09-30",
+     "museo": "Paolo BETTINI"
+    },
+    "2008": {
+     "cq": {
+      "categorie": "WCRR",
+      "nom": "World Championships (Varese) R.R.",
+      "vainqueur": "BALLAN Alessandro"
+     },
+     "date": "2008-09-28",
+     "museo": "Alessandro BALLAN"
+    }
+   }
+  },
+  {
+   "annees_concordantes": [],
+   "annees_museo": [
+    1896,
+    2021
+   ],
+   "libelle": "Jeux olympiques, course en ligne",
+   "museo_id": "34548",
+   "museo_nom": "Olympic Games Road Race",
+   "preuve": false,
+   "vainqueurs": {
+    "2008": {
+     "date": "2008-08-09",
+     "museo": "Samuel SANCHEZ GONZALEZ"
+    }
+   }
+  },
+  {
+   "annees_concordantes": [
+    2006,
+    2007,
+    2008
+   ],
+   "annees_museo": [
+    1907,
+    2026
+   ],
+   "libelle": "Championnats de France route (élite)",
+   "museo_id": "20739",
+   "museo_nom": "Road National Championship - France",
+   "preuve": true,
+   "vainqueurs": {
+    "2005": {
+     "date": "2005-06-26",
+     "museo": "Pierrick FEDRIGO"
+    },
+    "2006": {
+     "cq": {
+      "categorie": "NC2",
+      "nom": "National Championships France (Chantonnay) R.R.",
+      "vainqueur": "BRARD Florent"
+     },
+     "date": "2006-06-25",
+     "museo": "Florent BRARD"
+    },
+    "2007": {
+     "cq": {
+      "categorie": "NC2",
+      "nom": "National Championships France (Aurillac) R.R.",
+      "vainqueur": "MOREAU Christophe"
+     },
+     "date": "2007-07-01",
+     "museo": "Christophe MOREAU"
+    },
+    "2008": {
+     "cq": {
+      "categorie": "NC2",
+      "nom": "National Championships France (Semur-en-Auxois) R.R.",
+      "vainqueur": "VOGONDY Nicolas"
+     },
+     "date": "2008-06-29",
+     "museo": "Nicolas VOGONDY"
+    }
+   }
+  },
+  {
+   "annees_concordantes": [
+    2008
+   ],
+   "annees_museo": [
+    2005,
+    2024
+   ],
+   "libelle": "Championnats d'Afrique, course en ligne",
+   "museo_id": "180623",
+   "museo_nom": "African Continental Championship - Road Race",
+   "preuve": false,
+   "vainqueurs": {
+    "2005": {
+     "date": "2005-12-09",
+     "museo": "Rupert RHEEDER"
+    },
+    "2006": {
+     "date": "2006-11-12",
+     "museo": "Darren LILL"
+    },
+    "2007": {
+     "date": "2007-11-11",
+     "museo": "Nick WHITE"
+    },
+    "2008": {
+     "cq": {
+      "categorie": "CC",
+      "nom": "African Cycling Championships (Casablanca) R.R.",
+      "vainqueur": "CRAVEN Dan"
+     },
+     "date": "2008-11-09",
+     "museo": "Dan CRAVEN"
+    }
+   }
+  },
+  {
+   "annees_concordantes": [
+    2007,
+    2008
+   ],
+   "annees_museo": [
+    1999,
+    2019
+   ],
+   "libelle": "Championnats d'Asie, course en ligne",
+   "museo_id": "176524",
+   "museo_nom": "Asian Championship Road Race",
+   "preuve": true,
+   "vainqueurs": {
+    "2005": {
+     "date": "2005-12-13",
+     "museo": "Hyun Wook JOO"
+    },
+    "2006": {
+     "date": "2006-09-16",
+     "museo": "Mehdi SOHRABI"
+    },
+    "2007": {
+     "cq": {
+      "categorie": "CC",
+      "nom": "Asian Cycling Championships (Nakhon Ratchasima) R.R.",
+      "vainqueur": "MIYAZAWA Takashi"
+     },
+     "date": "2007-09-10",
+     "museo": "Takashi MIYAZAWA"
+    },
+    "2008": {
+     "cq": {
+      "categorie": "CC",
+      "nom": "Asian Cycling Championships (Nara) R.R.",
+      "vainqueur": "BEPPU Fumiyuki"
+     },
+     "date": "2008-04-17",
+     "museo": "Fumiyuki BEPPU"
+    }
+   }
+  },
+  {
+   "annees_concordantes": [],
+   "annees_museo": [
+    1995,
+    2026
+   ],
+   "libelle": "Championnats d'Océanie, course en ligne",
+   "museo_id": "233912",
+   "museo_nom": "Oceania Championship Road Race",
+   "preuve": false,
+   "vainqueurs": {}
+  },
+  {
+   "annees_concordantes": [
+    2006,
+    2008
+   ],
+   "annees_museo": [
+    1974,
+    2026
+   ],
+   "libelle": "Championnats panaméricains, course en ligne",
+   "museo_id": "58073",
+   "museo_nom": "Pan American Championship Road Race",
+   "preuve": true,
+   "vainqueurs": {
+    "2005": {
+     "date": "2005-05-01",
+     "museo": "John Freddy PARRA CELADA"
+    },
+    "2006": {
+     "cq": {
+      "categorie": "CC",
+      "nom": "Pan-American Championships (São Paulo) R.R.",
+      "vainqueur": "SERPA PEREZ Jose Rodolfo"
+     },
+     "date": "2006-06-04",
+     "museo": "Jose Rodolfo SERPA PEREZ"
+    },
+    "2007": {
+     "date": "2007-05-26",
+     "museo": "Martin GILBERT"
+    },
+    "2008": {
+     "cq": {
+      "categorie": "CC",
+      "nom": "Pan-American Championships (Montevideo) R.R.",
+      "vainqueur": "MASCARAÑAS GRANADA Richard Eustaquio"
+     },
+     "date": "2008-05-11",
+     "museo": "Richard Eustaquio MASCARAÑAS GRANADA"
+    }
+   }
+  }
+ ],
+ "epreuves": [
+  {
+   "annees_museo": [
+    1961,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "de brabantse pijl la fleche brabanconne|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-03-27",
+       "museo": "Oscar FREIRE GOMEZ"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Brabantse Pijl",
+        "vainqueur": "FREIRE GOMEZ Oscar"
+       },
+       "date": "2006-03-26",
+       "museo": "Oscar FREIRE GOMEZ"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Brabantse Pijl",
+        "vainqueur": "FREIRE GOMEZ Oscar"
+       },
+       "date": "2007-04-01",
+       "museo": "Oscar FREIRE GOMEZ"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Brabantse Pijl",
+        "vainqueur": "CHAVANEL Sylvain"
+       },
+       "date": "2008-03-30",
+       "museo": "Sylvain CHAVANEL"
+      }
+     }
+    }
+   ],
+   "museo_id": "9714",
+   "museo_nom": "Brabantse Pijl",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1924,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [
+      2008,
+      2007
+     ],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "circuit franco belge|BEL",
+     "preuve": true,
+     "preuve_type": "cle",
+     "references": [
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.75,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-02",
+       "museo": "Marco ZANOTTI"
+      },
+      "2006": {
+       "date": "2006-10-01",
+       "museo": "Kevin VAN IMPE"
+      },
+      "2007": {
+       "date": "2007-10-07",
+       "museo": "Gert STEEGMANS",
+       "reference": [
+        "STEEGMANS Gert"
+       ]
+      },
+      "2008": {
+       "date": "2008-10-05",
+       "museo": "Juan Antonio FLECHA GIANNONI",
+       "reference": [
+        "FLECHA GIANNONI Juan Antonio"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "9787",
+   "museo_nom": "Circuit Franco-Belge - Eurometropole Tour",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1981,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "clasica ciclista san sebastian san sebastian|ESP",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2010
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-13",
+       "museo": "Constantino ZABALLA GUTIERREZ"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian",
+        "vainqueur": "FLORENCIO CABRE Xavier"
+       },
+       "date": "2006-08-12",
+       "museo": "Xavier FLORENCIO CABRE"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian - San Sebastian",
+        "vainqueur": "BERTAGNOLLI Leonardo"
+       },
+       "date": "2007-08-04",
+       "museo": "Leonardo BERTAGNOLLI"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian - San Sebastian",
+        "vainqueur": "VALVERDE BELMONTE Alejandro"
+       },
+       "date": "2008-08-02",
+       "museo": "Alejandro VALVERDE BELMONTE"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [
+      2008,
+      2007,
+      2006,
+      2005
+     ],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "donostia san sebastian klasikoa|ESP",
+     "preuve": true,
+     "preuve_type": "cle",
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2011,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-13",
+       "museo": "Constantino ZABALLA GUTIERREZ",
+       "reference": [
+        "Constantino Zaballa"
+       ]
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian",
+        "vainqueur": "FLORENCIO CABRE Xavier"
+       },
+       "date": "2006-08-12",
+       "museo": "Xavier FLORENCIO CABRE",
+       "reference": [
+        "Xavier Florencio"
+       ]
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian - San Sebastian",
+        "vainqueur": "BERTAGNOLLI Leonardo"
+       },
+       "date": "2007-08-04",
+       "museo": "Leonardo BERTAGNOLLI",
+       "reference": [
+        "Leonardo Bertagnolli"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Clasica San Sebastian - San Sebastian",
+        "vainqueur": "VALVERDE BELMONTE Alejandro"
+       },
+       "date": "2008-08-02",
+       "museo": "Alejandro VALVERDE BELMONTE",
+       "reference": [
+        "Alejandro Valverde"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "2751",
+   "museo_nom": "Clasica San Sebastian",
+   "pays": "ESP"
+  },
+  {
+   "annees_museo": [
+    1985,
+    2022
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [
+      2008,
+      2007,
+      2006
+     ],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "post danmark rundt tour of denmark|DEN",
+     "preuve": true,
+     "preuve_type": "cle",
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2015
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-07",
+       "museo": "Ivan BASSO"
+      },
+      "2006": {
+       "date": "2006-08-06",
+       "museo": "Fabian CANCELLARA",
+       "reference": [
+        "CANCELLARA Fabian"
+       ]
+      },
+      "2007": {
+       "date": "2007-08-05",
+       "museo": "Kurt-Asle ARVESEN",
+       "reference": [
+        "ARVESEN Kurt Asle"
+       ]
+      },
+      "2008": {
+       "date": "2008-08-03",
+       "museo": "Jakob FUGLSANG",
+       "reference": [
+        "FUGLSANG Jakob"
+       ]
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "postnord danmark rundt tour of denmark|DEN",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2016,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-07",
+       "museo": "Ivan BASSO"
+      },
+      "2006": {
+       "date": "2006-08-06",
+       "museo": "Fabian CANCELLARA"
+      },
+      "2007": {
+       "date": "2007-08-05",
+       "museo": "Kurt-Asle ARVESEN"
+      },
+      "2008": {
+       "date": "2008-08-03",
+       "museo": "Jakob FUGLSANG"
+      }
+     }
+    }
+   ],
+   "museo_id": "12802",
+   "museo_nom": "Danmark Rundt",
+   "pays": "DEN"
+  },
+  {
+   "annees_museo": [
+    1968,
+    2012
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "e3 harelbeke|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2013,
+      2016
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VERBIST Evert"
+       },
+       "date": "2006-03-04",
+       "museo": "Evert VERBIST"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VANENDERT Jelle"
+       },
+       "date": "2007-03-10",
+       "museo": "Jelle VANENDERT"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "SCHMITZ Bram"
+       },
+       "date": "2008-03-08",
+       "museo": "Bram SCHMITZ"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "e3 prijs vlaanderen harelbeke|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2012
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VERBIST Evert"
+       },
+       "date": "2006-03-04",
+       "museo": "Evert VERBIST",
+       "reference": [
+        "BOONEN Tom"
+       ]
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VANENDERT Jelle"
+       },
+       "date": "2007-03-10",
+       "museo": "Jelle VANENDERT",
+       "reference": [
+        "BOONEN Tom"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "SCHMITZ Bram"
+       },
+       "date": "2008-03-08",
+       "museo": "Bram SCHMITZ",
+       "reference": [
+        "ARVESEN Kurt Asle"
+       ]
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "record bank e3 harelbeke|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2017,
+      2018
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VERBIST Evert"
+       },
+       "date": "2006-03-04",
+       "museo": "Evert VERBIST"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "VANENDERT Jelle"
+       },
+       "date": "2007-03-10",
+       "museo": "Jelle VANENDERT"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Vlaamse Pijl - Harelbeke",
+        "vainqueur": "SCHMITZ Bram"
+       },
+       "date": "2008-03-08",
+       "museo": "Bram SCHMITZ"
+      }
+     }
+    }
+   ],
+   "museo_id": "41416",
+   "museo_nom": "De Vlaamse Pijl Harelbeke",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1945,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "dwars door vlaanderen a travers la flandre|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-03-23",
+       "museo": "Nico EECKHOUT"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "VEUCHELEN Frederik"
+       },
+       "date": "2006-03-22",
+       "museo": "Frederik VEUCHELEN"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "BOONEN Tom"
+       },
+       "date": "2007-03-28",
+       "museo": "Tom BOONEN"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "CHAVANEL Sylvain"
+       },
+       "date": "2008-03-26",
+       "museo": "Sylvain CHAVANEL"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "dwars door vlaanderen a travers les flandres|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2017,
+      2017
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-03-23",
+       "museo": "Nico EECKHOUT"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "VEUCHELEN Frederik"
+       },
+       "date": "2006-03-22",
+       "museo": "Frederik VEUCHELEN"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "BOONEN Tom"
+       },
+       "date": "2007-03-28",
+       "museo": "Tom BOONEN"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Dwars door Vlaanderen - Waregem",
+        "vainqueur": "CHAVANEL Sylvain"
+       },
+       "date": "2008-03-26",
+       "museo": "Sylvain CHAVANEL"
+      }
+     }
+    }
+   ],
+   "museo_id": "9954",
+   "museo_nom": "Dwars door Vlaanderen",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1964,
+    2024
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "gp du canton d argovie gippingen|SUI",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2009
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-06-05",
+       "museo": "Alexandre MOOS"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "ZBERG Beat"
+       },
+       "date": "2006-06-04",
+       "museo": "Beat ZBERG"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "GADRET John"
+       },
+       "date": "2007-06-10",
+       "museo": "John GADRET"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "MONDORY Lloyd"
+       },
+       "date": "2008-06-08",
+       "museo": "Lloyd MONDORY"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "gp du canton d argovie|SUI",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2010,
+      2018
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-06-05",
+       "museo": "Alexandre MOOS"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "ZBERG Beat"
+       },
+       "date": "2006-06-04",
+       "museo": "Beat ZBERG"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "GADRET John"
+       },
+       "date": "2007-06-10",
+       "museo": "John GADRET"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP Kanton Aargau - Gippingen",
+        "vainqueur": "MONDORY Lloyd"
+       },
+       "date": "2008-06-08",
+       "museo": "Lloyd MONDORY"
+      }
+     }
+    }
+   ],
+   "museo_id": "11337",
+   "museo_nom": "G.P. Kanton Aargau Gippingen",
+   "pays": "SUI"
+  },
+  {
+   "annees_museo": [
+    1999,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "gran premio miguel indurain|ESP",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 1.0,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-04-02",
+       "museo": "Javier PASCUAL RODRIGUEZ"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "GP Miguel Indurain",
+        "vainqueur": "WEGMANN Fabian"
+       },
+       "date": "2006-04-01",
+       "museo": "Fabian WEGMANN"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP Miguel Indurain",
+        "vainqueur": "NOCENTINI Rinaldo"
+       },
+       "date": "2007-04-07",
+       "museo": "Rinaldo NOCENTINI"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP Miguel Indurain",
+        "vainqueur": "WEGMANN Fabian"
+       },
+       "date": "2008-04-05",
+       "museo": "Fabian WEGMANN"
+      }
+     }
+    }
+   ],
+   "museo_id": "11440",
+   "museo_nom": "G.P. Miguel Indurain",
+   "pays": "ESP"
+  },
+  {
+   "annees_museo": [
+    1935,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "ethias tour de wallonie|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2021,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-14",
+       "museo": "Nick NUYENS"
+      },
+      "2006": {
+       "date": "2006-09-13",
+       "museo": "Philippe GILBERT"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "DE WAELE Bert"
+       },
+       "date": "2007-09-19",
+       "museo": "Bert DE WAELE"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "GARZELLI Stefano"
+       },
+       "date": "2008-09-17",
+       "museo": "Stefano GARZELLI"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "grand prix de wallonie|BEL",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2025
+     ],
+     "score_nom": 1.0,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-14",
+       "museo": "Nick NUYENS"
+      },
+      "2006": {
+       "date": "2006-09-13",
+       "museo": "Philippe GILBERT"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "DE WAELE Bert"
+       },
+       "date": "2007-09-19",
+       "museo": "Bert DE WAELE"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "GARZELLI Stefano"
+       },
+       "date": "2008-09-17",
+       "museo": "Stefano GARZELLI"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "lotto grand prix de wallonie|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2026,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-14",
+       "museo": "Nick NUYENS"
+      },
+      "2006": {
+       "date": "2006-09-13",
+       "museo": "Philippe GILBERT"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "DE WAELE Bert"
+       },
+       "date": "2007-09-19",
+       "museo": "Bert DE WAELE"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "GARZELLI Stefano"
+       },
+       "date": "2008-09-17",
+       "museo": "Stefano GARZELLI"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "voo tour de wallonie|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2016,
+      2020
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-14",
+       "museo": "Nick NUYENS"
+      },
+      "2006": {
+       "date": "2006-09-13",
+       "museo": "Philippe GILBERT"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "DE WAELE Bert"
+       },
+       "date": "2007-09-19",
+       "museo": "Bert DE WAELE"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP de Wallonie",
+        "vainqueur": "GARZELLI Stefano"
+       },
+       "date": "2008-09-17",
+       "museo": "Stefano GARZELLI"
+      }
+     }
+    }
+   ],
+   "museo_id": "22962",
+   "museo_nom": "G.P. de Wallonie",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1990,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [
+      2008,
+      2007,
+      2006
+     ],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "grand prix du morbihan|FRA",
+     "preuve": true,
+     "preuve_type": "cle",
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 1.0,
+     "vainqueurs": {
+      "2006": {
+       "cq_meme_date": {
+        "nom": "GP de Plumelec-Morbihan",
+        "vainqueur": "HERVE Cédric"
+       },
+       "date": "2006-05-27",
+       "museo": "Cedric HERVE",
+       "reference": [
+        "Cédric Hervé"
+       ]
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP de Plumelec-Morbihan",
+        "vainqueur": "GERRANS Simon"
+       },
+       "date": "2007-06-02",
+       "museo": "Simon GERRANS",
+       "reference": [
+        "Simon Gerrans"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP de Plumelec-Morbihan",
+        "vainqueur": "VOECKLER Thomas"
+       },
+       "date": "2008-05-31",
+       "museo": "Thomas VOECKLER",
+       "reference": [
+        "Thomas Voeckler"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "2584",
+   "museo_nom": "G.P. du Morbihan",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    1934,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [
+      2008,
+      2007,
+      2006,
+      2005
+     ],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "WT",
+     "cle": "gent wevelgem in flanders fields|BEL",
+     "preuve": true,
+     "preuve_type": "cle",
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2014,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-04-06",
+       "museo": "Nico MATTAN",
+       "reference": [
+        "Nico Mattan"
+       ]
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Gent - Wevelgem",
+        "vainqueur": "HUSHOVD Thor"
+       },
+       "date": "2006-04-05",
+       "museo": "Thor HUSHOVD",
+       "reference": [
+        "Thor Hushovd"
+       ]
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Gent - Wevelgem",
+        "vainqueur": "BURGHARDT Marcus"
+       },
+       "date": "2007-04-11",
+       "museo": "Marcus BURGHARDT",
+       "reference": [
+        "Marcus Burghardt"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Gent - Wevelgem",
+        "vainqueur": "FREIRE GOMEZ Oscar"
+       },
+       "date": "2008-04-09",
+       "museo": "Oscar FREIRE GOMEZ",
+       "reference": [
+        "Óscar Freire"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "2820",
+   "museo_nom": "In Flanders Fields",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    2000,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "sparkassen munsterland giro|GER",
+     "preuve": true,
+     "preuve_type": "date_pays_cq",
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2006": {
+       "date": "2006-10-03",
+       "museo": "Paul MARTENS"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Münsterland Giro",
+        "vainqueur": "VAN EMDEN Jos"
+       },
+       "date": "2007-10-03",
+       "museo": "Jos VAN EMDEN"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Münsterland Giro",
+        "vainqueur": "GREIPEL André"
+       },
+       "date": "2008-10-03",
+       "museo": "André GREIPEL"
+      }
+     }
+    }
+   ],
+   "museo_id": "31649",
+   "museo_nom": "Munsterland Giro",
+   "pays": "GER"
+  },
+  {
+   "annees_museo": [
+    1955,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "4 jours de dunkerque grand prix des hauts de france|FRA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-05-08",
+       "museo": "Pierrick FEDRIGO"
+      },
+      "2006": {
+       "date": "2006-05-07",
+       "museo": "Roberto PETITO"
+      },
+      "2007": {
+       "date": "2007-05-13",
+       "museo": "Matthieu LADAGNOUS"
+      },
+      "2008": {
+       "date": "2008-05-11",
+       "museo": "Stéphane AUGÉ"
+      }
+     }
+    }
+   ],
+   "museo_id": "2535",
+   "museo_nom": "4 Jours de Dunkerque",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    2001,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "faun ardeche classic|FRA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2020,
+      2026
+     ],
+     "score_nom": 0.86,
+     "vainqueurs": {
+      "2005": {
+       "date": null,
+       "museo": "Fabien FRAISSIGNES"
+      },
+      "2006": {
+       "date": null,
+       "museo": "Jean-Christophe PERAUD"
+      },
+      "2007": {
+       "date": "2007-03-24",
+       "museo": "Evgeny SOKOLOV"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Boucles du Sud Ardèche - Souvenir Francis Delpech",
+        "vainqueur": "SMUKULIS Gatis"
+       },
+       "date": "2008-02-23",
+       "museo": "Gatis SMUKULIS"
+      }
+     }
+    }
+   ],
+   "museo_id": "92812",
+   "museo_nom": "Ardèche Classic",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    1951,
+    2006
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "parijs brusssel paris bruxelles|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2012
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": null,
+       "museo": "Stefan HUIZINGA"
+      },
+      "2006": {
+       "date": null,
+       "museo": "Dries VAN DER GINST"
+      }
+     }
+    }
+   ],
+   "museo_id": "63376",
+   "museo_nom": "Brussel-Opwijk",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1975,
+    2020
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "parijs brusssel paris bruxelles|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2012
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-03-06",
+       "museo": "Nicky COCQUYT"
+      },
+      "2006": {
+       "date": "2006-03-05",
+       "museo": "Michiel VAN AELBROEK"
+      },
+      "2007": {
+       "date": "2007-03-11",
+       "museo": "Kristof DE ZUTTER"
+      },
+      "2008": {
+       "date": "2008-03-09",
+       "museo": "Bjorn COOMANS"
+      }
+     }
+    }
+   ],
+   "museo_id": "62014",
+   "museo_nom": "Bruxelles-Zepperen",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1975,
+    2023
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "grand prix du morbihan|FRA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": null,
+       "museo": "Benoit LEGRIX"
+      },
+      "2006": {
+       "date": null,
+       "museo": "David LE LAY",
+       "reference": [
+        "Cédric Hervé"
+       ]
+      },
+      "2007": {
+       "date": null,
+       "museo": "Guillaume LE FLOCH",
+       "reference": [
+        "Simon Gerrans"
+       ]
+      },
+      "2008": {
+       "date": null,
+       "museo": "Julien FOUCHARD",
+       "reference": [
+        "Thomas Voeckler"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "184559",
+   "museo_nom": "Circuit du Morbihan",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    1952,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "coppa sabatini gran premio citta di peccioli|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2016,
+      2022
+     ],
+     "score_nom": 0.67,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-06",
+       "museo": "Alessandro BERTOLINI"
+      },
+      "2006": {
+       "date": "2006-10-05",
+       "museo": "Giovanni VISCONTI"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Coppa Sabatini",
+        "vainqueur": "VISCONTI Giovanni"
+       },
+       "date": "2007-10-11",
+       "museo": "Giovanni VISCONTI"
+      },
+      "2008": {
+       "date": "2008-10-09",
+       "museo": "Mykhaylo KHALILOV"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "gran premio citta di peccioli coppa sabatini|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2013,
+      2026
+     ],
+     "score_nom": 0.67,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-06",
+       "museo": "Alessandro BERTOLINI"
+      },
+      "2006": {
+       "date": "2006-10-05",
+       "museo": "Giovanni VISCONTI"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Coppa Sabatini",
+        "vainqueur": "VISCONTI Giovanni"
+       },
+       "date": "2007-10-11",
+       "museo": "Giovanni VISCONTI"
+      },
+      "2008": {
+       "date": "2008-10-09",
+       "museo": "Mykhaylo KHALILOV"
+      }
+     }
+    }
+   ],
+   "museo_id": "1303",
+   "museo_nom": "Coppa Sabatini",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    1998,
+    2024
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "eschborn frankfurt city loop|GER",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2009
+     ],
+     "score_nom": 0.76,
+     "vainqueurs": {
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Rund um den Henninger Turm - Frankfurt - Espoirs",
+        "vainqueur": "DENIFL Stefan"
+       },
+       "date": "2008-05-01",
+       "museo": "Stefan DENIFL"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008
+     ],
+     "classe_actuelle": "WT",
+     "cle": "rund um den finanzplatz eschborn frankfurt|GER",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2010,
+      2017
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Rund um den Henninger Turm - Frankfurt - Espoirs",
+        "vainqueur": "DENIFL Stefan"
+       },
+       "date": "2008-05-01",
+       "museo": "Stefan DENIFL"
+      }
+     }
+    }
+   ],
+   "museo_id": "92772",
+   "museo_nom": "Eschborn-Frankfurt U23",
+   "pays": "GER"
+  },
+  {
+   "annees_museo": [
+    2008,
+    2009
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008
+     ],
+     "classe_actuelle": "WT",
+     "cle": "copenhagen sprint|DEN",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2025,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP Copenhagen - Odsherred Classic",
+        "vainqueur": "JOHANSEN Allan"
+       },
+       "date": "2008-05-01",
+       "museo": "Allan JOHANSEN"
+      }
+     }
+    }
+   ],
+   "museo_id": "92726",
+   "museo_nom": "G.P. Copenhagen Classic",
+   "pays": "DEN"
+  },
+  {
+   "annees_museo": [
+    1977,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007,
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "gp industria artigianato|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2017,
+      2026
+     ],
+     "score_nom": 0.81,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-04-30",
+       "museo": "Luca MAZZANTI"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "GP Industria & Artigianato - Larciano",
+        "vainqueur": "CUNEGO Damiano"
+       },
+       "date": "2006-04-29",
+       "museo": "Damiano CUNEGO"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "GP Industria & Artigianato - Larciano",
+        "vainqueur": "NIBALI Vincenzo"
+       },
+       "date": "2007-05-05",
+       "museo": "Vincenzo NIBALI"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "GP Industria & Artigianato - Larciano",
+        "vainqueur": "RATTI Eddy"
+       },
+       "date": "2008-05-03",
+       "museo": "Eddy RATTI"
+      }
+     }
+    }
+   ],
+   "museo_id": "2956",
+   "museo_nom": "G.P. Industria e Artigianato - Larciano",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    2002,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "WT",
+     "cle": "gp ouest france plouay|FRA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2015
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-28",
+       "museo": "Piotr ZIELINSKI"
+      },
+      "2006": {
+       "date": "2006-08-26",
+       "museo": "Rein TAARAMAE"
+      },
+      "2007": {
+       "date": "2007-09-01",
+       "museo": "Julien SIMON",
+       "reference": [
+        "VOECKLER Thomas"
+       ]
+      },
+      "2008": {
+       "date": "2008-08-24",
+       "museo": "Yann GUYOT",
+       "reference": [
+        "FEDRIGO Pierrick"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "110260",
+   "museo_nom": "G.P. de Plouay Elite Open",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    1931,
+    2014
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "giro del trentino|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2016
+     ],
+     "score_nom": 0.8,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-05-08",
+       "museo": "Fabrizio AMERIGHI"
+      },
+      "2006": {
+       "date": "2006-05-07",
+       "museo": "Daniel Ricardo ESCUELA",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2007": {
+       "date": "2007-05-06",
+       "museo": "Andrea PINOS",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2008": {
+       "date": "2008-05-04",
+       "museo": "Daniel OSS",
+       "reference": [
+        "NIBALI Vincenzo"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "97227",
+   "museo_nom": "Giro dei Tre Ponti",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    1910,
+    2022
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2006
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "giro del trentino|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2016
+     ],
+     "score_nom": 0.86,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-07-17",
+       "museo": "Vasili KIRYIENKA"
+      },
+      "2006": {
+       "cq_meme_date": {
+        "nom": "Giro del Casentino",
+        "vainqueur": "MODOLO Sacha"
+       },
+       "date": "2006-07-16",
+       "museo": "Sacha MODOLO",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2007": {
+       "date": "2007-07-22",
+       "museo": "Francesco GINANNI",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2008": {
+       "date": "2008-07-20",
+       "museo": "Pierpaolo DE NEGRI",
+       "reference": [
+        "NIBALI Vincenzo"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "60089",
+   "museo_nom": "Giro del Casentino",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    1910,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "WT",
+     "cle": "giro di lombardia|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2010
+     ],
+     "score_nom": 0.75,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-04",
+       "museo": "Danilo NAPOLITANO"
+      },
+      "2006": {
+       "date": "2006-09-03",
+       "museo": "Santo ANZÀ"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Giro della Romagna",
+        "vainqueur": "SERRI Eddy"
+       },
+       "date": "2007-09-09",
+       "museo": "Eddy SERRI",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Giro della Romagna",
+        "vainqueur": "GASPAROTTO Enrico"
+       },
+       "date": "2008-09-07",
+       "museo": "Enrico GASPAROTTO",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "1488",
+   "museo_nom": "Giro di Romagna",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    1992,
+    2024
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "japan cup cycle road race|JPN",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2008,
+      2023
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-23",
+       "museo": "Damiano CUNEGO"
+      },
+      "2006": {
+       "date": "2006-10-22",
+       "museo": "Riccardo RICCO'"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Japan Cup",
+        "vainqueur": "MORI Manuele"
+       },
+       "date": "2007-10-28",
+       "museo": "Manuele MORI"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Japan Cup",
+        "vainqueur": "CUNEGO Damiano"
+       },
+       "date": "2008-10-26",
+       "museo": "Damiano CUNEGO"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "utsunomiya japan cup road race|JPN",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2024,
+      2026
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-23",
+       "museo": "Damiano CUNEGO"
+      },
+      "2006": {
+       "date": "2006-10-22",
+       "museo": "Riccardo RICCO'"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Japan Cup",
+        "vainqueur": "MORI Manuele"
+       },
+       "date": "2007-10-28",
+       "museo": "Manuele MORI"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Japan Cup",
+        "vainqueur": "CUNEGO Damiano"
+       },
+       "date": "2008-10-26",
+       "museo": "Damiano CUNEGO"
+      }
+     }
+    }
+   ],
+   "museo_id": "11816",
+   "museo_nom": "Japan Cup",
+   "pays": "JPN"
+  },
+  {
+   "annees_museo": [
+    2006,
+    2008
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008
+     ],
+     "classe_actuelle": "WT",
+     "cle": "giro di lombardia|ITA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2007,
+      2008
+     ],
+     "saisons": [
+      2009,
+      2010
+     ],
+     "score_nom": 1.0,
+     "vainqueurs": {
+      "2006": {
+       "date": "2006-10-07",
+       "museo": "Marco CATTANEO"
+      },
+      "2007": {
+       "date": "2007-09-29",
+       "museo": "Fausto FOGNINI",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Lombardia Tour",
+        "vainqueur": "SARAMOTINS Aleksejs"
+       },
+       "date": "2008-09-20",
+       "museo": "Aleksejs SARAMOTINS",
+       "reference": [
+        "CUNEGO Damiano"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "63010",
+   "museo_nom": "Lombardia Tour",
+   "pays": "ITA"
+  },
+  {
+   "annees_museo": [
+    1950,
+    2018
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "WT",
+     "cle": "omloop het nieuwsblad elite|BEL",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2010,
+      2026
+     ],
+     "score_nom": 0.75,
+     "vainqueurs": {
+      "2005": {
+       "date": null,
+       "museo": "Nick INGELS",
+       "reference": [
+        "Nick Nuyens"
+       ]
+      },
+      "2006": {
+       "date": null,
+       "museo": "Dominique CORNU",
+       "reference": [
+        "Philippe Gilbert"
+       ]
+      },
+      "2007": {
+       "date": null,
+       "museo": "Gert DOCKX",
+       "reference": [
+        "Filippo Pozzato"
+       ]
+      },
+      "2008": {
+       "date": "2008-06-28",
+       "museo": "Joeri CLAUWAERT",
+       "reference": [
+        "Philippe Gilbert"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "61576",
+   "museo_nom": "Omloop Het Nieuwsblad voor Beloften & elite z-c",
+   "pays": "BEL"
+  },
+  {
+   "annees_museo": [
+    1943,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "paris tours elite|FRA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2013,
+      2026
+     ],
+     "score_nom": 0.78,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-10-09",
+       "museo": "Fabien PATANCHON",
+       "reference": [
+        "Erik Zabel"
+       ]
+      },
+      "2006": {
+       "date": "2006-10-08",
+       "museo": "Huub DUYN",
+       "reference": [
+        "Frédéric Guesdon"
+       ]
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Paris - Tours Espoirs",
+        "vainqueur": "ROELANDTS Jürgen"
+       },
+       "date": "2007-10-14",
+       "museo": "Jurgen ROELANDTS",
+       "reference": [
+        "Alessandro Petacchi"
+       ]
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Paris - Tours Espoirs",
+        "vainqueur": "GALLOPIN Tony"
+       },
+       "date": "2008-10-12",
+       "museo": "Tony GALLOPIN",
+       "reference": [
+        "Philippe Gilbert"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "64024",
+   "museo_nom": "Paris-Tours espoirs",
+   "pays": "FRA"
+  },
+  {
+   "annees_museo": [
+    1985,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [
+      2008,
+      2007
+     ],
+     "classe_actuelle": "Pro",
+     "cle": "philadelphia international championship|USA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2010
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-06-05",
+       "museo": "Christopher WHERRY"
+      },
+      "2006": {
+       "date": "2006-06-11",
+       "museo": "Greg HENDERSON"
+      },
+      "2007": {
+       "cq_meme_date": {
+        "nom": "Commerce Bank International Championship",
+        "vainqueur": "HAEDO Juan Jose"
+       },
+       "date": "2007-06-10",
+       "museo": "Juan José HAEDO"
+      },
+      "2008": {
+       "cq_meme_date": {
+        "nom": "Commerce Bank Philadelphia International Championship",
+        "vainqueur": "BRESCHEL Matti"
+       },
+       "date": "2008-06-08",
+       "museo": "Matti BRESCHEL"
+      }
+     }
+    }
+   ],
+   "museo_id": "8157",
+   "museo_nom": "Philadelphia Cycling Classic",
+   "pays": "USA"
+  },
+  {
+   "annees_museo": [
+    1965,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "56 presidential cycling tour of turkey|TUR",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2021,
+      2021
+     ],
+     "score_nom": 1.0,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-05-08",
+       "museo": "Svetoslav TCHANLIEV"
+      },
+      "2006": {
+       "date": "2006-05-07",
+       "museo": "Ghader MIZBANI IRANAGH"
+      },
+      "2007": {
+       "date": "2007-05-13",
+       "museo": "Ivaïlo GABROVSKI"
+      },
+      "2008": {
+       "date": "2008-04-20",
+       "museo": "David GARCIA DAPENA"
+      }
+     }
+    },
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "presidential cycling tour of turkiye|TUR",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2010,
+      2026
+     ],
+     "score_nom": 0.83,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-05-08",
+       "museo": "Svetoslav TCHANLIEV"
+      },
+      "2006": {
+       "date": "2006-05-07",
+       "museo": "Ghader MIZBANI IRANAGH"
+      },
+      "2007": {
+       "date": "2007-05-13",
+       "museo": "Ivaïlo GABROVSKI"
+      },
+      "2008": {
+       "date": "2008-04-20",
+       "museo": "David GARCIA DAPENA"
+      }
+     }
+    }
+   ],
+   "museo_id": "68439",
+   "museo_nom": "Presidential Tour of Turkey",
+   "pays": "TUR"
+  },
+  {
+   "annees_museo": [
+    1996,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "petronas le tour de langkawi|MAS",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.9,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-02-06",
+       "museo": "Ryan COX"
+      },
+      "2006": {
+       "date": "2006-02-12",
+       "museo": "David Harold GEORGE"
+      },
+      "2007": {
+       "date": "2007-02-11",
+       "museo": "Anthony CHARTEAU"
+      },
+      "2008": {
+       "date": "2008-02-17",
+       "museo": "Ruslan IVANOV"
+      }
+     }
+    }
+   ],
+   "museo_id": "8323",
+   "museo_nom": "Tour de Langkawi",
+   "pays": "MAS"
+  },
+  {
+   "annees_museo": [
+    1935,
+    2025
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "skoda tour de luxembourg|LUX",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2026
+     ],
+     "score_nom": 0.86,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-06-05",
+       "museo": "Laszlo BODROGI"
+      },
+      "2006": {
+       "date": "2006-06-04",
+       "museo": "Christian VANDEVELDE"
+      },
+      "2007": {
+       "date": "2007-06-10",
+       "museo": "Gregory RAST"
+      },
+      "2008": {
+       "date": "2008-06-08",
+       "museo": "Joost POSTHUMA"
+      }
+     }
+    }
+   ],
+   "museo_id": "6266",
+   "museo_nom": "Tour de Luxembourg",
+   "pays": "LUX"
+  },
+  {
+   "annees_museo": [
+    2006,
+    2019
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "WT",
+     "cle": "amgen tour of california|USA",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2019
+     ],
+     "score_nom": 0.86,
+     "vainqueurs": {
+      "2006": {
+       "date": "2006-02-26",
+       "museo": "Floyd LANDIS"
+      },
+      "2007": {
+       "date": "2007-02-25",
+       "museo": "Levi LEIPHEIMER"
+      },
+      "2008": {
+       "date": "2008-02-24",
+       "museo": "Levi LEIPHEIMER"
+      }
+     }
+    }
+   ],
+   "museo_id": "55936",
+   "museo_nom": "Tour of California",
+   "pays": "USA"
+  },
+  {
+   "annees_museo": [
+    1927,
+    2026
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "volta a portugal em bicicleta edp|POR",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2009,
+      2009
+     ],
+     "score_nom": 0.5,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-08-15",
+       "museo": "Vladimir EFIMKIN"
+      },
+      "2006": {
+       "date": "2006-08-15",
+       "museo": "David BLANCO RODRIGUEZ"
+      },
+      "2007": {
+       "date": "2007-08-15",
+       "museo": "Xavier TONDO VOLPINI"
+      },
+      "2008": {
+       "date": "2008-08-24",
+       "museo": "David BLANCO RODRIGUEZ"
+      }
+     }
+    }
+   ],
+   "museo_id": "13191",
+   "museo_nom": "Volta a Portugal",
+   "pays": "POR"
+  },
+  {
+   "annees_museo": [
+    1941,
+    2008
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "WT",
+     "cle": "la vuelta ciclista a espana|ESP",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2017,
+      2026
+     ],
+     "score_nom": 0.77,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-05-29",
+       "museo": "Pavel BRUTT",
+       "reference": [
+        "Roberto Heras"
+       ]
+      },
+      "2006": {
+       "date": "2006-05-28",
+       "museo": "Jesús TENDERO MARCOS",
+       "reference": [
+        "Alexandre Vinokourov"
+       ]
+      },
+      "2007": {
+       "date": "2007-06-03",
+       "museo": "Maurizio BIONDO",
+       "reference": [
+        "Denis Menchov"
+       ]
+      },
+      "2008": {
+       "date": "2008-06-01",
+       "museo": "Diego Alejandro TAMAYO MARTINEZ",
+       "reference": [
+        "Alberto Contador"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "22529",
+   "museo_nom": "Vuelta Ciclista a Navarra",
+   "pays": "ESP"
+  },
+  {
+   "annees_museo": [
+    1935,
+    2019
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "WT",
+     "cle": "la vuelta ciclista a espana|ESP",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [
+      2005,
+      2006,
+      2007,
+      2008
+     ],
+     "saisons": [
+      2017,
+      2026
+     ],
+     "score_nom": 0.81,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-09-08",
+       "museo": "Miguel SILVESTRE INIESTA",
+       "reference": [
+        "Roberto Heras"
+       ]
+      },
+      "2006": {
+       "date": "2006-09-08",
+       "museo": "David GUTIERREZ GUTIERREZ",
+       "reference": [
+        "Alexandre Vinokourov"
+       ]
+      },
+      "2007": {
+       "date": "2007-09-09",
+       "museo": "Oscar LAGUNA GARCIA",
+       "reference": [
+        "Denis Menchov"
+       ]
+      },
+      "2008": {
+       "date": "2008-09-08",
+       "museo": "Ibon ZUGASTI ARRESE",
+       "reference": [
+        "Alberto Contador"
+       ]
+      }
+     }
+    }
+   ],
+   "museo_id": "195493",
+   "museo_nom": "Vuelta Ciclista a Salamanca",
+   "pays": "ESP"
+  },
+  {
+   "annees_museo": [
+    1982,
+    2023
+   ],
+   "cles": [
+    {
+     "annees_concordantes": [],
+     "annees_indice_cq": [],
+     "classe_actuelle": "Pro",
+     "cle": "vuelta a san juan internacional|ARG",
+     "preuve": false,
+     "preuve_type": null,
+     "references": [],
+     "saisons": [
+      2020,
+      2023
+     ],
+     "score_nom": 0.67,
+     "vainqueurs": {
+      "2005": {
+       "date": "2005-01-22",
+       "museo": "Luciano Antonio MONTIVERO"
+      },
+      "2006": {
+       "date": "2006-01-22",
+       "museo": "Gerardo Luis FERNANDEZ"
+      },
+      "2007": {
+       "date": "2007-01-21",
+       "museo": "Luciano Antonio MONTIVERO"
+      },
+      "2008": {
+       "date": "2008-01-13",
+       "museo": "Pedro Cristian GONZALEZ"
+      }
+     }
+    }
+   ],
+   "museo_id": "52789",
+   "museo_nom": "Vuelta a San Juan",
+   "pays": "ARG"
+  }
+ ],
+ "epreuves_sans_candidate": [
+  "100 tre valli varesine|ITA",
+  "abu dhabi tour|UAE",
+  "adac cyclassics|GER",
+  "ag driedaagse brugge de panne|BEL",
+  "baloise belgium tour|BEL",
+  "bemer cyclassics|GER",
+  "cadel evans great ocean road race men|AUS",
+  "cic mont ventoux|FRA",
+  "classique dunkerque grand prix des hauts de france|FRA",
+  "coppa bernocchi gp banco bpm|ITA",
+  "coppa bernocchi gp bpm|ITA",
+  "criterium du dauphine libere|FRA",
+  "danilith nokere koerse|BEL",
+  "driedaagse brugge de panne|BEL",
+  "driedaagse de panne koksijde|BEL",
+  "duracell dwars door het hageland|BEL",
+  "dutch food valley classic|NED",
+  "euroeyes cyclassics hamburg|GER",
+  "eurometropole tour|BEL",
+  "faun drome classic|FRA",
+  "flandrien 0 0 classic|BEL",
+  "gent wevelgem|BEL",
+  "gp de denain porte du hainaut valenciennes metropole|FRA",
+  "gp nobili rubinetterie coppa papa carlo coppa citta di stresa|ITA",
+  "gran premio bruno beghelli|ITA",
+  "gran premio citta di lugano|SUI",
+  "grand prix cycliste de montreal|CAN",
+  "grand prix cycliste de quebec|CAN",
+  "grand prix de denain porte du hainaut|FRA",
+  "handzame classic|BEL",
+  "kbc driedaagse de panne koksijde|BEL",
+  "kuurne brussel kuurne|BEL",
+  "mapei cadel evans great ocean road race men|AUS",
+  "maryland cycling classic presented by unitedhealthcare|USA",
+  "minerva classic brugge de panne|BEL",
+  "nokere koerse danilith classic|BEL",
+  "oxyclean classic brugge de panne|BEL",
+  "primus classic impanis van petegem|BEL",
+  "primus classic|BEL",
+  "prudential ridelondon surrey classic|GBR",
+  "renewi tour|BEL",
+  "ridelondon classic|GBR",
+  "ronde van brugge tour of bruges|BEL",
+  "royal bernard drome classic|FRA",
+  "santos tour down under|AUS",
+  "suissegas gran premio citta di lugano|SUI",
+  "td bank international cycling championship|USA",
+  "the aviva tour of britain|GBR",
+  "the larry h miller tour of utah|USA",
+  "tour de belgique ronde van belgie tour of belgium|BEL",
+  "tour de l eurometropole|BEL",
+  "tour de yorkshire|GBR",
+  "tour of slovenia|SLO",
+  "usa pro challenge|USA",
+  "vattenfall cyclassics|GER",
+  "vdk driedaagse de panne koksijde|BEL",
+  "volta ao algarve em bicicleta|POR"
+ ],
+ "produit_par": "tools/essais/proposer_alias_museo.py",
+ "regle_preuve": "vainqueurs concordants sur >= 2 années 2005-2008 avec une référence liée à l'épreuve par sa clé (Wikidata, CQ) ; championnats : classe officielle CQ (WCRR / NC / CC) à la même date",
+ "requetes": 0
+}
