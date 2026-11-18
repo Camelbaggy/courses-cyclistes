@@ -63,13 +63,38 @@ restantes, CQ Ranking 3 737 pages + 5 450 fiches, Museo 82 éditions + 4 911 fic
   d'`entites/` (PR #70). `entites/` du 18/11 : 26 063 coureurs, 5 223 équipes-saisons, 418 lignées, 871 épreuves ; Wikidata : 2 165 équipes-saisons
   rattachées sur 2 340, 11 311 coureurs.
 
-### À faire ensuite (ordre suggéré)
-1. Finir les chantiers ci-dessus (saison civile, collecteurs MDC / CQ / Museo, étape 2-3 des sources d'avant 2009).
-2. **update.yml** : crons très souvent sautés (3 passages en 24 h au lieu de 11 le 17-18/11) : mettre une veille (modèle `veille.yml`) ou une
-   tâche programmée **avant la reprise des courses (19/01/2027)**.
-3. Refonte des pages de liste.
-4. Bilan quotidien : la tâche programmée « Bilan archives » s'est arrêtée (sa condition, 2011-2025 complète, est remplie) ; en recréer une
-   si le propriétaire le souhaite (2009, the-sports, nouveaux collecteurs).
+### À faire ensuite (ordre validé en fin de session du 18/11 : reprendre au point 1)
+1. **Veille d'`update.yml` (à faire en premier, avant la reprise des courses le 19/01/2027).** GitHub saute la plupart de ses crons
+   (3 passages en 24 h au lieu de 11 le 17-18/11) : sans effet en intersaison, mais en saison résultats et notifications ntfy en retard.
+   Solution proposée : une veille sur le modèle de `veille.yml` du dépôt d'archives (cron horaire décalé qui relance `update.yml` par
+   `gh workflow run` si aucun passage n'a démarré depuis ~1 h 30 pendant le créneau 13 h-22 h UTC, rien si un passage est en file / en cours),
+   placée dans CE dépôt (`update.yml` y est) ; option de secours : tâche programmée côté Claude (accord du propriétaire requis).
+2. **Étape 2 des sources d'avant 2009 (rattachement), puis étape 3 (affichage).** Conception possible tout de suite sur les données déjà
+   collectées (`data/archives/sources/{thesports,mdc,cqranking,museo}/` du dépôt d'archives), les collectes finissent dans quelques jours :
+   - courses -> nos épreuves (`cle_edition`, alias) : nom identique validé d'office, cas douteux soumis au propriétaire (Paris-Nice, Tirreno,
+     Pays basque, Dauphiné, Paris-Camembert, renommages ; `docs/recherche/thesports_courses_proposees.json`) ;
+   - coureurs -> nos `rider_id` / QID Wikidata par nom + date de naissance (CQ Ranking, Museo, the-sports par fiche) ; Mémoire du Cyclisme
+     (nom seul) rattachée seulement de façon prudente ;
+   - désaccords entre sources : garder toutes les valeurs, chacune avec sa source, jamais trancher ;
+   - étape 3 : pages d'épreuve, d'édition et de coureur, crédit de chaque source (« the-sports.org », « Mémoire du Cyclisme », « CQ Ranking »,
+     « Museo del Ciclismo »).
+3. **Refonte des pages de liste** (Équipes, Coureurs, Classements, Courses, Recherche), seules pages encore dans l'ancien style ; harmoniser les
+   titres « Derniers résultats marquants ».
+4. **Équipes 2009-2010** une fois 2009 complète : rattachements manuels des équipes de 2e division sans code UCI (continuité d'effectif,
+   comme 2012-2014), liste à soumettre au propriétaire avant ajout à `alias_equipes.json`.
+5. **Petites corrections** : `winner` vide de la Vuelta 2011 dans l'index 2011 (`final.gc` donne Froome) ; onglet « Saison » de la fiche
+   coureur encore par saison UCI ; fil d'Ariane d'une édition reportée (année civile) ; régénérer le jeu fictif
+   (`tools/fixtures/generer_archives.py`, contient encore une saison 2027).
+
+**Décisions attendues du propriétaire** (posées le 18/11, pas encore tranchées) :
+- codes pays historiques de Mémoire du Cyclisme (`Hon`, `Tch`, `Rfa`, `Urs`, `Rda`) : codes d'époque (HUN, TCH, FRG, URS, GDR) ou vides
+  (vides aujourd'hui) ; même question pour Museo (CSI, DDR, LAT, TCH, URS) ;
+- Museo del Ciclismo : rester sur les épreuves suivies (`--suivies`) ou élargir (ex. courses italiennes et françaises d'avant 2009, `--cles`) ;
+- bilan quotidien : recréer une tâche programmée pour suivre 2009 et les quatre collectes (l'ancienne « Bilan archives » est arrêtée).
+
+**En attente d'un tiers** : FirstCycling et ProCyclingStats restent derrière Cloudflare tant que leurs administrateurs n'ouvrent pas un accès
+dédié (règle d'exception par en-tête secret, clé d'API ou export) ; aucun contournement de notre côté (`tools/essais/essai_firstcycling*.py`
+documentent les essais : requêtes simples et vrai navigateur sans déguisement, tous deux bloqués).
 
 ## Où on en est
 
