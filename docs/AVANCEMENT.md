@@ -1,6 +1,6 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 18 novembre 2026, fin de session. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
 ## POINT DE REPRISE (18/11/2026, fin de session) : à lire en premier
@@ -24,11 +24,14 @@ Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md`
    - **CQ Ranking : étape 1 FAITE** (`cqranking.py`, PR #77, `docs/recherche/cqranking_collecte.md`) ; **collecte en cours** (`cqranking.yml`, PR #10
      du dépôt d'archives, `data/archives/sources/cqranking/`, auto-relance ; ~28 h estimées). Résultats 1999-2008 (places à points CQ), fiches
      coureurs avec date de naissance (56/56) et ID UCI (62 %) : 16/16 concordants avec Wikidata. Classes anciennes (`1.4`, `1.5`, `CDM`) à rattacher.
-   - **Museo del Ciclismo** (museociclismo.it) : 1 agent écrivait l'étape 1 (collecteur
-     `museo.py` + `docs/recherche/<source>_collecte.md` + fixtures), chacun dans un worktree `/home/user/courses-cyclistes/.claude/worktrees/agent-*`
-     sur une branche LOCALE (`source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
-     puis relire, fusionner dans la branche de travail, PR ; si les branches ont disparu, relancer l'étape 1 sur le modèle de `thesports.py`.
-     Puis workflows de collecte (modèle `thesports.yml` / `mdc.yml`) et intégration (étape 2/3 communes avec the-sports).
+   - **Museo del Ciclismo : étape 1 FAITE** (`museo.py`, PR #79, `docs/recherche/museo_collecte.md`) ; **collecte en cours** (`museo.yml`, PR #11
+     du dépôt d'archives, `museo.py --suivies` = courses de `series_historiques.json` seulement, ~1 h 40 ; auto-relance). Le site ne distingue pas
+     pros / amateurs par course : élargir la sélection (`--cles`) est une décision à prendre. 5 807 courses hommes (Italie 2 248, France 844) ;
+     classements souvent complets, sans équipe ; fiches coureurs : naissance (31/31 = Wikidata) et équipes par année. Vainqueurs 20/20 = Wikidata.
+     Codes pays historiques (CSI, DDR, LAT, TCH, URS) à tabler ; écart vide en fin de tableau jamais interprété.
+   - **Étape 2 commune aux 4 sources** (à concevoir) : rattachement des courses (clés d'édition, alias), des coureurs (nom + date de naissance ;
+     CQ Ranking et Museo donnent les dates, the-sports aussi par fiche, Mémoire du Cyclisme non), priorité entre sources en cas de désaccord
+     (garder toutes les valeurs, jamais trancher), puis étape 3 : affichage avec crédit de chaque source.
    - **FirstCycling** : accord, mais pages de données derrière un défi Cloudflare (essais `essai_firstcycling*`, même un vrai navigateur sans
      déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
      ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
