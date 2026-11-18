@@ -1056,7 +1056,7 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // classements
   ranking: undefined, ridersCl: undefined, uc: { fr: false, q: "", limit: 100 }, clData: {},
   // archives : index (undefined = pas chargé, null = indisponible), index par saison, chemin (année) de chaque course d'archive connue
-  archIdx: undefined, archErr: null, archIndexes: {}, archChemins: new Map(),
+  archIdx: undefined, archErr: null, archIndexes: {}, archChemins: new Map(), archIndices: new Map(),
   // fiche coureur : données assemblées, onglet par coureur, filtres du palmarès, pays et noms de courses (entités)
   cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {}, rtab: "apercu", coureurOuvert: null,
   // recherche globale
@@ -1663,13 +1663,23 @@ async function fichierCourses(l) {
   catch (e) { if (e.status === 404) state.coursesEnt[l] = {}; else throw e; }
   return state.coursesEnt[l];
 }
-function saisonCourse(c) { return c.season != null ? c.season : ((pd(c.start_date) || {}).y ?? null); }
+/** SAISON SPORTIVE d'une édition = année civile de sa date (start_date, à défaut end_date), comme `collector.annee_course` : la fiche garde `season`
+ *  (saison UCI, mi-octobre -> mi-octobre) mais le Giro di Lombardia du 16/10/2010 rangé dans l'archive 2011 compte pour 2010 (palmarès, équipes-saisons,
+ *  navigation d'éditions). Sans date, ou année à plus d'un an de `season` (donnée douteuse) : `season`. */
+function saisonCourse(c) {
+  const y = (pd(c.start_date) || pd(c.end_date) || {}).y;
+  if (y != null && (c.season == null || Math.abs(y - c.season) <= 1)) return y;
+  return c.season != null ? c.season : null;
+}
 /** Saison d'une édition : « c<année> » (Calendrier) ou « a<année> » (archive), pour que la fiche coureur lise la bonne saison. */
 function ctxSaison(y) { return ((state.saisons && state.saisons.available) || []).includes(y) ? `c${y}` : `a${y}`; }
-/** Une édition d'une saison absente du Calendrier vient des archives : on mémorise son chemin (évite un 404 sur races/ à l'ouverture). */
+/** Une édition d'une saison absente du Calendrier vient des archives : on mémorise son dossier probable (évite un 404 sur races/ à l'ouverture).
+ *  `e.season` est la saison SPORTIVE (année de la date) : le dossier d'archive (saison UCI) est cette année, ou la suivante pour une course de
+ *  fin d'année rangée par DataRide dans la saison UCI suivante. C'est donc un indice (`archIndices`), essayé par `chargerCourse` ; le chemin
+ *  certain (`archChemins`) ne vient que d'un index d'archive chargé. */
 function noterChemin(e) {
   const dispo = (state.saisons && state.saisons.available) || [];
-  if (e && e.race_id && e.season != null && !dispo.includes(e.season)) state.archChemins.set(e.race_id, e.season);
+  if (e && e.race_id && e.season != null && !dispo.includes(e.season) && !state.archChemins.has(e.race_id)) state.archIndices.set(e.race_id, e.season);
 }
 /** Épreuve (entité de entites/courses/) d'une fiche de course : clé d'édition exacte, sinon clé canonique par alias manuel
  *  (editions.json, lu seulement si la clé brute n'a pas d'entité). null si inconnue. */
@@ -2024,6 +2034,13 @@ function setHashEtape(sel) {
 async function chargerCourse(id) {
   const an = state.archChemins.get(id);
   if (an != null) return { d: await chargerArchive(`${an}/races/${id}.json`), annee: an };
+  const h = state.archIndices.get(id);
+  if (h != null) {      // indice : saison sportive de l'édition ; le dossier est cette année-là, ou la suivante (course d'octobre rangée en saison UCI N+1)
+    for (const a of [h, h + 1]) {
+      try { const d = await chargerArchive(`${a}/races/${id}.json`); state.archChemins.set(id, a); return { d, annee: a }; }
+      catch (e) { if (e.status !== 404) throw e; }
+    }
+  }
   try { return { d: await charger(`races/${id}.json`), annee: null }; }
   catch (e) {
     if (e.status !== 404) throw e;
@@ -2053,7 +2070,8 @@ async function pageCourse(r, tok) {
     state.frOnly = false; state.limit = 50; state.sub = null;
   }
   const c = state.course;
-  state.ctxPage = state.courseArchive != null ? `a${state.courseArchive}` : (saisonCourse(c) != null ? `c${saisonCourse(c)}` : null);
+  // contexte de saison des liens coureur : saison SPORTIVE de l'édition (année de sa date), pas le dossier d'archive (saison UCI)
+  state.ctxPage = saisonCourse(c) != null ? `${state.courseArchive != null ? "a" : "c"}${saisonCourse(c)}` : null;
   let sel = etape != null && etape !== "" ? etape : selectionDefaut(c);
   if (c.race_type === "stage_race") {
     const ok = sel === "F" ? !!c.final : etapes(c).some(s => String(s.number) === String(sel));

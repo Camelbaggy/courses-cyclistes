@@ -63,13 +63,15 @@ def _retry_after(valeur: Optional[str]) -> float:
 
 
 def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[str, str]] = None,
-               retries: int = 3, raw_name: str = "", attendre_429: bool = False, timeout: float = 30.0) -> Optional[str]:
+               retries: int = 3, raw_name: str = "", attendre_429: bool = False,
+               encoding: Optional[str] = None, timeout: float = 30.0) -> Optional[str]:
     """GET (ou POST si `data`) poli ; renvoie le corps décodé ou None. Un hôte qui renvoie un challenge
     anti-robot, un 403 ou un 429 est abandonné pour toute la durée du passage.
     `attendre_429=True` (limite par IP partagée, ex. Wikimedia) : un 429 attend le `Retry-After` (borné à
     MAX_ATTENTE_429 s) puis reprend la même requête, sans abandonner l'hôte ; après MAX_REPRISES_429 réponses 429 de
-    suite la requête échoue (None) sans bloquer l'hôte. `timeout` : délai de lecture (serveur lent). Le comportement par
-    défaut est inchangé."""
+    suite la requête échoue (None) sans bloquer l'hôte. `encoding` : jeu de caractères imposé pour décoder le corps
+    (site qui ne l'annonce pas dans Content-Type, ex. cqranking.com en ISO-8859-1 / cp1252) ; sinon celui de
+    l'en-tête, à défaut UTF-8. `timeout` : délai de lecture (serveur lent). Le comportement par défaut est inchangé."""
     host = urllib.parse.urlparse(url).netloc
     if host in _blocked_hosts:
         return None
@@ -85,7 +87,7 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
                 body = resp.read()
                 if body[:2] == b"\x1f\x8b":
                     body = gzip.decompress(body)
-                text = body.decode(resp.headers.get_content_charset() or "utf-8", "replace")
+                text = body.decode(encoding or resp.headers.get_content_charset() or "utf-8", "replace")
             _save_raw(raw_name, text)
             return text
         except urllib.error.HTTPError as e:
