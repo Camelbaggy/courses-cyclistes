@@ -678,6 +678,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                                         "riders": fiche["totaux"]["riders"], "nationale": True if nat else None,
                                         "pays": nat, "lignee": lig}))
         equipes = dict(sorted(equipes.items()))
+        _heriter_lignees_renommees(an, equipes, LIGNEE_DE, LIGNEES_EQ, EQ_INDEX)
         equipes_total += len(equipes)
         EQ_PAR_AN[an] = equipes
         equipes_ecrites.add(f"{an}.json")
@@ -1073,6 +1074,46 @@ RENOMMEE_MIN_COUREURS = 5    # changement de nom en cours de saison : coureurs c
 RENOMMEE_PART = 0.6          # … et part minimale de l'effectif de l'équipe-saison sans code
 
 
+def _soeur_renommee(tid: str, equipes: Dict[str, Dict[str, Any]]) -> Optional[str]:
+    """Équipe-saison de la MÊME saison qui porte le même effectif que `tid` (changement de nom en cours de saison), pour une équipe-saison
+    sans code UCI ni sélection nationale : au moins RENOMMEE_MIN_COUREURS coureurs communs ET au moins RENOMMEE_PART de l'effectif de `tid` ;
+    la sœur au plus fort recouvrement (égalité : id le plus petit) ; sinon None."""
+    f = equipes[tid]
+    if f.get("nationale") or f.get("code_uci") or f.get("codes_uci"):
+        return None
+    a = set(_rids(f))
+    if not a:
+        return None
+    cands = []
+    for t2, e2 in equipes.items():
+        if t2 == tid or e2.get("nationale"):
+            continue
+        commun = len(a & set(_rids(e2)))
+        if commun >= RENOMMEE_MIN_COUREURS and commun / len(a) >= RENOMMEE_PART:
+            cands.append((-commun / len(a), t2))
+    return min(cands)[1] if cands else None
+
+
+def _heriter_lignees_renommees(an: int, equipes: Dict[str, Dict[str, Any]], lignee_de: Dict[str, str],
+                               lignees_eq: Dict[str, List[Tuple[int, str]]], eq_index: List[Dict[str, Any]]) -> List[str]:
+    """Changement de nom en cours de saison : une équipe-saison SANS lignée dont la sœur `_soeur_renommee` (même saison, même effectif) en a
+    une la reprend (`lignee`, `lignee_par: "renommee"`, tables de construction et entrée d'index mises à jour). Renvoie les ids complétés."""
+    faits = []
+    for tid, f in equipes.items():
+        sr = None if f.get("lignee") else _soeur_renommee(tid, equipes)
+        lig = sr and equipes[sr].get("lignee")
+        if lig:
+            f["lignee"] = lig
+            f["lignee_par"] = "renommee"
+            lignee_de[tid] = lig
+            lignees_eq.setdefault(lig, []).append((an, tid))
+            for t in eq_index:
+                if t["id"] == tid:
+                    t["lignee"] = lig
+            faits.append(tid)
+    return faits
+
+
 def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_de: Dict[str, str]) -> None:
     """Ajoute à chaque équipe-saison (en place) :
     - `meme_nom` : ids des AUTRES saisons portant exactement le même slug de libellé (id = `<slug>-<année>`), années croissantes. Aucune preuve de
@@ -1096,17 +1137,10 @@ def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_d
             prec = f"{slug}-{an - 1}"
             if q and lignee_de.get(prec) == q and prec in eq_par_an.get(an - 1, {}):
                 f["mouvements"] = _mouvements(_rids(eq_par_an[an - 1][prec]), _rids(f))
-        effs = {tid: set(_rids(f)) for tid, f in equipes.items() if not f.get("nationale")}
         for tid, f in equipes.items():
-            if f.get("nationale") or f.get("code_uci") or f.get("codes_uci") or not effs.get(tid):
-                continue
-            cands = []
-            for t2, e2 in effs.items():
-                commun = len(effs[tid] & e2)
-                if t2 != tid and commun >= RENOMMEE_MIN_COUREURS and commun / len(effs[tid]) >= RENOMMEE_PART:
-                    cands.append((-commun / len(effs[tid]), t2))
-            if cands:
-                f["renommee"] = min(cands)[1]
+            sr = _soeur_renommee(tid, equipes)
+            if sr:
+                f["renommee"] = sr
 
 
 def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]], images: Dict[str, Any],
@@ -1432,6 +1466,16 @@ def _tests() -> None:
                      "autre-2023": {"effectif": eff("abcdxyz")}, "codee-2023": {"code_uci": "XX", "effectif": eff("abcdefg")},
                      "peu-2023": {"effectif": eff("abcd")}}}
         _completer_equipes(ep, {})
+        # héritage de la lignée par l'équipe-saison renommée en cours de saison (même effectif), jamais par une équipe qui a un code
+        eq_h = {"ancien-nom-2023": {"effectif": [{"rider_id": f"r{i}"} for i in range(6)]},
+                "nouveau-nom-2023": {"code_uci": "NNM", "lignee": "Q77", "effectif": [{"rider_id": f"r{i}"} for i in range(8)]},
+                "autre-2023": {"code_uci": "AUT", "effectif": [{"rider_id": f"r{i}"} for i in range(3)]},
+                "sans-soeur-2023": {"effectif": [{"rider_id": f"z{i}"} for i in range(6)]}}
+        ld, le, ix = {"nouveau-nom-2023": "Q77"}, {"Q77": [(2023, "nouveau-nom-2023")]}, [{"id": "ancien-nom-2023"}, {"id": "sans-soeur-2023"}]
+        assert _heriter_lignees_renommees(2023, eq_h, ld, le, ix) == ["ancien-nom-2023"]
+        assert eq_h["ancien-nom-2023"]["lignee"] == "Q77" and eq_h["ancien-nom-2023"]["lignee_par"] == "renommee"
+        assert ld["ancien-nom-2023"] == "Q77" and (2023, "ancien-nom-2023") in le["Q77"] and ix[0]["lignee"] == "Q77"
+        assert "lignee" not in eq_h["sans-soeur-2023"] and "lignee" not in eq_h["autre-2023"] and "lignee" not in ix[1]
         assert ep[2023]["trek-segafredo-2023"]["renommee"] == "codee-2023"      # 100 % avec codee (7/7) > 100 %… égalité -> id le plus petit
         assert "renommee" not in ep[2023]["lidl-trek-2023"] and "renommee" not in ep[2023]["codee-2023"]   # a un code : rien
         assert "renommee" not in ep[2023]["autre-2023"] and "renommee" not in ep[2023]["peu-2023"]         # 4 communs / moins de 5 coureurs
