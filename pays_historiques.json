@@ -1,0 +1,387 @@
+{
+ "version": 1,
+ "doc": "Pays historiques et conversion des codes pays bruts des sources avant 2009 (décision du propriétaire, 18/11/2026) : codes ET drapeaux de l'époque pour les pays disparus, jamais de conversion vers un pays actuel (`successeurs` = information seulement). Lu par pays.py (`pays_normalise`) et recopié dans index.html (`DRAPEAUX_HIST`, vérifié par `python pays.py --test`).",
+ "pays": {
+  "URS": {
+   "nom": "Union soviétique",
+   "sigle_fr": "URSS",
+   "periode": [1922, 1991],
+   "successeurs": ["ARM", "AZE", "BLR", "EST", "GEO", "KAZ", "KGZ", "LAT", "LTU", "MDA", "RUS", "TJK", "TKM", "UKR", "UZB"],
+   "note": "Code CIO / UCI d'époque.",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of the Soviet Union.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "GDR": {
+   "nom": "République démocratique allemande (RDA)",
+   "periode": [1949, 1990],
+   "successeurs": ["GER"],
+   "note": "Code CIO « GDR » (« DDR » côté Museo et the-sports.org, « Rda » côté Mémoire du Cyclisme).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of East Germany.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "FRG": {
+   "nom": "République fédérale d'Allemagne (RFA)",
+   "periode": [1949, 1990],
+   "successeurs": ["GER"],
+   "note": "Code CIO « FRG » (« RFA » côté Museo, « FDR » côté the-sports.org, « Rfa » côté Mémoire du Cyclisme). Même drapeau que l'Allemagne actuelle (Commons n'a pas de fichier distinct : « Flag of West Germany.svg » est une redirection) ; la conversion ne dépend que du code brut : la source a déjà choisi RFA (avant 1990) ou ALL / GER (après).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of Germany.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "TCH": {
+   "nom": "Tchécoslovaquie",
+   "periode": [1918, 1992],
+   "successeurs": ["CZE", "SVK"],
+   "note": "Code CIO « TCH ». Le drapeau tchécoslovaque (1920-1992) est le même dessin que le drapeau tchèque : « Flag of Czechoslovakia.svg » est une redirection Commons vers ce fichier. Museo et Mémoire du Cyclisme réutilisent « TCH » / « Tch » pour des coureurs tchèques après 1992 : ces lignes (année > 1992) ne sont pas converties (voir `conversions`, `jusqu_a`).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of the Czech Republic.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "YUG": {
+   "nom": "Yougoslavie",
+   "periode": [1918, 2003],
+   "successeurs": ["BIH", "CRO", "KOS", "MKD", "MNE", "SLO", "SRB"],
+   "note": "Code CIO « YUG » (royaume, RSFY puis RFY jusqu'en 2003). Un seul drapeau par code : celui de la RSFY (1946-1992), par simplification pour les autres périodes.",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of Yugoslavia (1946-1992).svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "SCG": {
+   "nom": "Serbie-et-Monténégro",
+   "periode": [2003, 2006],
+   "successeurs": ["MNE", "SRB"],
+   "note": "Code CIO « SCG ».",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of Serbia and Montenegro (1992–2006).svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "EUN": {
+   "nom": "Communauté des États indépendants (équipe unifiée de 1992)",
+   "periode": [1992, 1992],
+   "successeurs": ["ARM", "BLR", "KAZ", "KGZ", "MDA", "RUS", "TJK", "UKR", "UZB"],
+   "note": "Choix : code CIO « EUN » (Équipe unifiée, Jeux de 1992) plutôt que « CEI » / « CIS » : seul code CIO attesté pour 1992. Museo écrit « CSI » (Comunità degli Stati Indipendenti), the-sports.org « EUN ». Le drapeau olympique de l'équipe unifiée (anneaux sur fond blanc) n'a pas de fichier Commons : on affiche le drapeau de la CEI.",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of the CIS.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "AHO": {
+   "nom": "Antilles néerlandaises",
+   "periode": [1954, 2010],
+   "successeurs": ["CUW", "SXM"],
+   "note": "Code CIO / UCI « AHO » (Museo, CQ Ranking ; « ANT » côté the-sports.org, pour Marc De Maar).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of the Netherlands Antilles (1986–2010).svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "ZAI": {
+   "nom": "Zaïre",
+   "periode": [1971, 1997],
+   "successeurs": ["COD"],
+   "note": "Code CIO « ZAI » (the-sports.org).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of Zaire (1971–1997).svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "BOH": {
+   "nom": "Bohême",
+   "periode": [1900, 1918],
+   "successeurs": ["CZE"],
+   "note": "Code CIO « BOH » (the-sports.org, 1912).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of Bohemia.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  },
+  "VSO": {
+   "nom": "Vietnam du Sud",
+   "periode": [1955, 1975],
+   "successeurs": ["VIE"],
+   "note": "Code CIO « VSO » (the-sports.org, 1964).",
+   "type": "disparu",
+   "drapeau": {
+    "fichier": "Flag of South Vietnam.svg",
+    "a_verifier": false,
+    "licence": "Public domain (Wikimedia Commons)",
+    "verifie_le": "2026-11-18"
+   }
+  }
+ },
+ "codes_actuels_supplementaires": {
+  "BAH": {
+   "flag": "bs",
+   "nom": "Bahamas"
+  },
+  "BIZ": {
+   "flag": "bz",
+   "nom": "Belize"
+  },
+  "BRU": {
+   "flag": "bn",
+   "nom": "Brunei"
+  },
+  "BUR": {
+   "flag": "bf",
+   "nom": "Burkina Faso"
+  },
+  "CAF": {
+   "flag": "cf",
+   "nom": "République centrafricaine"
+  },
+  "CAY": {
+   "flag": "ky",
+   "nom": "Îles Caïmans"
+  },
+  "ESA": {
+   "flag": "sv",
+   "nom": "Salvador"
+  },
+  "FIJ": {
+   "flag": "fj",
+   "nom": "Fidji"
+  },
+  "GUM": {
+   "flag": "gu",
+   "nom": "Guam"
+  },
+  "INA": {
+   "flag": "id",
+   "nom": "Indonésie"
+  },
+  "IRI": {
+   "flag": "ir",
+   "nom": "Iran"
+  },
+  "ISV": {
+   "flag": "vi",
+   "nom": "Îles Vierges américaines"
+  },
+  "IVB": {
+   "flag": "vg",
+   "nom": "Îles Vierges britanniques"
+  },
+  "LAT": {
+   "flag": "lv",
+   "nom": "Lettonie"
+  },
+  "LBA": {
+   "flag": "ly",
+   "nom": "Libye"
+  },
+  "MAC": {
+   "flag": "mo",
+   "nom": "Macao"
+  },
+  "MYA": {
+   "flag": "mm",
+   "nom": "Myanmar"
+  },
+  "PRK": {
+   "flag": "kp",
+   "nom": "Corée du Nord"
+  },
+  "TTO": {
+   "flag": "tt",
+   "nom": "Trinité-et-Tobago"
+  },
+  "VIN": {
+   "flag": "vc",
+   "nom": "Saint-Vincent-et-les-Grenadines"
+  }
+ },
+ "sources": {
+  "mdc": {
+   "identite": false,
+   "champ_brut": "pays_site",
+   "conversions": {
+    "Afs": "RSA",
+    "Alb": "ALB",
+    "Alg": "ALG",
+    "All": "GER",
+    "And": "AND",
+    "Arg": "ARG",
+    "Aus": "AUS",
+    "Aut": "AUT",
+    "Aze": "AZE",
+    "Bel": "BEL",
+    "Ben": "BEN",
+    "Bih": "BIH",
+    "Blr": "BLR",
+    "Blz": "BLZ",
+    "Bol": "BOL",
+    "Bul": "BUL",
+    "Can": "CAN",
+    "Chi": "CHI",
+    "Chn": "CHN",
+    "Civ": "CIV",
+    "Col": "COL",
+    "Crc": "CRC",
+    "Cro": "CRO",
+    "Cub": "CUB",
+    "Dan": "DEN",
+    "Eau": "UAE",
+    "Egy": "EGY",
+    "Ery": "ERI",
+    "Esp": "ESP",
+    "Est": "EST",
+    "Eth": "ETH",
+    "FRa": "FRA",
+    "Fin": "FIN",
+    "Fr": "FRA",
+    "Fra": "FRA",
+    "GBr": "GBR",
+    "Gab": "GAB",
+    "Gbr": "GBR",
+    "Ger": "GER",
+    "Gre": "GRE",
+    "Gua": "GUA",
+    "Hkg": "HKG",
+    "Hol": "NED",
+    "Hon": "HUN",
+    "Ind": "IND",
+    "Irl": "IRL",
+    "Isr": "ISR",
+    "It": "ITA",
+    "Ita": "ITA",
+    "Ital": "ITA",
+    "Jap": "JPN",
+    "Kaz": "KAZ",
+    "Kos": "KOS",
+    "Let": "LAT",
+    "Lie": "LIE",
+    "Lit": "LTU",
+    "Ltu": "LTU",
+    "Lux": "LUX",
+    "Mar": "MAR",
+    "Mex": "MEX",
+    "Mri": "MRI",
+    "Nam": "NAM",
+    "Nor": "NOR",
+    "Nzl": "NZL",
+    "Oma": "OMA",
+    "Phi": "PHI",
+    "Pol": "POL",
+    "Por": "POR",
+    "Qat": "QAT",
+    "Rda": "GDR",
+    "Rfa": "FRG",
+    "Rou": "ROU",
+    "Rus": "RUS",
+    "Rwa": "RWA",
+    "Slo": "SLO",
+    "Slq": "SVK",
+    "Sue": "SWE",
+    "Sui": "SUI",
+    "Svq": "SVK",
+    "Tch": {
+     "code": "TCH",
+     "jusqu_a": 1992
+    },
+    "Tha": "THA",
+    "Tun": "TUN",
+    "Tur": "TUR",
+    "USA": "USA",
+    "Ukr": "UKR",
+    "Urs": "URS",
+    "Urss": "URS",
+    "Uru": "URU",
+    "Usa": "USA",
+    "Ven": "VEN",
+    "You": "YUG",
+    "Yug": "YUG",
+    "Zim": "ZIM",
+    "aut": "AUT",
+    "dan": "DEN"
+   }
+  },
+  "museo": {
+   "identite": true,
+   "champ_brut": "nat_site (nat avant la table)",
+   "conversions": {
+    "CSI": "EUN",
+    "DDR": "GDR",
+    "FRa": "FRA",
+    "NGR": "NGA",
+    "RFA": "FRG",
+    "TCH": {
+     "code": "TCH",
+     "jusqu_a": 1992
+    }
+   }
+  },
+  "thesports": {
+   "identite": true,
+   "champ_brut": "nat_site",
+   "conversions": {
+    "ANT": "AHO",
+    "CMB": "CAM",
+    "DDR": "GDR",
+    "FDR": "FRG",
+    "INO": "INA",
+    "LEB": "LBN",
+    "LIA": "LBA",
+    "MAL": "MAS",
+    "MAW": "MWI",
+    "NIC": "NCA",
+    "ROM": "ROU",
+    "RSM": "SMR",
+    "SAL": "ESA",
+    "SCO": "GBR",
+    "SPA": "ESP",
+    "SWI": "SUI",
+    "TUK": "TKM"
+   }
+  },
+  "cqranking": {
+   "identite": true,
+   "champ_brut": "lignes[i][2], fiches nationalite",
+   "conversions": {
+    "ANT": "ATG",
+    "BAR": "BRB",
+    "MAW": "MWI",
+    "NGR": "NGA",
+    "SIN": "SGP"
+   }
+  }
+ }
+}

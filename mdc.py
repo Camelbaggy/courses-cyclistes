@@ -26,8 +26,9 @@ Structure du site (refait fin 2024, HTML statique ; constatée le 18/11/2026, do
     (Tour de France) : une page par année avec une page par étape, hors périmètre de cette étape.
 
 Règle cardinale du projet : aucune valeur inventée. Un champ absent reste absent. Interprétations (déterministes) :
-  - nationalité : code du site tel qu'écrit (`pays_site`) ET `nat` ISO3 par la table explicite PAYS_SITE_ISO3 (un code absent de la
-    table : `nat` absent, compté) ; AUCUNE mention = nationalité non écrite (jamais déduite France, même si les pages de
+  - nationalité : code du site tel qu'écrit (`pays_site`) ET `nat` = code canonique de `pays_historiques.json` par `pays.pays_normalise`
+    (pays existant : code actuel ; pays disparu : code D'ÉPOQUE, ex. Rfa -> FRG, Urs -> URS, Rda -> GDR, jamais converti ; `Tch` après
+    1992 : ambigu, vide ; un code absent de la table : `nat` absent, compté) ; AUCUNE mention = nationalité non écrite (jamais déduite France, même si les pages de
     courses françaises omettent « (Fra) » pour les Français) ;
   - temps : « en <temps> » (1er) -> `temps_s` ; « à <écart> » -> `ecart_s` (écart au 1er, croissant sur toutes les pages
     lues) ; « m.t. » / « s.t. » -> `meme_temps: true` ; une ligne sans mention n'a ni temps ni écart (on n'infère PAS
@@ -60,6 +61,7 @@ import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
+from pays import pays_normalise
 
 BASE = "https://www.memoireducyclisme.fr/"
 HOTE = "www.memoireducyclisme.fr"
@@ -100,21 +102,8 @@ PREFIXES_FICHIER = ("cla_", "eta_", "anc_")
 MOIS_FR = {"janvier": 1, "fevrier": 2, "février": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "aout": 8,
            "août": 8, "septembre": 9, "octobre": 10, "novembre": 11, "decembre": 12, "décembre": 12}
 
-# Code pays du site (3-4 lettres, casse mixte) -> code projet (UCI / CIO, comme netutil.FLAG_CODES). Table explicite : un code
-# absent donne `nat` absent et est compté (`codes_pays_inconnus`). Codes ambigus laissés hors table (Hon = Hongrie ou Honduras,
-# Tch = Tchécoslovaquie ou Tchéquie, Urs, Rda, Ser, Mal, Mol, Ina, Ira, Cam, Sin, Tai, Sal, Dom, Tri, Bur, Bru, Mon, Equ, Eur…) :
-# on les complète après vérification, jamais par déduction.
-PAYS_SITE_ISO3 = {
-    "Fra": "FRA", "Bel": "BEL", "Ita": "ITA", "Hol": "NED", "Esp": "ESP", "All": "GER", "Sui": "SUI", "Usa": "USA",
-    "Aus": "AUS", "Rus": "RUS", "Nor": "NOR", "Gbr": "GBR", "Pol": "POL", "Aut": "AUT", "Dan": "DEN", "Kaz": "KAZ",
-    "Alg": "ALG", "Tur": "TUR", "Ukr": "UKR", "Por": "POR", "Col": "COL", "Jap": "JPN", "Chn": "CHN", "Afs": "RSA",
-    "Est": "EST", "Can": "CAN", "Lux": "LUX", "Slo": "SLO", "Nzl": "NZL", "Mar": "MAR", "Let": "LAT", "Irl": "IRL",
-    "Svq": "SVK", "Mex": "MEX", "Cro": "CRO", "Blr": "BLR", "Ven": "VEN", "Sue": "SWE", "Rou": "ROU", "Lit": "LTU",
-    "Ery": "ERI", "Eau": "UAE", "Arg": "ARG", "Uru": "URU", "Qat": "QAT", "Oma": "OMA", "Bol": "BOL", "Bih": "BIH",
-    "Tha": "THA", "Rwa": "RWA", "Mri": "MRI", "Ind": "IND", "Hkg": "HKG", "Gre": "GRE", "Fin": "FIN", "Eth": "ETH",
-    "Chi": "CHI", "Bul": "BUL", "Aze": "AZE", "Tun": "TUN", "Phi": "PHI", "Lie": "LIE", "Egy": "EGY", "Cub": "CUB",
-    "Crc": "CRC", "Civ": "CIV", "Ben": "BEN", "Alb": "ALB", "Gab": "GAB", "Kos": "KOS", "Gua": "GUA", "Blz": "BLZ",
-}
+# Codes pays du site : table `sources.mdc` de pays_historiques.json (voir pays.py). Les parenthèses mêlent pays (casse mixte :
+# Fra, Hol, Rfa…) et clubs (ACBB, VCL…) : seuls les codes de la table donnent un `nat`, les autres sont comptés (`codes_pays_inconnus`).
 
 
 # --------------------------------------------------------------------------------------------------
@@ -262,7 +251,7 @@ _RE_EN = re.compile(r"\s+en\s+([0-9hH'’\"″.:]+)\s*$")
 _RE_PAREN = re.compile(r"\s*\(([^()]*)\)\s*")
 
 
-def lire_ligne(rang: int, reste_html: str, mode_nom: str, stats: Dict[str, Any]) -> Dict[str, Any]:
+def lire_ligne(rang: int, reste_html: str, mode_nom: str, stats: Dict[str, Any], annee: Optional[int] = None) -> Dict[str, Any]:
     """`Prénom <b>NOM</b> (Bel) en 4h49'26"` / `NOM Prénom (Bel)` / `Prénom Nom (El.2 - Club) à 2"` -> ligne structurée.
     mode_nom : "gras" (classement : le vainqueur a son NOM en gras) ou "majuscules" (palmarès : NOM en majuscules)."""
     ligne: Dict[str, Any] = {"rang": rang}
@@ -299,7 +288,7 @@ def lire_ligne(rang: int, reste_html: str, mode_nom: str, stats: Dict[str, Any])
         g = g.strip()
         if re.fullmatch(r"[A-Za-z]{2,4}", g):
             ligne["pays_site"] = g
-            iso = PAYS_SITE_ISO3.get(g)
+            iso = pays_normalise(g, "mdc", annee)
             if iso:
                 ligne["nat"] = iso
             else:
@@ -333,11 +322,11 @@ def lire_ligne(rang: int, reste_html: str, mode_nom: str, stats: Dict[str, Any])
     return ligne
 
 
-def lire_partant(ch: str, stats: Dict[str, Any]) -> Dict[str, Any]:
+def lire_partant(ch: str, stats: Dict[str, Any], annee: Optional[int] = None) -> Dict[str, Any]:
     """Coureur de la liste « Les partants » : `NOM Prénom (Nat) (ab.4°)` ; les mentions entre parenthèses qui ne sont pas un code
     pays (`ab.4°` = abandon à l'étape 4, `forfait`, `np.3°`) sont gardées telles quelles dans `remarque`."""
     reste = re.sub(r"\s+(?:np|ab)\.\S+\s*$", lambda m: " (" + m.group(0).strip() + ")", _txt(ch))
-    l = lire_ligne(0, reste, "majuscules", stats)
+    l = lire_ligne(0, reste, "majuscules", stats, annee)
     l.pop("rang", None)
     if "parentheses" in l:
         l["remarque"] = " ; ".join(l.pop("parentheses"))
@@ -399,7 +388,7 @@ def lire_palmares(page: str, url_course: str, stats: Dict[str, Any]) -> Dict[str
             continue
         m = _RE_RANG.match(t)
         if m and int(m.group(1)) <= 10:
-            courante["podium"].append(lire_ligne(int(m.group(1)), _sans_rang(ch), "majuscules", stats))
+            courante["podium"].append(lire_ligne(int(m.group(1)), _sans_rang(ch), "majuscules", stats, courante["annee"]))
             stats["lignes_palmares"] += 1
         elif t and not re.fullmatch(r"[&nbsp;\s]*", t):
             courante.setdefault("notes", []).append(t[:120])
@@ -424,7 +413,7 @@ def _distance(s: Optional[str]) -> Optional[float]:
         return None
 
 
-def lire_edition(page: str, url_rel: str) -> Dict[str, Any]:
+def lire_edition(page: str, url_rel: str, annee: Optional[int] = None) -> Dict[str, Any]:
     """Page de classement d'une édition -> {titre, type, etapes?, classements[], resume, annexes, ...} + `stats` (compteurs)."""
     stats: Dict[str, Any] = {"lignes": 0, "temps_illisibles": 0, "codes_pays_inconnus": {}, "lignes_inconnues": 0,
                              "lignes_palmares": 0, "notes_palmares": 0, "partants": 0}
@@ -483,7 +472,7 @@ def lire_edition(page: str, url_rel: str) -> Dict[str, Any]:
             if gras_t and gras_t == t:                      # ligne entièrement en gras = nom d'équipe
                 partants.append({"nom": t, "coureurs": []})
             elif partants:
-                partants[-1]["coureurs"].append(lire_partant(ch, stats))
+                partants[-1]["coureurs"].append(lire_partant(ch, stats, annee))
                 stats["partants"] += 1
             else:
                 stats["lignes_inconnues"] += 1
@@ -518,7 +507,7 @@ def lire_edition(page: str, url_rel: str) -> Dict[str, Any]:
         # --- ligne de classement
         mr = _RE_RANG.match(t)
         if mr and cur is not None and not entete:
-            ligne = lire_ligne(int(mr.group(1)), _sans_rang(ch), "gras", stats)
+            ligne = lire_ligne(int(mr.group(1)), _sans_rang(ch), "gras", stats, annee)
             if cur.get("type") == "autre":
                 mp = re.search(r"\s(\d+)(?:\s*points?)?$", ligne.get("affiche") or "")   # ligne sans libellé : rien
                 if mp:                                      # classement annexe : « 1. Pierre BAZZO (Fra) 25 points »
@@ -788,7 +777,7 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
                 page = tente(ed["url"])
                 if not page:
                     continue
-                contenu = lire_edition(page, ed["url"])
+                contenu = lire_edition(page, ed["url"], ed["annee"])
                 st = contenu.pop("stats")
                 for k in ("lignes", "temps_illisibles", "lignes_inconnues"):
                     resume[k] += st[k]
@@ -945,14 +934,16 @@ def _tests() -> None:
     assert ed["resume"]["partants"] == 147 and ed["resume"]["classes"] == 86 and ed["resume"]["date"] == "1926-04-04"
 
     # classement ancien par étapes avec listes de partants par équipe et classements annexes (Limousin 1983)
-    ed = lire_edition(_fixture("edition_limousin_1983.html"), "eta_france/limousin1983.html")
+    ed = lire_edition(_fixture("edition_limousin_1983.html"), "eta_france/limousin1983.html", 1983)
     assert [c["type"] for c in ed["classements"]] == ["etape"] * 4 + ["general", "autre", "autre"]
     grimpeur = ed["classements"][5]
     assert grimpeur["titre"] == "Meilleur grimpeur" and grimpeur["lignes"][0]["points"] == 25 and grimpeur["lignes"][0]["nat"] == "FRA"
     eq = {e["nom"]: e["coureurs"] for e in ed["equipes_partantes"]}
     assert len(eq) == 8 and len(eq["COOP-MERCIER-MAVIC"]) == 12 and sum(len(v) for v in eq.values()) == 99
     assert eq["COOP-MERCIER-MAVIC"][1] == {"affiche": "BERTIN Yvon", "nom_famille": "BERTIN", "prenom": "Yvon", "remarque": "ab.4°"}
-    assert ed["resume"]["partants"] == 96 and ed["stats"]["codes_pays_inconnus"] == {"Rfa": 4}   # code ambigu : pas de `nat`
+    assert ed["resume"]["partants"] == 96 and not ed["stats"]["codes_pays_inconnus"]
+    rfa = [c for e in ed["equipes_partantes"] for c in e["coureurs"] if c.get("pays_site") == "Rfa"]
+    assert rfa and all(c["nat"] == "FRG" for c in rfa), rfa      # pays disparu : code d'époque (RFA), brut conservé
 
     # comparaison palmarès / classement : mêmes noms, ordre prénom-nom indifférent
     assert _noms_podium([{"affiche": "CAPIOT Johan"}]) == _noms_podium([{"affiche": "Johan CAPIOT"}])
