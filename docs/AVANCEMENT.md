@@ -1,12 +1,63 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 17 novembre 2026, 11 h 30 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
-## Prochain projet : refonte du site
+## POINT DE REPRISE (18/11/2026, fin de session) : à lire en premier
 
-Point de départ, contrats à ne pas casser et questions à trancher : `docs/REDESIGN.md` (préparé le 17/11, captures de référence
-`tools/apercu.py` toutes vertes).
+### Chantiers en cours au moment de la coupure
+1. **Saison sportive = année civile : FAIT (PR #75, 18/11)**. Dans l'encyclopédie, une course compte pour l'année de sa `start_date` (Lombardia
+   2010 -> 2010) ; stockage par saison UCI inchangé ; `riders.json` / `ranking.json` / `state.json` liés à leur dossier. Publié au prochain passage
+   d'archives : vérifier `#epreuve/…lombardia…` (édition 2010 = Gilbert) et la fiche de Gilbert. Limites connues : onglet « Saison » de la fiche
+   coureur encore par saison UCI ; fil d'Ariane d'une édition reportée -> liste Courses de son année (qui ne la contient pas) ; jeu fictif
+   (`tools/fixtures/generer_archives.py`) non régénéré (contient encore une saison 2027).
+2. **Sources d'avant 2009 : 4 accords obtenus par le propriétaire le 18/11** (à reporter dans CLAUDE.md « Sources » s'ils n'y sont pas) :
+   - **the-sports.org** (Vincent Duplessy) : collecteur `thesports.py` (PR #69, #71), workflow `thesports.yml` du dépôt d'archives (PR #8),
+     **collecte en cours** (`data/archives/sources/thesports/`, `etat.json` : 152 courses découvertes au 1er passage, ~5 400 éditions puis
+     ~fiches coureurs restantes ; auto-relance). Étape 2 à faire : rattachement des courses (nom identique validé d'office ; à soumettre :
+     Paris-Nice, Tirreno, Pays basque, Dauphiné, Paris-Camembert et les renommages ; proposition `docs/recherche/thesports_courses_proposees.json`),
+     des coureurs (nom + date de naissance de la fiche du site), mondiaux (page multi-courses : garder la course en ligne élite) ; étape 3 :
+     affichage (pages d'épreuve / édition / coureur) avec crédit « the-sports.org ».
+   - **Mémoire du Cyclisme : étape 1 FAITE** (`mdc.py`, PR #74, `docs/recherche/mdc_collecte.md`) ; **collecte en cours** (`mdc.yml` du dépôt
+     d'archives, PR #9, `data/archives/sources/mdc/`, auto-relance ; 2 261 courses, ~16 000-32 000 pages de classements estimées, 3,2 s / page).
+     Ni date de naissance ni identifiant de coureur. À trancher : codes pays historiques `Hon`, `Tch`, `Rfa`, `Urs`, `Rda` (laissés vides).
+   - **CQ Ranking** (cqranking.com, dates de naissance +
+     ID UCI 1999-2008), **Museo del Ciclismo** (museociclismo.it) : 2 agents écrivaient l'étape 1 (collecteurs `cqranking.py`,
+     `museo.py` + `docs/recherche/<source>_collecte.md` + fixtures), chacun dans un worktree `/home/user/courses-cyclistes/.claude/worktrees/agent-*`
+     sur une branche LOCALE (`source-cq`, `source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
+     puis relire, fusionner dans la branche de travail, PR ; si les branches ont disparu, relancer l'étape 1 sur le modèle de `thesports.py`.
+     Puis workflows de collecte (modèle `thesports.yml` / `mdc.yml`) et intégration (étape 2/3 communes avec the-sports).
+   - **FirstCycling** : accord, mais pages de données derrière un défi Cloudflare (essais `essai_firstcycling*`, même un vrai navigateur sans
+     déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
+     ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
+   - Écartés / sans suite : siteducyclisme.com (robots `Disallow: /` délibéré), cyclebase.nl (`Disallow: /`), bases PCM (données de jeu),
+     CyclingRanking (compilation, `Crawl-Delay: 20`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
+     annoncés « sans protection » à tort ; seule vraie nouveauté : le nouveau site de Mémoire du Cyclisme.
+3. **Archives 2009-2010 (T4)** : défaut d'`archives.yml` = 2009-2025 (PR #7 du dépôt d'archives). 2010 complète (185 courses), 2009 en cours
+   (auto-relance). Ensuite : rattachement manuel des équipes 2009-2010 sans code UCI (classement WorldTour limité aux WorldTeams, comme
+   2012-2014 : proposer par continuité d'effectif, faire valider).
+
+### Fait le 17-18/11
+- **Refonte du site** (PR #55 à #61, `docs/REDESIGN.md`) : thème clair + sombre, composants Liquipedia modernisés, navigation (recherche
+  d'en-tête, retour mobile, sous-navigation), accueil, fiche de course, fiche coureur, articles d'équipe, pages d'épreuve. **Reste : pages de
+  liste** (Équipes, Coureurs, Classements, Courses, Recherche) ; titres « Derniers résultats marquants » à harmoniser.
+- **Archives 2011-2025 complètes** ; sondage des vainqueurs contre Wikidata 2011-2015 (grands tours + 5 monuments) : 40/40 conformes.
+  Championnat de France absent avant 2016 (limite DataRide). À regarder : `winner` vide dans l'index 2011 pour la Vuelta 2011 (le `final.gc`
+  donne Froome, Cobo déclassé).
+- **Équipes** : `data/ranking-<S>.json` (classement de fin de saison des saisons terminées encore au Calendrier, PR #62) et rang UCI des
+  `riders-<S>.json` (PR #63) ; `alias_equipes.json` 85 entrées validées (PR #64-68 : 2026, Cofidis 2012-2026, Groupama-FDJ 2012-2026,
+  Movistar 2015-2016, 45 équipes 2012-2014) ; lignée reprise par l'équipe renommée en cours de saison (`_heriter_lignees_renommees`, 43 cas ;
+  à surveiller : Fundación Orbea 2020 -> Euskaltel-Euskadi). Correctif : coureur 2010 sans nationalité qui bloquait toute reconstruction
+  d'`entites/` (PR #70). `entites/` du 18/11 : 26 063 coureurs, 5 223 équipes-saisons, 418 lignées, 871 épreuves ; Wikidata : 2 165 équipes-saisons
+  rattachées sur 2 340, 11 311 coureurs.
+
+### À faire ensuite (ordre suggéré)
+1. Finir les chantiers ci-dessus (saison civile, collecteurs MDC / CQ / Museo, étape 2-3 des sources d'avant 2009).
+2. **update.yml** : crons très souvent sautés (3 passages en 24 h au lieu de 11 le 17-18/11) : mettre une veille (modèle `veille.yml`) ou une
+   tâche programmée **avant la reprise des courses (19/01/2027)**.
+3. Refonte des pages de liste.
+4. Bilan quotidien : la tâche programmée « Bilan archives » s'est arrêtée (sa condition, 2011-2025 complète, est remplie) ; en recréer une
+   si le propriétaire le souhaite (2009, the-sports, nouveaux collecteurs).
 
 ## Où on en est
 
