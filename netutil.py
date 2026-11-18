@@ -46,8 +46,20 @@ def _save_raw(raw_name: str, text: str) -> None:
             f.write(text)
 
 
+def hote_bloque(url: str) -> bool:
+    """Vrai si l'hôte de `url` a été abandonné pour ce passage (403, 429 sans attente, défi anti-robot)."""
+    return urllib.parse.urlparse(url).netloc in _blocked_hosts
+
+
 def _looks_like_challenge(status: int, text: str) -> bool:
-    return status in (403, 429, 503) and ("Just a moment" in text or "challenge-platform" in text or "cf-" in text)
+    """Défi anti-robot. Un 503 n'en est un QUE s'il porte un marqueur explicite (« Just a moment », challenge-platform) :
+    une page d'erreur Cloudflare ordinaire (serveur d'origine surchargé, contient « cf- ») est une indisponibilité
+    passagère, retentée, et ne fait pas abandonner l'hôte (constaté le 18/11/2026 sur the-sports.org)."""
+    if status not in (403, 429, 503):
+        return False
+    if "Just a moment" in text or "challenge-platform" in text:
+        return True
+    return status != 503 and "cf-" in text
 
 
 MAX_ATTENTE_429 = 120      # secondes : plafond d'une attente `Retry-After`

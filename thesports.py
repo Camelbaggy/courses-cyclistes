@@ -67,7 +67,7 @@ import netutil
 BASE = "https://www.the-sports.org/"
 ACCUEIL = BASE + "cycling-s2.html"
 USER_AGENT = "courses-cyclistes (accord the-sports.org)"
-PAUSE_S = 2.2                      # >= 2 s entre deux requêtes (accord du 18/11/2026)
+PAUSE_S = 3.0                      # >= 2 s exigé ; 3 s depuis un 503 du site le 18/11/2026 (accord du 18/11/2026)
 netutil.HOST_DELAYS["www.the-sports.org"] = PAUSE_S
 
 AVANT_DEFAUT = 2009                # éditions <= 2008
@@ -620,6 +620,10 @@ class Session:
         self.dernier_journal = self.t0
 
     def epuise(self) -> bool:
+        """Budget ou plafond atteint, OU site abandonné pour ce passage (403 / 429 / défi : netutil bloque l'hôte) :
+        le passage s'arrête alors net au lieu de parcourir toute la liste en comptant des échecs."""
+        if netutil.hote_bloque(BASE):
+            return True
         if self.budget_s and time.monotonic() - self.t0 >= self.budget_s:
             return True
         return bool(self.max_pages) and self.requetes >= self.max_pages
@@ -954,6 +958,13 @@ def _fixture(nom: str) -> str:
 
 
 def _tests() -> None:
+    # 503 : indisponibilité passagère (page d'erreur Cloudflare « cf- ») != défi anti-robot ; un vrai défi bloque toujours l'hôte
+    assert not netutil._looks_like_challenge(503, "<html>cf-ray 12ab Service Unavailable</html>")
+    assert netutil._looks_like_challenge(503, "<title>Just a moment...</title>")
+    assert netutil._looks_like_challenge(403, "cf-error-details") and not netutil._looks_like_challenge(404, "Just a moment")
+    netutil._blocked_hosts.add("hote-test.invalid")
+    assert netutil.hote_bloque("https://hote-test.invalid/x") and not netutil.hote_bloque(BASE)
+    netutil._blocked_hosts.discard("hote-test.invalid")
     # temps
     assert parse_temps("6h27'08\"")[:2] == ("valeur", 6 * 3600 + 27 * 60 + 8)
     assert parse_temps("4h18'56")[:2] == ("valeur", 4 * 3600 + 18 * 60 + 56)
