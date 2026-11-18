@@ -1,1 +1,20 @@
-{"_championnats": []}
+{
+ "_note": "Validé par le propriétaire le 18/11/2026 : 11 alias d'épreuves prouvés (vainqueurs Museo concordants sur >= 2 années 2005-2008, docs/recherche/museo_alias_proposes.json) et 4 championnats (monde, France, Asie, Panaméricains). Non retenu : 41416 (De Vlaamse Pijl Harelbeke) = doublon probable de 4533 E3 Saxo Classic.",
+ "_championnats": [
+  "2634",
+  "20739",
+  "176524",
+  "58073"
+ ],
+ "2751": "donostia san sebastian klasikoa|ESP",
+ "2820": "gent wevelgem in flanders fields|BEL",
+ "9954": "dwars door vlaanderen a travers la flandre|BEL",
+ "9714": "de brabantse pijl la fleche brabanconne|BEL",
+ "9787": "circuit franco belge|BEL",
+ "12802": "post danmark rundt tour of denmark|DEN",
+ "2584": "grand prix du morbihan|FRA",
+ "11337": "gp du canton d argovie gippingen|SUI",
+ "11440": "gran premio miguel indurain|ESP",
+ "22962": "grand prix de wallonie|BEL",
+ "31649": "sparkassen munsterland giro|GER"
+}
