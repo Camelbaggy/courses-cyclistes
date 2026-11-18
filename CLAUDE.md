@@ -54,6 +54,7 @@ Pour tester le collecteur complet sans committer de données : `[essai:collecte]
 Lire les logs avec les outils GitHub MCP. `update.yml` (horaire, 13 h–22 h UTC + 6 h 41) commit `data/` sur `main` (`veille_update.yml`, horaire à :52, le relance si aucun passage n'a démarré depuis 50 min entre 13 h et 23 h UTC, ou depuis 3 h entre 7 h et 9 h UTC ; rien si un passage est en file ou en cours) :
 une branche de travail se retrouve vite derrière `main` ; ne pas committer `data/` à la main sur `main`. Une PR
 fusionnée ne doit pas être réutilisée : repartir de `origin/main` et ouvrir une nouvelle PR.
+**Battement** : GitHub saute la plupart des crons (mais jamais les `workflow_dispatch`), donc `battement.yml` (dispatch seul, job de ~330 min qui se relance lui-même, groupe `battement`) exécute toutes les 10 min `.github/scripts/veille_update.sh` (règles de relance d'`update.yml`) ; `veille_update.yml` (cron) n'est plus que le secours (même script) et relance `battement.yml` s'il n'est ni en file ni en cours. Tests locaux : faux `gh` dans le PATH, surcharges `HEURE_UTC` / `MAINTENANT` / `DUREE_S` / `PAUSE_S`.
 Claude peut fusionner lui-même ses PR (outils GitHub MCP) une fois le travail vérifié (contrôles locaux, essais
 ou logs CI concluants), sans attendre de validation.
 Déléguer à des agents Sonnet (outil Agent, `model: "sonnet"`) les tâches opérationnelles (lecture de logs, essais,
