@@ -626,7 +626,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                 c = eff.setdefault(cm(rid), [0, 0, 0])
                 for i in range(3):
                     c[i] += v[i]
-            nats = [S.coureurs[r]["nationality"] if r in S.coureurs else None for r in e["eff"]]
+            nats = [(S.coureurs.get(r) or {}).get("nationality") for r in e["eff"]]
             nat = _est_nationale(nom, nats)
             effectif = sorted(
                 ({"rider_id": cid, **_sans_vide({"name": S.coureurs[brut_de.get(cid, cid)].get("name"),

@@ -153,7 +153,7 @@ def _rapprocher(riders: Dict[str, Dict[str, Any]], ranking: Dict[str, Any]) -> i
         return 0
     par_nom: Dict[Tuple, List[str]] = {}
     for rid, f in riders.items():
-        par_nom.setdefault((_nom_cle(f["name"] or ""), f["nationality"]), []).append(rid)
+        par_nom.setdefault((_nom_cle(f.get("name") or ""), f.get("nationality")), []).append(rid)
     rows_par_nom: Dict[Tuple, int] = {}
     cles = []
     for r in rows:
