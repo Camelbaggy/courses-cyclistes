@@ -37,7 +37,11 @@ Règle cardinale du projet : aucune valeur inventée. Un champ absent reste abse
   - Équipe : le classement ne donne PAS l'équipe. L'équipe d'un coureur par année vient de sa fiche (`--equipes`).
   - Dates de naissance : seule une date COMPLÈTE (jour, mois, année) donne `precision: "jour"` ; une année seule donne
     `precision: "annee"` ; mois + année ou autre format : pas de date (compté, exemples dans `formats_date_inconnus`).
-  - Nationalité : code à 3 lettres du site gardé tel quel (`nat`) ; ceux absents de netutil.FLAG_CODES sont comptés.
+  - Nationalité d'un coureur : code à 3 lettres du site gardé tel quel (`nat_site`) ET `nat` = code canonique de `pays_historiques.json`
+    (`pays.pays_normalise` : pays existant = code actuel ; pays disparu = code D'ÉPOQUE, ex. RFA -> FRG, DDR -> GDR, CSI -> EUN, URS, YUG,
+    jamais converti ; TCH après 1992 ambigu : vide) ; un code inconnu de la table : `nat` absent, compté (`codes_pays_inconnus`). Les
+    fichiers écrits avant la table n'ont que `nat` (= code brut) : `pays.pays_ligne` refait la normalisation à la lecture. Le `pays` d'une
+    course (liste des courses, page de course) reste le code brut du site (il entre dans les clés d'édition).
   - Niveau (professionnel ou amateur) : le site ne le donne ni par course ni par édition, seulement par COUREUR (liste
     `professionisti`, entête de fiche). `coureurs.json` porte `categories` (listes où le coureur figure) / `categorie` (fiche).
 
@@ -64,6 +68,7 @@ import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
+from pays import pays_normalise
 
 HOTE = "www.museociclismo.it"
 BASE = "https://" + HOTE
@@ -211,7 +216,7 @@ def parse_temps(brut: str) -> Optional[int]:
     return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3))
 
 
-def lire_lignes(fragment: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
+def lire_lignes(fragment: str, stats: Dict[str, Any], annee: Optional[int] = None) -> List[Dict[str, Any]]:
     """Lignes d'un tableau de classement (Pos., Ciclista (NAZ), Tempo, Distacco, Punti)."""
     lignes: List[Dict[str, Any]] = []
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", fragment, flags=re.S):
@@ -231,9 +236,12 @@ def lire_lignes(fragment: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
             l["id"] = mc.group(1)
             l["nom"] = _txt(mc.group(2))
             if mc.group(3):
-                l["nat"] = mc.group(3).upper()
-                if l["nat"] not in netutil.FLAG_CODES:
-                    stats.setdefault("nat_hors_flag", {})[l["nat"]] = stats.get("nat_hors_flag", {}).get(l["nat"], 0) + 1
+                l["nat_site"] = mc.group(3).upper()
+                iso = pays_normalise(l["nat_site"], "museo", annee)
+                if iso:
+                    l["nat"] = iso
+                else:
+                    stats.setdefault("codes_pays_inconnus", {})[l["nat_site"]] = stats.get("codes_pays_inconnus", {}).get(l["nat_site"], 0) + 1
             else:
                 stats["nat_absentes"] = stats.get("nat_absentes", 0) + 1
         else:
@@ -334,7 +342,7 @@ def lire_endpoint_etapes(page: str) -> Optional[str]:
     return chemin_relatif(m.group(1)) + "?what=tappa_classifica&cod=" if m else None
 
 
-def lire_edition(page: str, stats: Dict[str, Any]) -> Dict[str, Any]:
+def lire_edition(page: str, stats: Dict[str, Any], annee: Optional[int] = None) -> Dict[str, Any]:
     """Page d'édition : entête, classement, étapes. Rien d'inventé : un champ absent reste absent."""
     ed: Dict[str, Any] = {}
     m = re.search(r"<h2>(.*?)</h2>", page, flags=re.S)
@@ -372,7 +380,7 @@ def lire_edition(page: str, stats: Dict[str, Any]) -> Dict[str, Any]:
     if m:
         ed["pays"] = m.group(1).upper()
     classe = _volet(page, "classifica")
-    ed["classement"] = lire_lignes(classe, stats) if classe else []
+    ed["classement"] = lire_lignes(classe, stats, annee) if classe else []
     ed["etapes"] = lire_etapes(page, stats)
     ep = lire_endpoint_etapes(page)
     if ep and ed["etapes"]:
@@ -380,8 +388,8 @@ def lire_edition(page: str, stats: Dict[str, Any]) -> Dict[str, Any]:
     return ed
 
 
-def lire_classement_etape(fragment: str, stats: Dict[str, Any]) -> List[Dict[str, Any]]:
-    return lire_lignes(fragment, stats)
+def lire_classement_etape(fragment: str, stats: Dict[str, Any], annee: Optional[int] = None) -> List[Dict[str, Any]]:
+    return lire_lignes(fragment, stats, annee)
 
 
 def lire_liste_coureurs(page: str) -> List[Dict[str, Any]]:
@@ -403,7 +411,10 @@ def lire_liste_coureurs(page: str) -> List[Dict[str, Any]]:
         if _txt(m.group(6)):
             c["lieu"] = _txt(m.group(6))
         if _txt(m.group(7)):
-            c["nat"] = _txt(m.group(7)).upper()
+            c["nat_site"] = _txt(m.group(7)).upper()
+            iso = pays_normalise(c["nat_site"], "museo")
+            if iso:
+                c["nat"] = iso
         out.append(c)
     return out
 
@@ -465,7 +476,10 @@ def lire_fiche(page: str) -> Dict[str, Any]:
                 f["naissance_brut"] = brut
     m = re.search(r"/media/flag/([A-Za-z]{3})\.gif[^>]*/>\s*</div>\s*<div class=\"text-center\">([A-Za-z]{3})</div>", page)
     if m:
-        f["nat"] = m.group(2).upper()
+        f["nat_site"] = m.group(2).upper()
+        iso = pays_normalise(f["nat_site"], "museo")
+        if iso:
+            f["nat"] = iso
     equipes = []
     seg = _volet(page, "squadre")
     for tr in re.findall(r"<tr>(.*?)</tr>", seg, flags=re.S):
@@ -666,7 +680,7 @@ def lire_albo_course(sess: Session, cid: str, c: Dict[str, Any], resume: Dict[st
 
 def ecrire_edition(sess: Session, cid: str, e: Dict[str, Any], page: str, resume: Dict[str, Any]) -> Dict[str, Any]:
     stats: Dict[str, Any] = {}
-    contenu = lire_edition(page, stats)
+    contenu = lire_edition(page, stats, e["annee"])
     contenu.update({"source": "museociclismo.it", "source_url": url_absolue(e["url"]), "course_id": cid,
                     "lu_le": _maintenant()})
     if e.get("vainqueur"):
@@ -679,8 +693,8 @@ def ecrire_edition(sess: Session, cid: str, e: Dict[str, Any], page: str, resume
     for k in ("lignes", "temps_illisibles", "ecarts_illisibles", "ecarts_vides", "ecarts_vides_non_prefixe", "sans_id",
               "nat_absentes", "rangs_non_numeriques"):
         resume[k] = resume.get(k, 0) + stats.get(k, 0)
-    for code, n in stats.get("nat_hors_flag", {}).items():
-        resume["nat_hors_flag"][code] = resume["nat_hors_flag"].get(code, 0) + n
+    for code, n in stats.get("codes_pays_inconnus", {}).items():
+        resume["codes_pays_inconnus"][code] = resume["codes_pays_inconnus"].get(code, 0) + n
     return contenu
 
 
@@ -705,15 +719,15 @@ def lire_etapes_edition(sess: Session, chemin: str, resume: Dict[str, Any], urls
             restant += 1
             continue
         stats: Dict[str, Any] = {}
-        e["classement"] = lire_classement_etape(page, stats)
+        e["classement"] = lire_classement_etape(page, stats, ed.get("annee"))
         if urls is not None:
             memoriser_urls(sess.sortie, page, urls)
         modif = True
         resume["etapes_lues"] += 1
         for k in ("lignes", "temps_illisibles", "ecarts_illisibles", "ecarts_vides", "ecarts_vides_non_prefixe", "sans_id"):
             resume[k] = resume.get(k, 0) + stats.get(k, 0)
-        for code, n in stats.get("nat_hors_flag", {}).items():
-            resume["nat_hors_flag"][code] = resume["nat_hors_flag"].get(code, 0) + n
+        for code, n in stats.get("codes_pays_inconnus", {}).items():
+            resume["codes_pays_inconnus"][code] = resume["codes_pays_inconnus"].get(code, 0) + n
     if modif:
         _ecrire_json(chemin, ed, compact=True)
     return restant
@@ -838,7 +852,7 @@ def lire_fiches(sess: Session, sortie: str, equipes: bool, relire: bool, resume:
                 entree["naissance_fiche"] = f.pop("naissance")
                 f.pop("precision", None)
             for k, v in f.items():
-                if k in ("naissance", "precision", "lieu", "nat"):
+                if k in ("naissance", "precision", "lieu", "nat", "nat_site"):
                     entree.setdefault(k, v)          # la liste fait foi quand elle a déjà une valeur
                 else:
                     entree[k] = v
@@ -887,7 +901,7 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
     reg = _lire_json(os.path.join(sortie, "courses.json"), {"source": "museociclismo.it"})
     courses = reg.setdefault("courses", {})
     resume: Dict[str, Any] = {"pages_listes": 0, "lignes_liste_illisibles": 0, "albos_lus": 0, "albos_sans_edition": 0,
-                              "editions_lues": 0, "etapes_lues": 0, "echecs": 0, "profondeurs": [], "nat_hors_flag": {},
+                              "editions_lues": 0, "etapes_lues": 0, "echecs": 0, "profondeurs": [], "codes_pays_inconnus": {},
                               "pages_coureurs": 0, "listes_naissances": {}, "fiches_naissances": {},
                               "formats_date_inconnus": [], "naissances_discordantes": 0}
     cle_fn = None
@@ -1013,7 +1027,7 @@ def _tests() -> None:
     assert (ed["annee"], ed["date"], ed["n"], ed["km"], ed["partants"], ed["arrives"]) == (1996, "1996-03-23", 87, 294.0, 198, 175)
     assert ed["depart"] == "Milano" and ed["arrivee"] == "Sanremo" and ed["type"] == "Linea" and ed["cod"] == "832"
     cl = ed["classement"]
-    assert cl[0] == {"rang": 1, "id": "2636", "nom": "Gabriele COLOMBO", "nat": "ITA", "temps_s": 25227}
+    assert cl[0] == {"rang": 1, "id": "2636", "nom": "Gabriele COLOMBO", "nat": "ITA", "nat_site": "ITA", "temps_s": 25227}
     assert cl[1]["ecart_s"] == 1 and cl[1]["nat"] == "UKR" and cl[1]["id"] == "7911" and "ecart_vide" not in cl[1]
     assert cl[-1]["ecart_s"] == 987 and not ed["etapes"] and "etapes_endpoint" not in ed
     assert st.get("ecarts_vides_non_prefixe", 0) == 0 and st["lignes"] == len(cl)
@@ -1033,13 +1047,13 @@ def _tests() -> None:
     st = {}
     cs = lire_classement_etape(_fixture("etape_23924_classifica.html"), st)
     assert cs[0]["rang"] == 1 and cs[0]["temps_s"] == 12644 and cs[1] == {"rang": 2, "id": "9743", "nom": "Frédéric MONCASSIN",
-                                                                         "nat": "FRA", "ecart_vide": True}
+                                                                         "nat": "FRA", "nat_site": "FRA", "ecart_vide": True}
     assert st["ecarts_vides"] >= 2 and st.get("ecarts_vides_non_prefixe", 0) == 0
     # liste de coureurs (professionisti)
     lc = lire_liste_coureurs(_fixture("liste_coureurs_professionisti.html"))
     assert lc[0] == {"id": "72231", "cognome": "AADEL", "sexe": "M", "nome": "Reda", "naissance": "1990-10-28",
-                     "precision": "jour", "nat": "MAR"}
-    assert lc[2]["lieu"] == "TONSBERG" and lc[2]["nat"] == "NOR"
+                     "precision": "jour", "nat": "MAR", "nat_site": "MAR"}
+    assert lc[2]["lieu"] == "TONSBERG" and lc[2]["nat"] == "NOR" and lc[2]["nat_site"] == "NOR"
     assert any(c.get("precision") == "annee" for c in lc) or any("naissance" not in c for c in lc)
     # fiche coureur : naissance complète, équipes par année
     f = lire_fiche(_fixture("fiche_colombo.html"))
@@ -1056,6 +1070,14 @@ def _tests() -> None:
     assert lg[0]["temps_s"] == 18000 and lg[1]["ecart_vide"] and lg[2]["ecart_s"] == 9 and lg[3]["ecart_vide"]
     assert lg[4]["ecart_brut"] == "bizarre" and "ecart_s" not in lg[4]
     assert st["ecarts_vides"] == 2 and st["ecarts_vides_non_prefixe"] == 1 and st["ecarts_illisibles"] == 1
+    # pays disparus : code d'époque dans `nat`, code brut dans `nat_site` ; TCH après 1992 ambigu ; inconnu compté
+    st = {}
+    pl = "".join('<tr><td><span>%d°</span></td><td><a href="/content/ciclisti/ciclista/%d-X/index.html">C%d</a> (%s)</td>'
+                 '<td>1h 0\' 0"</td><td></td><td></td></tr>' % (i + 1, i + 1, i + 1, n) for i, n in enumerate(["RFA", "CSI", "TCH", "APA"]))
+    lg = lire_lignes("<table>" + pl + "</table>", st, 1992)
+    assert [(l["nat_site"], l.get("nat")) for l in lg] == [("RFA", "FRG"), ("CSI", "EUN"), ("TCH", "TCH"), ("APA", None)], lg
+    assert st["codes_pays_inconnus"] == {"APA": 1}
+    assert lire_lignes("<table>" + pl + "</table>", {}, 2000)[2].get("nat") is None
     # clés des courses retenues : liste ou dictionnaire
     import tempfile as _t
     with _t.TemporaryDirectory() as d0:
@@ -1072,7 +1094,7 @@ def _tests() -> None:
     import tempfile
     with tempfile.TemporaryDirectory() as d:
         sess = Session(d)
-        resume = {"editions_lues": 0, "etapes_lues": 0, "profondeurs": [], "nat_hors_flag": {}}
+        resume = {"editions_lues": 0, "etapes_lues": 0, "profondeurs": [], "codes_pays_inconnus": {}}
         page = _fixture("edition_tour_de_france_1996.html")
         c = ecrire_edition(sess, "5208", {"annee": 1996, "cod": "5218", "url": "/x.html"}, page, resume)
         chemin = chemin_edition(d, "5208", 1996, "5218")

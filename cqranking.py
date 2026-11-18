@@ -45,7 +45,7 @@ Colonnes d'un fichier course : `lignes: [[rang, coureur, nat, equipe, brut, ecar
 
 Fiches coureurs : une requête par coureur lu dans un classement collecté, du plus notable (meilleur rang, puis le plus
 fréquent) au moins notable, jamais relue sans `--relire`. `coureurs.json` = {id CQ: {nom, nom_famille, prenom, naissance
-AAAA-MM-JJ (date COMPLÈTE seulement), nationalite (code UCI du site), uci_id, statut, marque_nom ("*" final du nom affiché, sens non documenté), equipes [[année, code]], url, lu_le}} ;
+AAAA-MM-JJ (date COMPLÈTE seulement), nationalite (code UCI du site, gardé brut ; `pays.pays_normalise(code, "cqranking")` donne le code canonique de pays_historiques.json : AHO, SCG… en code d'époque, ANT -> ATG), uci_id, statut, marque_nom ("*" final du nom affiché, sens non documenté), equipes [[année, code]], url, lu_le}} ;
 une fiche sans date reconnue n'a pas de `naissance` (comptée, exemples dans `formats_date_inconnus`). `nom_famille` / `prenom`
 = découpe déterministe du nom affiché (« DE MAAR Marc » : jetons tout en majuscules d'abord). `equipes.json` =
 {année: {code équipe: nom}} lu sur les fiches.
@@ -72,6 +72,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
+from pays import pays_normalise
 
 BASE = "https://cqranking.com/men/asp/gen/"
 USER_AGENT = "courses-cyclistes (accord CQ Ranking)"
@@ -657,7 +658,7 @@ def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]
             st["avec_uci_id" if fiche.get("uci_id") else "sans_uci_id"] += 1
             if statut == "inconnu" and len(inconnus) < 20:
                 inconnus.append(brut)
-            if fiche.get("nationalite") and netutil.flag_code(fiche["nationalite"]) is None:
+            if fiche.get("nationalite") and pays_normalise(fiche["nationalite"], "cqranking") is None:
                 k = "fiche:" + fiche["nationalite"]
                 resume["codes_pays_inconnus"][k] = resume["codes_pays_inconnus"].get(k, 0) + 1
             for annee, code, nom in fiche.pop("equipes", []):

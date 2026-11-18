@@ -63,6 +63,7 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
+from pays import pays_normalise
 
 BASE = "https://www.the-sports.org/"
 ACCUEIL = BASE + "cycling-s2.html"
@@ -91,22 +92,10 @@ MOIS = {m: i + 1 for i, m in enumerate(
     ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
      "december"])}
 
-# Code pays du site -> code pays du projet (UCI / CIO, comme netutil.FLAG_CODES). Table explicite : un code absent
-# donne None et est compté (`nat_inconnues`) ; elle se complète au fil des lectures réelles, jamais par déduction.
-PAYS_SITE_ISO3 = {
-    # Table explicite : uniquement des codes VUS sur les pages lues (18/11/2026, éditions 1995-1998 et 2003). Un code absent
-    # donne `nat` absent et est compté ; la synthèse de la collecte liste `codes_pays_inconnus` : on les ajoute ici après
-    # vérification, jamais par déduction.
-    "AUS": "AUS", "AUT": "AUT", "BEL": "BEL", "CAN": "CAN", "CHI": "CHI", "COL": "COL", "CRC": "CRC", "CRO": "CRO",
-    "CZE": "CZE", "DEN": "DEN",
-    "EST": "EST", "FIN": "FIN", "FRA": "FRA", "GBR": "GBR", "GER": "GER", "HUN": "HUN", "ITA": "ITA", "JPN": "JPN", "KAZ": "KAZ",
-    "LAT": "LAT", "LTU": "LTU", "MDA": "MDA", "MEX": "MEX", "NED": "NED", "NOR": "NOR", "NZL": "NZL", "POL": "POL", "POR": "POR",
-    "RUS": "RUS", "SLO": "SLO", "SWE": "SWE", "UKR": "UKR", "USA": "USA", "UZB": "UZB", "VEN": "VEN",
-    # codes propres au site, différents des nôtres
-    "SPA": "ESP", "SWI": "SUI",
-    # SCO (Écosse) : un coureur écossais court sous la nationalité sportive UCI GBR (décision du propriétaire, 18/11/2026)
-    "SCO": "GBR",
-}
+# Code pays du site -> code canonique : table `sources.thesports` de pays_historiques.json (voir pays.py) ; codes propres au site
+# (SPA, SWI, MAL, INO…) convertis, pays disparus en code d'époque (FDR -> FRG, DDR -> GDR, URS, YUG, SCG, EUN, ZAI, BOH, VSO),
+# SCO -> GBR (nationalité sportive UCI, décision du propriétaire, 18/11/2026). Un code absent donne `nat` absent et est compté
+# (`codes_pays_inconnus`) ; le code brut reste dans `nat_site`.
 
 # Nom de pays anglais lu en tête d'une fiche coureur (« Great Britain - 28 April 1980 ») -> code projet. Table explicite,
 # sans déduction : un nom absent donne `nationalite` absente et est compté (`pays_fiche_inconnus`).
@@ -367,7 +356,7 @@ def lire_ligne(tr: str) -> Optional[Dict[str, Any]]:
     ligne["nom"] = nom
     if code:
         ligne["nat_site"] = code
-        iso = PAYS_SITE_ISO3.get(code)
+        iso = pays_normalise(code, "thesports")
         if iso:
             ligne["nat"] = iso
     ms = re.search(r"-spf(\d+)\.html", nom_html)
@@ -1164,7 +1153,7 @@ def _tests() -> None:
     assert st == "inconnu" and "naissance" not in f and brut == "11/12/64", (st, f, brut)
     assert lire_fiche("<html>rien</html>")[1] == "absent"
     # SCO -> GBR (nationalité sportive UCI)
-    assert PAYS_SITE_ISO3["SCO"] == "GBR"
+    assert pays_normalise("SCO", "thesports") == "GBR"
     tr = ('<tr><td>1</td><td><img alt="SCO" src="x"/><a href="https://www.the-sports.org/jean-dupont-cycling-spf12.html">'
           'Jean Dupont</a> (SCO)</td><td>Equipe</td><td>1h00\'00</td></tr>')
     l = lire_ligne(tr)

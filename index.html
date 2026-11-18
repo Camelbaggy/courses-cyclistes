@@ -972,7 +972,32 @@ const BASE_MAILLOTS = (() => {
 const ESC_MAP = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
 function esc(v) { return v == null ? "" : String(v).replace(/[&<>"']/g, c => ESC_MAP[c]); }
 
+/* Drapeaux de pays DISPARUS (codes d'époque « h-urs », « h-gdr »… ; fichiers Wikimedia Commons, domaine public, aucun crédit requis).
+   Copie de pays_historiques.json (`pays` -> nom, drapeau.fichier), vérifiée par `python pays.py --test`. */
+const DRAPEAUX_HIST = {
+  "urs": {"nom": "Union soviétique", "fichier": "Flag of the Soviet Union.svg"},
+  "gdr": {"nom": "République démocratique allemande (RDA)", "fichier": "Flag of East Germany.svg"},
+  "frg": {"nom": "République fédérale d'Allemagne (RFA)", "fichier": "Flag of Germany.svg"},
+  "tch": {"nom": "Tchécoslovaquie", "fichier": "Flag of the Czech Republic.svg"},
+  "yug": {"nom": "Yougoslavie", "fichier": "Flag of Yugoslavia (1946-1992).svg"},
+  "scg": {"nom": "Serbie-et-Monténégro", "fichier": "Flag of Serbia and Montenegro (1992–2006).svg"},
+  "eun": {"nom": "Communauté des États indépendants (équipe unifiée de 1992)", "fichier": "Flag of the CIS.svg"},
+  "aho": {"nom": "Antilles néerlandaises", "fichier": "Flag of the Netherlands Antilles (1986–2010).svg"},
+  "zai": {"nom": "Zaïre", "fichier": "Flag of Zaire (1971–1997).svg"},
+  "boh": {"nom": "Bohême", "fichier": "Flag of Bohemia.svg"},
+  "vso": {"nom": "Vietnam du Sud", "fichier": "Flag of South Vietnam.svg"}
+};
+function urlDrapeauHist(c) {
+  const h = DRAPEAUX_HIST[c];
+  return h ? "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(h.fichier.replace(/ /g, "_")).replace(/%28/g, "(").replace(/%29/g, ")") + "?width=40" : null;
+}
 function flag(code, nom) {
+  const h = /^h-([a-z]{3})$/i.exec(code || "");
+  if (h) {
+    const c = h[1].toLowerCase(), d = DRAPEAUX_HIST[c];
+    if (!d) return '<span class="flag"></span>';
+    return `<img class="flag" loading="lazy" src="${esc(urlDrapeauHist(c))}" alt="${esc(nom || d.nom)}" title="${esc(nom || d.nom)}">`;
+  }
   if (!code || !/^[a-z]{2}(-[a-z]{2,3})?$/i.test(code)) return '<span class="flag"></span>';
   const c = code.toLowerCase();
   return `<img class="flag" loading="lazy" src="https://flagcdn.com/w40/${esc(c)}.png" alt="${esc(nom || c)}" title="${esc(nom || "")}">`;
@@ -1165,7 +1190,9 @@ const ISO3 = { FRA:"fr",BEL:"be",NED:"nl",ITA:"it",ESP:"es",GBR:"gb",GER:"de",SU
 function normaliser(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 function drapeauIso3(n) {
   const c = ISO3[n];
-  return c ? flag(c, n) : `<span class="cc">${esc(n || "")}</span>`;
+  if (c) return flag(c, n);
+  const h = DRAPEAUX_HIST[String(n || "").toLowerCase()];      // pays disparu : drapeau et nom d'époque
+  return h ? flag("h-" + String(n).toLowerCase(), h.nom) : `<span class="cc">${esc(n || "")}</span>`;
 }
 async function chargerRanking() {
   if (state.ranking !== undefined) return state.ranking;
@@ -2152,7 +2179,7 @@ async function chargerPays() {
   try { state.pays = await chargerArchive("entites/pays.json"); } catch (e) { state.pays = null; }
   return state.pays;
 }
-function nomPays(iso) { const p = state.pays && state.pays[iso]; return (p && p.nom) || iso || ""; }
+function nomPays(iso) { const p = state.pays && state.pays[iso]; const h = DRAPEAUX_HIST[String(iso || "").toLowerCase()]; return (p && p.nom) || (h && h.nom) || iso || ""; }
 
 async function chargerCoursesEnt(l) {
   try { return await fichierCourses(l); } catch (e) { console.warn("Courses (entités) indisponibles :", e.message); return {}; }
