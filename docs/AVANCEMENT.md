@@ -21,10 +21,12 @@ Dernière mise à jour : 18 novembre 2026, 11 h 45 UTC. À lire avec `CLAUDE.md`
    - **Mémoire du Cyclisme : étape 1 FAITE** (`mdc.py`, PR #74, `docs/recherche/mdc_collecte.md`) ; **collecte en cours** (`mdc.yml` du dépôt
      d'archives, PR #9, `data/archives/sources/mdc/`, auto-relance ; 2 261 courses, ~16 000-32 000 pages de classements estimées, 3,2 s / page).
      Ni date de naissance ni identifiant de coureur. À trancher : codes pays historiques `Hon`, `Tch`, `Rfa`, `Urs`, `Rda` (laissés vides).
-   - **CQ Ranking** (cqranking.com, dates de naissance +
-     ID UCI 1999-2008), **Museo del Ciclismo** (museociclismo.it) : 2 agents écrivaient l'étape 1 (collecteurs `cqranking.py`,
+   - **CQ Ranking : étape 1 FAITE** (`cqranking.py`, PR #77, `docs/recherche/cqranking_collecte.md`) ; **collecte en cours** (`cqranking.yml`, PR #10
+     du dépôt d'archives, `data/archives/sources/cqranking/`, auto-relance ; ~28 h estimées). Résultats 1999-2008 (places à points CQ), fiches
+     coureurs avec date de naissance (56/56) et ID UCI (62 %) : 16/16 concordants avec Wikidata. Classes anciennes (`1.4`, `1.5`, `CDM`) à rattacher.
+   - **Museo del Ciclismo** (museociclismo.it) : 1 agent écrivait l'étape 1 (collecteur
      `museo.py` + `docs/recherche/<source>_collecte.md` + fixtures), chacun dans un worktree `/home/user/courses-cyclistes/.claude/worktrees/agent-*`
-     sur une branche LOCALE (`source-cq`, `source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
+     sur une branche LOCALE (`source-museo`), **non poussée**. Reprise : `git -C /home/user/courses-cyclistes branch --list 'source-*'`
      puis relire, fusionner dans la branche de travail, PR ; si les branches ont disparu, relancer l'étape 1 sur le modèle de `thesports.py`.
      Puis workflows de collecte (modèle `thesports.yml` / `mdc.yml`) et intégration (étape 2/3 communes avec the-sports).
    - **FirstCycling** : accord, mais pages de données derrière un défi Cloudflare (essais `essai_firstcycling*`, même un vrai navigateur sans
