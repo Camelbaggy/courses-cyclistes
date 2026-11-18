@@ -501,7 +501,7 @@ def lire_edition(page: str, url_rel: str) -> Dict[str, Any]:
         if mr and cur is not None and not entete:
             ligne = lire_ligne(int(mr.group(1)), _sans_rang(ch), "gras", stats)
             if cur.get("type") == "autre":
-                mp = re.search(r"\s(\d+)(?:\s*points?)?$", ligne["affiche"])
+                mp = re.search(r"\s(\d+)(?:\s*points?)?$", ligne.get("affiche") or "")   # ligne sans libellé : rien
                 if mp:                                      # classement annexe : « 1. Pierre BAZZO (Fra) 25 points »
                     ligne["points"] = int(mp.group(1))
                     ligne["affiche"] = ligne["affiche"][:mp.start()].strip()
