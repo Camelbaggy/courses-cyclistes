@@ -30,9 +30,24 @@ Interprétation des temps (documentée, déterministe) :
     seulement) `H:MM:SS` `MM:SS` ; suffixe « (40.116 km/h) » séparé (`vitesse_kmh`). Format à points séparés
     (`8.17.00`, `5.36.14`) : AMBIGU (H.MM.SS ou MM.SS.cc), jamais interprété.
 
+Fiches coureurs (décision du propriétaire, 18/11/2026) : les classements ne donnent ni date de naissance ni identifiant
+UCI. Après les éditions (donc dans le MÊME budget, les éditions manquantes d'abord), le collecteur lit la fiche de chaque
+coureur (id du site `spf<N>`, URL lue dans les classements et gardée dans `fiches` de l'édition, jamais devinée) qui
+figure dans une édition écrite et n'est pas encore dans `coureurs.json` : une requête par coureur, jamais relue
+(`--relire` : tout relire). Sur la fiche, la ligne sous le titre (« Italy - 11 December 1964 ») et la phrase « (born 11
+December 1964 [in Wien]) » portent la naissance. Seule une date COMPLÈTE (jour, mois en toutes lettres anglaises, année)
+donne `precision: "jour"` ; un millésime seul donne `precision: "annee"` (`naissance` = « AAAA ») ; mois + année,
+format inconnu, numérique ambigu, ou deux sources qui se contredisent : pas de date (compté dans la synthèse,
+exemples dans `formats_date_inconnus`). `coureurs.json` = `{id site: {"nom" (tel qu'affiché sur la fiche), "naissance",
+"precision", "nationalite" (ISO3 du nom de pays de la fiche, `NOMS_PAYS_ISO3`), "url", "lu_le"}}`, écrit tous les 100
+coureurs et à l'arrêt. Code pays du site `SCO` -> `GBR` (nationalité sportive UCI).
+Sortie : `courses.json`, `editions/<course>/<année>.json`, `coureurs.json`, `etat.json`
+(`{"termine", "editions_restantes", "coureurs_restants"}` : lu par le workflow thesports.yml pour l'auto-relance, sans
+horodatage pour qu'un passage sans effet ne change rien), `cache/` (calendriers en gzip).
+
     python thesports.py --sortie DOSSIER [--avant 2009] [--depuis AAAA] [--courses s43,tour-de-france] [--relire]
-                        [--budget-min N] [--decouverte-seule]
-                        [--sans-decouverte] [--garder-html]
+                        [--budget-min N] [--max-requetes N] [--decouverte-seule]
+                        [--sans-decouverte] [--sans-fiches] [--garder-html]
     python thesports.py --test            # tests sans réseau (pages réelles de tools/fixtures/thesports/)
 """
 import argparse
@@ -81,7 +96,7 @@ MOIS = {m: i + 1 for i, m in enumerate(
 PAYS_SITE_ISO3 = {
     # Table explicite : uniquement des codes VUS sur les pages lues (18/11/2026, éditions 1995-1998 et 2003). Un code absent
     # donne `nat` absent et est compté ; la synthèse de la collecte liste `codes_pays_inconnus` : on les ajoute ici après
-    # vérification, jamais par déduction. SCO (Écosse) vu, volontairement NON converti : à décider (GBR à l'UCI ?).
+    # vérification, jamais par déduction.
     "AUS": "AUS", "AUT": "AUT", "BEL": "BEL", "CAN": "CAN", "CHI": "CHI", "COL": "COL", "CRC": "CRC", "CRO": "CRO",
     "CZE": "CZE", "DEN": "DEN",
     "EST": "EST", "FIN": "FIN", "FRA": "FRA", "GBR": "GBR", "GER": "GER", "HUN": "HUN", "ITA": "ITA", "JPN": "JPN", "KAZ": "KAZ",
@@ -89,6 +104,21 @@ PAYS_SITE_ISO3 = {
     "RUS": "RUS", "SLO": "SLO", "SWE": "SWE", "UKR": "UKR", "USA": "USA", "UZB": "UZB", "VEN": "VEN",
     # codes propres au site, différents des nôtres
     "SPA": "ESP", "SWI": "SUI",
+    # SCO (Écosse) : un coureur écossais court sous la nationalité sportive UCI GBR (décision du propriétaire, 18/11/2026)
+    "SCO": "GBR",
+}
+
+# Nom de pays anglais lu en tête d'une fiche coureur (« Great Britain - 28 April 1980 ») -> code projet. Table explicite,
+# sans déduction : un nom absent donne `nationalite` absente et est compté (`pays_fiche_inconnus`).
+NOMS_PAYS_ISO3 = {
+    "australia": "AUS", "austria": "AUT", "belgium": "BEL", "canada": "CAN", "chile": "CHI", "colombia": "COL",
+    "costa rica": "CRC", "croatia": "CRO", "czech republic": "CZE", "denmark": "DEN", "estonia": "EST",
+    "finland": "FIN", "france": "FRA", "great britain": "GBR", "scotland": "GBR", "germany": "GER", "hungary": "HUN",
+    "ireland": "IRL", "italy": "ITA", "japan": "JPN", "kazakhstan": "KAZ", "latvia": "LAT", "lithuania": "LTU",
+    "moldova": "MDA", "mexico": "MEX", "netherlands": "NED", "norway": "NOR", "new zealand": "NZL", "poland": "POL",
+    "portugal": "POR", "russia": "RUS", "slovenia": "SLO", "spain": "ESP", "sweden": "SWE", "switzerland": "SUI",
+    "ukraine": "UKR", "united states": "USA", "uzbekistan": "UZB", "venezuela": "VEN", "brazil": "BRA",
+    "argentina": "ARG", "luxembourg": "LUX", "slovakia": "SVK", "south africa": "RSA",
 }
 
 STATUTS = {"DNF", "DNS", "OTL", "DSQ", "DQ", "HD", "AB", "NP", "DNQ", "LAP"}
@@ -343,6 +373,9 @@ def lire_ligne(tr: str) -> Optional[Dict[str, Any]]:
     ms = re.search(r"-spf(\d+)\.html", nom_html)
     if ms:
         ligne["id_site"] = int(ms.group(1))
+        mu = re.search(r'href="([^"]*-cycling-spf%s\.html)"' % ms.group(1), nom_html)
+        if mu:
+            ligne["_url"] = mu.group(1)           # URL lue dans le classement (retirée par lire_edition -> `fiches`)
     equipe = _txt(cells[2][1])
     if equipe:
         ligne["equipe"] = equipe
@@ -468,8 +501,105 @@ def lire_edition(page: str, url: str) -> Dict[str, Any]:
             if len(parts) > 1:
                 ed["lieu"] = " - ".join(parts[1:])
     ed["sections"] = lire_sections(page, stats)
+    fiches: Dict[str, str] = {}
+    for sec in ed["sections"]:
+        for l in sec["lignes"]:
+            u = l.pop("_url", None)
+            if u and "id_site" in l:
+                fiches[str(l["id_site"])] = u
+    if fiches:
+        ed["fiches"] = fiches                     # {id site: URL de la fiche coureur lue dans les classements}
     ed["stats"] = stats
     return ed
+
+
+# --------------------------------------------------------------------------------------------------
+# Fiches coureurs (identification des coureurs d'avant 2009 : décision du propriétaire du 18/11/2026)
+# --------------------------------------------------------------------------------------------------
+
+_RE_JMA = re.compile(r"^(\d{1,2})(?:st|nd|rd|th)? ([A-Za-z]+) (\d{4})$")
+_RE_MJA = re.compile(r"^([A-Za-z]+) (\d{1,2})(?:st|nd|rd|th)?,? (\d{4})$")
+_RE_MA = re.compile(r"^([A-Za-z]+),? (\d{4})$")
+_RE_ANNEE = re.compile(r"^(\d{4})$")
+ANNEE_MIN, ANNEE_MAX = 1800, 2010
+
+
+def parse_naissance(texte: str) -> Tuple[Optional[str], str]:
+    """Date de naissance écrite par le site -> (valeur, statut).
+    statut : 'jour' (« 11 December 1964 » ou « December 11, 1964 » : date COMPLÈTE, mois en toutes lettres anglaises ->
+    AAAA-MM-JJ), 'annee' (« 1893 » seule -> AAAA), 'mois' (mois + année sans jour : jamais complété), 'absent' (vide),
+    'inconnu' (tout autre format, dont les dates numériques ambiguës type 03/04/1960 : jamais devinées)."""
+    t = re.sub(r"\s+", " ", _html.unescape(texte or "")).strip().strip(".")
+    if not t:
+        return None, "absent"
+    m = _RE_JMA.match(t)
+    if m:
+        iso = date_iso(m.group(1), m.group(2), m.group(3))
+    else:
+        m = _RE_MJA.match(t)
+        iso = date_iso(m.group(2), m.group(1), m.group(3)) if m else None
+    if iso:
+        return (iso, "jour") if ANNEE_MIN <= int(iso[:4]) <= ANNEE_MAX else (None, "inconnu")
+    m = _RE_ANNEE.match(t)
+    if m and ANNEE_MIN <= int(m.group(1)) <= ANNEE_MAX:
+        return m.group(1), "annee"
+    m = _RE_MA.match(t)
+    if m and m.group(1).lower() in MOIS:
+        return None, "mois"
+    return None, "inconnu"
+
+
+def lire_fiche(page: str) -> Tuple[Dict[str, Any], str, str]:
+    """Fiche coureur -> (contenu, statut de la date, texte brut de la date si format inconnu).
+    Deux endroits portent la naissance : la ligne sous le titre (« Italy - 11 December 1964 ») et la phrase de
+    présentation (« Franco Ballerini (born 11 December 1964) is… »). Les deux sont lues ; si elles se contredisent
+    (ou si l'une est un simple millésime et l'autre une autre année), aucune date n'est retenue (statut 'conflit').
+    Contenu : `nom` (tel qu'affiché), `naissance` + `precision` ('jour' | 'annee') si lue, `nationalite` (ISO3, nom de
+    pays de la ligne d'en-tête converti par NOMS_PAYS_ISO3) ; `pays_site` (nom anglais lu) pour les statistiques."""
+    c = _corps(page)
+    out: Dict[str, Any] = {}
+    m = re.search(r"<h1[^>]*>(.*?)</h1>\s*<p class=\"p_centre\"[^>]*>(.*?)</p>", c, flags=re.S)
+    if not m:
+        return out, "absent", ""
+    nom = re.sub(r"^Cycling\s*-\s*", "", _txt(m.group(1)))
+    if nom:
+        out["nom"] = nom
+    entete = _txt(m.group(2))
+    pays, _, date_txt = entete.partition(" - ")
+    if pays.strip():
+        out["pays_site"] = pays.strip()
+        iso3 = NOMS_PAYS_ISO3.get(pays.strip().lower())
+        if iso3:
+            out["nationalite"] = iso3
+    cand = [parse_naissance(date_txt)]
+    mb = re.search(r"\(born ([^)]*)\)", _txt(c[m.end():m.end() + 1500]))
+    if mb:
+        cand.append(parse_naissance(re.split(r"\s+in\s+", mb.group(1), maxsplit=1)[0]))
+    valides = [(v, st) for v, st in cand if v]
+    statuts = [st for _, st in cand]
+    brut = ""
+    if valides:
+        distinctes = set(valides)
+        if len(distinctes) == 1:
+            v, st = valides[0]
+        elif len(distinctes) == 2 and {st for _, st in valides} == {"annee", "jour"} and \
+                next(v for v, st in valides if st == "annee") == next(v for v, st in valides if st == "jour")[:4]:
+            v, st = next((v, st) for v, st in valides if st == "jour")
+        else:
+            v, st = None, "conflit"
+        if v:
+            out["naissance"], out["precision"] = v, st
+        statut = st
+    else:
+        for pref in ("inconnu", "mois"):
+            if pref in statuts:
+                statut = pref
+                break
+        else:
+            statut = "absent"
+        if statut == "inconnu":
+            brut = date_txt if cand[0][1] == "inconnu" else mb.group(1)
+    return out, statut, brut[:80]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -565,16 +695,119 @@ def lire_et_ecrire_edition(sess: Session, cid: str, ed: Dict[str, Any], page: st
     return contenu
 
 
+def _maintenant() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def fiches_attendues(sortie: str) -> Tuple[Dict[int, str], int]:
+    """Coureurs apparaissant dans les éditions collectées : ({id site: URL de la fiche lue dans les classements},
+    nombre d'éditions écrites sans `fiches` (anciennes : leurs coureurs ne sont atteignables qu'avec --relire))."""
+    out: Dict[int, str] = {}
+    sans = 0
+    racine = os.path.join(sortie, "editions")
+    for dossier, _, fichiers in sorted(os.walk(racine)):
+        for nom in sorted(fichiers):
+            if not nom.endswith(".json"):
+                continue
+            ed = _lire_json(os.path.join(dossier, nom), None)
+            if not isinstance(ed, dict):
+                continue
+            f = ed.get("fiches")
+            if not f:
+                if any("id_site" in l for sec in ed.get("sections", []) for l in sec.get("lignes", [])):
+                    sans += 1
+                continue
+            for k, u in f.items():
+                if k.isdigit() and re.fullmatch(r"[A-Za-z0-9._%%-]*-cycling-spf%s\.html" % k, u):
+                    out.setdefault(int(k), u)
+    return out, sans
+
+
+ECHECS_MAX = 3   # une fiche introuvable ou illisible 3 fois de suite n'est plus redemandée (reste sans date : rien d'inventé)
+
+
+def _fiche_a_lire(entree: Optional[Dict[str, Any]]) -> bool:
+    """Vrai si la fiche est absente du cache, ou en échec moins de ECHECS_MAX fois (entrée sans `nom`)."""
+    return entree is None or (not entree.get("nom") and entree.get("echecs", 0) < ECHECS_MAX)
+
+
+def _noter_echec(cache: Dict[str, Any], i: int) -> None:
+    """Compte un échec de lecture de la fiche `i` (page absente, réseau, titre illisible) : `{"echecs": n, "dernier_essai"}`."""
+    e = cache.get(str(i))
+    if e and e.get("nom"):
+        return
+    cache[str(i)] = {"echecs": (e or {}).get("echecs", 0) + 1, "dernier_essai": _maintenant()}
+
+
+def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]) -> int:
+    """Lit la fiche de chaque coureur des éditions collectées absent de `coureurs.json` (une requête chacun, URL lue
+    dans les classements, jamais devinée). Cache écrit tous les 100 coureurs et à l'arrêt. Retourne le nombre restant."""
+    chemin = os.path.join(sortie, "coureurs.json")
+    cache: Dict[str, Any] = _lire_json(chemin, {})
+    attendues, sans = fiches_attendues(sortie)
+    resume["editions_sans_fiches"] = sans
+    a_lire = [i for i in sorted(attendues) if relire or _fiche_a_lire(cache.get(str(i)))]
+    lues, depuis_ecriture = 0, 0
+    st = {"jour": 0, "annee": 0, "mois": 0, "absent": 0, "inconnu": 0, "conflit": 0, "pays_inconnus": 0, "echecs": 0}
+    inconnus: List[str] = []
+    try:
+        for i in a_lire:
+            if sess.epuise():
+                break
+            page = sess.page(attendues[i])
+            if not page:
+                st["echecs"] += 1
+                _noter_echec(cache, i)
+                depuis_ecriture += 1
+                continue
+            fiche, statut, brut = lire_fiche(page)
+            lues += 1
+            st[statut] += 1
+            if "pays_site" in fiche and "nationalite" not in fiche:
+                st["pays_inconnus"] += 1
+                resume["codes_pays_inconnus"]["fiche:" + fiche["pays_site"]] = \
+                    resume["codes_pays_inconnus"].get("fiche:" + fiche["pays_site"], 0) + 1
+            fiche.pop("pays_site", None)
+            if statut == "inconnu" and len(inconnus) < 20:
+                inconnus.append(brut)
+            if not fiche.get("nom"):
+                st["echecs"] += 1                    # page lue mais sans titre reconnu : échec compté, relue au plus ECHECS_MAX fois
+                _noter_echec(cache, i)
+                depuis_ecriture += 1
+                continue
+            fiche["url"] = BASE + attendues[i]
+            fiche["lu_le"] = _maintenant()
+            cache[str(i)] = fiche
+            depuis_ecriture += 1
+            if depuis_ecriture >= 100:
+                _ecrire_json(chemin, cache, compact=True)
+                depuis_ecriture = 0
+            sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, len(a_lire) - lues - st["echecs"]))
+    finally:
+        if depuis_ecriture or (cache and not os.path.exists(chemin)):
+            _ecrire_json(chemin, cache, compact=True)
+    restantes = len([i for i in attendues if _fiche_a_lire(cache.get(str(i)))])
+    resume["fiches_lues"] = lues
+    resume["fiches_dates"] = st
+    if inconnus:
+        resume["formats_date_inconnus"] = inconnus
+    sess.journal("fiches coureurs : %d lues, %d restantes" % (lues, restantes), force=True)
+    return restantes
+
+
 def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None, cibles: Optional[List[str]] = None,
            relire: bool = False, budget_min: float = 0.0, decouverte_seule: bool = False,
-           max_pages: int = 0, sans_decouverte: bool = False, garder_html: bool = False) -> Dict[str, Any]:
-    """Découverte (calendriers -> courses) puis lecture des éditions de la période. Reprenable."""
+           max_pages: int = 0, sans_decouverte: bool = False, garder_html: bool = False,
+           fiches: bool = True) -> Dict[str, Any]:
+    """Découverte (calendriers -> courses), lecture des éditions de la période, puis des fiches des coureurs qui y figurent.
+    Reprenable ; écrit `etat.json` (termine, editions_restantes, coureurs_restants) en fin de passage."""
     sess = Session(sortie, budget_min, max_pages, garder_html)
     cibles = [c.strip().lower() for c in (cibles or []) if c.strip()]
     chemin_courses = os.path.join(sortie, "courses.json")
     reg = _lire_json(chemin_courses, {"source": "the-sports.org", "courses": {}})
     courses: Dict[str, Dict[str, Any]] = reg.setdefault("courses", {})
     epr_vers_cid = {e["epr"]: cid for cid, c in courses.items() for e in c.get("editions", [])}
+    decouverte_ok = True               # False dès qu'un calendrier ou une page de découverte manque (budget, échec réseau)
     resume = {"calendriers": 0, "courses": 0, "editions_lues": 0, "editions_deja": 0, "echecs": 0, "refus": {},
               "lignes": 0, "temps_ambigus": 0, "temps_illisibles": 0, "temps_non_resolus": 0, "nat_inconnues": 0,
               "codes_pays_inconnus": {}}
@@ -600,12 +833,15 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
         p = sess.page(lien, mettre_en_cache=True)
         annees = lire_annees_calendrier(p) if p else {}
     if not annees and not sans_decouverte:
+        decouverte_ok = False
         print("[THESPORTS] [WARN] liste des années introuvable : découverte impossible")
     for annee in sorted((a for a in annees if a < avant and (depuis is None or a >= depuis)), reverse=True):
         if sess.epuise():
+            decouverte_ok = False
             break
         page = sess.page(annees[annee], mettre_en_cache=True)
         if not page:
+            decouverte_ok = False
             continue
         resume["calendriers"] += 1
         for lg in lire_calendrier(page, annee):
@@ -623,14 +859,17 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
                 if not any(re.fullmatch(r"[se]\d+", t) for t in cibles):
                     continue
             if sess.epuise():
+                decouverte_ok = False
                 break
             # édition inconnue : on la lit (elle est à intégrer de toute façon) pour obtenir l'onglet « Archives »
             page_ed = sess.page(lg["url"], sess.garder_html)
             if not page_ed:
+                decouverte_ok = False
                 continue
             editions = lire_archives(page_ed)
             cid = id_course(page_ed, editions)
             if not cid:
+                decouverte_ok = False
                 resume["refus"]["course sans id"] = resume["refus"].get("course sans id", 0) + 1
                 continue
             if cibles and not cible_ok(cid, lg["url"] + " " + lg["nom"]):
@@ -673,10 +912,34 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
                 sess.journal("lecture : %d éditions lues" % resume["editions_lues"])
             if sess.epuise():
                 break
+    # --- éditions restantes (après la lecture : chemins réels sur disque)
+    editions_restantes = 0
+    for cid, c in courses.items():
+        if not cible_ok(cid, c.get("nom", "") + " " + c.get("url_edition_vue", "")):
+            continue
+        for ed in c.get("editions", []):
+            if ed["annee"] >= avant or (depuis is not None and ed["annee"] < depuis):
+                continue
+            if not os.path.exists(chemin_edition(sortie, cid, ed["annee"], ed["epr"])):
+                editions_restantes += 1
+
+    # --- fiches des coureurs (après les éditions : les éditions manquantes passent d'abord)
+    if fiches and not decouverte_seule:
+        coureurs_restants = lire_fiches(sess, sortie, relire, resume)
+    else:
+        attendues, _ = fiches_attendues(sortie)
+        cache = _lire_json(os.path.join(sortie, "coureurs.json"), {})
+        coureurs_restants = len([i for i in attendues if _fiche_a_lire(cache.get(str(i)))])
     resume["echecs"] = sess.echecs
     resume["requetes"] = sess.requetes
     resume["duree_min"] = round((time.monotonic() - sess.t0) / 60, 1)
     resume["budget_epuise"] = sess.epuise()
+    termine = bool(decouverte_ok and not editions_restantes and not coureurs_restants and fiches and not decouverte_seule)
+    # etat.json : lu par le workflow (auto-relance) ; aucun horodatage, pour qu'un passage sans effet ne change rien
+    _ecrire_json(os.path.join(sortie, "etat.json"), {"termine": termine, "editions_restantes": editions_restantes,
+                                                     "coureurs_restants": coureurs_restants})
+    resume["editions_restantes"], resume["coureurs_restants"], resume["termine"] = \
+        editions_restantes, coureurs_restants, termine
     sess.journal("synthèse : %s" % json.dumps(resume, ensure_ascii=False, sort_keys=True), force=True)
     return resume
 
@@ -839,6 +1102,95 @@ def _tests() -> None:
         _ecrire_json(p, {"epr": "epr9234"})
         assert chemin_edition(d, "s43", 1995, "epr9234") == p
         assert chemin_edition(d, "s43", 1995, "epr1").endswith("1995-epr1.json")
+
+    # fiches coureurs : dates complètes seulement
+    assert parse_naissance("11 December 1964") == ("1964-12-11", "jour")
+    assert parse_naissance("7 September 1973") == ("1973-09-07", "jour")
+    assert parse_naissance("December 11, 1964") == ("1964-12-11", "jour")
+    assert parse_naissance("1 march 1950") == ("1950-03-01", "jour")
+    assert parse_naissance("1893") == ("1893", "annee")
+    assert parse_naissance("March 1950") == (None, "mois")
+    assert parse_naissance("") == (None, "absent")
+    assert parse_naissance("31 February 1950") == (None, "inconnu")          # date impossible
+    assert parse_naissance("03/04/1960") == (None, "inconnu")                # numérique : ambigu, jamais deviné
+    assert parse_naissance("11 Dec 1964") == (None, "inconnu")               # mois abrégé : format inconnu
+    assert parse_naissance("11 December 1064") == (None, "inconnu")
+    f, st, _ = lire_fiche(_fixture("fiche_ballerini.html"))
+    assert st == "jour" and f == {"nom": "Franco Ballerini", "naissance": "1964-12-11", "precision": "jour",
+                                  "nationalite": "ITA", "pays_site": "Italy"}, f
+    f, st, _ = lire_fiche(_fixture("fiche_wiggins.html"))                    # « (born 28 April 1980 in Ghent) »
+    assert st == "jour" and f["naissance"] == "1980-04-28" and f["nationalite"] == "GBR", f
+    f, st, _ = lire_fiche(_fixture("fiche_sans_date.html"))
+    assert st == "absent" and "naissance" not in f and "precision" not in f and f["nom"] == "Jean De Busscher" \
+        and f["nationalite"] == "BEL", f
+    base = _fixture("fiche_ballerini.html")
+    f, st, _ = lire_fiche(base.replace("(born 11 December 1964)", "(born 12 December 1964)"))
+    assert st == "conflit" and "naissance" not in f                          # deux sources discordantes : rien
+    f, st, _ = lire_fiche(base.replace("Italy - 11 December 1964", "Italy - 1964"))
+    assert st == "jour" and f["naissance"] == "1964-12-11"                   # millésime + jour de la même année
+    f, st, brut = lire_fiche(base.replace("11 December 1964", "11/12/64").replace("(born 11/12/64)", "(born unknown)"))
+    assert st == "inconnu" and "naissance" not in f and brut == "11/12/64", (st, f, brut)
+    assert lire_fiche("<html>rien</html>")[1] == "absent"
+    # SCO -> GBR (nationalité sportive UCI)
+    assert PAYS_SITE_ISO3["SCO"] == "GBR"
+    tr = ('<tr><td>1</td><td><img alt="SCO" src="x"/><a href="https://www.the-sports.org/jean-dupont-cycling-spf12.html">'
+          'Jean Dupont</a> (SCO)</td><td>Equipe</td><td>1h00\'00</td></tr>')
+    l = lire_ligne(tr)
+    assert l["nat"] == "GBR" and l["nat_site"] == "SCO" and l["id_site"] == 12 and l["_url"].endswith("-cycling-spf12.html")
+    # l'édition porte les URL des fiches lues dans les classements
+    ed = lire_edition(_fixture("paris_roubaix_1995.html"), "cycling-paris-roubaix-results-1995-epr9234.html")
+    assert ed["fiches"]["46384"].endswith("franco-ballerini-cycling-spf46384.html") and len(ed["fiches"]) == 90
+    assert all("_url" not in l for s_ in ed["sections"] for l in s_["lignes"])
+
+    # phase fiches : éditions sans réseau, fiches servies par un Session simulé ; jamais relues ; budget ; cache ; etat
+    with tempfile.TemporaryDirectory() as d:
+        ed_min = {"epr": "epr1", "fiches": {"46384": "franco-ballerini-cycling-spf46384.html",
+                                            "54603": "jean-de-busscher-cycling-spf54603.html",
+                                            "952": "bradley-wiggins-cycling-spf952.html", "7": "../evil.html"},
+                  "sections": [{"lignes": [{"id_site": 46384}]}]}
+        _ecrire_json(os.path.join(d, "editions", "s43", "1995.json"), ed_min)
+        _ecrire_json(os.path.join(d, "editions", "s43", "1993.json"), {"epr": "epr0", "sections": [{"lignes": [{"id_site": 5}]}]})
+        att, sans = fiches_attendues(d)
+        assert sorted(att) == [952, 46384, 54603] and sans == 1, (att, sans)     # URL douteuse écartée
+
+        class Faux(Session):
+            def __init__(self, *a, **k):
+                super().__init__(*a, **k)
+                self.demandees = []
+
+            def page(self, rel, mettre_en_cache=False):
+                if self.epuise():
+                    return None
+                self.requetes += 1
+                self.demandees.append(rel)
+                return _fixture({"46384": "fiche_ballerini.html", "54603": "fiche_sans_date.html"}.get(
+                    re.search(r"spf(\d+)", rel).group(1), "fiche_wiggins.html"))
+
+        res = {"codes_pays_inconnus": {}}
+        sess = Faux(d, max_pages=2)
+        assert lire_fiches(sess, d, False, res) == 1 and sess.requetes == 2          # plafond de requêtes : 1 reste
+        cache = _lire_json(os.path.join(d, "coureurs.json"), {})
+        assert sorted(cache) == ["46384", "952"], sorted(cache)                      # ordre d'id croissant
+        sess = Faux(d)
+        assert lire_fiches(sess, d, False, res) == 0 and len(sess.demandees) == 1    # la fiche déjà lue n'est pas relue
+        cache = _lire_json(os.path.join(d, "coureurs.json"), {})
+        assert cache["46384"]["naissance"] == "1964-12-11" and cache["46384"]["precision"] == "jour"
+        assert cache["46384"]["url"].endswith("franco-ballerini-cycling-spf46384.html") and cache["46384"]["lu_le"]
+        assert "naissance" not in cache["54603"] and cache["54603"]["nom"] == "Jean De Busscher"
+        # fiche en échec : comptée, retentée jusqu'à ECHECS_MAX fois puis abandonnée (jamais de date inventée)
+        c2: Dict[str, Any] = {}
+        for _ in range(ECHECS_MAX):
+            assert _fiche_a_lire(c2.get("7"))
+            _noter_echec(c2, 7)
+        assert c2["7"]["echecs"] == ECHECS_MAX and not _fiche_a_lire(c2["7"]) and "naissance" not in c2["7"]
+        c2["8"] = {"nom": "X Y"}
+        _noter_echec(c2, 8)
+        assert c2["8"] == {"nom": "X Y"} and not _fiche_a_lire(c2["8"])
+        sess = Faux(d)
+        assert lire_fiches(sess, d, False, res) == 0 and not sess.demandees
+        sess = Faux(d)
+        lire_fiches(sess, d, True, res)
+        assert len(sess.demandees) == 3                                              # --relire : tout est relu
     print("thesports : tests OK")
 
 
@@ -851,7 +1203,9 @@ def main() -> int:
     ap.add_argument("--courses", default="", help="liste : id de course (s43) ou fragment d'URL (paris-roubaix)")
     ap.add_argument("--relire", action="store_true", help="relire aussi les éditions déjà écrites")
     ap.add_argument("--budget-min", type=float, default=0.0, help="budget de temps en minutes (0 = illimité)")
-    ap.add_argument("--max-pages", type=int, default=0, help="plafond de requêtes (0 = illimité)")
+    ap.add_argument("--max-requetes", "--max-pages", dest="max_requetes", type=int, default=0,
+                    help="plafond de requêtes du passage, découverte + éditions + fiches (0 = illimité ; essais)")
+    ap.add_argument("--sans-fiches", action="store_true", help="ne lit pas les fiches des coureurs (éditions seulement)")
     ap.add_argument("--sans-decouverte", action="store_true", help="ne relit pas les calendriers : éditions des courses de courses.json")
     ap.add_argument("--garder-html", action="store_true", help="garde les pages d'édition (gzip, cache/) : relecture sans requête")
     ap.add_argument("--decouverte-seule", action="store_true", help="ne lit que les calendriers et les éditions inconnues")
@@ -859,8 +1213,8 @@ def main() -> int:
     if a.test:
         _tests()
         return 0
-    lancer(a.sortie, a.avant, a.depuis, a.courses.split(","), a.relire, a.budget_min, a.decouverte_seule, a.max_pages,
-           a.sans_decouverte, a.garder_html)
+    lancer(a.sortie, a.avant, a.depuis, a.courses.split(","), a.relire, a.budget_min, a.decouverte_seule, a.max_requetes,
+           a.sans_decouverte, a.garder_html, not a.sans_fiches)
     return 0
 
 
