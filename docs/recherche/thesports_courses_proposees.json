@@ -1,0 +1,1691 @@
+{
+ "_notice": "PROPOSITION, à valider par le propriétaire avant tout usage ; non appliquée. Clés = collector.cle_edition(nom, pays) de l'index publié entites/courses/index.json (813 épreuves, 18/11/2026). Couvre les 95 courses vues le 18/11/2026 (courses actives en 1995 + 9 vues en 1996-98) ; la collecte complète (thesports.py) produit courses.json pour toutes les autres, à rattacher avec le même script. `cle` seulement si l'égalité de clé est exacte (nom actuel, autre nom de la liste Archives du site, ou alias_courses.json) ; sinon null + raison.",
+ "genere_le": "2026-11-18",
+ "source": "the-sports.org (accord du 18/11/2026)",
+ "courses": {
+  "s36": {
+   "nom_site": "World Championships",
+   "noms_site": [
+    "World Championships"
+   ],
+   "pays": "COL",
+   "competition": "World Championships",
+   "annees_site": [
+    1921,
+    2022
+   ],
+   "editions_avant_2009": 36,
+   "cle": null,
+   "raison": "Championnats du monde : notre index a une épreuve distincte par pays hôte et par discipline (course en ligne / CLM / par équipes), pas une série unique ; page du site = plusieurs courses (CLM, ligne, amateurs). À traiter à part."
+  },
+  "s37": {
+   "nom_site": "French National Championships",
+   "noms_site": [
+    "French National Championships"
+   ],
+   "pays": "FRA",
+   "competition": "National Championships",
+   "annees_site": [
+    1907,
+    2024
+   ],
+   "editions_avant_2009": 97,
+   "cle": "national road championships france|FRA",
+   "confiance": "forte",
+   "preuve": "Même épreuve : « French National Championships » (site, 1907→) = « National Road Championships - France » (index, h = 1907, même année de début) ; nos éditions UCI 2018-2026 portent un autre libellé que 2016."
+  },
+  "s38": {
+   "nom_site": "Milan - San Remo",
+   "noms_site": [
+    "Milan - San Remo",
+    "Milano-Sanremo"
+   ],
+   "pays": "ITA",
+   "competition": "World Tour",
+   "annees_site": [
+    1907,
+    2026
+   ],
+   "editions_avant_2009": 99,
+   "cle": "milano sanremo|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Milano-Sanremo » ; index : Milano-Sanremo, UCI 2011-2026, historique Wikidata depuis 1907"
+  },
+  "s39": {
+   "nom_site": "Ronde van Vlaanderen",
+   "noms_site": [
+    "Ronde van Vlaanderen",
+    "Ronde van Vlaanderen - Tour des Flandres",
+    "Ronde van Vlaanderen / Tour des Flandres"
+   ],
+   "pays": "BEL",
+   "competition": "World Tour",
+   "annees_site": [
+    1913,
+    2026
+   ],
+   "editions_avant_2009": 92,
+   "cle": "ronde van vlaanderen tour des flandres|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via alias_courses.json : « ronde van vlaanderen|BEL » -> ronde van vlaanderen tour des flandres|BEL ; index : Ronde van Vlaanderen, UCI 2011-2026, historique Wikidata depuis 1913"
+  },
+  "s43": {
+   "nom_site": "Paris-Roubaix",
+   "noms_site": [
+    "Paris - Roubaix",
+    "Paris-Roubaix"
+   ],
+   "pays": "FRA",
+   "competition": "World Tour",
+   "annees_site": [
+    1896,
+    2026
+   ],
+   "editions_avant_2009": 106,
+   "cle": "paris roubaix|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris-Roubaix Hauts-de-France, UCI 2011-2026, historique Wikidata depuis 1896"
+  },
+  "s44": {
+   "nom_site": "Liege - Bastogne - Liege",
+   "noms_site": [
+    "Liege - Bastogne - Liege",
+    "Liège - Bastogne - Liège",
+    "Liège-Bastogne-Liège"
+   ],
+   "pays": "BEL",
+   "competition": "World Tour",
+   "annees_site": [
+    1892,
+    2026
+   ],
+   "editions_avant_2009": 94,
+   "cle": "liege bastogne liege|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Liège-Bastogne-Liège, UCI 2011-2026, historique Wikidata depuis 1892"
+  },
+  "s45": {
+   "nom_site": "Amstel Gold Race",
+   "noms_site": [
+    "Amstel Gold Race"
+   ],
+   "pays": "NED",
+   "competition": "World Tour",
+   "annees_site": [
+    1966,
+    2026
+   ],
+   "editions_avant_2009": 43,
+   "cle": "amstel gold race|NED",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Amstel Gold Race, UCI 2011-2026, historique Wikidata depuis 1966"
+  },
+  "s47": {
+   "nom_site": "Clasica San Sebastian",
+   "noms_site": [
+    "Clasica Ciclista San Sebastian",
+    "Clasica San Sebastian",
+    "Donostia San Sebastian Klasikoa",
+    "Donostia San Sebastian Klasikoaian"
+   ],
+   "pays": "ESP",
+   "competition": "World Tour",
+   "annees_site": [
+    1981,
+    2026
+   ],
+   "editions_avant_2009": 28,
+   "cle": "donostia san sebastian klasikoa|ESP",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via alias_courses.json : « clasica ciclista san sebastian|ESP » -> donostia san sebastian klasikoa|ESP ; index : DSSK (Donostia San Sebastian Klasikoa), UCI 2011-2026, historique Wikidata depuis 1981"
+  },
+  "s48": {
+   "nom_site": "Championship of Zurich",
+   "noms_site": [
+    "Championship of Zurich"
+   ],
+   "pays": "SUI",
+   "competition": "World Tour",
+   "annees_site": [
+    1914,
+    2007
+   ],
+   "editions_avant_2009": 92,
+   "cle": null,
+   "raison": "Meisterschaft von Zürich (dernière édition 2006) : absente de notre index (éditions UCI 2011+ seulement)."
+  },
+  "s49": {
+   "nom_site": "Paris-Tours",
+   "noms_site": [
+    "Paris - Tours Elite",
+    "Paris-Tours"
+   ],
+   "pays": "FRA",
+   "competition": "World Tour",
+   "annees_site": [
+    1896,
+    2024
+   ],
+   "editions_avant_2009": 102,
+   "cle": "paris tours|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris - Tours, UCI 2011-2012"
+  },
+  "s50": {
+   "nom_site": "Giro di Lombardia",
+   "noms_site": [
+    "Giro di Lombardia",
+    "Il Lombardia"
+   ],
+   "pays": "ITA",
+   "competition": "World Tour",
+   "annees_site": [
+    1905,
+    2026
+   ],
+   "editions_avant_2009": 102,
+   "cle": "giro di lombardia|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Giro di Lombardia, UCI 2011-2011"
+  },
+  "s53": {
+   "nom_site": "Omloop Het Nieuwsblad",
+   "noms_site": [
+    "Het Nieuwsblad",
+    "Omloop Het Nieuwsblad",
+    "Omloop Het Nieuwsblad Elite"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1945,
+    2024
+   ],
+   "editions_avant_2009": 61,
+   "cle": "omloop het nieuwsblad elite|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Omloop Het Nieuwsblad Elite » ; index : Omloop Nieuwsblad, UCI 2011-2026, historique Wikidata depuis 1945"
+  },
+  "s54": {
+   "nom_site": "Tour Mediterraneen",
+   "noms_site": [
+    "Tour Mediterraneen",
+    "Tour Méditerranéen Cycliste Professionnel"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1974,
+    2015
+   ],
+   "editions_avant_2009": 35,
+   "cle": "tour mediterraneen|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tour Méditerranéen, UCI 2012-2012"
+  },
+  "s55": {
+   "nom_site": "Grote Scheldeprijs - Vlaanderen",
+   "noms_site": [
+    "Grote Scheldeprijs",
+    "Grote Scheldeprijs - Vlaanderen",
+    "Scheldeprijs"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1907,
+    2026
+   ],
+   "editions_avant_2009": 95,
+   "cle": "scheldeprijs|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Scheldeprijs » ; index : Scheldeprijs, UCI 2011-2026"
+  },
+  "s56": {
+   "nom_site": "Rund um den Henninger Turm",
+   "noms_site": [
+    "Eschborn-Frankfurt",
+    "Eschborn-Frankfurt - Rund um den Finanzplatz",
+    "Rund um den Finanzplatz Eschborn-Frankfurt",
+    "Rund um den Henninger Turm"
+   ],
+   "pays": "GER",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1962,
+    2024
+   ],
+   "editions_avant_2009": 47,
+   "cle": "eschborn frankfurt|GER",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Eschborn-Frankfurt » ; index : Eschborn-Frankfurt, UCI 2018-2026"
+  },
+  "s58": {
+   "nom_site": "Criterium International",
+   "noms_site": [
+    "Criterium International",
+    "Criterium national",
+    "Critérium International"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1932,
+    2017
+   ],
+   "editions_avant_2009": 77,
+   "cle": "criterium international|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Critérium International, UCI 2011-2016"
+  },
+  "s59": {
+   "nom_site": "Driedaagse van De Panne",
+   "noms_site": [
+    "AG Driedaagse Brugge-De Panne",
+    "Classic Brugge - De Panne",
+    "Classic Brugge-De Panne",
+    "Driedaagse Brugge-De Panne",
+    "Driedaagse De Panne-Koksijde",
+    "Driedaagse van De Panne",
+    "Oxyclean Classic Brugge-De Panne",
+    "VDK-Driedaagse De Panne-Koksijde"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1977,
+    2024
+   ],
+   "editions_avant_2009": 32,
+   "cle": "ag driedaagse brugge de panne|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « AG Driedaagse Brugge-De Panne » ; index : AG Driedaagse Brugge-De Panne, UCI 2020-2020"
+  },
+  "s60": {
+   "nom_site": "Veenendaal - Veenendaal",
+   "noms_site": [
+    "Arnhem Veenendaal Classic",
+    "Arnhem-Veenendaal Classic",
+    "Dutch Food Valley Classic",
+    "Veenendaal - Veenendaal",
+    "Veenendaal - Veenendaal (Dutch Food Valley Classic)",
+    "Veenendaal-Veenendaal",
+    "Veenendaal-Veenendaal Classic"
+   ],
+   "pays": "NED",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1985,
+    2026
+   ],
+   "editions_avant_2009": 23,
+   "cle": "arnhem veenendaal classic|NED",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Arnhem Veenendaal Classic » ; index : Arnhem-Veenendaal Classic, UCI 2015-2015"
+  },
+  "s61": {
+   "nom_site": "Coppa Placci",
+   "noms_site": [
+    "Coppa Placci"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1923,
+    2011
+   ],
+   "editions_avant_2009": 57,
+   "cle": null,
+   "raison": "Coppa Placci : absente de notre index (pas d'édition UCI 2011+ sous ce nom)."
+  },
+  "s62": {
+   "nom_site": "Paris-Bruxelles",
+   "noms_site": [
+    "Brussels Cycling Classic",
+    "Parijs-Brusssel - Paris-Bruxelles",
+    "Paris-Bruxelles",
+    "Paris-Bruxelles - Parijs-Brusssel"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1893,
+    2026
+   ],
+   "editions_avant_2009": 88,
+   "cle": "brussels cycling classic|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Brussels Cycling Classic » ; index : Brussels Cycling Classic, UCI 2013-2026"
+  },
+  "s63": {
+   "nom_site": "Four Days of Dunkirk",
+   "noms_site": [
+    "4 Jours de Dunkerque / Grand Prix des Hauts de France",
+    "4 Jours de Dunkerque / Tour du Nord-Pas-de-Calais",
+    "4 Jours de Dunkerque / Tour du Nord-pas-de-Calais",
+    "Four Days of Dunkirk"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1955,
+    2026
+   ],
+   "editions_avant_2009": 54,
+   "cle": "4 jours de dunkerque grand prix des hauts de france|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « 4 Jours de Dunkerque / Grand Prix des Hauts de France » ; index : 4 Jours de Dunkerque / Grand Prix des Hauts de France, UCI 2011-2026"
+  },
+  "s65": {
+   "nom_site": "Giro dell'Emilia",
+   "noms_site": [
+    "G.P. Emilia",
+    "Giro dell'Emilia"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1909,
+    2026
+   ],
+   "editions_avant_2009": 91,
+   "cle": "giro dell emilia|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Giro dell'Emilia, UCI 2011-2026"
+  },
+  "s66": {
+   "nom_site": "Giro del Lazio",
+   "noms_site": [
+    "Giro del Lazio",
+    "Roma Maxima"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1935,
+    2015
+   ],
+   "editions_avant_2009": 73,
+   "cle": "roma maxima|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Roma Maxima » ; index : Roma Maxima, UCI 2013-2013"
+  },
+  "s67": {
+   "nom_site": "Giro del Piemonte",
+   "noms_site": [
+    "Giro del Piemonte",
+    "Gran Piemonte"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1906,
+    2026
+   ],
+   "editions_avant_2009": 95,
+   "cle": "giro del piemonte|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Giro del Piemonte, UCI 2011-2016"
+  },
+  "s94": {
+   "nom_site": "Tour de France",
+   "noms_site": [
+    "Tour de France"
+   ],
+   "pays": "FRA",
+   "competition": "Grand Tour",
+   "annees_site": [
+    1903,
+    2026
+   ],
+   "editions_avant_2009": 95,
+   "cle": "tour de france|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tour de France, UCI 2011-2026, historique Wikidata depuis 1903"
+  },
+  "s96": {
+   "nom_site": "Paris - Nice",
+   "noms_site": [
+    "Paris - Nice",
+    "Paris-Nice"
+   ],
+   "pays": "FRA",
+   "competition": "World Tour",
+   "annees_site": [
+    1990,
+    2026
+   ],
+   "editions_avant_2009": 19,
+   "cle": "paris nice|FRA",
+   "confiance": "forte",
+   "a_verifier": "début Wikidata 1933 ≠ première édition du site 1990",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris-Nice, UCI 2011-2026, historique Wikidata depuis 1933"
+  },
+  "s97": {
+   "nom_site": "Tirreno-Adriatico",
+   "noms_site": [
+    "Tirreno-Adriatico"
+   ],
+   "pays": "ITA",
+   "competition": "World Tour",
+   "annees_site": [
+    1990,
+    2026
+   ],
+   "editions_avant_2009": 19,
+   "cle": "tirreno adriatico|ITA",
+   "confiance": "forte",
+   "a_verifier": "début Wikidata 1966 ≠ première édition du site 1990",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tirreno-Adriatico, UCI 2011-2026, historique Wikidata depuis 1966"
+  },
+  "s98": {
+   "nom_site": "Vuelta al Pais Vasco",
+   "noms_site": [
+    "Itzulia Basque Country",
+    "Vuelta Ciclista al Pais Vasco",
+    "Vuelta al Pais Vasco"
+   ],
+   "pays": "ESP",
+   "competition": "World Tour",
+   "annees_site": [
+    1990,
+    2026
+   ],
+   "editions_avant_2009": 19,
+   "cle": "itzulia basque country|ESP",
+   "confiance": "forte",
+   "a_verifier": "début Wikidata 1924 ≠ première édition du site 1990",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Itzulia Basque Country » ; index : Itzulia Basque Country, UCI 2011-2026, historique Wikidata depuis 1924"
+  },
+  "s100": {
+   "nom_site": "Criterium du Dauphine Libere",
+   "noms_site": [
+    "Criterium du Dauphine Libere",
+    "Critérium du Dauphiné",
+    "Tour Auvergne - Rhône-Alpes"
+   ],
+   "pays": "FRA",
+   "competition": "World Tour",
+   "annees_site": [
+    1990,
+    2026
+   ],
+   "editions_avant_2009": 19,
+   "cle": "criterium du dauphine|FRA",
+   "confiance": "forte",
+   "a_verifier": "début Wikidata 1947 ≠ première édition du site 1990",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Critérium du Dauphiné » ; index : Tour Auvergne - Rhône-Alpes, UCI 2011-2026, historique Wikidata depuis 1947"
+  },
+  "s102": {
+   "nom_site": "Tour de Suisse",
+   "noms_site": [
+    "Tour de Suisse"
+   ],
+   "pays": "SUI",
+   "competition": "World Tour",
+   "annees_site": [
+    1933,
+    2026
+   ],
+   "editions_avant_2009": 72,
+   "cle": "tour de suisse|SUI",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tour de Suisse, UCI 2011-2026, historique Wikidata depuis 1933"
+  },
+  "s1362": {
+   "nom_site": "Gent-Wevelgem",
+   "noms_site": [
+    "Gent - Wevelgem",
+    "Gent-Wevelgem",
+    "Gent-Wevelgem in Flanders Fields",
+    "In Flanders Fields - From Middelkerke to Wevelgem"
+   ],
+   "pays": "BEL",
+   "competition": "World Tour",
+   "annees_site": [
+    1934,
+    2026
+   ],
+   "editions_avant_2009": 70,
+   "cle": "gent wevelgem|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Gent - Wevelgem, UCI 2011-2013"
+  },
+  "s1363": {
+   "nom_site": "Fleche Wallonne",
+   "noms_site": [
+    "Fleche Wallonne",
+    "La Flèche Wallonne"
+   ],
+   "pays": "BEL",
+   "competition": "World Tour",
+   "annees_site": [
+    1936,
+    2026
+   ],
+   "editions_avant_2009": 72,
+   "cle": "la fleche wallonne|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « La Flèche Wallonne » ; index : La Flèche Wallonne, UCI 2011-2026, historique Wikidata depuis 1936"
+  },
+  "s1365": {
+   "nom_site": "GP Ouest France - Plouay",
+   "noms_site": [
+    "Bretagne Classic - CIC",
+    "Bretagne Classic - Ouest Francev",
+    "Bretagne Classic - Ouest-France",
+    "GP Ouest France - Plouay",
+    "GP Plouay - Bretagne"
+   ],
+   "pays": "FRA",
+   "competition": "World Tour",
+   "annees_site": [
+    1931,
+    2026
+   ],
+   "editions_avant_2009": 72,
+   "cle": "gp ouest france plouay|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : GP Ouest France - Plouay, UCI 2011-2015"
+  },
+  "s1369": {
+   "nom_site": "Tour de la Region Wallonne",
+   "noms_site": [
+    "Ethias-Tour de Wallonie",
+    "Tour de Wallonie",
+    "Tour de la Region Wallonne",
+    "VOO-Tour de Wallonie"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1994,
+    2026
+   ],
+   "editions_avant_2009": 15,
+   "cle": "ethias tour de wallonie|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Ethias-Tour de Wallonie » ; index : Ethias-Tour de Wallonie, UCI 2021-2026"
+  },
+  "s1924": {
+   "nom_site": "Kuurne-Brussel-Kuurne",
+   "noms_site": [
+    "Kuurne - Brussel - Kuurne",
+    "Kuurne - Bruxelles - Kuurne",
+    "Kuurne-Brussel-Kuurne",
+    "Kuurne-Bruxelles-Kuurne"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1946,
+    2026
+   ],
+   "editions_avant_2009": 61,
+   "cle": "kuurne brussel kuurne|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Kuurne - Brussel - Kuurne, UCI 2012-2026"
+  },
+  "s2695": {
+   "nom_site": "E3 Prijs Vlaanderen",
+   "noms_site": [
+    "E3 BinckBank Classic",
+    "E3 Harelbeke",
+    "E3 Prijs Vlaanderen",
+    "E3 Prijs Vlaanderen - Harelbeke",
+    "E3 Saxo Bank Classic",
+    "Record Bank E3 Harelbeke"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1958,
+    2024
+   ],
+   "editions_avant_2009": 51,
+   "cle": "e3 saxo classic|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via alias_courses.json : « e3 binckbank classic|BEL » -> e3 saxo classic|BEL ; index : E3 Saxo Classic, UCI 2019-2026, historique Wikidata depuis 1958"
+  },
+  "s2697": {
+   "nom_site": "Rund um Köln",
+   "noms_site": [
+    "Rund um Köln"
+   ],
+   "pays": "GER",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1910,
+    2026
+   ],
+   "editions_avant_2009": 43,
+   "cle": "rund um koln|GER",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Rund um Köln, UCI 2013-2026"
+  },
+  "s2698": {
+   "nom_site": "GP du Canton d'Argovie - Gippingen",
+   "noms_site": [
+    "GP Gippingen",
+    "GP du Canton d'Argovie",
+    "GP du Canton d'Argovie - Gippingen",
+    "GP du canton d'Argovie",
+    "Grosser Preis des Kantons Aargau"
+   ],
+   "pays": "SUI",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1964,
+    2026
+   ],
+   "editions_avant_2009": 45,
+   "cle": "gp gippingen|SUI",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « GP Gippingen » ; index : GP Gippingen, UCI 2026-2026"
+  },
+  "s2699": {
+   "nom_site": "Philadelphia International Championship",
+   "noms_site": [
+    "First Union USPRO Championship",
+    "Philadelphia Cycling Class p/b AmeriGas",
+    "Philadelphia International Championship",
+    "Philadelphia International Cycling Classic",
+    "TD Bank Philadelphia International Championship",
+    "The Parx Casino Philly Cycling Classic",
+    "The Philadelphia Cycling Classic",
+    "USPRO Championship",
+    "Wachovia USPRO Championship"
+   ],
+   "pays": "USA",
+   "competition": "UCI America Tour",
+   "annees_site": [
+    1985,
+    2026
+   ],
+   "editions_avant_2009": 24,
+   "cle": "the philadelphia cycling classic|USA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « The Philadelphia Cycling Classic » ; index : The Philadelphia Cycling Classic, UCI 2013-2013"
+  },
+  "s2700": {
+   "nom_site": "Tre Valli Varesine",
+   "noms_site": [
+    "100^ Tre Valli Varesine",
+    "Tre Valli Varesine"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1919,
+    2026
+   ],
+   "editions_avant_2009": 87,
+   "cle": "tre valli varesine|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tre Valli Varesine, UCI 2011-2026"
+  },
+  "s2701": {
+   "nom_site": "GP de Fourmies",
+   "noms_site": [
+    "GP de Fourmies",
+    "GP de Fourmies / La Voix du Nord"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1928,
+    2026
+   ],
+   "editions_avant_2009": 76,
+   "cle": "gp de fourmies la voix du nord|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « GP de Fourmies / La Voix du Nord » ; index : GP de Fourmies / La Voix du Nord, UCI 2011-2026"
+  },
+  "s2702": {
+   "nom_site": "Milano-Torino",
+   "noms_site": [
+    "Milano - Torino",
+    "Milano-Torino"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1876,
+    2026
+   ],
+   "editions_avant_2009": 90,
+   "cle": "milano torino|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Milano - Torino, UCI 2012-2026"
+  },
+  "s3053": {
+   "nom_site": "Tour de Vendée",
+   "noms_site": [
+    "Tour de Vendée"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1980,
+    2026
+   ],
+   "editions_avant_2009": 29,
+   "cle": "tour de vendee|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tour de Vendée, UCI 2011-2026, historique Wikidata depuis 1980"
+  },
+  "s3055": {
+   "nom_site": "GP Le Samyn",
+   "noms_site": [
+    "Ename Samyn Classic",
+    "GP Le Samyn",
+    "Le Samyn"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1968,
+    2026
+   ],
+   "editions_avant_2009": 39,
+   "cle": "ename samyn classic|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Ename Samyn Classic » ; index : Ename Samyn Classic, UCI 2025-2026"
+  },
+  "s3056": {
+   "nom_site": "Nokere Koerse",
+   "noms_site": [
+    "Danilith - Nokere Koerse",
+    "Danilith Nokere Koerse",
+    "Nokere Koerse",
+    "Nokere Koerse - Danilith Classic"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1944,
+    2026
+   ],
+   "editions_avant_2009": 63,
+   "cle": "danilith nokere koerse|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Danilith - Nokere Koerse » ; index : Danilith Nokere Koerse, UCI 2017-2026"
+  },
+  "s3057": {
+   "nom_site": "Dwars door Vlaanderen",
+   "noms_site": [
+    "Dwars Door Vlaanderen",
+    "Dwars door Vlaanderen",
+    "Dwars door Vlaanderen - A travers la Flandre",
+    "Dwars door Vlaanderen / A travers la Flandre"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1945,
+    2024
+   ],
+   "editions_avant_2009": 63,
+   "cle": "dwars door vlaanderen a travers la flandre|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Dwars door Vlaanderen - A travers la Flandre » ; index : Dwars door Vlaanderen - A travers la Flandre, UCI 2012-2026"
+  },
+  "s3058": {
+   "nom_site": "Brabantse Pijl",
+   "noms_site": [
+    "Brabantse Pijl",
+    "De Brabantse Pijl - La Flèche Brabançonne"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1961,
+    2026
+   ],
+   "editions_avant_2009": 48,
+   "cle": "de brabantse pijl la fleche brabanconne|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « De Brabantse Pijl - La Flèche Brabançonne » ; index : De Brabantse Pijl - La Flèche Brabançonne, UCI 2011-2026"
+  },
+  "s3059": {
+   "nom_site": "Paris-Bourges",
+   "noms_site": [
+    "Paris - Bourges",
+    "Paris-Bourges"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1913,
+    2024
+   ],
+   "editions_avant_2009": 54,
+   "cle": "paris bourges|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris - Bourges, UCI 2011-2023, historique Wikidata depuis 1913"
+  },
+  "s3292": {
+   "nom_site": "Cholet - Pays de Loire",
+   "noms_site": [
+    "Cholet - Mauleon",
+    "Cholet - Pays De Loire",
+    "Cholet - Pays de Loire",
+    "Cholet - Pays de la Loire",
+    "Cholet Agglo Tour",
+    "Mauleon - Moulins",
+    "Mauleon-Moulins"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1978,
+    2026
+   ],
+   "editions_avant_2009": 31,
+   "cle": "cholet pays de loire|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Cholet - Pays De Loire, UCI 2011-2016"
+  },
+  "s3294": {
+   "nom_site": "Hel van het Mergelland - Volta Limburg Classic",
+   "noms_site": [
+    "Hel van het Mergelland - Volta Limburg Classic",
+    "NXT Classic",
+    "Volta Limburg Classic",
+    "Volta NXT Classic"
+   ],
+   "pays": "NED",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1977,
+    2026
+   ],
+   "editions_avant_2009": 31,
+   "cle": "volta limburg classic|NED",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Volta Limburg Classic » ; index : Volta Limburg Classic, UCI 2015-2019"
+  },
+  "s3295": {
+   "nom_site": "Grand Prix Pino Cerami",
+   "noms_site": [
+    "Grand Prix Cerami",
+    "Grand Prix Pino Cerami"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1964,
+    2026
+   ],
+   "editions_avant_2009": 43,
+   "cle": "grand prix pino cerami|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Grand Prix Pino Cerami, UCI 2012-2013"
+  },
+  "s3296": {
+   "nom_site": "Paris - Camembert",
+   "noms_site": [
+    "Paris - Camembert",
+    "Paris-Camembert"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1906,
+    2026
+   ],
+   "editions_avant_2009": 73,
+   "cle": "paris camembert|FRA",
+   "confiance": "forte",
+   "a_verifier": "début Wikidata 1934 ≠ première édition du site 1906",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris - Camembert, UCI 2011-2026, historique Wikidata depuis 1934"
+  },
+  "s3297": {
+   "nom_site": "G.P. Città di Lugano",
+   "noms_site": [
+    "Axion SWISS Bank Gran Premio Città di Lugano",
+    "G.P. Città di Lugano",
+    "Gran Premio Città di Lugano",
+    "SuisseGas Gran Premio Città di Lugano"
+   ],
+   "pays": "SUI",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1981,
+    2023
+   ],
+   "editions_avant_2009": 24,
+   "cle": "g p citta di lugano|SUI",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : G.P. Città di Lugano, UCI 2014-2014"
+  },
+  "s3300": {
+   "nom_site": "Halle - Ingooigem",
+   "noms_site": [
+    "72 ° Halle Ingooigem",
+    "73° Halle-Ingooigem",
+    "Halle - Ingooigem",
+    "Halle Ingooigem",
+    "Halle-Ingooigem"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1945,
+    2022
+   ],
+   "editions_avant_2009": 61,
+   "cle": "halle ingooigem|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Halle Ingooigem, UCI 2012-2018"
+  },
+  "s3301": {
+   "nom_site": "Belgian National Championships",
+   "noms_site": [
+    "Belgian National Championships"
+   ],
+   "pays": "BEL",
+   "competition": "National Championships",
+   "annees_site": [
+    1894,
+    2024
+   ],
+   "editions_avant_2009": 109,
+   "cle": null,
+   "raison": "Championnats nationaux de Belgique : absents de notre index (seule la France y figure)."
+  },
+  "s3302": {
+   "nom_site": "Dutch National Championships",
+   "noms_site": [
+    "Dutch National Championships"
+   ],
+   "pays": "NED",
+   "competition": "National Championships",
+   "annees_site": [
+    1888,
+    2023
+   ],
+   "editions_avant_2009": 113,
+   "cle": null,
+   "raison": "Championnats nationaux des Pays-Bas : absents de notre index (seule la France y figure)."
+  },
+  "s3307": {
+   "nom_site": "GP Stad Zottegem",
+   "noms_site": [
+    "Egmont Cycling Race",
+    "GP Stad Zottegem"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1934,
+    2024
+   ],
+   "editions_avant_2009": 73,
+   "cle": "gp stad zottegem|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : GP Stad Zottegem, UCI 2016-2016"
+  },
+  "s3308": {
+   "nom_site": "Druivenkoers - Overijse",
+   "noms_site": [
+    "Druivenkoers - Overijse"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1961,
+    2024
+   ],
+   "editions_avant_2009": 48,
+   "cle": "druivenkoers overijse|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Druivenkoers - Overijse, UCI 2011-2024"
+  },
+  "s3309": {
+   "nom_site": "Schaal Sels",
+   "noms_site": [
+    "Schaal Sels",
+    "Schaal Sels Merksem",
+    "Schaal Sels Merksem/ Johan Museeuw Classic"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1921,
+    2022
+   ],
+   "editions_avant_2009": 82,
+   "cle": "schaal sels merksem johan museeuw classic|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Schaal Sels Merksem/ Johan Museeuw Classic » ; index : Schaal Sels Merksem/ Johan Museeuw Classic, UCI 2019-2019"
+  },
+  "s3310": {
+   "nom_site": "GP Jef Scherens",
+   "noms_site": [
+    "GP Jef Scherens",
+    "Grote Prijs Jef Scherens - Rondom Leuven",
+    "Tour of Leuven - Grand Prix Jef Scherens",
+    "Tour of Leuven - Memorial Jef Scherens"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1963,
+    2024
+   ],
+   "editions_avant_2009": 42,
+   "cle": "grote prijs jef scherens rondom leuven|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Grote Prijs Jef Scherens - Rondom Leuven » ; index : Grote Prijs Jef Scherens - Rondom Leuven, UCI 2011-2021"
+  },
+  "s3311": {
+   "nom_site": "Memorial Rik Van Steenbergen",
+   "noms_site": [
+    "Memorial Rik Van Steenbergen",
+    "Memorial Rik Van Steenbergen / Kempen Classic"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1991,
+    2022
+   ],
+   "editions_avant_2009": 18,
+   "cle": null,
+   "raison": "Memorial Rik Van Steenbergen : absent de notre index."
+  },
+  "s3312": {
+   "nom_site": "GP de Wallonie",
+   "noms_site": [
+    "GP de Wallonie",
+    "Grand Prix de Wallonie",
+    "Lotto Grand Prix de Wallonie"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1935,
+    2026
+   ],
+   "editions_avant_2009": 49,
+   "cle": "grand prix de wallonie|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Grand Prix de Wallonie » ; index : Grand Prix de Wallonie, UCI 2011-2025"
+  },
+  "s3313": {
+   "nom_site": "Flemish Championship",
+   "noms_site": [
+    "Flemish Championship",
+    "Kampioenschap van Vlaanderen"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1908,
+    2026
+   ],
+   "editions_avant_2009": 93,
+   "cle": "kampioenschap van vlaanderen|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Kampioenschap van Vlaanderen » ; index : Kampioenschap van Vlaanderen, UCI 2013-2026"
+  },
+  "s3315": {
+   "nom_site": "Omloop van Het Houtland",
+   "noms_site": [
+    "Omloop van Het Houtland",
+    "Omloop van het HOUTLAND",
+    "Omloop van het Houtland",
+    "Omloop van het Houtland Lichtervelde",
+    "Omloop van het Houtland Middelkerke-Lichtervelde"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1945,
+    2026
+   ],
+   "editions_avant_2009": 63,
+   "cle": "omloop van het houtland|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Omloop van het Houtland, UCI 2022-2024"
+  },
+  "s3317": {
+   "nom_site": "Nationale Sluitingprijs",
+   "noms_site": [
+    "Nationale Sluitingprijs",
+    "Nationale Sluitingprijs - Putte - Kapellen",
+    "Sluitingsprijs Putte-Kapellen"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1929,
+    2020
+   ],
+   "editions_avant_2009": 75,
+   "cle": "nationale sluitingprijs putte kapellen|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Nationale Sluitingprijs - Putte - Kapellen » ; index : Nationale Sluitingprijs - Putte - Kapellen, UCI 2015-2015"
+  },
+  "s3337": {
+   "nom_site": "Clásica de Almería",
+   "noms_site": [
+    "Clasica de Almeria",
+    "Clásica de Almería"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2026
+   ],
+   "editions_avant_2009": 17,
+   "cle": "clasica de almeria|ESP",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Clasica de Almeria, UCI 2012-2026"
+  },
+  "s3543": {
+   "nom_site": "Coppa Agostoni",
+   "noms_site": [
+    "Coppa Agostoni",
+    "Coppa Agostoni - Giro delle Brianze"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1946,
+    2026
+   ],
+   "editions_avant_2009": 62,
+   "cle": "coppa agostoni giro delle brianze|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Coppa Agostoni - Giro delle Brianze » ; index : Coppa Agostoni - Giro delle Brianze, UCI 2018-2026"
+  },
+  "s3546": {
+   "nom_site": "Coppa Bernocchi",
+   "noms_site": [
+    "100° Coppa Bernocchi - 43° GP BPM",
+    "99° Coppa Bernocchi - 42° GP BPM",
+    "Coppa Bernocchi",
+    "Coppa Bernocchi - GP BPM",
+    "Coppa Bernocchi - GP Banco BPM",
+    "GP Banca di Legnano - Coppa Bernocchi"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1919,
+    2026
+   ],
+   "editions_avant_2009": 87,
+   "cle": "coppa bernocchi|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Coppa Bernocchi, UCI 2014-2014"
+  },
+  "s3547": {
+   "nom_site": "Trofeo Melinda",
+   "noms_site": [
+    "Trofeo Melinda",
+    "Trofeo Melinda - val di Non"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2015
+   ],
+   "editions_avant_2009": 17,
+   "cle": null,
+   "raison": "Trofeo Melinda : absent de notre index."
+  },
+  "s3609": {
+   "nom_site": "Binche-Tournai-Binche",
+   "noms_site": [
+    "Binche - Chimay - Binche / Mémorial Frank Vandenbroucke",
+    "Binche-Chimay -Binche",
+    "Binche-Chimay-Binche",
+    "Binche-Tournai-Binche",
+    "Binche-Tournai-Binche - Mémorial Frank Vandenbroucke"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1911,
+    2026
+   ],
+   "editions_avant_2009": 22,
+   "cle": "binche tournai binche|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Binche - Tournai - Binche, UCI 2011-2011"
+  },
+  "s3722": {
+   "nom_site": "Grand Prix d'Ouverture La Marseillaise",
+   "noms_site": [
+    "Grand Prix Cycliste de Marseille La Marseillaise",
+    "Grand Prix Cycliste la Marseillaise",
+    "Grand Prix d'Ouverture La Marseillaise",
+    "La Marseillaise"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1980,
+    2026
+   ],
+   "editions_avant_2009": 29,
+   "cle": "grand prix cycliste de marseille la marseillaise|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Grand Prix Cycliste de Marseille La Marseillaise » ; index : Grand Prix Cycliste de Marseille La Marseillaise, UCI 2022-2026"
+  },
+  "s3724": {
+   "nom_site": "Trofeo Palma de Mallorca",
+   "noms_site": [
+    "Trofeo Palma",
+    "Trofeo Palma - Palma",
+    "Trofeo Palma de Mallorca",
+    "Trofeo Playa de Palma - Palma"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2026
+   ],
+   "editions_avant_2009": 17,
+   "cle": "trofeo palma|ESP",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Trofeo Palma » ; index : Trofeo Palma, UCI 2013-2025"
+  },
+  "s3725": {
+   "nom_site": "Trofeo Cala Millor",
+   "noms_site": [
+    "Trofeo Alcúdia - Port d'Alcúdia",
+    "Trofeo Cala Millor",
+    "Trofeo Port D'Alcudia - Port D'Alcudia"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2023
+   ],
+   "editions_avant_2009": 17,
+   "cle": "trofeo alcudia port d alcudia|ESP",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Trofeo Alcúdia - Port d'Alcúdia » ; index : Trofeo Alcudia-Port d'Alcudia, UCI 2021-2021"
+  },
+  "s3726": {
+   "nom_site": "Trofeo Inca",
+   "noms_site": [
+    "Trofeo Inca"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2011
+   ],
+   "editions_avant_2009": 17,
+   "cle": null,
+   "raison": "Trofeo Inca : absent de notre index."
+  },
+  "s3727": {
+   "nom_site": "Trophée Deià",
+   "noms_site": [
+    "Trophée Deià"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2014
+   ],
+   "editions_avant_2009": 17,
+   "cle": null,
+   "raison": "Trofeo Deià : candidat « trofeo deia|ESP » (index, une édition 2012) mais le site écrit « Trophée Deià » ; même course très probable, non prouvée.",
+   "candidat": "trofeo deia|ESP"
+  },
+  "s3728": {
+   "nom_site": "Trofeo Magaluf-Palmanova",
+   "noms_site": [
+    "Trofeo Magaluf-Palmanova"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2011
+   ],
+   "editions_avant_2009": 16,
+   "cle": null,
+   "raison": "Trofeo Magaluf-Palmanova : absent de notre index."
+  },
+  "s3729": {
+   "nom_site": "Trofeo Laigueglia",
+   "noms_site": [
+    "Trofeo Laigueglia"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1964,
+    2026
+   ],
+   "editions_avant_2009": 45,
+   "cle": "trofeo laigueglia|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Trofeo Laigueglia, UCI 2013-2026"
+  },
+  "s3736": {
+   "nom_site": "Grand Prix de Denain",
+   "noms_site": [
+    "GP de Denain - Porte du Hainaut / Valenciennes Métropole",
+    "GP de Denain Porte du Hainaut",
+    "Grand Prix de Denain",
+    "Grand Prix de Denain - Porte du Hainaut"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1959,
+    2026
+   ],
+   "editions_avant_2009": 50,
+   "cle": "gp de denain porte du hainaut valenciennes metropole|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « GP de Denain - Porte du Hainaut / Valenciennes Métropole » ; index : GP de Denain - Porte du Hainaut / Valenciennes Métropole, UCI 2016-2017"
+  },
+  "s4024": {
+   "nom_site": "New Zealand National Championships",
+   "noms_site": [
+    "New Zealand National Championships"
+   ],
+   "pays": "NZL",
+   "competition": "National Championships",
+   "annees_site": [
+    1990,
+    2025
+   ],
+   "editions_avant_2009": 18,
+   "cle": null,
+   "raison": "Championnats nationaux de Nouvelle-Zélande : absents de notre index."
+  },
+  "s4033": {
+   "nom_site": "Chrono des Herbiers",
+   "noms_site": [
+    "Chrono Des Nations",
+    "Chrono des Herbiers",
+    "Chrono des Nations"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1982,
+    2026
+   ],
+   "editions_avant_2009": 27,
+   "cle": "chrono des nations|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « Chrono Des Nations » ; index : Chrono des Nations, UCI 2011-2026, historique Wikidata depuis 1982"
+  },
+  "s4056": {
+   "nom_site": "Ster van Zwolle",
+   "noms_site": [
+    "60th Craft Ster van Zwolle",
+    "61th Craft Ster van Zwolle",
+    "Craft Ster van Zwolle",
+    "Salverda Bouw Ster van Zwolle",
+    "Ster van Zwolle"
+   ],
+   "pays": "NED",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1961,
+    2026
+   ],
+   "editions_avant_2009": 48,
+   "cle": null,
+   "raison": "Ster van Zwolle : absent de notre index."
+  },
+  "s4070": {
+   "nom_site": "Giro del Friuli",
+   "noms_site": [
+    "Giro del Friuli"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1974,
+    2012
+   ],
+   "editions_avant_2009": 29,
+   "cle": null,
+   "raison": "Giro del Friuli : absent de notre index (le « Giro della Regione Friuli Venezia Giulia » de l'index est une autre course par étapes)."
+  },
+  "s4073": {
+   "nom_site": "Omloop van het Waasland",
+   "noms_site": [
+    "Omloop van het Waasland",
+    "Tintrio - Omloop van het Waasland"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1965,
+    2026
+   ],
+   "editions_avant_2009": 44,
+   "cle": "omloop van het waasland|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Omloop van het Waasland, UCI 2012-2024"
+  },
+  "s4074": {
+   "nom_site": "Kattekoers",
+   "noms_site": [
+    "Gent-Wevelgem / Kattekoers-Ieper",
+    "Gent-Wevelgem/Kattekoers-Ieper",
+    "Kattekoers"
+   ],
+   "pays": "BEL",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1934,
+    2024
+   ],
+   "editions_avant_2009": 69,
+   "cle": "kattekoers|BEL",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Kattekoers, UCI 2014-2014"
+  },
+  "s4075": {
+   "nom_site": "Paris-Troyes",
+   "noms_site": [
+    "Paris - Troyes",
+    "Paris-Troyes"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1910,
+    2026
+   ],
+   "editions_avant_2009": 60,
+   "cle": "paris troyes|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Paris - Troyes, UCI 2011-2026"
+  },
+  "s4140": {
+   "nom_site": "Klasika Primavera de Amorebieta",
+   "noms_site": [
+    "64 Klasika Primavera de Amorebieta",
+    "65 Klasika Primavera de Amorebieta",
+    "66 Klasika Primavera de Amorebieta",
+    "Klasika Primavera de Amorebieta"
+   ],
+   "pays": "ESP",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1946,
+    2022
+   ],
+   "editions_avant_2009": 56,
+   "cle": "klasika primavera de amorebieta|ESP",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Klasika Primavera de Amorebieta, UCI 2012-2013"
+  },
+  "s4141": {
+   "nom_site": "Giro dell'Appennino",
+   "noms_site": [
+    "Giro dell'Appennino"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1934,
+    2026
+   ],
+   "editions_avant_2009": 69,
+   "cle": "giro dell appennino|ITA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Giro dell'Appennino, UCI 2023-2026"
+  },
+  "s4143": {
+   "nom_site": "Tro-Bro Léon",
+   "noms_site": [
+    "Tro-Bro Léon"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1984,
+    2026
+   ],
+   "editions_avant_2009": 25,
+   "cle": "tro bro leon|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via nom actuel du site ; index : Tro-Bro Léon, UCI 2011-2026, historique Wikidata depuis 1984"
+  },
+  "s4144": {
+   "nom_site": "Grand Prix Midtbank",
+   "noms_site": [
+    "Grand Prix Herning",
+    "Grand Prix Herning - S.A.T.S.",
+    "Grand Prix Midtbank",
+    "Grand Prix S.A.T.S."
+   ],
+   "pays": "DEN",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1992,
+    2026
+   ],
+   "editions_avant_2009": 16,
+   "cle": null,
+   "raison": "Grand Prix Midtbank / GP Herning : absent de notre index."
+  },
+  "s4181": {
+   "nom_site": "Omloop van Voorne-Putten",
+   "noms_site": [
+    "OZ Tour Beneden-Maas",
+    "Omloop van Voorne-Putten",
+    "Tour Beneden-Maas",
+    "Tour de Rijke"
+   ],
+   "pays": "NED",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1989,
+    2012
+   ],
+   "editions_avant_2009": 20,
+   "cle": null,
+   "raison": "Omloop van Voorne-Putten / Tour Beneden Maas : absent de notre index."
+  },
+  "s4184": {
+   "nom_site": "A Travers le Morbihan",
+   "noms_site": [
+    "A Travers de Morbihan",
+    "A Travers le Morbihan",
+    "A travers le Morbihan",
+    "Grand Prix de Plumelec",
+    "Grand Prix de Plumelec-Morbihan",
+    "Grand Prix du Morbihan"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1974,
+    2026
+   ],
+   "editions_avant_2009": 32,
+   "cle": "grand prix du morbihan|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via alias_courses.json : « grand prix de plumelec morbihan|FRA » -> grand prix du morbihan|FRA ; index : Grand Prix du Morbihan, UCI 2011-2026, historique Wikidata depuis 1974"
+  },
+  "s4190": {
+   "nom_site": "Gran Premio Città di Camaiore",
+   "noms_site": [
+    "G.P. Camaiore",
+    "Gran Premio Città di Camaiore"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1966,
+    2015
+   ],
+   "editions_avant_2009": 42,
+   "cle": null,
+   "raison": "Gran Premio Città di Camaiore : absent de notre index."
+  },
+  "s4195": {
+   "nom_site": "Gran Premio Industria e Commercio Artigianato Carnaghese",
+   "noms_site": [
+    "Gran Premio Industria e Commercio Artigianato Carnaghese"
+   ],
+   "pays": "ITA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1991,
+    2012
+   ],
+   "editions_avant_2009": 18,
+   "cle": null,
+   "raison": "GP Industria e Commercio Artigianato Carnaghese : absent de notre index."
+  },
+  "s4287": {
+   "nom_site": "Polynormande",
+   "noms_site": [
+    "La Poly Normande",
+    "La Polynormande",
+    "Polynormande"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1980,
+    2026
+   ],
+   "editions_avant_2009": 29,
+   "cle": "la poly normande|FRA",
+   "confiance": "forte",
+   "preuve": "Clé identique à celle de notre index via autre nom de la liste Archives du site : « La Poly Normande » ; index : La Poly Normande, UCI 2011-2019"
+  },
+  "s9609": {
+   "nom_site": "Grand Prix de Rennes",
+   "noms_site": [
+    "Grand Prix de Rennes"
+   ],
+   "pays": "FRA",
+   "competition": "UCI Europe Tour",
+   "annees_site": [
+    1990,
+    2008
+   ],
+   "editions_avant_2009": 19,
+   "cle": null,
+   "raison": "Grand Prix de Rennes : absent de notre index."
+  }
+ }
+}

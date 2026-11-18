@@ -30,6 +30,8 @@ python collector.py --test                            # tests locaux de compact_
 python encyclopedie.py --test                         # tests locaux des fichiers entites/ (sans réseau)
 python wikidata.py --test                             # tests locaux Wikidata / Commons (réponses simulées)
 python historique.py --test                           # tests locaux de l'historique (palmarès Wikidata, réponses simulées)
+python thesports.py --test                            # tests locaux de la collecte the-sports.org (pages réelles enregistrées, sans réseau)
+python thesports.py --sortie <dossier> --avant 2009 --courses paris-roubaix --budget-min 30   # collecte the-sports.org (réseau, 2,2 s / page, reprenable)
 python run_pipeline.py --historique --budget-min 300  # cache entites/historique/ SEUL (ARCHIVES_DIR) ; séries de series_historiques.json
 python historique.py --verifier-series docs/recherche/historique_series_candidats.json <ARCHIVES_DIR> --sortie <dossier>   # preuve des séries (réseau)
 python run_pipeline.py --wikidata --budget-min 300    # cache Wikidata (ARCHIVES_DIR/entites/wikidata/ SEUL) ; --entites reconstruit entites/ à la main
@@ -70,6 +72,7 @@ run_pipeline.py ── collector.py ─┬ uci.py        source principale : Dat
                                  ├ encyclopedie.py entités de l'encyclopédie (coureurs, équipes-saisons, courses, saisons, pays, recherche) -> ARCHIVES_DIR/entites/
                                  ├ wikidata.py   Wikidata + Commons (QID coureurs, lignées d'équipes, images sous licence) -> ARCHIVES_DIR/entites/wikidata/ (cache)
                                  ├ historique.py palmarès (vainqueur + podium) de toute l'histoire des épreuves suivies, depuis Wikidata -> ARCHIVES_DIR/entites/historique/ (cache)
+                                 ├ thesports.py  the-sports.org : classements complets avant 2009 (courses route hommes, étapes) -> ARCHIVES_DIR/sources/thesports/ (étape 1 : collecteur seul)
                                  ├ riders.py     fiches coureurs (palmarès de la saison, 3 meilleurs résultats par points UCI)
                                  ├ uci_ranking.py classement UCI (pages iframe publiques DataRide, une fois par jour ; moments et instantanés historiques, E1c)
                                  └ agents_flash.py dossier factuel → Gemini rédacteur → contrôleur, repli
@@ -241,6 +244,11 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   Les fiches de course d'archive déjà écrites gardent la valeur UCI. Schéma : `docs/SPEC.md` §4.5 ; vérification : `docs/recherche/encyclopedie_sources.md`.
 - **Exclues** : ProCyclingStats et FirstCycling (CGU/robots.txt interdisent, Cloudflare). Ne pas les réintroduire.
   Aucun contournement anti-robot (pas de faux navigateur, pas de jeton récupéré dans une page).
+- **the-sports.org** (`thesports.py`, `docs/recherche/thesports_collecte.md`) : accord de l'éditeur (Vincent Duplessy) obtenu par le propriétaire le 18/11/2026 pour collecter par programme les résultats
+  cyclistes ET les afficher, crédit « the-sports.org ». Politesse : robots.txt respecté (jamais /accueil.php, /index.php, /admin.php, /go.php, /calendrier.php, /tmp/, /zz, /how-to-, /*.html/), UA « courses-cyclistes (accord the-sports.org) »,
+  ≥ 2 s entre requêtes (`PAUSE_S` 2,2), aucune page demandée deux fois (calendriers en cache gzip, éditions écrites une fois : `--relire` pour forcer). Découverte = calendriers annuels (liste déroulante des années), colonne
+  « Competition » ; course = onglet « Archives » d'une page d'édition + `sup<N>` du lien « Prize list » ; `epm` hommes / `epf` femmes / `epi` mixte (seuls `epr` et `epm` retenus). Temps : s.t./m.t. = ligne précédente, valeur >= temps du 1er =
+  temps absolu sinon écart, formats à points (`8.17.00`) ambigus donc jamais interprétés. Pas de date de naissance dans les classements (id site `spf<N>` seulement). Tests : `python thesports.py --test`.
 - **ASO et DirectVélo** : accord du propriétaire du projet. Respecter quand même robots.txt (ASO interdit `/api`,
   `/graphql`, `/*/ajax`) et le Crawl-delay de DirectVélo.
 - **UCI DataRide** (`dataride.uci.org/iframe/...`) : `Competitions` exige les 3 filtres Kendo (RaceTypeId,
