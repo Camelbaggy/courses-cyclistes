@@ -176,7 +176,7 @@ Conventions : temps et écarts **toujours en secondes entières** dans le JSON (
 
 ### 4.3 `data/state.json`
 
-`{"notified": ["uci-76380:F", "uci-76012:3", …], "last_run": "…"}` — clé `<race_id>:<stage_number|F>`.
+`{"notified": ["uci-76380:F", "uci-76012:3", …], "last_run": "…"}` — clé `<race_id>:<identifiant d'étape|F>`. **Identifiant d'étape** (`uci.ref_etape`) = `<number><suffixe>` : « 3a » / « 3b » pour deux demi-étapes d'un même jour (suffixe lu dans `name`, « Étape 3b », comme `uci.cle_tri_etape`), « 3 » sans suffixe (identique à l'ancienne clé : aucune renotification), « F » pour le final. Aucun champ ajouté aux fichiers : `index.html` le recalcule depuis `name` / `label` (`refEtape` / `refLibelle`) ; routes `#course/<id>/3b` ; `#course/<id>/3` ouvre l'étape sans suffixe, sinon la première demi-étape ; `prev_stages` du collecteur est indexé par cet identifiant.
 
 ### 4.4 Archives (saisons passées, dépôt `courses-cyclistes-archives`)
 

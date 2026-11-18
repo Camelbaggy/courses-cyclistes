@@ -434,7 +434,7 @@ def finalize_race(race: Dict, today: dt.date) -> None:
 
 def stage_key(race: Dict, idx: int) -> str:
     st = race["stages"][idx]
-    return f"{race['id']}:{'F' if st.get('number') is None else st['number']}"
+    return f"{race['id']}:{uci.ref_etape(st)}"
 
 
 def stage_label(st: Dict) -> str:
@@ -490,9 +490,9 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
         "riders": data.get("riders") or {}, "_complete": data.get("complete", True),
     }
     aso_ref = None if archive else aso.match_race(race["name"], race["start_date"])
-    prev_stages = {s.get("number"): s for s in (previous or {}).get("stages") or []}
+    prev_stages = {uci.ref_etape(s): s for s in (previous or {}).get("stages") or []}
     for idx, st in enumerate(race["stages"]):
-        old = prev_stages.get(st.get("number"))
+        old = prev_stages.get(uci.ref_etape(st))
         if old and old.get("route") and not st.get("route"):
             st["route"] = old["route"]
         if aso_ref and not (old and old.get("_aso_done")):
@@ -508,7 +508,7 @@ def collect_race(comp: Dict, category: str, reason: str, previous: Optional[Dict
 
     # Résumés : conservés si l'étape n'a pas changé ; Gemini seulement pour les étapes récentes.
     for idx, st in enumerate(race["stages"]):
-        old = prev_stages.get(st.get("number"))
+        old = prev_stages.get(uci.ref_etape(st))
         # Seuls les résumés Gemini sont conservés ; le repli déterministe est toujours recalculé (gratuit).
         if archive:
             txt, src = agents_flash.build_fallback_summary(race, idx), "fallback"
@@ -1950,7 +1950,18 @@ def _tests_classements() -> None:
          uci_ranking.list_moments, uci_ranking.get_ranking_moment) = sauve
 
 
+def _tests_demi_etapes() -> None:
+    """Demi-étapes d'un même jour (« Étape 3a » / « 3b ») : clés de notification distinctes, étapes sans suffixe inchangées."""
+    race = {"id": "uci-1", "stages": [{"number": 3, "name": "Étape 3a"}, {"number": 3, "name": "Étape 3b"}, {"number": 4, "name": "Étape 4"},
+                                      {"number": 0, "name": "Prologue"}, {"number": None, "name": "Course"}]}
+    assert [stage_key(race, i) for i in range(5)] == ["uci-1:3a", "uci-1:3b", "uci-1:4", "uci-1:0", "uci-1:F"]
+    idx = build_index([{"id": "uci-1", "name": "T", "race_type": "stage_race", "start_date": "2023-01-01", "end_date": "2023-01-05", "status": "finished",
+                        "stages": [], "riders": {}}], 2023, [], None)
+    assert isinstance(idx, dict)
+
+
 def _tests() -> None:
+    _tests_demi_etapes()
     _reel_classements = globals()["collecter_classements"]
     _appels_cl: List[Any] = []
     globals()["collecter_classements"] = lambda *a, **k: _appels_cl.append(a[0]) or {"ecrits": 0, "restants": 0, "interrompu": False}   # pas de réseau via run_archive
