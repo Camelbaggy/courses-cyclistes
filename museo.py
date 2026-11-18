@@ -71,7 +71,25 @@ USER_AGENT = "courses-cyclistes (accord Museo del Ciclismo)"
 PAUSE_S = 3.2                      # >= 3 s entre deux requêtes (accord du 18/11/2026)
 TIMEOUT_S = 90.0                   # serveur parfois lent : délai de lecture généreux
 ECHECS_DE_SUITE_MAX = 8            # abandon propre du passage
-ECHECS_MAX = 3                     # une page en échec 3 fois n'est plus redemandée (sans --relire)
+ECHECS_MAX = 3                     # une page absente (404) ou sans titre 3 jours différents n'est plus redemandée (sans --relire)
+# Règle de comptage (voir thesports.REGLE_ECHECS) : une panne (réseau, 5xx, serveur abandonné) ne note rien ; au plus un échec par page et
+# par jour ; un compteur sans marque `<clé>_regle` (ou de règle plus ancienne) est ignoré = page re-tentée, remis à 0 au prochain échec.
+REGLE_ECHECS = 2
+
+
+def _echecs(obj: Dict[str, Any], cle: str) -> int:
+    """Échecs comptés (clé `cle` de `obj`) selon la règle en vigueur ; 0 pour un compteur de règle ancienne."""
+    return obj.get(cle, 0) if obj.get(cle + "_regle", 0) >= REGLE_ECHECS else 0
+
+
+def _noter_echec(obj: Dict[str, Any], cle: str) -> bool:
+    """Compte un échec (page absente ou sans titre) : un seul par jour. Retourne vrai si le compteur a augmenté."""
+    jour = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+    n = _echecs(obj, cle)
+    if n and obj.get(cle + "_jour") == jour:
+        return False
+    obj[cle], obj[cle + "_jour"], obj[cle + "_regle"] = n + 1, jour, REGLE_ECHECS
+    return True
 netutil.HOST_DELAYS[HOTE] = PAUSE_S
 
 AVANT_DEFAUT = 2009
@@ -482,6 +500,7 @@ class Session:
         self.max_requetes = max_requetes
         self.requetes = 0
         self.echecs = 0
+        self.absente = False        # dernière page demandée : 404 / 410 (vrai échec) ; faux = lue, ou panne passagère
         self.echecs_de_suite = 0
         self.abandon = False
         self.dernier_journal = self.t0
@@ -502,6 +521,7 @@ class Session:
         if mettre_en_cache and os.path.exists(chemin):
             with gzip.open(chemin, "rt", encoding="utf-8") as f:
                 return f.read()
+        self.absente = False
         if self.epuise():
             return None
         self.requetes += 1
@@ -509,6 +529,7 @@ class Session:
                                    timeout=TIMEOUT_S)
         if texte is None:
             self.echecs += 1
+            self.absente = netutil.page_absente()
             self.echecs_de_suite += 1
             if self.echecs_de_suite >= ECHECS_DE_SUITE_MAX and not self.abandon:
                 self.abandon = True
@@ -632,7 +653,8 @@ def lire_albo_course(sess: Session, cid: str, c: Dict[str, Any], resume: Dict[st
         return True
     page = sess.page("/content/corse/corsa/%s-%s/index.html" % (cid, c["slug"]))
     if not page:
-        c["albo_echecs"] = c.get("albo_echecs", 0) + 1
+        if sess.absente:
+            _noter_echec(c, "albo_echecs")
         return False
     a = lire_albo(page)
     c["editions"] = [{k: v for k, v in e.items()} for e in a["editions"]]
@@ -671,15 +693,15 @@ def lire_etapes_edition(sess: Session, chemin: str, resume: Dict[str, Any], urls
     restant = 0
     modif = False
     for e in ed["etapes"]:
-        if "classement" in e or e.get("echecs", 0) >= ECHECS_MAX:
+        if "classement" in e or _echecs(e, "echecs") >= ECHECS_MAX:
             continue
         if sess.epuise():
             restant += 1
             continue
         page = sess.page(ed["etapes_endpoint"] + e["cod"])
         if page is None:
-            e["echecs"] = e.get("echecs", 0) + 1
-            modif = True
+            if sess.absente:
+                modif = _noter_echec(e, "echecs") or modif
             restant += 1
             continue
         stats: Dict[str, Any] = {}
@@ -770,7 +792,7 @@ def lire_listes_coureurs(sess: Session, sortie: str, noms: Tuple[str, ...], resu
 def _fiche_a_lire(entree: Optional[Dict[str, Any]], equipes: bool) -> bool:
     if entree is None:
         return True
-    if entree.get("fiche_echecs", 0) >= ECHECS_MAX:
+    if _echecs(entree, "fiche_echecs") >= ECHECS_MAX:
         return False
     if entree.get("fiche_lue"):
         return False
@@ -795,12 +817,13 @@ def lire_fiches(sess: Session, sortie: str, equipes: bool, relire: bool, resume:
             entree = cache.setdefault(i, {})
             depuis_ecriture += 1
             if not page:
-                entree["fiche_echecs"] = entree.get("fiche_echecs", 0) + 1
+                if sess.absente:                     # 404 / 410 : vrai échec ; sinon panne passagère, rien n'est noté
+                    _noter_echec(entree, "fiche_echecs")
                 continue
             f = lire_fiche(page)
             lues += 1
             if not f.get("nom"):
-                entree["fiche_echecs"] = entree.get("fiche_echecs", 0) + 1
+                _noter_echec(entree, "fiche_echecs")
                 continue
             f.pop("id", None)
             if f.get("naissance"):
@@ -900,14 +923,15 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
                     if etapes:
                         editions_restantes += lire_etapes_edition(sess, chemin, resume, urls)
                     continue
-                if e.get("echecs", 0) >= ECHECS_MAX and not relire:
+                if _echecs(e, "echecs") >= ECHECS_MAX and not relire:
                     continue
                 if sess.epuise():
                     editions_restantes += 1
                     continue
                 page = sess.page(e["url"])
                 if not page:
-                    e["echecs"] = e.get("echecs", 0) + 1
+                    if sess.absente:
+                        _noter_echec(e, "echecs")
                     resume["echecs"] += 1
                     editions_restantes += 1
                     continue
@@ -1061,6 +1085,31 @@ def _tests() -> None:
         assert "10915" in ids and ids == sorted(ids, key=int)
         urls: Dict[str, str] = {}
         assert memoriser_urls(d, page, urls) and "10915" in urls and urls["10915"].startswith("/content/ciclisti/ciclista/10915-")
+    # échecs : un par jour, abandon après ECHECS_MAX jours ; compteur sans marque de règle = à relire ; panne = rien de noté
+    o: Dict[str, Any] = {}
+    assert _noter_echec(o, "echecs") and not _noter_echec(o, "echecs") and o["echecs"] == 1
+    for _ in range(ECHECS_MAX - 1):
+        o["echecs_jour"] = "2026-01-01"
+        assert _noter_echec(o, "echecs")
+    assert _echecs(o, "echecs") >= ECHECS_MAX
+    ancien = {"echecs": 3}
+    assert _echecs(ancien, "echecs") == 0 and _noter_echec(ancien, "echecs") and ancien["echecs"] == 1
+    with tempfile.TemporaryDirectory() as d:
+        class Panne(Session):
+            def page(self, rel, mettre_en_cache=False):
+                self.requetes += 1
+                self.absente = self.statut_faux in (404, 410)
+                return None
+        sp = Panne(d)
+        e = {"echecs": 3, "cod": "1"}
+        sp.statut_faux = 503
+        edd = {"etapes": [e], "etapes_endpoint": "/x?"}
+        _ecrire_json(os.path.join(d, "ed.json"), edd)
+        lire_etapes_edition(sp, os.path.join(d, "ed.json"), {"etapes_lues": 0})
+        assert _lire_json(os.path.join(d, "ed.json"), {})["etapes"][0] == e    # 503 : rien noté
+        sp.statut_faux = 404
+        lire_etapes_edition(sp, os.path.join(d, "ed.json"), {"etapes_lues": 0})
+        assert _lire_json(os.path.join(d, "ed.json"), {})["etapes"][0]["echecs"] == 1       # 404 : règle neuve, 1 échec
     print("[MUSEO] tests : OK")
 
 

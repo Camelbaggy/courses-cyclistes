@@ -20,6 +20,9 @@ HOST_DELAYS = {"www.directvelo.com": 10.5}  # Crawl-delay: 10 déclaré dans rob
 
 _last_call: Dict[str, float] = {}
 _blocked_hosts: set = set()
+# Statut de la dernière requête de `fetch_text` : 200 (corps lu), code HTTP d'erreur, ou None (erreur réseau, délai,
+# hôte abandonné). Permet aux collecteurs de distinguer « page absente » (404 / 410) d'une panne passagère.
+dernier_statut: Optional[int] = None
 _RAW_DIR: Optional[str] = None
 
 
@@ -44,6 +47,11 @@ def _save_raw(raw_name: str, text: str) -> None:
         safe = re.sub(r"[^A-Za-z0-9._-]+", "_", raw_name)[:150]
         with open(os.path.join(_RAW_DIR, safe), "w", encoding="utf-8") as f:
             f.write(text)
+
+
+def page_absente() -> bool:
+    """Vrai si la dernière requête de `fetch_text` a reçu 404 ou 410 (la page n'existe pas) : seul vrai échec d'une fiche."""
+    return dernier_statut in (404, 410)
 
 
 def hote_bloque(url: str) -> bool:
@@ -84,6 +92,8 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
     suite la requête échoue (None) sans bloquer l'hôte. `encoding` : jeu de caractères imposé pour décoder le corps
     (site qui ne l'annonce pas dans Content-Type, ex. cqranking.com en ISO-8859-1 / cp1252) ; sinon celui de
     l'en-tête, à défaut UTF-8. `timeout` : délai de lecture (serveur lent). Le comportement par défaut est inchangé."""
+    global dernier_statut
+    dernier_statut = None
     host = urllib.parse.urlparse(url).netloc
     if host in _blocked_hosts:
         return None
@@ -101,8 +111,10 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
                     body = gzip.decompress(body)
                 text = body.decode(encoding or resp.headers.get_content_charset() or "utf-8", "replace")
             _save_raw(raw_name, text)
+            dernier_statut = 200
             return text
         except urllib.error.HTTPError as e:
+            dernier_statut = e.code
             try:
                 txt = e.read(4000).decode("utf-8", "replace")
             except Exception:
@@ -124,6 +136,7 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
             if e.code in (400, 404, 410):
                 return None
         except Exception as e:
+            dernier_statut = None
             print(f"[WARN] Erreur réseau sur {url} : {e}")
         time.sleep(2 ** attempt)
         attempt += 1
