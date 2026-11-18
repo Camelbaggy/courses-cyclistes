@@ -45,6 +45,15 @@ Règle cardinale du projet : aucune valeur inventée. Un champ absent reste abse
   - Niveau (professionnel ou amateur) : le site ne le donne ni par course ni par édition, seulement par COUREUR (liste
     `professionisti`, entête de fiche). `coureurs.json` porte `categories` (listes où le coureur figure) / `categorie` (fiche).
 
+Sélection élargie (`--selection`, 18/11/2026 ; règles dans `construire_selection`, selection.json écrit par `--preparer-selection`) :
+  1. id dans `alias_museo.json` `_championnats` (liste manuelle, vide au départ) -> `championnat` ; 2. clé d'épreuve (cle_edition + « G.P. » -> « GP » +
+  alias_courses.json + alias_museo.json {id Museo : clé d'épreuve}) dans l'index du projet, classe actuelle WT/Pro/.1/.2 -> `epreuve_suivie`, toutes les
+  éditions < 2009 ; 3. hors index, course au calendrier CQ Ranking de l'année (1999-2008, rapprochement EXACT) en France -> `calendrier_uci_france` ;
+  4. idem à l'étranger -> `calendrier_uci_top10`, édition retenue si un FRA est dans le top 10 (fichier CQ, 0 requête Museo ; sinon page Museo lue,
+  décision mémorisée par édition : `lue` / `ecartee` / `ecartee_cq`, jamais redemandée) ; 5. sinon `sans_classe` (non collecté). Aucune classe CQ n'est
+  convertie. Ordre : phase `index` puis `calendrier`, années décroissantes ; étapes non lues sans `--etapes`. `etat.json` : termine, albos_restants,
+  editions_a_decider, editions_restantes, coureurs_restants, phase.
+
 Sortie (`--sortie`, défaut ARCHIVES_DIR/sources/museo) : `courses.json` (index des courses, éditions des courses lues),
 `editions/<id course>/<année>.json`, `coureurs.json`, `etat.json` (`{"termine", "editions_restantes",
 "coureurs_restants"}`, sans horodatage), `cache/` (listes en gzip).
@@ -52,6 +61,8 @@ Sortie (`--sortie`, défaut ARCHIVES_DIR/sources/museo) : `courses.json` (index 
     python museo.py --sortie DOSSIER [--avant 2009] [--depuis AAAA] [--courses id,nom exact,...] [--suivies | --cles FICHIER]
                     [--pays ITA,FRA] [--listes linea,tappe] [--relire] [--budget-min N] [--max-requetes N]
                     [--decouverte-seule] [--sans-etapes] [--sans-fiches] [--equipes] [--listes-coureurs professionisti]
+    python museo.py --sortie DOSSIER --archives DOSSIER_ARCHIVES --preparer-selection     # hors réseau : selection.json + chiffres
+    python museo.py --sortie DOSSIER --archives DOSSIER_ARCHIVES --selection [--etapes] [--raisons epreuve_suivie,...]
     python museo.py --test            # tests sans réseau (pages réelles allégées de tools/fixtures/museo/)
 """
 import argparse
@@ -68,7 +79,7 @@ import urllib.parse
 from typing import Any, Dict, List, Optional, Tuple
 
 import netutil
-from pays import pays_normalise
+from pays import pays_ligne, pays_normalise
 
 HOTE = "www.museociclismo.it"
 BASE = "https://" + HOTE
@@ -981,6 +992,470 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
 
 
 # --------------------------------------------------------------------------------------------------
+# Sélection élargie (18/11/2026, décision du propriétaire : élargir en suivant les règles du projet)
+# --------------------------------------------------------------------------------------------------
+
+REGLE_SELECTION = 1                # à incrémenter quand les règles changent : les décisions `ecartee*` mémorisées sont alors refaites
+ALIAS_MUSEO = os.path.join(RACINE, "alias_museo.json")
+CQ_ANNEES = (1999, 2008)           # calendrier CQ Ranking disponible : bornes incluses (avant 1999 : règles 1 et 2 seulement)
+CLASSES_INDEX = ("WT", "Pro", ".1", ".2")      # `cat` de entites/courses/index.json : classe ACTUELLE de l'épreuve (None = championnat)
+# classes CQ jamais prises pour des courses sur route ordinaires : championnats (NC*, WC*, CC*, XX*), classement final de Coupe du monde, NE
+CLASSES_CQ_EXCLUES = ("NC", "WC", "CC", "XX", "CDMF", "NE")
+RAISONS = ("championnat", "epreuve_suivie", "calendrier_uci_france", "calendrier_uci_top10")
+PHASE_DE = {"championnat": "index", "epreuve_suivie": "index", "calendrier_uci_france": "calendrier",
+            "calendrier_uci_top10": "calendrier"}
+TAUX_EDITIONS = 0.88               # éditions réelles / borne (fin - début + 1), mesuré sur les 15 courses déjà lues (étude du 18/11/2026)
+
+
+def gp(cle: Optional[str]) -> Optional[str]:
+    """Clé d'édition `collector.cle_edition` avec « G.P. » -> « GP » (« g p » -> « gp » sur le nom normalisé) : seule retouche
+    admise (rapprochement CQ 336 -> 409 courses, aucun faux positif connu) ; `cle_edition` elle-même n'est pas modifiée
+    (alignement avec `cleEdition` d'index.html). Les articles et « grand prix » ne sont PAS supprimés (collisions de clés)."""
+    if not cle or "|" not in cle:
+        return cle
+    nom, pays = cle.rsplit("|", 1)
+    return " ".join(re.sub(r"\bg p\b", "gp", nom).split()) + "|" + pays
+
+
+def cle_museo(nom: Optional[str], pays: Optional[str]) -> Optional[str]:
+    import collector
+    return gp(collector.cle_edition(nom, pays))
+
+
+def charger_alias_museo(chemin: Optional[str] = None) -> Tuple[Dict[str, str], List[str]]:
+    """`alias_museo.json` (manuel, jamais deviné) : {id course Museo : clé d'épreuve du projet} + clé `_championnats` (liste d'ids Museo
+    des championnats retenus, à valider un par un). Retourne (alias, championnats)."""
+    brut = _lire_json(chemin or ALIAS_MUSEO, {})
+    brut = brut if isinstance(brut, dict) else {}
+    ch = brut.get("_championnats")
+    championnats = [str(x) for x in ch] if isinstance(ch, list) else []
+    alias = {str(k): gp(v) for k, v in brut.items() if not k.startswith("_") and isinstance(v, str) and v}
+    return alias, championnats
+
+
+def charger_index_epreuves(archives_dir: str) -> Dict[str, Dict[str, Any]]:
+    """`entites/courses/index.json` -> {clé (G.P. normalisé) : entrée}. `cat` = classe ACTUELLE (WT / Pro / .1 / .2 ; None = championnat)."""
+    liste = _lire_json(os.path.join(archives_dir, "entites", "courses", "index.json"), [])
+    return {gp(e["k"]): e for e in liste if isinstance(e, dict) and e.get("k")}
+
+
+def charger_calendriers_cq(archives_dir: str, alias_courses: Dict[str, str]) -> Dict[int, Dict[str, List[Dict[str, Any]]]]:
+    """Calendriers CQ Ranking 1999-2008 : {année : {clé canonique : [entrées]}}. Championnats (NC*, WC*, CC*, XX*), classement final de
+    Coupe du monde et NE exclus ; clé = `cle_museo` puis alias_courses ; `categorie` gardée telle quelle (aucune conversion de classe)."""
+    out: Dict[int, Dict[str, List[Dict[str, Any]]]] = {}
+    dossier = os.path.join(archives_dir, "sources", "cqranking", "calendrier")
+    if not os.path.isdir(dossier):
+        return out
+    for nom in sorted(os.listdir(dossier)):
+        d = _lire_json(os.path.join(dossier, nom), None)
+        if not isinstance(d, dict) or not isinstance(d.get("annee"), int):
+            continue
+        an = d["annee"]
+        for mois in sorted(d.get("mois", {}), key=lambda m: int(m)):
+            for x in d["mois"][mois].get("courses", []):
+                if (x.get("categorie") or "").upper().startswith(CLASSES_CQ_EXCLUES):
+                    continue
+                k = cle_museo(x.get("nom"), x.get("pays"))
+                if k:
+                    out.setdefault(an, {}).setdefault(alias_courses.get(k, k), []).append(x)
+    return out
+
+
+def francais_top10_museo(classement: List[Dict[str, Any]], annee: Optional[int] = None) -> bool:
+    """Un coureur de nationalité FRA (code normalisé par pays.py) classé rang entier <= 10 (général final pour une course par étapes)."""
+    return any(isinstance(l.get("rang"), int) and l["rang"] <= 10 and pays_ligne("museo", l, annee) == "FRA" for l in classement)
+
+
+def francais_top10_cq(lignes: List[Any], annee: Optional[int] = None) -> bool:
+    """Idem sur les `lignes` d'un fichier CQ : [rang, id coureur, nat, équipe, brut, écart_s, points]."""
+    return any(isinstance(l[0], int) and l[0] <= 10 and pays_ligne("cqranking", l, annee) == "FRA" for l in lignes if l)
+
+
+def top10_cq_fichier(archives_dir: str, annee: int, entree: Dict[str, Any]) -> Optional[bool]:
+    """Décision « Français dans le top 10 » d'une entrée du calendrier CQ d'après son fichier `courses/<année>/<id>.json` (pour une course par
+    étapes, l'id du calendrier est celui du classement général). None : fichier absent ou sans lignes (pas encore collecté)."""
+    d = _lire_json(os.path.join(archives_dir, "sources", "cqranking", "courses", str(annee), "%s.json" % entree.get("id")), None)
+    if not isinstance(d, dict) or not d.get("lignes"):
+        return None
+    return francais_top10_cq(d["lignes"], annee)
+
+
+def _borne(c: Dict[str, Any], avant: int, depuis: Optional[int] = None) -> Tuple[int, int]:
+    return max(c["debut"], depuis or 0), min(c["fin"], avant - 1)
+
+
+def construire_selection(courses: Dict[str, Dict[str, Any]], index: Dict[str, Dict[str, Any]],
+                         calendriers: Dict[int, Dict[str, List[Dict[str, Any]]]], top10_cq: Any,
+                         alias_courses: Dict[str, str], alias_museo: Dict[str, str], championnats: List[str],
+                         avant: int = AVANT_DEFAUT) -> Dict[str, Any]:
+    """Règle de sélection (pure, sans réseau ni fichier ; déterministe). Pour chaque course d'homme avec au moins une édition avant `avant` :
+      1. id dans `championnats` (liste manuelle)                      -> `championnat`, toutes les éditions < avant ;
+      2. clé (cle_museo, alias_courses, alias_museo) dans notre index avec une classe actuelle WT/Pro/.1/.2
+                                                                          -> `epreuve_suivie`, toutes les éditions < avant ;
+      3. sinon, 1999-2008 seulement : clé présente au calendrier CQ de l'année Y (Y dans [début, fin] de la course) :
+           pays FRA                      -> `calendrier_uci_france` : édition de l'année Y retenue ;
+           pays étranger                 -> `calendrier_uci_top10`  : édition Y retenue si un FRA est dans le top 10 (décision `retenue` /
+                                            `ecartee_cq` d'après le fichier CQ, 0 requête Museo ; `a_decider` : fichier CQ absent, la page
+                                            Museo sera lue puis la décision mémorisée) ;
+      4. sinon `sans_classe` (niveau inconnu, PAS « amateur ») : non collectée.
+    Aucune classe n'est convertie ni devinée : `classe_actuelle` (index) ou `classe_cq` brute, seulement à titre d'information."""
+    sel_courses: Dict[str, Dict[str, Any]] = {}
+    sans_classe: List[str] = []
+    exclues = {"femmes": 0, "sans_edition": 0, "apres": 0}
+    cles: Dict[str, List[str]] = {}
+    championnats_set = set(championnats)
+    utilises_alias = set()
+    for cid in sorted(courses, key=lambda x: (len(x), x)):
+        c = courses[cid]
+        if c.get("sexe") == "F":
+            exclues["femmes"] += 1
+            continue
+        if "debut" not in c:
+            exclues["sans_edition"] += 1
+            continue
+        if c["debut"] >= avant:
+            exclues["apres"] += 1
+            continue
+        brut = cle_museo(c.get("nom"), c.get("pays"))
+        via = "cle"
+        if cid in alias_museo:
+            ck, via = alias_museo[cid], "alias_museo"
+            utilises_alias.add(cid)
+        elif brut and brut in alias_courses:
+            ck, via = alias_courses[brut], "alias_courses"
+        else:
+            ck = brut
+        if ck:
+            cles.setdefault(ck, []).append(cid)
+        base = {"nom": c.get("nom"), "pays": c.get("pays") or None, "type": c.get("type"), "debut": c["debut"], "fin": c["fin"]}
+        if ck:
+            base["cle"] = ck
+        if cid in championnats_set:
+            sel_courses[cid] = dict(base, raison="championnat")
+            continue
+        e = index.get(ck) if ck else None
+        if e is not None and e.get("cat") in CLASSES_INDEX:
+            sel_courses[cid] = dict(base, raison="epreuve_suivie", via=via, classe_actuelle=e["cat"], classe_uci=e.get("cl"))
+            continue
+        annees: Dict[str, Any] = {}
+        france = pays_normalise(c.get("pays"), "museo") == "FRA" or c.get("pays") == "FRA"
+        if ck:
+            for y in range(max(c["debut"], CQ_ANNEES[0]), min(c["fin"], avant - 1, CQ_ANNEES[1]) + 1):
+                entrees = calendriers.get(y, {}).get(ck)
+                if not entrees:
+                    continue
+                a: Dict[str, Any] = {"classe_cq": sorted({x.get("categorie") for x in entrees if x.get("categorie")})}
+                if france:
+                    a["decision"] = "retenue"
+                else:
+                    r = [top10_cq(y, x) for x in entrees]
+                    if any(v is True for v in r):
+                        a["decision"] = "retenue"
+                    elif all(v is False for v in r):
+                        a["decision"] = "ecartee_cq"
+                    else:
+                        a["decision"] = "a_decider"
+                annees[str(y)] = a
+        if annees:
+            sel_courses[cid] = dict(base, raison="calendrier_uci_france" if france else "calendrier_uci_top10", annees=annees)
+        else:
+            sans_classe.append(cid)
+    index_utiles = {s["cle"] for s in sel_courses.values() if s["raison"] == "epreuve_suivie"}
+    return {
+        "regle": REGLE_SELECTION, "avant": avant, "courses": sel_courses, "sans_classe": sans_classe,
+        "exclues": exclues,
+        "collisions": {k: sorted(v, key=int) for k, v in sorted(cles.items())
+                       if len(v) > 1 and any(i in sel_courses for i in v)},
+        "alias_museo_orphelins": sorted([i for i, k in alias_museo.items() if i not in courses or k not in index], key=int),
+        "championnats_inconnus": sorted([i for i in championnats_set if i not in courses], key=int),
+        "epreuves_sans_course": sorted(k for k, e in index.items() if e.get("cat") in CLASSES_INDEX and k not in index_utiles),
+    }
+
+
+def resumer_selection(sel: Dict[str, Any], taux: float = TAUX_EDITIONS) -> Dict[str, Any]:
+    """Chiffres de la sélection (état-indépendants) : courses et éditions par raison ; requêtes si RIEN n'était encore collecté
+    (1 albo par course, 1 page par édition ; les éditions des règles 1-2 sont estimées par la borne x `taux`)."""
+    r: Dict[str, Any] = {}
+    for raison in RAISONS:
+        cs = {i: s for i, s in sel["courses"].items() if s["raison"] == raison}
+        d: Dict[str, Any] = {"courses": len(cs)}
+        if PHASE_DE[raison] == "index":
+            borne = sum(max(0, min(s["fin"], sel["avant"] - 1) - s["debut"] + 1) for s in cs.values())
+            d["editions_borne"], d["editions_estimees"] = borne, round(borne * taux)
+        else:
+            dec: Dict[str, int] = {}
+            for s in cs.values():
+                for a in s["annees"].values():
+                    dec[a["decision"]] = dec.get(a["decision"], 0) + 1
+            d["editions"] = sum(dec.values())
+            d["decisions"] = dict(sorted(dec.items()))
+        r[raison] = d
+    r["sans_classe"] = len(sel["sans_classe"])
+    return r
+
+
+def _unites_course(s: Dict[str, Any], c: Dict[str, Any], avant: int, depuis: Optional[int]
+                   ) -> List[Tuple[int, str, Optional[Dict[str, Any]]]]:
+    """Unités de travail d'une course sélectionnée : (année, décision de la sélection, édition de l'albo ou None si l'albo n'est pas
+    encore lu). Règles 1-2 : une unité par édition de l'albo (aucune tant que l'albo est inconnu)."""
+    editions = c.get("editions")
+    if PHASE_DE[s["raison"]] == "index":
+        return [(e["annee"], "retenue", e) for e in (editions or []) if e["annee"] < avant and (depuis is None or e["annee"] >= depuis)]
+    out: List[Tuple[int, str, Optional[Dict[str, Any]]]] = []
+    for a, d in sorted(s["annees"].items()):
+        y = int(a)
+        if y >= avant or (depuis is not None and y < depuis):
+            continue
+        if editions is None:
+            out.append((y, d["decision"], None))
+        else:
+            out.extend((y, d["decision"], e) for e in editions if e["annee"] == y)
+    return out
+
+
+def _etat_edition(sortie: str, cid: str, e: Dict[str, Any], decision: str, relire: bool) -> str:
+    """ecrite | ecartee | ecartee_cq | abandon | a_lire | a_decider (une édition `ecartee` par la page Museo n'est jamais redemandée
+    tant que la règle de sélection ne change pas ou sans --relire ; `ecartee_cq` n'est respectée que si CQ décide toujours)."""
+    if os.path.exists(chemin_edition(sortie, cid, e["annee"], e["cod"])) and not relire:
+        return "ecrite"
+    memo = e.get("decision") if e.get("decision_regle") == REGLE_SELECTION else None
+    if not relire and (memo == "ecartee" or (memo == "ecartee_cq" and decision == "ecartee_cq")):
+        return memo
+    if _echecs(e, "echecs") >= ECHECS_MAX and not relire:
+        return "abandon"
+    return decision if decision in ("a_decider", "ecartee_cq") else "a_lire"
+
+
+def restant_selection(sel: Dict[str, Any], courses: Dict[str, Dict[str, Any]], sortie: str, avant: int, depuis: Optional[int] = None,
+                      relire: bool = False, raisons: Optional[Tuple[str, ...]] = None) -> Dict[str, int]:
+    """Travail restant d'après l'état courant (courses.json + fichiers écrits) : `albos_restants`, `editions_a_decider`, `editions_restantes`."""
+    r = {"albos_restants": 0, "editions_a_decider": 0, "editions_restantes": 0}
+    for cid, s in sel["courses"].items():
+        if raisons and s["raison"] not in raisons:
+            continue
+        c = courses.get(cid) or {}
+        us = _unites_course(s, c, avant, depuis)
+        if c.get("editions") is None and (PHASE_DE[s["raison"]] == "index" or any(d != "ecartee_cq" for _, d, _ in us)):
+            if _echecs(c, "albo_echecs") < ECHECS_MAX or relire:
+                r["albos_restants"] += 1
+        for _, d, e in us:
+            if e is None:
+                if d == "retenue":
+                    r["editions_restantes"] += 1
+                elif d == "a_decider":
+                    r["editions_a_decider"] += 1
+                continue
+            st = _etat_edition(sortie, cid, e, d, relire)
+            if st == "a_lire":
+                r["editions_restantes"] += 1
+            elif st == "a_decider":
+                r["editions_a_decider"] += 1
+    return r
+
+
+def estimer_requetes(sel: Dict[str, Any], courses: Dict[str, Dict[str, Any]], sortie: str, taux: float = TAUX_EDITIONS) -> Dict[str, Any]:
+    """Requêtes restantes estimées (hors réseau) : albos manquants + éditions restantes (éditions inconnues des règles 1-2 : borne x taux,
+    moins les fichiers déjà écrits) ; `a_decider` compté au maximum (toutes lues) ; passages de 50 min (~900 pages à 3,2 s)."""
+    avant = sel["avant"]
+    r = restant_selection(sel, courses, sortie, avant)
+    inconnues = 0.0
+    for cid, s in sel["courses"].items():
+        c = courses.get(cid) or {}
+        if PHASE_DE[s["raison"]] == "index" and c.get("editions") is None:
+            ecrites = len(os.listdir(os.path.join(sortie, "editions", cid))) if os.path.isdir(os.path.join(sortie, "editions", cid)) else 0
+            borne = max(0, min(s["fin"], avant - 1) - s["debut"] + 1)
+            inconnues += max(0.0, borne * taux - ecrites)
+    total = r["albos_restants"] + r["editions_restantes"] + round(inconnues)
+    r.update({"editions_index_inconnues_estimees": round(inconnues), "requetes_sans_a_decider": total,
+              "requetes_avec_a_decider_max": total + r["editions_a_decider"]})
+    r["passages_50min"] = round((total + r["editions_a_decider"]) * PAUSE_S / 3000, 1)
+    return r
+
+
+def _ecrire_si_change(chemin: str, obj: Any) -> bool:
+    os.makedirs(os.path.dirname(chemin), exist_ok=True)
+    texte = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
+    try:
+        with open(chemin, encoding="utf-8") as f:
+            if f.read() == texte:
+                return False
+    except OSError:
+        pass
+    tmp = chemin + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(texte)
+    os.replace(tmp, chemin)
+    return True
+
+
+def preparer_selection(sortie: str, archives_dir: str, avant: int = AVANT_DEFAUT, alias_chemin: Optional[str] = None,
+                       ecrire: bool = True) -> Dict[str, Any]:
+    """Hors réseau : lit courses.json (découverte déjà faite), l'index des épreuves, les alias, le calendrier et les fichiers CQ ;
+    écrit `<sortie>/selection.json` (déterministe : aucun horodatage, ordre trié, réécrit seulement s'il change)."""
+    import collector
+    reg = _lire_json(os.path.join(sortie, "courses.json"), {})
+    alias_courses = collector.charger_alias(os.path.join(RACINE, "alias_courses.json"))
+    alias_museo, championnats = charger_alias_museo(alias_chemin)
+    index = charger_index_epreuves(archives_dir)
+    calendriers = charger_calendriers_cq(archives_dir, alias_courses)
+    sel = construire_selection(reg.get("courses", {}), index, calendriers,
+                               lambda y, x: top10_cq_fichier(archives_dir, y, x), alias_courses, alias_museo, championnats, avant)
+    sel["resume"] = resumer_selection(sel)
+    if ecrire:
+        _ecrire_si_change(os.path.join(sortie, "selection.json"), sel)
+    est = estimer_requetes(sel, reg.get("courses", {}), sortie)
+    print("[MUSEO] sélection : " + json.dumps({"resume": sel["resume"], "exclues": sel["exclues"],
+                                                "collisions": len(sel["collisions"]),
+                                                "alias_museo_orphelins": len(sel["alias_museo_orphelins"]),
+                                                "championnats_inconnus": len(sel["championnats_inconnus"]),
+                                                "epreuves_sans_course": len(sel["epreuves_sans_course"]),
+                                                "estimation": est}, ensure_ascii=False, sort_keys=True))
+    return sel
+
+
+def _traiter_edition(sess: Session, sortie: str, cid: str, e: Dict[str, Any], decision: str, relire: bool, etapes: bool,
+                     urls: Dict[str, str], resume: Dict[str, Any]) -> int:
+    """Une édition de la sélection. Retourne le nombre d'étapes restantes (si `etapes`)."""
+    st = _etat_edition(sortie, cid, e, decision, relire)
+    if st == "ecrite":
+        return lire_etapes_edition(sess, chemin_edition(sortie, cid, e["annee"], e["cod"]), resume, urls) if etapes else 0
+    if st == "ecartee_cq":
+        if e.get("decision") != "ecartee_cq" or e.get("decision_regle") != REGLE_SELECTION:
+            e["decision"], e["decision_regle"] = "ecartee_cq", REGLE_SELECTION
+            resume["ecartees_cq"] += 1
+        return 0
+    if st in ("ecartee", "abandon") or sess.epuise():
+        return 0
+    page = sess.page(e["url"])
+    if not page:
+        if sess.absente:
+            _noter_echec(e, "echecs")
+        resume["echecs"] += 1
+        return 0
+    if st == "a_decider":
+        ed = lire_edition(page, {}, e["annee"])
+        if not francais_top10_museo(ed["classement"], e["annee"]):
+            e["decision"], e["decision_regle"] = "ecartee", REGLE_SELECTION
+            if len(ed["classement"]) < 10:
+                e["top10_incomplet"] = True
+                resume["ecartees_incompletes"] += 1
+            resume["ecartees"] += 1
+            return 0
+    ed = ecrire_edition(sess, cid, e, page, resume)
+    e["decision"], e["decision_regle"] = "lue", REGLE_SELECTION
+    memoriser_urls(sortie, page, urls)
+    if etapes and ed.get("etapes"):
+        return lire_etapes_edition(sess, chemin_edition(sortie, cid, e["annee"], e["cod"]), resume, urls)
+    return 0
+
+
+def lancer_selection(sortie: str, archives_dir: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
+                     listes: Tuple[str, ...] = LISTES_DEFAUT, relire: bool = False, budget_min: float = 0.0, max_requetes: int = 0,
+                     decouverte_seule: bool = False, etapes: bool = False, fiches: bool = True, equipes: bool = False,
+                     listes_coureurs: Tuple[str, ...] = (), raisons: Optional[Tuple[str, ...]] = None) -> Dict[str, Any]:
+    """Collecte suivant `selection.json` (recalculée en début de passage, hors réseau). Ordre : découverte, puis phase `index` (albos des
+    courses des règles 1-2, puis leurs éditions, années décroissantes), puis phase `calendrier` (règles 3-4, années décroissantes ; albo
+    lu au besoin ; décision `a_decider` prise sur la page Museo lue), listes de coureurs, fiches. Étapes NON lues par défaut."""
+    sess = Session(sortie, budget_min, max_requetes)
+    reg = _lire_json(os.path.join(sortie, "courses.json"), {"source": "museociclismo.it"})
+    courses = reg.setdefault("courses", {})
+    resume: Dict[str, Any] = {"pages_listes": 0, "lignes_liste_illisibles": 0, "albos_lus": 0, "albos_sans_edition": 0,
+                              "editions_lues": 0, "etapes_lues": 0, "echecs": 0, "profondeurs": [], "codes_pays_inconnus": {},
+                              "pages_coureurs": 0, "listes_naissances": {}, "fiches_naissances": {},
+                              "formats_date_inconnus": [], "naissances_discordantes": 0,
+                              "ecartees": 0, "ecartees_incompletes": 0, "ecartees_cq": 0, "annees_sans_edition": 0}
+    chemin_reg = os.path.join(sortie, "courses.json")
+    pages_ok = decouvrir_courses(sess, listes, reg, resume)
+    _ecrire_json(chemin_reg, reg, compact=True)
+    sel = preparer_selection(sortie, archives_dir, avant)
+    resume["selection"] = sel["resume"]
+    urls = urls_fiches(sortie)
+    etapes_restantes = 0
+    depuis_ecriture = 0
+    try:
+        if not decouverte_seule:
+            for phase in ("index", "calendrier"):
+                cids = [i for i, s in sel["courses"].items() if PHASE_DE[s["raison"]] == phase and i in courses
+                        and (not raisons or s["raison"] in raisons)]
+                if phase == "index":
+                    for cid in sorted(cids, key=int):
+                        if courses[cid].get("editions") is None and (_echecs(courses[cid], "albo_echecs") < ECHECS_MAX or relire) \
+                                and not sess.epuise() and not lire_albo_course(sess, cid, courses[cid], resume):
+                            resume["echecs"] += 1
+                        depuis_ecriture += 1
+                        if depuis_ecriture >= 50:
+                            _ecrire_json(chemin_reg, reg, compact=True)
+                            depuis_ecriture = 0
+                        sess.journal("phase index : albos, %d lus" % resume["albos_lus"])
+                unites = []
+                for cid in cids:
+                    for annee, d, e in _unites_course(sel["courses"][cid], courses[cid], avant, depuis):
+                        unites.append((-annee, int(cid), cid, annee, d, e))
+                unites.sort(key=lambda u: u[:2])
+                for _, _, cid, annee, d, e in unites:
+                    c = courses[cid]
+                    if e is None:                    # albo encore inconnu (phase calendrier) : lu seulement s'il y a quelque chose à lire
+                        if c.get("editions") is None:
+                            if d == "ecartee_cq" or sess.epuise() or (_echecs(c, "albo_echecs") >= ECHECS_MAX and not relire):
+                                continue
+                            if not lire_albo_course(sess, cid, c, resume):
+                                resume["echecs"] += 1
+                                continue
+                        eds = [x for x in c["editions"] if x["annee"] == annee]
+                        if not eds:
+                            resume["annees_sans_edition"] += 1
+                        for x in eds:
+                            etapes_restantes += _traiter_edition(sess, sortie, cid, x, d, relire, etapes, urls, resume)
+                    else:
+                        etapes_restantes += _traiter_edition(sess, sortie, cid, e, d, relire, etapes, urls, resume)
+                    depuis_ecriture += 1
+                    if depuis_ecriture >= 50:
+                        _ecrire_json(chemin_reg, reg, compact=True)
+                        _ecrire_json(os.path.join(sortie, "urls_coureurs.json"), urls, compact=True)
+                        depuis_ecriture = 0
+                    sess.journal("phase %s : %d éditions lues, %d écartées" % (phase, resume["editions_lues"],
+                                                                                resume["ecartees"] + resume["ecartees_cq"]))
+    finally:
+        _ecrire_json(chemin_reg, reg, compact=True)
+        _ecrire_json(os.path.join(sortie, "urls_coureurs.json"), urls, compact=True)
+    rest = restant_selection(sel, courses, sortie, avant, depuis, relire)
+    coureurs_restants = 0
+    if not decouverte_seule:
+        if listes_coureurs:
+            lire_listes_coureurs(sess, sortie, listes_coureurs, resume)
+        if fiches:
+            coureurs_restants = lire_fiches(sess, sortie, equipes, relire, resume)
+    editions_restantes = rest["editions_restantes"] + etapes_restantes
+    termine = pages_ok and rest["albos_restants"] == 0 and editions_restantes == 0 and rest["editions_a_decider"] == 0 \
+        and coureurs_restants == 0 and not sess.abandon and not decouverte_seule
+    if not pages_ok:
+        phase_etat = "decouverte"
+    elif any(restant_selection(sel, courses, sortie, avant, depuis, relire, (r,)) != {"albos_restants": 0, "editions_a_decider": 0,
+                                                                                        "editions_restantes": 0}
+             for r in ("championnat", "epreuve_suivie")) and not raisons:
+        phase_etat = "index"
+    elif rest["albos_restants"] or editions_restantes or rest["editions_a_decider"]:
+        phase_etat = "calendrier"
+    elif coureurs_restants:
+        phase_etat = "fiches"
+    else:
+        phase_etat = "termine" if termine else "fin_de_passage"
+    _ecrire_json(os.path.join(sortie, "etat.json"),
+                 {"termine": bool(termine), "albos_restants": rest["albos_restants"],
+                  "editions_a_decider": rest["editions_a_decider"], "editions_restantes": editions_restantes,
+                  "coureurs_restants": coureurs_restants, "phase": phase_etat})
+    prof = sorted(resume.pop("profondeurs"))
+    if prof:
+        resume["profondeur_mediane"] = prof[len(prof) // 2]
+        resume["profondeur_min"], resume["profondeur_max"] = prof[0], prof[-1]
+    resume["requetes"] = sess.requetes
+    resume["echecs_reseau"] = sess.echecs
+    resume["abandon"] = sess.abandon
+    print("[MUSEO] synthèse : " + json.dumps(resume, ensure_ascii=False, sort_keys=True))
+    return resume
+
+
+# --------------------------------------------------------------------------------------------------
 # Tests (sans réseau, pages réelles allégées)
 # --------------------------------------------------------------------------------------------------
 
@@ -1132,6 +1607,91 @@ def _tests() -> None:
         sp.statut_faux = 404
         lire_etapes_edition(sp, os.path.join(d, "ed.json"), {"etapes_lues": 0})
         assert _lire_json(os.path.join(d, "ed.json"), {})["etapes"][0]["echecs"] == 1       # 404 : règle neuve, 1 échec
+    # --- sélection élargie : clés, règles 1 à 5, décisions mémorisées (aucune requête) ---
+    assert gp("gp de plouay|FRA") == "gp de plouay|FRA" and cle_museo("G.P. Ouest-France", "FRA") == "gp ouest france|FRA"
+    assert cle_museo("Tour de France 1996", "FRA") == "tour de france|FRA" and cle_museo("X", "") is None
+    assert francais_top10_museo([{"rang": 11, "nat": "FRA", "nat_site": "FRA"}, {"rang": 3, "nat": "ITA", "nat_site": "ITA"}]) is False
+    assert francais_top10_museo([{"rang": 1, "nat": "ITA", "nat_site": "ITA"}, {"rang": 10, "nat": "FRA", "nat_site": "FRA"}]) is True
+    assert francais_top10_cq([[11, 1, "FRA", "X", "", 0, 1], [2, 2, "BEL", "X", "", 0, 1]]) is False
+    assert francais_top10_cq([[10, 1, "FRA", "X", "", 0, 1]]) is True
+    cs = {"1": {"nom": "Milano-Sanremo", "pays": "ITA", "debut": 1907, "fin": 2026, "type": "Linea", "sexe": "M"},
+          "2": {"nom": "G.P. Foo", "pays": "FRA", "debut": 1999, "fin": 2005, "type": "Linea", "sexe": "M"},
+          "3": {"nom": "Trofeo Bar", "pays": "ITA", "debut": 1999, "fin": 2008, "type": "Linea", "sexe": "M"},
+          "4": {"nom": "Locale", "pays": "FRA", "debut": 1960, "fin": 1980, "type": "Linea", "sexe": "M"},
+          "5": {"nom": "Dames", "pays": "ITA", "debut": 1999, "fin": 2008, "type": "Linea", "sexe": "F"},
+          "6": {"nom": "Championnat X", "pays": "FRA", "debut": 1907, "fin": 2026, "type": "Linea", "sexe": "M"},
+          "7": {"nom": "Ancien nom", "pays": "BEL", "debut": 1950, "fin": 2008, "type": "Linea", "sexe": "M"},
+          "8": {"nom": "Futur", "pays": "BEL", "debut": 2010, "fin": 2012, "type": "Linea", "sexe": "M"},
+          "9": {"nom": "Sans date", "pays": "BEL", "type": "Linea", "sexe": "M"}}
+    idx = {"milano sanremo|ITA": {"cat": "WT", "cl": "1.UWT"}, "nouveau nom|BEL": {"cat": "Pro", "cl": "1.Pro"},
+           "championnat x|FRA": {"cat": None, "cl": "CN"}}
+    cal = {2003: {"gp foo|FRA": [{"id": 10, "categorie": "1.3"}], "trofeo bar|ITA": [{"id": 11, "categorie": "1.2"}]},
+           2004: {"trofeo bar|ITA": [{"id": 12, "categorie": "1.1"}]}, 2005: {"trofeo bar|ITA": [{"id": 13, "categorie": "1.1"}]},
+           2007: {"trofeo bar|ITA": [{"id": 14, "categorie": "1.HC"}]}, 2000: {"locale|FRA": [{"id": 15, "categorie": "CDM"}]}}
+    t10 = {10: None, 11: True, 12: False, 13: None, 14: None}
+    sel = construire_selection(cs, idx, cal, lambda y, x: t10[x["id"]], {}, {"7": "nouveau nom|BEL"}, ["6"], 2009)
+    r = {i: s["raison"] for i, s in sel["courses"].items()}
+    assert r == {"1": "epreuve_suivie", "2": "calendrier_uci_france", "3": "calendrier_uci_top10", "6": "championnat",
+                 "7": "epreuve_suivie"}, r
+    assert sel["courses"]["1"]["classe_actuelle"] == "WT" and sel["courses"]["7"]["via"] == "alias_museo"
+    assert sel["courses"]["2"]["annees"] == {"2003": {"classe_cq": ["1.3"], "decision": "retenue"}}
+    assert {a: d["decision"] for a, d in sel["courses"]["3"]["annees"].items()} == {
+        "2003": "retenue", "2004": "ecartee_cq", "2005": "a_decider", "2007": "a_decider"}
+    assert sel["courses"]["3"]["annees"]["2007"]["classe_cq"] == ["1.HC"]       # classe CQ brute, jamais convertie
+    assert sel["sans_classe"] == ["4"] and sel["exclues"] == {"femmes": 1, "sans_edition": 1, "apres": 1}
+    assert sel["alias_museo_orphelins"] == [] and sel["championnats_inconnus"] == []
+    assert construire_selection(cs, idx, cal, lambda y, x: t10[x["id"]], {}, {"7": "inconnu|BEL"}, ["99"], 2009)["alias_museo_orphelins"] == ["7"]
+    # avant 1999 : règles 1 et 2 seulement (course 3 hors calendrier CQ avant 1999 : aucune année)
+    assert construire_selection({"3": dict(cs["3"], debut=1990, fin=1998)}, idx, cal, lambda y, x: True, {}, {}, [], 2009)["sans_classe"] == ["3"]
+    sel2 = construire_selection(cs, idx, cal, lambda y, x: t10[x["id"]], {}, {"7": "nouveau nom|BEL"}, ["6"], 2009)
+    assert json.dumps(sel, sort_keys=True) == json.dumps(sel2, sort_keys=True)          # déterminisme
+    rs = resumer_selection(sel)
+    assert rs["calendrier_uci_top10"]["decisions"] == {"a_decider": 2, "ecartee_cq": 1, "retenue": 1} and rs["sans_classe"] == 1
+    assert rs["epreuve_suivie"]["editions_borne"] == (2008 - 1907 + 1) + (2008 - 1950 + 1)
+    # travail restant et décisions mémorisées
+    with tempfile.TemporaryDirectory() as d1:
+        courses = {i: dict(c) for i, c in cs.items()}
+        assert restant_selection(sel, courses, d1, 2009) == {"albos_restants": 5, "editions_a_decider": 2, "editions_restantes": 2}
+        ed = lambda a, **k: dict({"annee": a, "cod": str(a), "url": "/e/%d" % a}, **k)
+        courses["3"]["editions"] = [ed(2003), ed(2004), ed(2005), ed(2007, decision="ecartee", decision_regle=REGLE_SELECTION)]
+        assert restant_selection(sel, courses, d1, 2009, None, False, ("calendrier_uci_top10",)) == {
+            "albos_restants": 0, "editions_a_decider": 1, "editions_restantes": 1}                 # 2004 ecartee_cq : pas de travail
+        assert restant_selection(sel, courses, d1, 2009, None, True, ("calendrier_uci_top10",))["editions_a_decider"] == 2   # --relire
+        e04 = courses["3"]["editions"][1]
+        class Fausse(Session):
+            def page(self, rel, mettre_en_cache=False):
+                self.requetes += 1
+                p = _fixture("edition_milano_sanremo_1996.html")
+                return p.replace("(FRA)", "(BEL)") if "e/2005" in rel else p
+        fs = Fausse(d1)
+        res = {"editions_lues": 0, "etapes_lues": 0, "profondeurs": [], "codes_pays_inconnus": {}, "ecartees": 0, "ecartees_incompletes": 0,
+               "ecartees_cq": 0, "echecs": 0}
+        # a_decider : page sans Français dans son top 10 (FRA remplacé par BEL) -> écartée, rien écrit, mémorisée, jamais redemandée
+        e05 = courses["3"]["editions"][2]
+        _traiter_edition(fs, d1, "3", e05, "a_decider", False, False, {}, res)
+        assert e05["decision"] == "ecartee" and res["ecartees"] == 1 and fs.requetes == 1 and not os.path.exists(chemin_edition(d1, "3", 2005, "2005"))
+        _traiter_edition(fs, d1, "3", e05, "a_decider", False, False, {}, res)
+        assert fs.requetes == 1                                                                    # pas de seconde requête
+        # ecartee_cq : décision mémorisée sans requête ; retenue : page écrite, décision `lue`
+        _traiter_edition(fs, d1, "3", e04, "ecartee_cq", False, False, {}, res)
+        assert e04["decision"] == "ecartee_cq" and fs.requetes == 1 and res["ecartees_cq"] == 1
+        e03 = courses["3"]["editions"][0]
+        e03["cod"] = "832"                       # cod de la page de la fixture : le fichier écrit est reconnu ensuite
+        _traiter_edition(fs, d1, "3", e03, "retenue", False, False, {}, res)
+        assert e03["decision"] == "lue" and fs.requetes == 2 and os.path.exists(os.path.join(d1, "editions", "3", "2003.json")) and res["editions_lues"] == 1
+        _traiter_edition(fs, d1, "3", e03, "retenue", False, False, {}, res)
+        assert fs.requetes == 2
+        # ancienne règle : une décision `ecartee` d'une autre version est refaite
+        e05["decision_regle"] = REGLE_SELECTION - 1
+        assert _etat_edition(d1, "3", e05, "a_decider", False) == "a_decider"
+        # a_decider avec un Français 9e (Milano-Sanremo 1996) : page écrite, décision `lue`
+        e07 = courses["3"]["editions"][3]
+        e07.pop("decision"), e07.pop("decision_regle")
+        _traiter_edition(fs, d1, "3", e07, "a_decider", False, False, {}, res)
+        assert e07["decision"] == "lue" and os.path.exists(os.path.join(d1, "editions", "3", "2007.json"))
+        # preparer_selection : fichiers lus, selection.json écrit une fois (réécriture identique = False)
+        assert _ecrire_si_change(os.path.join(d1, "s.json"), sel) and not _ecrire_si_change(os.path.join(d1, "s.json"), sel)
+    assert charger_alias_museo(os.path.join(RACINE, "alias_museo.json")) == ({}, [])
     print("[MUSEO] tests : OK")
 
 
@@ -1153,6 +1713,11 @@ def main() -> int:
     ap.add_argument("--sans-etapes", action="store_true", help="ne lit pas les classements d'étape")
     ap.add_argument("--sans-fiches", action="store_true", help="ne lit pas les fiches des coureurs")
     ap.add_argument("--equipes", action="store_true", help="lit aussi la fiche des coureurs connus par une liste (équipes par année)")
+    ap.add_argument("--preparer-selection", action="store_true", help="HORS RÉSEAU : écrit selection.json (règles de sélection élargie, raison de chaque course / édition) et affiche les chiffres")
+    ap.add_argument("--selection", action="store_true", help="collecte suivant selection.json (recalculée en début de passage) au lieu de --suivies ; étapes non lues par défaut")
+    ap.add_argument("--archives", default=ARCHIVES_DIR, help="dossier des archives (entites/courses/index.json, sources/cqranking) pour la sélection")
+    ap.add_argument("--etapes", action="store_true", help="avec --selection : lit aussi les classements d'étape (non lus par défaut)")
+    ap.add_argument("--raisons", default="", help="avec --selection : sous-ensemble de " + ",".join(RAISONS))
     ap.add_argument("--listes-coureurs", default="", help="parcourt ces listes de coureurs (professionisti,dilettanti…) : dates de naissance")
     a = ap.parse_args()
     if a.test:
@@ -1160,6 +1725,14 @@ def main() -> int:
         return 0
     listes = tuple(x.strip() for x in a.listes.split(",") if x.strip() in LISTES_COURSES) or LISTES_DEFAUT
     lc = tuple(x.strip() for x in a.listes_coureurs.split(",") if x.strip() in LISTES_COUREURS)
+    if a.preparer_selection:
+        preparer_selection(a.sortie, a.archives, a.avant)
+        return 0
+    if a.selection:
+        lancer_selection(a.sortie, a.archives, a.avant, a.depuis, listes, a.relire, a.budget_min, a.max_requetes, a.decouverte_seule,
+                         a.etapes and not a.sans_etapes, not a.sans_fiches, a.equipes, lc,
+                         tuple(x.strip() for x in a.raisons.split(",") if x.strip() in RAISONS) or None)
+        return 0
     lancer(a.sortie, a.avant, a.depuis, a.courses.split(","), a.pays.split(","), a.suivies, listes, a.relire,
            a.budget_min, a.max_requetes, a.decouverte_seule, not a.sans_etapes, not a.sans_fiches, a.equipes, lc, a.cles)
     return 0

@@ -167,3 +167,76 @@ les étapes restantes le sont une fois, un album ou une édition en échec est a
 >   **écart vide = ambigu, jamais interprété** (vide en tête ET en fin de tableau sur les étapes du Tour 1996). Pas d'équipe, de dossard ni de statut dans les classements. Concordance
 >   Wikidata : 20/20 vainqueurs, 17/20 podiums (3 écarts d'orthographe), 31/31 dates de naissance. Sortie `ARCHIVES_DIR/sources/museo/` (`courses.json`, `editions/<id>/<année>.json`,
 >   `coureurs.json`, `urls_coureurs.json`, `etat.json`, `cache/`) ; `museo.yml` du dépôt d'archives à écrire sur le modèle de `thesports.yml`. Tests : `python museo.py --test`.
+
+## Sélection élargie (18/11/2026)
+
+Décision du propriétaire : élargir la collecte au-delà des épreuves suivies, en suivant les règles du projet. Règles (`museo.construire_selection`, `--preparer-selection` hors réseau, `--selection`) :
+
+1. id dans `alias_museo.json` `_championnats` (liste manuelle, vide au départ) -> `championnat`, toutes les éditions < 2009 ;
+2. clé d'épreuve (`cle_edition` + « G.P. » -> « GP » + `alias_courses.json` + `alias_museo.json` `{id Museo: clé d'épreuve}`) dans `entites/courses/index.json` avec une classe actuelle WT / Pro / .1 / .2 -> `epreuve_suivie`, toutes les éditions < 2009 ;
+3. hors index, 1999-2008 seulement, course présente au calendrier CQ Ranking de l'année (clé exacte, championnats NC / WC / CC / XX exclus) : en France -> `calendrier_uci_france` (édition de l'année retenue) ;
+4. à l'étranger -> `calendrier_uci_top10` : édition retenue si un FRA (pays normalisés par `pays.py`) est dans le top 10 du général final / de la course, d'après le fichier CQ (0 requête Museo) sinon d'après la page Museo lue ; décision mémorisée par édition (`lue`, `ecartee`, `ecartee_cq`) : aucune page n'est redemandée ;
+5. le reste : `sans_classe` (niveau inconnu, pas « amateur »), non collecté. Avant 1999 : règles 1 et 2 seulement. Aucune classe CQ n'est convertie (PT, GT, CDM, XPT : seule la présence au calendrier compte).
+
+Chiffres de `selection.json` sur les données du 18/11/2026 (alias_museo vide) : 209 courses `epreuve_suivie` (~8057 éditions estimées, borne 9156), 0 `championnat`, 33 `calendrier_uci_france` (130 éditions), 241 `calendrier_uci_top10` (1041 éditions : a_decider 722, ecartee_cq 282, retenue 37), 4878 `sans_classe`.
+
+### Propositions d'alias (à valider une à une ; `alias_museo.json` reste vide)
+
+Produit par `tools/essais/proposer_alias_museo.py` (une page d'albo par candidate ; JSON complet : `museo_alias_proposes.json`). `preuve` = vainqueurs Museo concordants sur >= 2 années 2005-2008 avec une référence liée à l'épreuve par sa clé (Wikidata, calendrier CQ : type `cle`) ou, à défaut, avec le vainqueur CQ de même date et même pays lorsque le nom est aussi très proche (type `date_pays_cq`).
+
+| Preuve | Id Museo | Course Museo (années) | Clé d'épreuve proposée | Classe | Années concordantes | Type |
+|---|---|---|---|---|---|---|
+| oui | 2751 | Clasica San Sebastian (1981-2026) | `donostia san sebastian klasikoa\|ESP` (+ `clasica ciclista san sebastian san sebastian\|ESP`) | WT | 2005, 2006, 2007, 2008 | cle |
+| oui | 41416 | De Vlaamse Pijl Harelbeke (1968-2012) | `e3 harelbeke\|BEL` (+ `e3 prijs vlaanderen harelbeke\|BEL`, `record bank e3 harelbeke\|BEL`) | WT | 2006, 2007, 2008 | date_pays_cq |
+| oui | 9954 | Dwars door Vlaanderen (1945-2026) | `dwars door vlaanderen a travers la flandre\|BEL` (+ `dwars door vlaanderen a travers les flandres\|BEL`) | WT | 2006, 2007, 2008 | date_pays_cq |
+| oui | 2820 | In Flanders Fields (1934-2026) | `gent wevelgem in flanders fields\|BEL` | WT | 2005, 2006, 2007, 2008 | cle |
+| oui | 9714 | Brabantse Pijl (1961-2025) | `de brabantse pijl la fleche brabanconne\|BEL` | Pro | 2006, 2007, 2008 | date_pays_cq |
+| oui | 9787 | Circuit Franco-Belge - Eurometropole Tour (1924-2025) | `circuit franco belge\|BEL` | Pro | 2007, 2008 | cle |
+| oui | 12802 | Danmark Rundt (1985-2022) | `post danmark rundt tour of denmark\|DEN` | Pro | 2006, 2007, 2008 | cle |
+| oui | 11337 | G.P. Kanton Aargau Gippingen (1964-2024) | `gp du canton d argovie gippingen\|SUI` (+ `gp du canton d argovie\|SUI`) | Pro | 2006, 2007, 2008 | date_pays_cq |
+| oui | 11440 | G.P. Miguel Indurain (1999-2026) | `gran premio miguel indurain\|ESP` | Pro | 2006, 2007, 2008 | date_pays_cq |
+| oui | 22962 | G.P. de Wallonie (1935-2025) | `grand prix de wallonie\|BEL` | Pro | 2007, 2008 | date_pays_cq |
+| oui | 2584 | G.P. du Morbihan (1990-2026) | `grand prix du morbihan\|FRA` | Pro | 2006, 2007, 2008 | cle |
+| oui | 31649 | Munsterland Giro (2000-2025) | `sparkassen munsterland giro\|GER` | Pro | 2007, 2008 | date_pays_cq |
+| non | 92772 | Eschborn-Frankfurt U23 (1998-2024) | `rund um den finanzplatz eschborn frankfurt\|GER` | WT | 2008 | - |
+| non | 92726 | G.P. Copenhagen Classic (2008-2009) | `copenhagen sprint\|DEN` | WT | 2008 | - |
+| non | 110260 | G.P. de Plouay Elite Open (2002-2026) | `gp ouest france plouay\|FRA` | WT | - | - |
+| non | 1488 | Giro di Romagna (1910-2025) | `giro di lombardia\|ITA` | WT | 2007, 2008 | - |
+| non | 63010 | Lombardia Tour (2006-2008) | `giro di lombardia\|ITA` | WT | 2008 | - |
+| non | 61576 | Omloop Het Nieuwsblad voor Beloften & elite z-c (1950-2018) | `omloop het nieuwsblad elite\|BEL` | WT | - | - |
+| non | 55936 | Tour of California (2006-2019) | `amgen tour of california\|USA` | WT | - | - |
+| non | 22529 | Vuelta Ciclista a Navarra (1941-2008) | `la vuelta ciclista a espana\|ESP` | WT | - | - |
+| non | 195493 | Vuelta Ciclista a Salamanca (1935-2019) | `la vuelta ciclista a espana\|ESP` | WT | - | - |
+| non | 2535 | 4 Jours de Dunkerque (1955-2025) | `4 jours de dunkerque grand prix des hauts de france\|FRA` | Pro | - | - |
+| non | 92812 | Ardèche Classic (2001-2026) | `faun ardeche classic\|FRA` | Pro | 2008 | - |
+| non | 63376 | Brussel-Opwijk (1951-2006) | `parijs brusssel paris bruxelles\|BEL` | Pro | - | - |
+| non | 62014 | Bruxelles-Zepperen (1975-2020) | `parijs brusssel paris bruxelles\|BEL` | Pro | - | - |
+| non | 184559 | Circuit du Morbihan (1975-2023) | `grand prix du morbihan\|FRA` | Pro | - | - |
+| non | 1303 | Coppa Sabatini (1952-2025) | `coppa sabatini gran premio citta di peccioli\|ITA` | Pro | 2007 | - |
+| non | 2956 | G.P. Industria e Artigianato - Larciano (1977-2025) | `gp industria artigianato\|ITA` | Pro | 2006, 2007, 2008 | - |
+| non | 97227 | Giro dei Tre Ponti (1931-2014) | `giro del trentino\|ITA` | Pro | - | - |
+| non | 60089 | Giro del Casentino (1910-2022) | `giro del trentino\|ITA` | Pro | 2006 | - |
+| non | 11816 | Japan Cup (1992-2024) | `japan cup cycle road race\|JPN` | Pro | 2007, 2008 | - |
+| non | 64024 | Paris-Tours espoirs (1943-2025) | `paris tours elite\|FRA` | Pro | 2007, 2008 | - |
+| non | 8157 | Philadelphia Cycling Classic (1985-2026) | `philadelphia international championship\|USA` | Pro | 2007, 2008 | - |
+| non | 68439 | Presidential Tour of Turkey (1965-2026) | `56 presidential cycling tour of turkey\|TUR` | Pro | - | - |
+| non | 8323 | Tour de Langkawi (1996-2025) | `petronas le tour de langkawi\|MAS` | Pro | - | - |
+| non | 6266 | Tour de Luxembourg (1935-2025) | `skoda tour de luxembourg\|LUX` | Pro | - | - |
+| non | 13191 | Volta a Portugal (1927-2026) | `volta a portugal em bicicleta edp\|POR` | Pro | - | - |
+| non | 52789 | Vuelta a San Juan (1982-2023) | `vuelta a san juan internacional\|ARG` | Pro | - | - |
+
+Remarques : plusieurs clés d'index peuvent désigner la même course Museo (changements de nom) : `alias_museo.json` n'en porte qu'une, les autres dénominations restent des épreuves distinctes. Museo 41416 (De Vlaamse Pijl Harelbeke) concorde avec les vainqueurs d'E3 mais Museo 4533 (E3 Saxo Classic) est déjà sélectionnée par clé : doublon probable, `collisions` de selection.json à examiner avant de valider. Sans candidate (57 épreuves, dont la plupart sont postérieures à 2008) : liste `epreuves_sans_candidate` du JSON.
+
+### Championnats (clé `_championnats`, à valider)
+
+| Preuve | Id Museo | Course Museo | Années concordantes (CQ, classe officielle) |
+|---|---|---|---|
+| oui | 2634 | World Championship Road Race (1927-2025) | 2007, 2008 |
+| non | 34548 | Olympic Games Road Race (1896-2021) | - |
+| oui | 20739 | Road National Championship - France (1907-2026) | 2006, 2007, 2008 |
+| non | 180623 | African Continental Championship - Road Race (2005-2024) | 2008 |
+| oui | 176524 | Asian Championship Road Race (1999-2019) | 2007, 2008 |
+| non | 233912 | Oceania Championship Road Race (1995-2026) | - |
+| oui | 58073 | Pan American Championship Road Race (1974-2026) | 2006, 2008 |
+
+Championnats : preuve par la classe CQ officielle (WCRR monde, NC France, CC continentaux) à la même date. Jeux olympiques : une seule édition 2005-2008 (2008), donc pas de preuve possible ; Océanie : aucune édition datée 2005-2008 trouvée ; Afrique : une seule année concordante. Les championnats nationaux d'autres pays ne sont pas proposés (règle du projet : seulement en France). Le championnat d'Europe élite sur route n'existe pas avant 2016 (aucune édition < 2009).
