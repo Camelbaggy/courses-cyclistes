@@ -46,7 +46,7 @@
    "nom": "Tchécoslovaquie",
    "periode": [1918, 1992],
    "successeurs": ["CZE", "SVK"],
-   "note": "Code CIO « TCH ». Le drapeau tchécoslovaque (1920-1992) est le même dessin que le drapeau tchèque : « Flag of Czechoslovakia.svg » est une redirection Commons vers ce fichier. Museo et Mémoire du Cyclisme réutilisent « TCH » / « Tch » pour des coureurs tchèques après 1992 : ces lignes (année > 1992) ne sont pas converties (voir `conversions`, `jusqu_a`).",
+   "note": "Code CIO « TCH ». Le drapeau tchécoslovaque (1920-1992) est le même dessin que le drapeau tchèque : « Flag of Czechoslovakia.svg » est une redirection Commons vers ce fichier. Museo et Mémoire du Cyclisme réutilisent « TCH » / « Tch » pour des coureurs tchèques après 1992 : ces lignes (année > 1992) sont converties en CZE (décision du propriétaire du 18/11/2026 : erreur de la source ; `conversions`, `jusqu_a` / `apres`).",
    "type": "disparu",
    "drapeau": {
     "fichier": "Flag of the Czech Republic.svg",
@@ -315,7 +315,8 @@
     "Svq": "SVK",
     "Tch": {
      "code": "TCH",
-     "jusqu_a": 1992
+     "jusqu_a": 1992,
+     "apres": "CZE"
     },
     "Tha": "THA",
     "Tun": "TUN",
@@ -345,7 +346,8 @@
     "RFA": "FRG",
     "TCH": {
      "code": "TCH",
-     "jusqu_a": 1992
+     "jusqu_a": 1992,
+     "apres": "CZE"
     }
    }
   },

@@ -1077,7 +1077,7 @@ def _tests() -> None:
     lg = lire_lignes("<table>" + pl + "</table>", st, 1992)
     assert [(l["nat_site"], l.get("nat")) for l in lg] == [("RFA", "FRG"), ("CSI", "EUN"), ("TCH", "TCH"), ("APA", None)], lg
     assert st["codes_pays_inconnus"] == {"APA": 1}
-    assert lire_lignes("<table>" + pl + "</table>", {}, 2000)[2].get("nat") is None
+    assert lire_lignes("<table>" + pl + "</table>", {}, 2000)[2].get("nat") == "CZE"   # Tchèque étiqueté TCH après 1992 : CZE (décision du 18/11/2026)
     # clés des courses retenues : liste ou dictionnaire
     import tempfile as _t
     with _t.TemporaryDirectory() as d0:
