@@ -3,6 +3,31 @@
 Dernière mise à jour : 18 novembre 2026, fin de session. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
 
+## Session du 18/11 au soir (à lire en premier, puis le point de reprise ci-dessous)
+
+Fait (PR #84 à #86, fusionnées) :
+- **Point 1 fait** : `veille_update.yml` (horaire à :52) relance `update.yml` si aucun passage depuis 50 min entre 13 h et 23 h UTC (3 h
+  entre 7 h et 9 h) ; essai réel le 18/11 à 18 h 15 : passage sauté détecté (138 min) et relancé.
+- **Vainqueur d'une course par étapes** lu dans le général final (Vuelta 2011 : vide -> Froome ; De Panne 2016 : Kristoff -> Westra) ;
+  **ordre des demi-étapes** (3a avant 3b, 27 archives) ; révision LOCALE des saisons complètes à chaque passage d'archives
+  (`reviser_vainqueurs_saison`, idempotente, ~3 s) : publiée au prochain passage d'archives (vérifier la Vuelta 2011 dans `#courses/2011`).
+- **Demi-étapes** : identifiant `3a` / `3b` (`uci.ref_etape`) pour la notification ntfy et les routes `#course/<id>/3b`.
+- **Échecs des fiches des sources d'avant 2009** : les 2 320 fiches coureurs the-sports.org avaient été abandonnées pendant la panne 503
+  (3 échecs en 3 passages) ; une panne n'est plus un échec, un échec par jour au plus, entrées anciennes re-tentées (`REGLE_ECHECS = 2`,
+  aussi MDC : 673 `introuvables` re-tentés, CQ Ranking et Museo par prévention).
+
+En cours / suite :
+- **Passage Wikidata relancé à la main (18/11 18 h 14 UTC)** : le cache ne contenait aucune équipe 2009-2011 (dernier passage avant leur
+  arrivée). Ensuite : refaire les propositions d'équipes 2009-2010 par continuité d'effectif sur ce qui reste sans lignée (1re version, avant
+  ce passage : 42 propositions chaînées via 2011, à refaire ; script `prop.py` à recopier dans `tools/` si réutilisé), puis soumettre au
+  propriétaire. Cas notés : `fdj-2010` et `francaise-des-jeux-2010` (même équipe, deux libellés), Rabobank 2010 à 49 %, HTC-Columbia sans suite.
+- **Inventaire des 4 sources (18/11, collectes partielles)** : courses rattachées par clé exacte : the-sports 124/152 (après conversion des
+  codes pays du site SPA->ESP, SWI->SUI, MAL->MAS), Museo 296, CQ Ranking 151/1 778 clés, MDC 12/2 261 (815 courses sans pays) ; union = 374
+  de nos 892 épreuves (113 des 183 WT/Pro). Échecs surtout dus aux anciens noms (Henninger Turm, Het Volk, championnats nationaux) : alias à
+  proposer. Coureurs CQ Ranking : 68 % rattachés par nom + date ; 155 de plus avec même date + nationalité mais prénom différent (Greg/Gregory
+  Henderson) à soumettre. Vainqueurs 1999-2008 : aucun vrai désaccord entre sources (écarts de graphie seulement). Anomalies : the-sports `nat`
+  vide quand `nat_site` est rempli (2 921 lignes), CQ Ranking `*` collé à 629 noms, Museo noms « Prénom NOM ».
+
 ## POINT DE REPRISE (18/11/2026, fin de session) : à lire en premier
 
 ### Chantiers en cours au moment de la coupure
@@ -64,7 +89,7 @@ restantes, CQ Ranking 3 737 pages + 5 450 fiches, Museo 82 éditions + 4 911 fic
   rattachées sur 2 340, 11 311 coureurs.
 
 ### À faire ensuite (ordre validé en fin de session du 18/11 : reprendre au point 1)
-1. **Veille d'`update.yml` (à faire en premier, avant la reprise des courses le 19/01/2027).** GitHub saute la plupart de ses crons
+1. **FAIT le 18/11 au soir (`veille_update.yml`).** Veille d'`update.yml`. GitHub saute la plupart de ses crons
    (3 passages en 24 h au lieu de 11 le 17-18/11) : sans effet en intersaison, mais en saison résultats et notifications ntfy en retard.
    Solution proposée : une veille sur le modèle de `veille.yml` du dépôt d'archives (cron horaire décalé qui relance `update.yml` par
    `gh workflow run` si aucun passage n'a démarré depuis ~1 h 30 pendant le créneau 13 h-22 h UTC, rien si un passage est en file / en cours),
