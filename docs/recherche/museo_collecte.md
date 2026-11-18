@@ -180,7 +180,7 @@ Décision du propriétaire : élargir la collecte au-delà des épreuves suivies
 
 Chiffres de `selection.json` sur les données du 18/11/2026 (alias_museo vide) : 209 courses `epreuve_suivie` (~8057 éditions estimées, borne 9156), 0 `championnat`, 33 `calendrier_uci_france` (130 éditions), 241 `calendrier_uci_top10` (1041 éditions : a_decider 722, ecartee_cq 282, retenue 37), 4878 `sans_classe`.
 
-### Propositions d'alias (à valider une à une ; `alias_museo.json` reste vide)
+### Propositions d'alias (11 alias et 4 championnats validés par le propriétaire le 18/11/2026 et écrits dans `alias_museo.json` ; le reste reste à valider)
 
 Produit par `tools/essais/proposer_alias_museo.py` (une page d'albo par candidate ; JSON complet : `museo_alias_proposes.json`). `preuve` = vainqueurs Museo concordants sur >= 2 années 2005-2008 avec une référence liée à l'épreuve par sa clé (Wikidata, calendrier CQ : type `cle`) ou, à défaut, avec le vainqueur CQ de même date et même pays lorsque le nom est aussi très proche (type `date_pays_cq`).
 
@@ -225,9 +225,76 @@ Produit par `tools/essais/proposer_alias_museo.py` (une page d'albo par candidat
 | non | 13191 | Volta a Portugal (1927-2026) | `volta a portugal em bicicleta edp\|POR` | Pro | - | - |
 | non | 52789 | Vuelta a San Juan (1982-2023) | `vuelta a san juan internacional\|ARG` | Pro | - | - |
 
-Remarques : plusieurs clés d'index peuvent désigner la même course Museo (changements de nom) : `alias_museo.json` n'en porte qu'une, les autres dénominations restent des épreuves distinctes. Museo 41416 (De Vlaamse Pijl Harelbeke) concorde avec les vainqueurs d'E3 mais Museo 4533 (E3 Saxo Classic) est déjà sélectionnée par clé : doublon probable, `collisions` de selection.json à examiner avant de valider. Sans candidate (57 épreuves, dont la plupart sont postérieures à 2008) : liste `epreuves_sans_candidate` du JSON.
+Remarques : plusieurs clés d'index peuvent désigner la même course Museo (changements de nom) : `alias_museo.json` n'en porte qu'une, les autres dénominations restent des épreuves distinctes. Museo 41416 (De Vlaamse Pijl Harelbeke) n'est PAS E3 (course espoirs de début mars, preuve 2005-2008 = faux positif : voir « Preuve complémentaire ») : non aliasée ; E3 = Museo 4533, déjà sélectionnée par clé. Alias validés (tableau ci-dessus, lignes « oui » sauf 41416) : clé retenue = la première citée de chaque ligne. Sans candidate (57 épreuves, dont la plupart sont postérieures à 2008) : liste `epreuves_sans_candidate` du JSON.
 
-### Championnats (clé `_championnats`, à valider)
+### Preuve complémentaire par les vainqueurs 2009-2025 (18/11/2026, `tools/essais/proposer_alias_museo_vainqueurs.py`)
+
+La page albo Museo donne le vainqueur de toutes les éditions, y compris après 2008. Preuve (`type: "vainqueurs_2009_2025"`) : au moins 2 années 2009-2025 où le vainqueur Museo concorde avec le vainqueur de notre édition UCI (`entites/courses`, rang 1 du podium, année civile de `start_date` ; `wikidata.nom_concorde`, ordre des mots indifférent) ET aucune année discordante non expliquée. Une discordance est « expliquée » seulement quand c'est le même coureur écrit autrement (mot de >= 4 lettres commun et même initiale du prénom : Thomas / Tom Pidcock, Izagirre / Izaguirre, Sam / Samuel Watson…) : elle ne compte pas comme concordance. Résultats dans `museo_alias_proposes.json` : `preuve_2009_2025` de chaque clé (`annees_concordantes`, `annees_discordantes`, `annees_discordantes_expliquees`, `raison_non_preuve`), `epreuves_sans_candidate_2009_2025` (candidates trouvées et lues pour les épreuves sans candidate) et `bilan_2009_2025` (une ligne par couple course Museo / clé). **Rien de tout cela n'est écrit dans `alias_museo.json`** (à valider par le propriétaire). 88 requêtes Museo (albos, cache gzip, pause de 3,2 s).
+
+**Contre-épreuve des alias validés** : 10 des 11 clés écrites dans `alias_museo.json` sont confirmées par 2009-2025 (2 avec une discordance de simple variante de nom : Brabantse Pijl 2021, Miguel Indurain 2023) ; la onzième, `gp du canton d argovie gippingen|SUI` (Museo 11337), n'a qu'une année comparable après 2008, alors que l'autre dénomination de la même ligne validée, `gp du canton d argovie|SUI`, concorde sur 7 années : le propriétaire peut préférer cette clé. **Museo 41416 (De Vlaamse Pijl Harelbeke) n'est PAS E3** : course de début mars (4 mars 2006, 10 mars 2007, 8 mars 2008) aux vainqueurs Verbist, Vanendert, Schmitz (coureurs de l'élite jeune), jusqu'en 2012 ; la preuve « date_pays_cq » de 2005-2008 était un faux positif (le calendrier CQ nomme la course « Vlaamse Pijl - Harelbeke », mot « Harelbeke » commun avec E3). Sur 2009-2012 elle discorde avec E3 (4 années sur 4). Elle ne doit pas être aliasée ; E3 = Museo 4533 (E3 Saxo Classic, 1958-2026), déjà sélectionnée par clé.
+
+#### Courses Museo sans preuve 2005-2008 maintenant prouvées (8 sur 26)
+
+| Id Museo | Course Museo | Clé d'épreuve | Classe | Années concordantes | Remarque |
+|---|---|---|---|---|---|
+| 12802 | Danmark Rundt | `postnord danmark rundt tour of denmark|DEN` | Pro | 6 (2016–2022) | même course Museo que d'autres clés (changements de nom) |
+| 2535 | 4 Jours de Dunkerque | `4 jours de dunkerque grand prix des hauts de france|FRA` | Pro | 14 (2009–2024) + variantes de nom 2025 | - |
+| 92812 | Ardèche Classic | `faun ardeche classic|FRA` | Pro | 6 (2020–2025) | - |
+| 1303 | Coppa Sabatini | `coppa sabatini gran premio citta di peccioli|ITA` | Pro | 6 (2016–2022) | même course Museo que d'autres clés (changements de nom) |
+| 1303 | Coppa Sabatini | `gran premio citta di peccioli coppa sabatini|ITA` | Pro | 4 (2013–2025) | même course Museo que d'autres clés (changements de nom) |
+| 2956 | G.P. Industria e Artigianato - Larciano | `gp industria artigianato|ITA` | Pro | 8 (2017–2025) | - |
+| 8157 | Philadelphia Cycling Classic | `philadelphia international championship|USA` | Pro | 2 (2009–2010) | - |
+| 68439 | Presidential Tour of Turkey | `presidential cycling tour of turkiye|TUR` | Pro | 12 (2010–2024) + variantes de nom 2011, 2025 | - |
+| 8323 | Tour de Langkawi | `petronas le tour de langkawi|MAS` | Pro | 14 (2009–2025) + variantes de nom 2011, 2014 | - |
+| 6266 | Tour de Luxembourg | `skoda tour de luxembourg|LUX` | Pro | 17 (2009–2025) | - |
+
+Les 18 autres restent sans preuve : 13 avec des discordances franches (courses distinctes de même nom proche : Eschborn U23, Paris-Tours espoirs, Omloop espoirs, Plouay Elite Open, Giro di Romagna / Casentino / Tre Ponti, Bruxelles-Zepperen, Circuit du Morbihan, Vuelta Salamanca, Japan Cup 2013 (Rogers / Bauer), Tour of California 2011 (Goss / Horner), Vuelta a San Juan 2023 (López / Ganna)) et 5 avec moins de 2 années comparables (Brussel-Opwijk, Copenhagen Classic, Lombardia Tour, Volta a Portugal, Vuelta a Navarra : une seule année commune avec nos éditions UCI, ou aucune).
+
+#### Épreuves de l'index sans candidate : candidates trouvées et prouvées (32 clés sur 57, 24 courses Museo)
+
+Candidates cherchées dans toute la liste Museo (même pays, mot non générique commun ou nom proche, existence compatible avec nos éditions 2009-2025), 3 au plus lues par épreuve.
+
+| Id Museo | Course Museo | Clé d'épreuve | Classe | Années concordantes | Remarque |
+|---|---|---|---|---|---|
+| 5823 | Cyclassics Hamburg | `bemer cyclassics|GER` | WT | 3 (2022–2024) | même course Museo que d'autres clés (changements de nom) |
+| 1565 | Coppa Bernocchi | `coppa bernocchi gp banco bpm|ITA` | Pro | 3 (2023–2025) | même course Museo que d'autres clés (changements de nom) |
+| 1565 | Coppa Bernocchi | `coppa bernocchi gp bpm|ITA` | Pro | 2 (2021–2022) | même course Museo que d'autres clés (changements de nom) |
+| 8606 | Nokere-Koerse | `danilith nokere koerse|BEL` | Pro | 8 (2017–2025) | même course Museo que d'autres clés (changements de nom) |
+| 8493 | Classic Brugge-De Panne | `driedaagse de panne koksijde|BEL` | Pro | 5 (2014–2018) | même course Museo que d'autres clés (changements de nom) |
+| 106876 | Dwars door het Hageland | `duracell dwars door het hageland|BEL` | Pro | 3 (2023–2025) | - |
+| 4964 | Veenendaal-Veenendaal Classic | `dutch food valley classic|NED` | Pro | 2 (2009–2010) | - |
+| 5823 | Cyclassics Hamburg | `euroeyes cyclassics hamburg|GER` | WT | 2 (2018–2019) | même course Museo que d'autres clés (changements de nom) |
+| 160564 | Drôme Classic | `faun drome classic|FRA` | Pro | 4 (2022–2025) | même course Museo que d'autres clés (changements de nom) |
+| 4449 | G.P. de Denain Porte du Hainaut | `gp de denain porte du hainaut valenciennes metropole|FRA` | Pro | 2 (2016–2017) | même course Museo que d'autres clés (changements de nom) |
+| 23248 | G.P. Nobili Rubinetterie | `gp nobili rubinetterie coppa papa carlo coppa citta di stresa|ITA` | Pro | 2 (2013–2015) | - |
+| 35039 | G.P. Beghelli | `gran premio bruno beghelli|ITA` | Pro | 7 (2011–2019) | - |
+| 20620 | G.P. Città di Lugano | `gran premio citta di lugano|SUI` | Pro | 2 (2016–2017) | - |
+| 111850 | G.P. Cycliste de Montréal | `grand prix cycliste de montreal|CAN` | WT | 14 (2010–2025) | - |
+| 111773 | G.P. Cycliste de Québec | `grand prix cycliste de quebec|CAN` | WT | 13 (2010–2025) + variantes de nom 2015 | - |
+| 4449 | G.P. de Denain Porte du Hainaut | `grand prix de denain porte du hainaut|FRA` | Pro | 7 (2018–2025) | même course Museo que d'autres clés (changements de nom) |
+| 8493 | Classic Brugge-De Panne | `kbc driedaagse de panne koksijde|BEL` | Pro | 3 (2009–2011) | même course Museo que d'autres clés (changements de nom) |
+| 4675 | Kuurne-Bruxelles-Kuurne | `kuurne brussel kuurne|BEL` | Pro | 4 (2011–2025) | - |
+| 205403 | Maryland Cycling Classic | `maryland cycling classic presented by unitedhealthcare|USA` | Pro | 2 (2022–2023) | - |
+| 8606 | Nokere-Koerse | `nokere koerse danilith classic|BEL` | Pro | 3 (2014–2016) | même course Museo que d'autres clés (changements de nom) |
+| 156657 | Prudential RideLondon Classic | `prudential ridelondon surrey classic|GBR` | WT | 4 (2015–2019) | AMBIGU : deux courses Museo concordent; même course Museo que d'autres clés (changements de nom) |
+| 158924 | London Surrey Cycle Classic | `prudential ridelondon surrey classic|GBR` | WT | 3 (2015–2018) | AMBIGU : deux courses Museo concordent |
+| 156657 | Prudential RideLondon Classic | `ridelondon classic|GBR` | Pro | 2 (2013–2016) | même course Museo que d'autres clés (changements de nom) |
+| 160564 | Drôme Classic | `royal bernard drome classic|FRA` | Pro | 6 (2016–2021) | même course Museo que d'autres clés (changements de nom) |
+| 8222 | Tour Down Under | `santos tour down under|AUS` | WT | 11 (2013–2025) | - |
+| 117754 | Tour of Utah | `the larry h miller tour of utah|USA` | Pro | 4 (2016–2019) + variantes de nom 2015 | - |
+| 6933 | Tour de Belgique | `tour de belgique ronde van belgie tour of belgium|BEL` | Pro | 5 (2009–2013) | - |
+| 162984 | Tour of Yorkshire | `tour de yorkshire|GBR` | Pro | 4 (2016–2019) | - |
+| 14857 | Tour de Slovenie | `tour of slovenia|SLO` | Pro | 6 (2019–2025) | - |
+| 162744 | USA Pro Cycling Challenge | `usa pro challenge|USA` | Pro | 3 (2013–2015) | - |
+| 5823 | Cyclassics Hamburg | `vattenfall cyclassics|GER` | WT | 7 (2009–2015) | même course Museo que d'autres clés (changements de nom) |
+| 8493 | Classic Brugge-De Panne | `vdk driedaagse de panne koksijde|BEL` | Pro | 2 (2012–2013) | même course Museo que d'autres clés (changements de nom) |
+| 15301 | Volta ao Algarve | `volta ao algarve em bicicleta|POR` | Pro | 10 (2016–2025) | - |
+
+Lecture : une même course Museo prouvée pour plusieurs clés (Classic Brugge-De Panne : 4 clés, Cyclassics Hamburg : 3, Coppa Bernocchi : 2, Drôme Classic : 2, GP de Denain : 2, Nokere-Koerse : 2, RideLondon : 2) = changements de nom de la même course : `alias_museo.json` ne porte qu'une clé par id Museo (la plus récente / la mieux fournie), les autres dénominations restent des épreuves distinctes de l'index. **Ambigu** : la clé `prudential ridelondon surrey classic|GBR` concorde avec deux courses Museo (156657 et 158924 aux années qui se recoupent) : à trancher par le propriétaire.
+
+**Non prouvées (25 sur 57)** : 10 sans aucune course Museo candidate (Abu Dhabi Tour, ADAC Cyclassics, Eurometropole Tour, Flandrien, Gent-Wevelgem sous son nom court, Handzame, Primus Classic x2, Renewi Tour, Tour de l'Eurometropole) ; 10 où une seule année est comparable (une seule édition UCI portant cette clé : 100 Tre Valli, Cadel Evans GORR, Critérium du Dauphiné Libéré, Tour of Britain 2015, quatre clés Brugge-De Panne à une édition, CIC Mont Ventoux, GP Lugano 2015) ; 3 dont les seules candidates sont de mauvaises courses (Baloise Belgium Tour, Classique Dunkerque, TD Bank : championnats nationaux ou autres courses) ; 2 sans édition UCI 2009-2025 avec vainqueur. Raison principale : l'épreuve n'a qu'une édition dans notre index (clés de sponsor ou de nom court) ; une preuve par 2 années est alors impossible, sans que la candidate soit réfutée.
+
+### Championnats (clé `_championnats` : 2634, 20739, 176524 et 58073 validés et écrits le 18/11/2026 ; 34548, 180623, 233912 non prouvés)
 
 | Preuve | Id Museo | Course Museo | Années concordantes (CQ, classe officielle) |
 |---|---|---|---|

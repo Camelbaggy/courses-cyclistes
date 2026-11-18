@@ -1691,7 +1691,9 @@ def _tests() -> None:
         assert e07["decision"] == "lue" and os.path.exists(os.path.join(d1, "editions", "3", "2007.json"))
         # preparer_selection : fichiers lus, selection.json écrit une fois (réécriture identique = False)
         assert _ecrire_si_change(os.path.join(d1, "s.json"), sel) and not _ecrire_si_change(os.path.join(d1, "s.json"), sel)
-    assert charger_alias_museo(os.path.join(RACINE, "alias_museo.json")) == ({}, [])
+    # alias_museo.json (validé par le propriétaire le 18/11/2026) : 11 alias d'épreuves + 4 championnats ; 41416 (Vlaamse Pijl, pas E3) jamais aliasée
+    al, ch = charger_alias_museo(os.path.join(RACINE, "alias_museo.json"))
+    assert len(al) == 11 and sorted(ch) == ["176524", "20739", "2634", "58073"] and "41416" not in al and al["2751"] == "donostia san sebastian klasikoa|ESP"
     print("[MUSEO] tests : OK")
 
 
