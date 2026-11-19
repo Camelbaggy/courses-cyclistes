@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "cdx2")
+    etape = os.environ.get("ETAPE", "p3")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
@@ -156,6 +156,83 @@ def main():
             print("....")
             print(t[max(i, 0):max(i, 0) + 3500] if i >= 0 else t[3000:6500])
             print("FIN>>>")
+    if etape == "p3":
+        base = "https://web.archive.org/cdx/search/cdx?output=txt&fl=timestamp,original,statuscode&collapse=urlkey&matchType=prefix"
+        def cdx(url, limit=4000):
+            for essai in range(3):
+                s, h, b = get(base + "&url=" + url + "&limit=%d" % limit, timeout=240)
+                if s == 200:
+                    return [l.split(" ") for l in b.decode("utf-8", "replace").splitlines() if l.strip()]
+                print("[CDX] statut", s, b[:60]); time.sleep(60)
+            return []
+        # A. autres hôtes / chemins pour 1995-2001
+        for pre in ["www.cyclingnews.com/results/", "www.cyclingnews.com/road/", "cyclingnews.com/road.php", "autobus.cyclingnews.com/road/",
+                    "autobus.cyclingnews.com/archiveindex", "autobus.cyclingnews.com/road.php?id=road/results", "autobus.cyclingnews.com/road.php?id=results"]:
+            L = cdx(pre)
+            an = collections.Counter()
+            for l in L:
+                m = re.search(r"/((?:19|20)\d\d)/", l[1])
+                an[m.group(1) if m else "?"] += 1
+            print("[A] %s : %d urls ; par année %s" % (pre, len(L), dict(sorted(an.items()))))
+            for l in L[:6] + L[len(L)//2:len(L)//2 + 3]:
+                print("[A]   ex", l[0], l[1][:150], l[2])
+        def propre(h):
+            h = re.sub(r"(?is)<(script|style).*?</\1>", "", h)
+            h = re.sub(r"(?i)<br\s*/?>", "\n", h)
+            h = re.sub(r"(?s)<[^>]+>", "", h)
+            return h.replace("&nbsp;", " ").replace("&amp;", "&")
+        def montre(ts, u, tete=40):
+            s_, h_, b = get("https://web.archive.org/web/%sid_/%s" % (ts, u))
+            t = b.decode("latin-1", "replace")
+            print("[PAGE]", u, s_, len(b), h_.get("Content-Type"), "pre=", t.lower().count("<pre"))
+            if s_ != 200:
+                return
+            i = t.lower().find("<pre")
+            avant = [l.strip() for l in propre(t[max(0, i - 9000):i]).splitlines() if l.strip()][-tete:]
+            print("<<<AVANT", u)
+            for l in avant:
+                print("  |", l[:160])
+            for k, m in enumerate(re.finditer(r"(?is)<pre[^>]*>(.*?)</pre>", t)):
+                lg = propre(m.group(1)).splitlines()
+                rg = re.compile(r"^\s*(\d+|DNF|DNS|OTL|DSQ|HD|AB)\s+\S")
+                print("  bloc", k, "lignes", len(lg), "classées", sum(1 for x in lg if rg.match(x)))
+                for x in lg[:6]:
+                    print("   >", x[:150])
+                print("   ...")
+                for x in lg[-9:]:
+                    print("   <", x[:150])
+            apres = [l.strip() for l in propre(t[t.lower().rfind("</pre>"):t.lower().rfind("</pre>") + 6000]).splitlines() if l.strip()][:12]
+            for l in apres:
+                print("  apres|", l[:160])
+            print("FIN>>>")
+        # B. pages d'index
+        for u in ["http://autobus.cyclingnews.com/road.php", "http://autobus.cyclingnews.com/archiveindex.php"]:
+            s_, h_, b = get("https://web.archive.org/web/2009id_/" + u)
+            t = b.decode("latin-1", "replace")
+            print("[IDX]", u, s_, len(b))
+            liens = sorted(set(re.findall(r'href="([^"]*(?:road|results|archive)[^"]*)"', t, re.I)))
+            print("[IDX]   liens", len(liens))
+            for x in liens[:70]:
+                print("[IDX]   ", x[:140])
+        # C. échantillon de pages
+        L08 = cdx("autobus.cyclingnews.com/road.php?id=road/2008/", limit=20000)
+        L05 = cdx("autobus.cyclingnews.com/road.php?id=road/2005/", limit=20000)
+        L03 = cdx("autobus.cyclingnews.com/road.php?id=road/2003/", limit=20000)
+        def trouve(L, motif, dernier=False):
+            c = [l for l in L if re.search(motif, l[1]) and l[2] == "200" and "/default" not in l[1]]
+            return (c[-1] if dernier else c[0]) if c else None
+        choix = []
+        for L, mots in [(L08, [r"roubaix", r"sanremo|sremo", r"amstel", r"alentejo08/alentejo08\d$", r"tourdefrance08/\w+21$|tdf08/\w+21$"]),
+                        (L05, [r"roubaix", r"/gp[a-z]+05$"]), (L03, [r"roubaix", r"/gp[a-z]+03$"])]:
+            for mo in mots:
+                c = trouve(L, mo, dernier=True)
+                if c:
+                    choix.append(c)
+                else:
+                    print("[C] aucun motif", mo)
+        for c in choix[:9]:
+            print("[C] choix", c)
+            montre(c[0], c[1])
     if etape == "2":
         # capture d'une page de course et de pages d'index
         for u in os.environ.get("URLS", "").split("|"):
