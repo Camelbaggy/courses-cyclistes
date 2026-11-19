@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "p6")
+    etape = os.environ.get("ETAPE", "p7")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
@@ -433,6 +433,68 @@ def main():
             print("[R]   roubaix :", [x[1][-90:] for x in c[:6]])
             for x in c[:1]:
                 montre(x[0], x[1])
+    if etape == "p7":
+        base = "https://web.archive.org/cdx/search/cdx?output=txt&fl=timestamp,original,statuscode&collapse=urlkey&matchType=prefix"
+        def cdx(url, limit=20000):
+            for essai in range(3):
+                time.sleep(6)
+                s, h, b = get(base + "&url=" + url + "&limit=%d" % limit, timeout=240)
+                if s == 200:
+                    return [l.split(" ") for l in b.decode("utf-8", "replace").splitlines() if l.strip()]
+                print("[CDX] statut", s, b[:60]); time.sleep(75)
+            return []
+        def propre(h):
+            h = re.sub(r"(?is)<(script|style).*?</\1>", "", h)
+            h = re.sub(r"(?i)<br\s*/?>", "\n", h)
+            h = re.sub(r"(?s)<[^>]+>", "", h)
+            return h.replace("&nbsp;", " ").replace("&amp;", "&")
+        def montre(ts, u, tete=8, n=12):
+            s_, h_, b = get("https://web.archive.org/web/%sid_/%s" % (ts, u))
+            t = b.decode("latin-1", "replace")
+            print("[PAGE]", u, s_, len(b), "pre=", t.lower().count("<pre"))
+            if s_ != 200:
+                return
+            i = t.lower().find("<pre")
+            avant = [l.strip() for l in propre(t[max(0, i - 3000):i]).splitlines() if l.strip()][-tete:]
+            for l in avant:
+                print("  |", l[:160])
+            for k, m in enumerate(re.finditer(r"(?is)<pre[^>]*>(.*?)</pre>", t)):
+                if k > 1:
+                    break
+                lg = propre(m.group(1)).splitlines()
+                rg = re.compile(r"^\s*(\d+\.?|DNF|DNS|OTL|DSQ|HD|AB)\s+\S")
+                print("  bloc", k, "lignes", len(lg), "classées", sum(1 for x in lg if rg.match(x)), "avec temps", sum(1 for x in lg if re.search(r"\d+[.:]\d\d[.:]\d\d", x)))
+                for x in lg[:n]:
+                    print("   >", x[:140])
+                for x in lg[-3:]:
+                    print("   <", x[:140])
+        hubs = {}
+        for an in (2008, 2005, 2003):
+            L = cdx("autobus.cyclingnews.com/road/%d/" % an, limit=6000)
+            hubs[an] = L
+            cles = collections.defaultdict(set)
+            for l in L:
+                m = re.search(r"/road/%d/([a-z]{3}\d\d)/([^/?&]+)/?\??(?:id=)?([^&]*)" % an, l[1])
+                if m and l[2] == "200":
+                    cles[m.group(1) + "/" + m.group(2)].add(m.group(3).split("/")[0] or "(accueil)")
+            avec_res = sum(1 for v in cles.values() if "results" in v)
+            print("[HUB] %d : %d urls ; %d courses ; %d avec ?id=results capturé" % (an, len(L), len(cles), avec_res))
+            print("[HUB]   courses", " ".join(sorted(k.split("/")[1] + ("*" if "results" in v else "") for k, v in cles.items()))[:2500])
+        sel = []
+        for an, mots in [(2008, [r"amstel08/\?id=results", r"roubaix08/\?id=results|flanders08/\?id=results", r"tirreno08/\?id=results.*|paris-?nice08.*results", r"lombardia08/\?id=results"]),
+                         (2005, [r"roubaix05/\?id=results", r"flanders05/\?id=results", r"sanremo05/\?id=results"]), (2003, [r"roubaix03/\?id=results", r"amstel03/\?id=results"])]:
+            for mo in mots:
+                c = [l for l in hubs.get(an, []) if re.search(mo, l[1]) and l[2] == "200"]
+                print("[HUBSEL]", an, mo, [x[1][-80:] for x in c[:3]])
+                if c:
+                    sel.append(c[0])
+        for c in sel[:8]:
+            montre(c[0], c[1], n=12)
+        for an in (1998, 1999, 2000, 2001, 2002):
+            L = cdx("www.cyclingnews.com/results/%d/" % an, limit=6000)
+            pages = [l for l in L if re.search(r"\.s?html$", l[1]) and l[2] == "200" and not re.search(r"photo|diary|news|feature|teams|cal\d\d|\d\d\.s?html$", l[1].split("/")[-1].replace(str(an)[2:] + ".", "XX."))]
+            print("[OLDN] %d : %d urls ; pages html 200 : %d ; hors news/photos/diary : %d" % (an, len(L), sum(1 for l in L if re.search(r"\.s?html$", l[1]) and l[2] == "200"), len(pages)))
+            print("[OLDN]   ex", [l[1].split("/results/")[-1] for l in pages[:14]])
     if etape == "2":
         # capture d'une page de course et de pages d'index
         for u in os.environ.get("URLS", "").split("|"):
