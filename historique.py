@@ -7,7 +7,7 @@ une valeur absente reste absente ; un désaccord entre propriétés est CONSERV�
 
 Fichiers de `ARCHIVES_DIR/entites/historique/` (écrits au fil de l'eau, une série à la fois, reprenables ; ce module n'écrit QUE là) :
     editions/<lettre>.json  {clé d'édition: [{annee, qid, date?, vainqueur?, podium, statut, detail?, wikipedia?, verifie, ...}]}
-    coureurs.json           {QID: {nom, naissance?, naissance_precision?, deces?, deces_precision?, nationalite?, wikipedia?, rider_id?, verifie}}
+    coureurs.json           {QID: {nom, naissance?, naissance_precision?, deces?, deces_precision?, nationalite?, wikipedia?, ids?, regle_ids, rider_id?, verifie}}
     pays.json               {QID de pays: {code CIO (P984) | null, verifie}}
     non_personnes.json      {QID: date de vérification} (valeurs de P1346 qui ne sont pas des humains : équipes, ignorées)
     etat.json               {QID de série: {verifie, editions, cles}}
@@ -321,7 +321,7 @@ def extraire_personne(e: Dict[str, Any], pays: Dict[str, Dict[str, Any]], verifi
     return _sans_vide({"nom": nom_personne(e), "naissance": nais and nais[0], "naissance_precision": nais and nais[1],
                        "deces": dec and dec[0], "deces_precision": dec and dec[1],
                        "nationalite": (codes[0] if len(codes) == 1 else codes) if codes else None,
-                       "wikipedia": wikidata.sitelinks(e), "verifie": verifie})
+                       "wikipedia": wikidata.sitelinks(e), "ids": wikidata.ids_externes(e), "regle_ids": wikidata.REGLE_IDS, "verifie": verifie})
 
 
 def choisir_conteneur(parts: Dict[str, Optional[Dict[str, Any]]]) -> Tuple[Optional[str], str]:
@@ -571,6 +571,19 @@ def maj_rider_ids(ctx: Ctx) -> int:
     return n
 
 
+def relire_ids_coureurs(ctx: Ctx) -> int:
+    """Reprise REGLE_IDS : les coureurs du cache sans `regle_ids` à jour sont relus (claims seuls, lots de 50, dans le budget) pour poser `ids`, sans
+    toucher au reste de l'entrée ; cache écrit au fil de l'eau."""
+    def ecrire() -> None:
+        ctx.cache.marquer("coureurs")
+        ctx.cache.ecrire()
+    a_lire = {q: q for q, v in ctx.cache.coureurs.items() if wikidata.besoin_ids({"qid": q, "regle_ids": v.get("regle_ids")})}
+    n = wikidata.relire_ids(ctx, a_lire, ctx.cache.coureurs, ecrire)
+    if n:
+        ctx.cache.marquer("coureurs")
+    return n
+
+
 def run_historique(budget_min: float = 300, archives_dir: Optional[str] = None, now: Optional[dt.date] = None,
                    api: Optional[wikidata.Api] = None, horloge: Callable[[], float] = time.monotonic,
                    series: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -605,6 +618,7 @@ def run_historique(budget_min: float = 300, archives_dir: Optional[str] = None, 
             if ctx.horloge() - ctx.derniere_ligne >= PERIODE_JOURNAL:
                 ctx.derniere_ligne = ctx.horloge()
                 print(f"[HISTORIQUE] en cours : {faites}/{len(attente)} séries, {total['editions']} éditions, {api.requetes} requêtes, {ctx.minutes():.0f} min")
+        relire_ids_coureurs(ctx)
         maj_rider_ids(ctx)
     except HoteAbandonne as e:
         print(f"[WARN] [HISTORIQUE] passage interrompu ({e}) : cache conservé, reprise au prochain passage")
@@ -1176,6 +1190,9 @@ def _tests() -> None:
         "Q108": _edition("Q108", 2024, ["Q70"]),
     }
     series = {"Q1000": list(E)}
+    P["Q1"]["claims"]["P1541"] = [wikidata._cl("777")]                                  # identifiants externes (reprise REGLE_IDS testée plus bas)
+    P["Q1"]["claims"]["P2709"] = [wikidata._cl("888")]                                  # CQ femmes : jamais conservé
+    P["Q1"]["claims"]["P4391"] = [wikidata._cl("4242")]
     faux = FauxHist({**P, **E}, series)
     tmp = tempfile.mkdtemp(prefix="hist_")
     try:
@@ -1206,6 +1223,18 @@ def _tests() -> None:
         assert c.coureurs["Q1"]["rider_id"] == "dupont-jean-19300102"                    # "Jean Dupont" ≠ "Jean Dupond" : un seul nom concorde
         assert c.coureurs["Q4"]["rider_id"] == "martin-paul-19400506"                    # lien du cache Wikidata
         assert "rider_id" not in c.coureurs["Q2"]
+        # identifiants externes : extraits des claims déjà lus (pas de requête de plus), `regle_ids` posé ; reprise d'une entrée plus ancienne
+        assert c.coureurs["Q1"]["ids"] == {"cq": ["777"], "thesports": ["4242"]} and c.coureurs["Q1"]["regle_ids"] == wikidata.REGLE_IDS
+        assert "ids" not in c.coureurs["Q2"] and c.coureurs["Q2"]["regle_ids"] == wikidata.REGLE_IDS
+        vieux = {q: {k: v for k, v in e.items() if k not in ("ids", "regle_ids")} for q, e in c.coureurs.items()}
+        collector._dump(os.path.join(ent, "historique", "coureurs.json"), vieux)
+        n_avant = len(faux.log)
+        res = run_historique(5, tmp, today + dt.timedelta(days=10), creer_api(faux), lambda: 0.0, series_cfg)
+        c = Cache(os.path.join(ent, "historique"))
+        lus = [x for x in faux.log[n_avant:]]
+        assert len(lus) == 1, lus                                                                             # une seule lecture groupée (claims) pour tous les coureurs
+        assert c.coureurs["Q1"]["ids"] == {"cq": ["777"], "thesports": ["4242"]} and all(e["regle_ids"] == wikidata.REGLE_IDS for e in c.coureurs.values())
+        assert c.coureurs["Q1"]["verifie"] == "2026-11-16" and c.coureurs["Q1"]["rider_id"] == "dupont-jean-19300102"   # reste de l'entrée intact
         # reprise : rien à refaire, aucune requête
         n_avant = len(faux.log)
         res = run_historique(5, tmp, today + dt.timedelta(days=10), creer_api(faux), lambda: 0.0, series_cfg)

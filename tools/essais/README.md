@@ -20,6 +20,8 @@ Lire ensuite les logs du job « Essais réseau ».
   réutilisation), coureurs Wikidata retrouvés par l'API de recherche (`haswbstatement:P11020=<UciId>`, sinon nom + date de
   naissance vérifiée), équipes par `haswbstatement:P1998=<code UCI>` (P31, P5138, P1448, P1365/P1366). Importe
   `essai_encyclopedie.py`. Durée visée < 14 min, ≤ 1 requête/s, `maxlag=5`.
+- `wikidata_ids_integration` : intégration des identifiants externes Wikidata sur un petit échantillon (dossier temporaire, rien d'écrit dans le dépôt) : reprise `REGLE_IDS` de ~100
+  coureurs du cache UCI et ~100 de l'historique, sens inverse sur ~30 ids CQ Ranking et ~20 ids the-sports.org, contrôles de cohérence. Durée visée < 10 min, ≤ 1 requête/s.
 - `verif_ecarts` : vérification sur Wikidata (naissance P569, nationalité P27, vainqueur d'édition P1346, titres Wikipédia fr / en) d'écarts repérés par
   `tools/audit_worlddb.py` ; lit `tools/essais/verif_ecarts.json` (NOS valeurs seulement, aucune donnée tierce). Verdicts « confirmé / différent /
   indéterminé » + synthèse chiffrée ; ≤ 1 requête/s, durée visée < 12 min. Test hors réseau : `python tools/essais/essai_verif_ecarts.py --test`.
