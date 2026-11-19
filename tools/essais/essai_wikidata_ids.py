@@ -372,7 +372,7 @@ def phase_sonde_or(ctx: Ctx, prop: str, ids_test: List[str]) -> Optional[str]:
     return retenu
 
 
-def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: float) -> None:
+def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: float, cibles: Optional[List[str]] = None) -> None:
     print(f"\n######## inverse_{src} (prop {prop}) ({t()})")
     idx = INDEX[src](A)
     cache = charger(f"{A}/entites/wikidata/coureurs.json", {})
@@ -387,7 +387,8 @@ def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: 
     print(f"nos ids : {len(ids)} ; avec naissance : {sum(1 for v in idx.values() if v['naissance'])} ; QID déjà connus de l'encyclopédie : {len(connus)}")
     rnd = random.Random(42)
     rnd.shuffle(ids)
-    ech = ids[:taille]
+    ech = list(dict.fromkeys([i for i in (cibles or []) if i in idx] + ids[:taille]))
+    print("cibles :", [(i, idx[i]["nom"], idx[i]["naissance"]) for i in (cibles or []) if i in idx])
     variante = phase_sonde_or(ctx, prop, [i for i in ech[:40]][:12]) if len(ech) >= 12 else None
     if not variante:
         # repli : lot de 1 (une requête par id) sur un petit échantillon
@@ -455,8 +456,9 @@ def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: 
             c = "aucune_date_nom_ok" if nom_ok else "aucune_date_nom_KO"
         cat[c] += 1
         cat["rapprochement:" + (deja or "nouveau")] += 1
-        if c.endswith("nom_KO") or c.startswith("date_diff") or deja == "cache_discordant" or c == "non_humain":
-            if len(ex[c]) < 12:
+        if (i in (cibles or [])) or c.endswith("nom_KO") or c.startswith("date_diff") or deja in ("cache_discordant", "cache_null_GAIN", "qid_connu_autre_cle") or c == "non_humain":
+            if len(ex[c + "/" + deja]) < 14 or i in (cibles or []):
+                c = c + "/" + deja
                 lab = ((e.get("labels") or {}).get("en") or (e.get("labels") or {}).get("fr") or {}).get("value")
                 ex[c].append(f"{src} {i} : {notre['nom']} ({notre.get('naissance')}) <-> {q} {lab!r} ({nai}) cache={deja or 'non'}")
     print("verdicts (sur les ids trouvés avec un seul QID) :", dict(cat))
@@ -489,7 +491,7 @@ def main() -> None:
             phase_couverture(ctx, A, taille)
         for src in ("cq", "museo", "thesports"):
             if f"inverse_{src}" in phases and props.get(src):
-                phase_inverse(ctx, A, src, props[src], int(c.get("taille_inverse", "1200")), T0 + budget)
+                phase_inverse(ctx, A, src, props[src], int(c.get("taille_inverse", "1200")), T0 + budget, c.get(f"cibles_{src}", "").split())
     except wikidata.HoteAbandonne as e:
         print(f"[ABANDON] hôte refusé : {e}")
     print(f"\nTotal : {ctx.api.requetes} requêtes en {time.time() - T0:.0f}s")
