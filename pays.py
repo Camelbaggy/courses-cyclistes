@@ -13,7 +13,8 @@ le code et le drapeau DE L'ÉPOQUE ; jamais de conversion vers un pays actuel (l
   - `sources.<source>.conversions` : code brut du site -> code canonique (texte, ou {"code", "jusqu_a"} : valable seulement
     pour une année <= `jusqu_a` ; au-delà, `apres` s'il est donné (correction validée), sinon le code est ambigu et reste vide) ; `identite` : un code brut déjà valide
     (netutil.FLAG_CODES, supplémentaires ou pays disparus) est accepté tel quel (Museo, the-sports, CQ Ranking ; pas Mémoire du
-    Cyclisme dont les parenthèses mêlent pays et clubs en casse mixte).
+    Cyclisme dont les parenthèses mêlent pays et clubs en casse mixte, ni Clics sur le cyclisme dont les pays sont des mots français :
+    table explicite `sources.clics`, pays doubles `KENYA/G-B` laissés bruts par le collecteur).
 
 La conversion ne dépend que du code brut (la source a déjà choisi RFA avant 1990, ALL / GER après), sauf l'exception
 explicite `jusqu_a` (Museo et Mémoire du Cyclisme réutilisent TCH / Tch pour des Tchèques après 1992 : convertis en CZE,
@@ -39,7 +40,7 @@ import netutil
 
 RACINE = os.path.dirname(os.path.abspath(__file__))
 FICHIER = os.path.join(RACINE, "pays_historiques.json")
-SOURCES = ("mdc", "museo", "thesports", "cqranking")
+SOURCES = ("mdc", "museo", "thesports", "cqranking", "clics")
 
 _TABLE: Optional[Dict[str, Any]] = None
 
@@ -125,7 +126,7 @@ def url_drapeau(code: str, largeur: int = 40) -> Optional[str]:
 def pays_ligne(source: str, ligne: Any, annee: Optional[int] = None) -> Optional[str]:
     """Code canonique d'une ligne DÉJÀ COLLECTÉE, refait à partir du code brut conservé (jamais du champ `nat` normalisé) :
     mdc `pays_site` ; museo `nat_site` (fichiers récents) sinon `nat` (brut avant la table) ; thesports `nat_site` ;
-    cqranking : liste `lignes` du site (3e colonne) ou dict de fiche (`nationalite`)."""
+    cqranking : liste `lignes` du site (3e colonne) ou dict de fiche (`nationalite`) ; clics `pays_site` (mot français ; pays double : None)."""
     if isinstance(ligne, (list, tuple)):
         brut = ligne[2] if len(ligne) > 2 else None
     elif source == "mdc":
@@ -134,6 +135,8 @@ def pays_ligne(source: str, ligne: Any, annee: Optional[int] = None) -> Optional
         brut = ligne.get("nat_site") or ligne.get("nat")
     elif source == "thesports":
         brut = ligne.get("nat_site")
+    elif source == "clics":
+        brut = None if ligne.get("pays_double") else ligne.get("pays_site")
     else:
         brut = ligne.get("nationalite") or ligne.get("nat")
     return pays_normalise(brut, source, annee)
@@ -197,6 +200,12 @@ def _tests() -> None:
     assert pays_ligne("thesports", {"nat_site": "SPA", "nat": "ESP"}) == "ESP"
     assert pays_ligne("cqranking", [1, 2694, "POR", "DUJ", "3h46'36\"", 0, 25]) == "POR"
     assert pays_ligne("cqranking", {"nationalite": "AHO"}) == "AHO"
+    # Clics sur le cyclisme : mots français (table explicite, pas d'identité), pays doubles jamais convertis
+    assert [pays_normalise(m, "clics") for m in ("FRANCE", "G-B", "PAYS-BAS", "ISRAËL", "ALLEMAGNE", "URSS", "RFA", "RDA")] == \
+        ["FRA", "GBR", "NED", "ISR", "GER", "URS", "FRG", "GDR"]
+    assert pays_normalise("FRA", "clics") is None and pays_normalise("KENYA/G-B", "clics") is None and pays_normalise("AFN/FRANCE", "clics") is None
+    assert pays_normalise("AFN", "clics") is None and pays_normalise("", "clics") is None
+    assert pays_ligne("clics", {"pays_site": "ESPAGNE"}) == "ESP" and pays_ligne("clics", {"pays_site": "KENYA/G-B", "pays_double": True}) is None
     st: Dict[str, int] = {}
     compter_inconnu(st, "XYZ")
     compter_inconnu(st, "XYZ")
