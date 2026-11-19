@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "p5")
+    etape = os.environ.get("ETAPE", "p6")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
@@ -375,6 +375,64 @@ def main():
                 print("[SLUGS]  motif", mo, "->", c[1][-70:] if c else None)
         for c in picks[:10]:
             montre(c[0], c[1])
+    if etape == "p6":
+        base = "https://web.archive.org/cdx/search/cdx?output=txt&fl=timestamp,original,statuscode&collapse=urlkey&matchType=prefix"
+        def cdx(url, limit=20000):
+            for essai in range(3):
+                time.sleep(6)
+                s, h, b = get(base + "&url=" + url + "&limit=%d" % limit, timeout=240)
+                if s == 200:
+                    return [l.split(" ") for l in b.decode("utf-8", "replace").splitlines() if l.strip()]
+                print("[CDX] statut", s, b[:60]); time.sleep(75)
+            return []
+        def propre(h):
+            h = re.sub(r"(?is)<(script|style).*?</\1>", "", h)
+            h = re.sub(r"(?i)<br\s*/?>", "\n", h)
+            h = re.sub(r"(?s)<[^>]+>", "", h)
+            return h.replace("&nbsp;", " ").replace("&amp;", "&")
+        def montre(ts, u, tete=8, n=12):
+            s_, h_, b = get("https://web.archive.org/web/%sid_/%s" % (ts, u))
+            t = b.decode("latin-1", "replace")
+            print("[PAGE]", u, s_, len(b), "pre=", t.lower().count("<pre"))
+            if s_ != 200:
+                return
+            i = t.lower().find("<pre")
+            avant = [l.strip() for l in propre(t[max(0, i - 3000):i]).splitlines() if l.strip()][-tete:]
+            for l in avant:
+                print("  |", l[:160])
+            for k, m in enumerate(re.finditer(r"(?is)<pre[^>]*>(.*?)</pre>", t)):
+                if k > 1:
+                    break
+                lg = propre(m.group(1)).splitlines()
+                rg = re.compile(r"^\s*(\d+|DNF|DNS|OTL|DSQ|HD|AB)\s+\S")
+                print("  bloc", k, "lignes", len(lg), "classées", sum(1 for x in lg if rg.match(x)), "avec temps", sum(1 for x in lg if re.search(r"\d+[.:]\d\d[.:]\d\d", x)))
+                for x in lg[:n]:
+                    print("   >", x[:140])
+                for x in lg[-3:]:
+                    print("   <", x[:140])
+        s_, h_, b = get("https://web.archive.org/web/2009id_/http://autobus.cyclingnews.com/road.php")
+        t = b.decode("latin-1", "replace")
+        hrefs = re.findall(r'href=["\']?([^"\' >]+)', t)
+        cl = collections.Counter(re.sub(r"\d+", "N", "/".join(re.sub(r"^https?://[^/]+", "", h).split("?")[0].split("/")[:3]))[:60] + ("?" + re.sub(r"\d+", "N", h.split("?")[1])[:30] if "?" in h else "") for h in hrefs)
+        print("[HOME]", s_, len(b), len(hrefs), "liens")
+        for k, v in cl.most_common(45):
+            print("[HOME]  ", v, k)
+        for h in hrefs:
+            if re.search(r"roubaix|flanders|amstel|sanremo|lombard", h, re.I):
+                print("[HOME]   course :", h[:150])
+        for pre in ["autobus.cyclingnews.com/races", "autobus.cyclingnews.com/results/", "autobus.cyclingnews.com/road.php?id=road/2008/apr08/roubaix", "autobus.cyclingnews.com/road.php?id=road/pro"]:
+            L = cdx(pre, limit=4000)
+            an = collections.Counter()
+            for l in L:
+                m = re.search(r"/((?:19|20)\d\d|\d\d)/", l[1])
+                an[m.group(1) if m else "?"] += 1
+            print("[R] %s : %d urls ; %s" % (pre, len(L), dict(sorted(an.items()))))
+            for l in L[:4] + L[len(L)//3:len(L)//3 + 4] + L[-4:]:
+                print("[R]   ex", l[0], l[1][:160], l[2])
+            c = [l for l in L if re.search(r"roubaix", l[1], re.I) and l[2] == "200"]
+            print("[R]   roubaix :", [x[1][-90:] for x in c[:6]])
+            for x in c[:1]:
+                montre(x[0], x[1])
     if etape == "2":
         # capture d'une page de course et de pages d'index
         for u in os.environ.get("URLS", "").split("|"):
