@@ -61,7 +61,7 @@ En cours / suite :
      déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
      ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
    - Écartés / sans suite : siteducyclisme.com (robots `Disallow: /` délibéré), cyclebase.nl (`Disallow: /`), bases PCM (données de jeu),
-     CyclingRanking (compilation, `Crawl-Delay: 20`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
+     (CyclingRanking : écarté d'abord, puis accord du 19/11/2026, voir `docs/recherche/cyclingranking_collecte.md`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
      annoncés « sans protection » à tort ; seule vraie nouveauté : le nouveau site de Mémoire du Cyclisme.
 3. **Archives 2009-2010 (T4)** : défaut d'`archives.yml` = 2009-2025 (PR #7 du dépôt d'archives). 2010 complète (185 courses), 2009 en cours
    (auto-relance). Ensuite : rattachement manuel des équipes 2009-2010 sans code UCI (classement WorldTour limité aux WorldTeams, comme

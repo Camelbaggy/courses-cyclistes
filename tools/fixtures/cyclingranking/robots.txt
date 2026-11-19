@@ -1,0 +1,80 @@
+User-agent: *
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
+
+User-agent: meta-externalagent
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders
+Disallow: /teams
+Disallow: /races
+Disallow: /countries
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
+
+User-agent: googlebot
+Crawl-Delay: 5
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+
+User-agent: AhrefsBot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders
+Disallow: /teams
+Disallow: /races
+Disallow: /countries
+
+User-agent: BLEXBot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders
+Disallow: /teams
+Disallow: /races
+Disallow: /countries
+
+User-agent: MJ12bot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
+
+User-agent: Amazonbot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
+
+User-agent: SemrushBot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
+
+User-agent: bingbot
+Crawl-Delay: 20
+Disallow: /cyclist
+Disallow: /riders/search
+Disallow: /teams/search
+Disallow: /races/search
+Disallow: /*?highlight=*
+Disallow: /*&highlight=*
