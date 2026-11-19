@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "p7")
+    etape = os.environ.get("ETAPE", "p8")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
@@ -495,6 +495,35 @@ def main():
             pages = [l for l in L if re.search(r"\.s?html$", l[1]) and l[2] == "200" and not re.search(r"photo|diary|news|feature|teams|cal\d\d|\d\d\.s?html$", l[1].split("/")[-1].replace(str(an)[2:] + ".", "XX."))]
             print("[OLDN] %d : %d urls ; pages html 200 : %d ; hors news/photos/diary : %d" % (an, len(L), sum(1 for l in L if re.search(r"\.s?html$", l[1]) and l[2] == "200"), len(pages)))
             print("[OLDN]   ex", [l[1].split("/results/")[-1] for l in pages[:14]])
+    if etape == "p8":
+        for ts, u in [("20121106062214", "http://autobus.cyclingnews.com/road.php?id=road/2008/may08/gpkranj08"),
+                      ("2010", "http://autobus.cyclingnews.com/road/2008/apr08/amstel08/?id=results"),
+                      ("20150918061335", "http://autobus.cyclingnews.com/road.php?id=road/2008/apr08/alentejo08/alentejo085")]:
+            s_, h_, b = get("https://web.archive.org/web/%sid_/%s" % (ts, u))
+            t = b.decode("latin-1", "replace")
+            print("<<<RAW", u, s_, len(b), "meta:", re.findall(r"(?i)<meta[^>]*charset[^>]*>", t)[:2])
+            i = t.lower().find("<pre")
+            # en-tête : 2200 caractères avant le premier <pre>, sans scripts
+            av = re.sub(r"(?is)<script.*?</script>", "", t[max(0, i - 2600):i])
+            print(av[-2000:])
+            m = re.search(r"(?is)<pre[^>]*>(.*?)</pre>", t)
+            corps = m.group(1)
+            print("--- PRE (début)")
+            print(corps[:700])
+            lg = corps.splitlines()
+            print("--- PRE lignes non classées (hors rang / DNF) :")
+            n = 0
+            for k, x in enumerate(lg):
+                if not re.match(r"^\s*(\d+|DNF|DNS|OTL|DSQ|HD|AB)\s", x) and x.strip():
+                    print("  [%d] %s" % (k, x[:140])); n += 1
+                    if n > 25:
+                        break
+            print("--- PRE (fin)")
+            print("\n".join(lg[-4:]))
+            print("--- APRES </pre>")
+            j = t.lower().find("</pre>")
+            print(re.sub(r"(?is)<script.*?</script>", "", t[j:j + 700]))
+            print("FIN>>>")
     if etape == "2":
         # capture d'une page de course et de pages d'index
         for u in os.environ.get("URLS", "").split("|"):
