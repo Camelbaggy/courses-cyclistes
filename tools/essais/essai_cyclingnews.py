@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "p8")
+    etape = os.environ.get("ETAPE", "1")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
