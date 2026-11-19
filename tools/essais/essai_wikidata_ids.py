@@ -172,6 +172,12 @@ def phase_proprietes(ctx: Ctx) -> None:
             for r in (rep or {}).get("search", []):
                 vus.setdefault(r["id"], f"{r.get('label')} | {r.get('description')}")
                 print(f"  [{terme!r}/{lang}] {r['id']} {r.get('label')} | {r.get('description')}")
+    for terme in ("museociclismo", "museociclismo.it", "Museo del Ciclismo ID", "Museo Ciclismo ciclista", "memoireducyclisme", "cyclist ID Italian museum", "Cycling Museum"):
+        for ns in (120,):
+            rep = ctx.api.appel(wikidata.WD_API, action="query", list="search", srsearch=terme, srnamespace=ns, srlimit=10)
+            print(f"  [recherche plein texte espace Property « {terme} »] :", [r["title"] for r in ((rep or {}).get("query") or {}).get("search", [])])
+            for r in ((rep or {}).get("query") or {}).get("search", []):
+                vus.setdefault(r["title"].replace("Property:", ""), "plein texte")
     meta = meta_props(ctx, list(dict.fromkeys(list(PROPS_CONNUES) + list(vus))))
     print("\n-- propriétés (libellé, datatype, formatter, regex)")
     for p, m in sorted(meta.items(), key=lambda x: int(x[0][1:])):
@@ -274,7 +280,7 @@ def phase_couverture(ctx: Ctx, A: str, taille: int) -> None:
         for q in groupes[g][:4]:
             print(f"  {g} {q} : {json.dumps({p: v for p, v in ext_ids(ents.get(q)).items() if p in meta and (p in PROPS_CONNUES or any(d in (meta[p].get('formatter') or '').lower() for d in DOMAINES.values()))}, ensure_ascii=False)}")
     # couverture par décennie de naissance (au moins une source « cyclisme »)
-    props_cq = set(cl.get("cq", {}).get("personne", []))
+    props_cq = set(cl.get("cq", {}).get("personne", [])) - {"P2709"}
     props_mu = set(cl.get("museo", {}).get("personne", []))
     props_ts = set(cl.get("thesports", {}).get("personne", []))
     props_md = set(cl.get("mdc", {}).get("personne", []))
@@ -308,7 +314,7 @@ def phase_couverture(ctx: Ctx, A: str, taille: int) -> None:
         print(f"  {q} {cle_par_qid[q][:1]} : {json.dumps(ids, ensure_ascii=False)}")
     # croisement avec nos fichiers
     for src in ("cq", "museo", "thesports"):
-        ps = cl.get(src, {}).get("personne", [])
+        ps = [p for p in cl.get(src, {}).get("personne", []) if p != "P2709"]   # P2709 = CQ Ranking FEMMES : autre espace d'ids
         if not ps:
             print(f"-- croisement {src} : propriété « coureur » non trouvée")
             continue
@@ -372,6 +378,11 @@ def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: 
     cache = charger(f"{A}/entites/wikidata/coureurs.json", {})
     hist = charger(f"{A}/entites/historique/coureurs.json", {})
     connus = {v["qid"] for v in cache.values() if v.get("qid")} | set(hist)
+    par_cle: Dict[Tuple[str, frozenset], Tuple[str, Optional[str]]] = {}
+    for rid, v in cache.items():
+        m = re.fullmatch(r"(.+)-(\d{8})", rid)
+        if m:
+            par_cle[(m.group(2), frozenset(m.group(1).split("-")))] = (rid, v.get("qid"))
     ids = sorted(idx)
     print(f"nos ids : {len(ids)} ; avec naissance : {sum(1 for v in idx.values() if v['naissance'])} ; QID déjà connus de l'encyclopédie : {len(connus)}")
     rnd = random.Random(42)
@@ -422,11 +433,18 @@ def phase_inverse(ctx: Ctx, A: str, src: str, prop: str, taille: int, budget_s: 
         nai = wikidata.naissance_jour(e)
         nom_ok = wikidata.nom_concorde(notre["nom"], wikidata.noms_entite(e))
         humain = any(wikidata.qid_de(c) == "Q5" for c in wikidata.revendications(e, "P31"))
-        cle = netutil.slugify(" ".join(notre["nom"].split())) + "-" + notre["naissance"].replace("-", "") if notre.get("naissance") else None
-        ent_cache = cache.get(cle) if cle else None
-        deja = "connu_cache" if (ent_cache and ent_cache.get("qid") == q) else ("cache_discordant" if (ent_cache and ent_cache.get("qid")) else "")
-        if not deja and q in connus:
+        cle = (notre["naissance"].replace("-", ""), frozenset(wikidata.jetons(notre["nom"]))) if notre.get("naissance") else None
+        ent_cache = par_cle.get(cle) if cle else None
+        if ent_cache and ent_cache[1] == q:
+            deja = "connu_cache"
+        elif ent_cache and ent_cache[1]:
+            deja = "cache_discordant"
+        elif ent_cache:
+            deja = "cache_null_GAIN"            # fiche UCI connue, nom + date n'avait rien rapproché
+        elif q in connus:
             deja = "qid_connu_autre_cle"
+        else:
+            deja = ""
         if not humain:
             c = "non_humain"
         elif notre.get("naissance") and nai:
