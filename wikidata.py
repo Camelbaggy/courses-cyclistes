@@ -7,7 +7,10 @@ valeur `null` est mise en cache (re-tentée plus tard). Wikidata est en CC0 ; le
 licence lus sur Commons (pas de licence lisible = pas d'image).
 
 Fichiers de `ARCHIVES_DIR/entites/wikidata/` (écrits au fil de l'eau, reprenables) :
-    coureurs.json  {rider_id: {"qid": QID|null, "verifie": AAAA-MM-JJ, "naissance"?: AAAA-MM-JJ (P569), ...}}   (null : "raison" = aucune | ambigu)
+    coureurs.json  {rider_id: {"qid": QID|null, "verifie": AAAA-MM-JJ, "naissance"?: AAAA-MM-JJ (P569), "ids"?: {source: [identifiants externes]},
+                   "regle_ids"?: N, ...}}   (null : "raison" = aucune | ambigu)
+    ids_inverse.json  {source ("cq" | "thesports"): {id de la source: {"qid": QID|null, "statut": ok | a_verifier | ambigu | aucun | refuse, "preuve"?, "detail"?,
+                   "regle": N, "verifie_le": AAAA-MM-JJ}}}   (sens inverse : nos ids -> QID ; seul `statut: ok` est utilisable)
     images.json    {nom de fichier Commons: {"url", "page", "auteur"?, "licence", "licence_url"?, "verifie"} | {"url": null, "raison", "verifie"}}
     equipes.json   {id d'équipe-saison: {"qid": QID|null, "preuve": "code+nom"|"code+periode"|"alias", "detail"?, "regle", "verifie"}}
     lignees.json   {QID: {"libelle", "noms", "codes", "pays", "classes", "sitelinks", "logo", "verifie"}}
@@ -67,9 +70,22 @@ PERIODE_JOURNAL = 300                     # secondes entre deux lignes de progre
 REGLE_COUREURS = 2                        # version des règles de rapprochement de coureurs : une entrée `null` d'une version plus ancienne est
                                           # re-tentée aussitôt (v2 : translittération ß/ø/æ…, inclusion des jetons dans les deux sens)
 REGLE_EQUIPES = 3                         # version des règles de rapprochement d'équipes : toute entrée (rattachée ou `null`) d'une version plus ancienne est re-vérifiée
+REGLE_IDS = 1                             # version de l'extraction des identifiants externes (`ids`) : une entrée rattachée sans `regle_ids` à jour est relue (claims seuls),
+                                          # sans toucher au rattachement ; indépendante de REGLE_COUREURS (qui re-chercherait tous les `null`)
+REGLE_INVERSE = 1                         # version des règles du sens inverse (ids de nos sources -> QID) : une entrée plus ancienne est re-tentée
+JOURS_INVERSE = 60                        # une entrée du sens inverse qui n'est pas `ok` est re-tentée après ce délai (`ok` : JOURS_VERIF)
+LOT_INVERSE = 10                          # ids de source par recherche `haswbstatement:P=a|P=b|…` (50 résultats au plus par recherche)
+# Identifiants externes conservés (clé -> propriété Wikidata) : table UNIQUE. P2709 (CQ Ranking femmes) est un AUTRE espace d'ids : jamais lue.
+IDS_EXTERNES = {"cq": "P1541", "thesports": "P4391", "mdc": "P4516", "uci": "P11020", "pcs": "P1663", "firstcycling": "P10902",
+                "cyclingarchives": "P1409", "cyclebase": "P4508"}
+IDS_NUMERIQUES = {"cq", "thesports", "mdc", "uci", "firstcycling", "cyclingarchives", "cyclebase"}   # valeurs entièrement numériques (format Wikidata `\d+`)
+RE_ID_NUM = re.compile(r"\d+")
+RE_ID_LIBRE = re.compile(r"[0-9A-Za-z][0-9A-Za-z._/-]{0,99}")
+IDS_IGNORES = {"valeurs": 0}              # valeurs aberrantes écartées (comptées pour le journal)
+SOURCES_INVERSE = ("cq", "thesports")     # sources de nos fichiers dont les ids sont cherchés dans Wikidata (sens inverse)
 FALLBACK_LIBRE = False                    # 2e recherche sans filtre d'occupation si aucun candidat (coûte ~1 requête de plus par coureur obscur)
 MOTS_SAISON = {"season", "saison", "stagione", "temporada", "seizoen", "sezon", "sasong"}
-FICHIERS = ("coureurs", "equipes", "lignees", "images", "libelles")
+FICHIERS = ("coureurs", "equipes", "lignees", "images", "libelles", "ids_inverse")
 
 
 class HoteAbandonne(Exception):
@@ -163,6 +179,29 @@ def besoin_equipe(entree: Any, aujourdhui: dt.date) -> bool:
     if isinstance(entree, dict) and entree.get("preuve") != "alias" and (entree.get("regle") or 1) < REGLE_EQUIPES:
         return True
     return besoin(entree, aujourdhui)
+
+
+def besoin_ids(entree: Any) -> bool:
+    """Vrai pour une entrée rattachée (`qid`) dont les identifiants externes n'ont pas été lus par la règle courante (`regle_ids` < REGLE_IDS)."""
+    return isinstance(entree, dict) and bool(entree.get("qid")) and (entree.get("regle_ids") or 0) < REGLE_IDS
+
+
+def ids_externes(e: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
+    """{clé de IDS_EXTERNES: [valeurs triées, uniques]} lus dans les `claims` d'un élément (aucune requête) ; valeurs « deprecated » et non
+    chaînes ignorées, valeurs hors format écartées et comptées (IDS_IGNORES) ; clé absente si aucune valeur."""
+    out: Dict[str, List[str]] = {}
+    for cle, prop in IDS_EXTERNES.items():
+        vals = set()
+        for c in revendications(e, prop):
+            v = valeur(c)
+            v = v.strip() if isinstance(v, str) else None
+            if v and (RE_ID_NUM if cle in IDS_NUMERIQUES else RE_ID_LIBRE).fullmatch(v):
+                vals.add(v)
+            else:
+                IDS_IGNORES["valeurs"] += 1
+        if vals:
+            out[cle] = sorted(vals)
+    return out
 
 
 # --------------------------------------------------------------------------- lecture des revendications (fonctions pures)
@@ -413,7 +452,8 @@ def qids_a_libeller(e: Dict[str, Any]) -> List[str]:
 
 
 def extraire_coureur(e: Dict[str, Any], libelles: Dict[str, Optional[str]]) -> Dict[str, Any]:
-    """Champs conservés (clés absentes si inconnues) : lieu de naissance, taille (m), image P18, sitelinks, équipes P54 datées."""
+    """Champs conservés (clés absentes si inconnues) : lieu de naissance, taille (m), image P18, sitelinks, équipes P54 datées, `ids` (identifiants
+    externes, IDS_EXTERNES ; lus dans les mêmes claims) ; `regle_ids` est posé par l'appelant."""
     lieu = next(((q, libelles.get(q)) for q in (qid_de(c) for c in revendications(e, "P19")) if q), None)
     img = _choisir_valeur(revendications(e, "P18"))
     equipes = []
@@ -427,7 +467,7 @@ def extraire_coureur(e: Dict[str, Any], libelles: Dict[str, Optional[str]]) -> D
     equipes.sort(key=lambda x: (x.get("debut") or "9999", x.get("fin") or "9999", x["qid"]))
     return _sans_vide({"lieu": _sans_vide({"qid": lieu[0], "libelle": lieu[1]}) if lieu else None, "taille": taille_metres(e),
                        "image": _fichier(img) if isinstance(img, str) and img.strip() else None,
-                       "sitelinks": sitelinks(e), "equipes": equipes})
+                       "sitelinks": sitelinks(e), "equipes": equipes, "ids": ids_externes(e)})
 
 
 def requetes_coureur(nom: str) -> List[Tuple[str, str]]:
@@ -491,7 +531,7 @@ def resoudre_tranche(ctx: "Contexte", tranche: List[Dict[str, Any]]) -> Dict[str
             continue
         if s["res"] and s["res"][0] == "ok":
             qid = s["res"][1]
-            sortie[rid] = dict(qid=qid, verifie=today, regle=REGLE_COUREURS, naissance=naissance_jour(ents_tous[qid]),
+            sortie[rid] = dict(qid=qid, verifie=today, regle=REGLE_COUREURS, regle_ids=REGLE_IDS, naissance=naissance_jour(ents_tous[qid]),
                                **extraire_coureur(ents_tous[qid], ctx.cache.d["libelles"]))
         else:
             sortie[rid] = {"qid": None, "verifie": today, "regle": REGLE_COUREURS, "raison": "ambigu" if s["res"] else "aucune"}
@@ -778,6 +818,7 @@ class Contexte:
         self.sous = Sousclasses(api)
         self.classes: Dict[str, str] = {}          # {QID de classe P31: libellés fr + en en minuscules} (mémorisé le temps du passage)
         self.derniere_ligne = self.t0              # dernier journal de progression
+        self.sources_dir = os.path.join(os.path.dirname(os.path.normpath(entites_dir)), "sources")   # ARCHIVES_DIR/sources (sens inverse, lecture seule)
 
     def charger_classes(self, entites: Iterable[Optional[Dict[str, Any]]]) -> None:
         """Libellés fr|en des classes P31 des `entites` (parents d'équipes), pour le filtre féminin / la désambiguïsation."""
@@ -840,9 +881,43 @@ def appliquer_alias_coureurs(ctx: "Contexte", fiches: List[Dict[str, Any]], alia
         print(f"[WARN] [WIKIDATA] alias coureur {rid} -> {a_lire[rid]} refusé (élément illisible, non cycliste ou nom discordant)")
     charger_libelles(ctx.api, ctx.cache, [x for q in ok.values() for x in qids_a_libeller(ents[q])])
     for rid, q in ok.items():
-        cache[rid] = dict(qid=q, verifie=today, preuve="alias", naissance=naissance_jour(ents[q]), **extraire_coureur(ents[q], ctx.cache.d["libelles"]))
+        cache[rid] = dict(qid=q, verifie=today, preuve="alias", regle_ids=REGLE_IDS, naissance=naissance_jour(ents[q]), **extraire_coureur(ents[q], ctx.cache.d["libelles"]))
     resoudre_images(ctx, [cache[rid]["image"] for rid in ok if cache[rid].get("image")])
     return len(ok)
+
+
+def relire_ids(ctx: "Contexte", a_lire: Dict[str, str], entrees: Dict[str, Dict[str, Any]], apres_lot: Optional[Callable[[], None]] = None) -> int:
+    """Reprise REGLE_IDS : relit les `claims` (lots de 50, une requête par lot, rien d'autre) des QID `a_lire` {clé d'entrée: QID} et pose `ids` /
+    `regle_ids` dans `entrees`, sans toucher au rattachement (`qid`, `verifie`, `naissance`…). Élément supprimé : `regle_ids` posé sans `ids` (pas de
+    boucle). Lecture échouée ou budget épuisé : l'entrée reste à relire. Cache écrit tous les ECRIRE_TOUS entrées (`apres_lot` pour l'appelant)."""
+    if not a_lire:
+        return 0
+    cles = sorted(a_lire)
+    fait, depuis, avec_ids, t0 = 0, 0, 0, ctx.api.requetes
+    for i in range(0, len(cles), LOT):
+        if ctx.hors_budget():
+            break
+        lot = cles[i:i + LOT]
+        ents = lire_entites(ctx.api, [a_lire[c] for c in lot], "claims")
+        for c in lot:
+            q = a_lire[c]
+            if q not in ents:
+                continue                                    # lecture échouée : relu au prochain passage
+            ids = ids_externes(ents[q]) if ents[q] else {}
+            e = entrees[c]
+            e.pop("ids", None)
+            if ids:
+                e["ids"] = ids
+                avec_ids += 1
+            e["regle_ids"] = REGLE_IDS
+            fait += 1
+            depuis += 1
+        if depuis >= ECRIRE_TOUS:
+            (apres_lot or ctx.cache.ecrire)()
+            depuis = 0
+    print(f"[WIKIDATA] ids : {fait}/{len(cles)} coureur(s) relu(s) pour leurs identifiants externes ({avec_ids} en portent), {ctx.api.requetes - t0} requête(s)"
+          + (f", {IDS_IGNORES['valeurs']} valeur(s) hors format ignorée(s)" if IDS_IGNORES["valeurs"] else ""))
+    return fait
 
 
 def run_coureurs(ctx: "Contexte", alias: Optional[Dict[str, str]] = None) -> Dict[str, int]:
@@ -851,6 +926,7 @@ def run_coureurs(ctx: "Contexte", alias: Optional[Dict[str, str]] = None) -> Dic
     alias = charger_alias_coureurs() if alias is None else alias
     if alias and verifier_occupation(ctx.api):
         appliquer_alias_coureurs(ctx, fiches, alias)
+    relire_ids(ctx, {rid: v["qid"] for rid, v in cache.items() if besoin_ids(v)}, cache)
     attente = sorted((f for f in fiches if f["id"] not in alias and besoin_coureur(cache.get(f["id"]), ctx.aujourdhui)), key=lambda f: f["prio"])
     traites = 0
     ctx.derniere_ligne = ctx.horloge()
@@ -869,6 +945,137 @@ def run_coureurs(ctx: "Contexte", alias: Optional[Dict[str, str]] = None) -> Dic
                 ctx.cache.ecrire()
                 depuis_ecriture = 0
     return bilan_coureurs(ctx, traites)
+
+
+# --------------------------------------------------------------------------- sens inverse : nos ids (CQ Ranking, the-sports.org) -> Wikidata
+
+def besoin_inverse(entree: Any, aujourdhui: dt.date) -> bool:
+    """Entrée absente, sans date ou de règle plus ancienne : à (re)chercher ; `ok` re-vérifiée après JOURS_VERIF, toute autre (aucun, ambigu,
+    a_verifier, refuse) après JOURS_INVERSE."""
+    if not isinstance(entree, dict) or (entree.get("regle") or 0) < REGLE_INVERSE:
+        return True
+    d = collector._date(entree.get("verifie_le"))
+    return d is None or (aujourdhui - d).days > (JOURS_VERIF if entree.get("statut") == "ok" else JOURS_INVERSE)
+
+
+def sources_inverse(sources_dir: str) -> Dict[str, Dict[str, Dict[str, Optional[str]]]]:
+    """{source: {id: {"nom", "naissance" (AAAA-MM-JJ complet seulement), "annee" (si seule l'année est connue)}}} lu dans `sources/cqranking/coureurs.json`
+    et `sources/thesports/coureurs.json` ; fiches sans nom ni date (échecs de lecture) ignorées."""
+    out: Dict[str, Dict[str, Dict[str, Optional[str]]]] = {"cq": {}, "thesports": {}}
+    for cle, dossier in (("cq", "cqranking"), ("thesports", "thesports")):
+        data = collector._load(os.path.join(sources_dir, dossier, "coureurs.json"), {})
+        for i, f in (data if isinstance(data, dict) else {}).items():
+            if not isinstance(f, dict) or not re.fullmatch(r"\d+", str(i)):
+                continue
+            nais = f.get("naissance") if isinstance(f.get("naissance"), str) else None
+            jour = nais if nais and re.fullmatch(r"\d{4}-\d{2}-\d{2}", nais) else None
+            annee = nais[:4] if nais and not jour and re.fullmatch(r"\d{4}", nais) else None
+            nom = f.get("nom") if isinstance(f.get("nom"), str) and f["nom"].strip() else None
+            if nom or jour or annee:
+                out[cle][str(i)] = {"nom": nom, "naissance": jour, "annee": annee}
+    return out
+
+
+def juger_inverse(fiche: Dict[str, Optional[str]], qids: List[str], ents: Dict[str, Optional[Dict[str, Any]]], sous: "Sousclasses") -> Dict[str, Any]:
+    """Décision pour UN id de source trouvé sur `qids` (fonction pure, `ents` = claims / labels / aliases lus). Un seul QID, cycliste (P106) ; puis
+    (a) naissance au jour égale à celle de la source (nom indifférent) -> ok ; (b) date absente d'un côté (ou de la source seulement à l'année,
+    concordante) ET nom concordant -> ok ; naissance différente -> a_verifier (jamais utilisé sans validation humaine) ; plusieurs QID -> ambigu."""
+    if not qids:
+        return {"qid": None, "statut": "aucun"}
+    if len(qids) > 1:
+        return {"qid": None, "statut": "ambigu", "detail": {"qids": sorted(qids)}}
+    q = qids[0]
+    e = ents.get(q)
+    if not e or not est_cycliste(e, sous):
+        return {"qid": None, "statut": "refuse", "detail": {"raison": "non_cycliste", "qid": q}}
+    wd, nom = naissance_jour(e), fiche.get("nom")
+    concorde = bool(nom) and nom_concorde(nom or "", noms_entite(e))
+    if fiche.get("naissance") and wd:
+        if fiche["naissance"] == wd:
+            return {"qid": q, "statut": "ok", "preuve": "naissance"}
+        return {"qid": q, "statut": "a_verifier", "detail": {"raison": "naissance_differente", "naissance_source": fiche["naissance"],
+                                                              "naissance_wikidata": wd, "nom_concorde": concorde}}
+    if fiche.get("annee") and wd and wd[:4] != fiche["annee"]:
+        return {"qid": q, "statut": "a_verifier", "detail": {"raison": "annee_differente", "annee_source": fiche["annee"],
+                                                              "naissance_wikidata": wd, "nom_concorde": concorde}}
+    if concorde:
+        return {"qid": q, "statut": "ok", "preuve": "nom+date_absente"}
+    return {"qid": None, "statut": "refuse", "detail": {"raison": "nom_discordant_sans_date", "qid": q}}
+
+
+def ids_connus(ctx: "Contexte") -> Tuple[Dict[str, set], set]:
+    """({source: ids déjà portés par un `ids` du cache coureurs ou de historique/coureurs.json}, QID déjà connus de ces deux caches)."""
+    hist = collector._load(os.path.join(ctx.entites_dir, "historique", "coureurs.json"), {}) or {}
+    connus: Dict[str, set] = {c: set() for c in SOURCES_INVERSE}
+    qids = set()
+    for qid_cle, entrees in ((False, ctx.cache.d["coureurs"]), (True, hist)):
+        for k, v in entrees.items():
+            if not isinstance(v, dict):
+                continue
+            q = k if qid_cle else v.get("qid")
+            if q:
+                qids.add(q)
+            for c in SOURCES_INVERSE:
+                connus[c].update(str(x) for x in (v.get("ids") or {}).get(c, []))
+    return connus, qids
+
+
+def run_ids_inverse(ctx: "Contexte") -> Dict[str, int]:
+    """Résout les ids CQ Ranking et the-sports.org (lus dans ARCHIVES_DIR/sources/) absents de tout `ids` du cache : recherche
+    `haswbstatement:P=a|P=b|…` par lots de LOT_INVERSE, puis `wbgetentities` (claims, labels, aliases) par 50 ; jugement de `juger_inverse`.
+    Dans le budget restant ; cache écrit tous les ECRIRE_TOUS ids et à l'arrêt (reprise immédiate)."""
+    cache = ctx.cache.d["ids_inverse"]
+    sources = sources_inverse(ctx.sources_dir)
+    connus, qids_connus = ids_connus(ctx)
+    attente: List[Tuple[str, str]] = []
+    for cle in SOURCES_INVERSE:
+        a = [i for i in sorted(sources[cle], key=int) if i not in connus[cle] and besoin_inverse((cache.get(cle) or {}).get(i), ctx.aujourdhui)]
+        attente += [(cle, i) for i in a]
+    bilan = {"cherches": 0, "ok": 0, "a_verifier": 0, "ambigus": 0, "aucun": 0, "refuses": 0, "nouveaux": 0, "restants": len(attente)}
+    if not attente or ctx.hors_budget() or not verifier_occupation(ctx.api):
+        return bilan
+    today = ctx.aujourdhui.isoformat()
+    depuis, t0, ctx.derniere_ligne = 0, ctx.api.requetes, ctx.horloge()
+    for cle in SOURCES_INVERSE:
+        a_faire = [i for c, i in attente if c == cle]
+        prop = IDS_EXTERNES[cle]
+        for j in range(0, len(a_faire), LOT_INVERSE):
+            if ctx.hors_budget():
+                break
+            lot = a_faire[j:j + LOT_INVERSE]
+            res = recherche(ctx.api, "haswbstatement:" + "|".join(f"{prop}={i}" for i in lot), 50)
+            if res is None:
+                continue                                       # recherche échouée : retenté au prochain passage
+            ents = lire_entites(ctx.api, res, "claims|labels|aliases")
+            if any(q not in ents for q in res):
+                continue                                       # lecture partielle : on ne tranche pas
+            par_id: Dict[str, List[str]] = {i: [] for i in lot}
+            for q in res:
+                for v in ids_externes(ents[q]).get(cle, []) if ents[q] else []:
+                    if v in par_id:
+                        par_id[v].append(q)
+            for i in lot:
+                d = juger_inverse(sources[cle][i], sorted(set(par_id[i])), ents, ctx.sous)
+                cache.setdefault(cle, {})[i] = dict(d, regle=REGLE_INVERSE, verifie_le=today)
+                bilan["cherches"] += 1
+                st = d["statut"]
+                bilan[{"ok": "ok", "a_verifier": "a_verifier", "ambigu": "ambigus", "aucun": "aucun", "refuse": "refuses"}[st]] += 1
+                if st == "ok" and d["qid"] not in qids_connus:
+                    bilan["nouveaux"] += 1
+                    qids_connus.add(d["qid"])
+                depuis += 1
+            if ctx.horloge() - ctx.derniere_ligne >= PERIODE_JOURNAL:
+                ctx.derniere_ligne = ctx.horloge()
+                print(f"[WIKIDATA] ids : en cours : {cle} {bilan['cherches']}/{len(attente)} ids cherchés, {bilan['ok']} trouvés, "
+                      f"{ctx.api.requetes - t0} requêtes, {ctx.minutes():.0f} min")
+            if depuis >= ECRIRE_TOUS:
+                ctx.cache.ecrire()
+                depuis = 0
+    bilan["restants"] = len(attente) - bilan["cherches"]
+    print(f"[WIKIDATA] ids : sens inverse, {bilan['cherches']}/{len(attente)} ids cherchés : {bilan['ok']} trouvés (dont {bilan['nouveaux']} nouveaux QID), "
+          f"{bilan['a_verifier']} à vérifier, {bilan['ambigus']} ambigus, {bilan['refuses']} refusés, {bilan['aucun']} sans résultat, "
+          f"{bilan['restants']} restants, {ctx.api.requetes - t0} requête(s)")
+    return bilan
 
 
 def bilan_coureurs(ctx: "Contexte", traites: int = 0) -> Dict[str, int]:
@@ -897,6 +1104,7 @@ def run_wikidata(budget_min: float = 300, archives_dir: Optional[str] = None, no
         run_equipes(ctx, alias)
         run_lignees(ctx)
         run_coureurs(ctx)
+        run_ids_inverse(ctx)
     except HoteAbandonne as e:
         print(f"[WARN] [WIKIDATA] passage interrompu ({e}) : cache conservé, reprise au prochain passage")
     finally:
@@ -1337,6 +1545,108 @@ def _tests() -> None:
             assert faux.n("search") == avant and len(collector._load(os.path.join(ent, "wikidata", "coureurs.json"), {})) == 100
         finally:
             netutil._blocked_hosts.discard("www.wikidata.org")
+    # --- identifiants externes (`ids`) : extraction sans requête, reprise REGLE_IDS
+    def ext(prop, v, rank="normal"):
+        return {prop: [_cl(v, rank=rank)]}
+    riche = _item("Q201", "Ida Ids", "1990-01-01", extra={
+        "P1541": [_cl("968"), _cl("968"), _cl("999", rank="deprecated"), _cl("12x")],          # doublon fusionné, deprecated et valeur hors format écartés
+        "P4391": [_cl("47362")], "P4516": [_cl("3170")], "P11020": [_cl("10001234567")], "P1663": [_cl("ida-ids")], "P10902": [_cl("3054")],
+        "P1409": [_cl("8987")], "P4508": [_cl("4038")], "P2709": [_cl("555")]})                  # P2709 (CQ femmes) : jamais lue
+    avant_ign = IDS_IGNORES["valeurs"]
+    idx = ids_externes(riche)
+    assert idx == {"cq": ["968"], "thesports": ["47362"], "mdc": ["3170"], "uci": ["10001234567"], "pcs": ["ida-ids"], "firstcycling": ["3054"],
+                   "cyclingarchives": ["8987"], "cyclebase": ["4038"]}, idx
+    assert IDS_IGNORES["valeurs"] == avant_ign + 1 and "P2709" not in IDS_EXTERNES.values()
+    assert ids_externes(_item("Q202", "Sans Ids", "1990-01-01")) == {} and ids_externes(None) == {}
+    assert "ids" not in extraire_coureur(_item("Q202", "Sans Ids", "1990-01-01"), {}) and extraire_coureur(riche, {})["ids"]["cq"] == ["968"]
+    assert besoin_ids({"qid": "Q1"}) and besoin_ids({"qid": "Q1", "regle_ids": 0}) and not besoin_ids({"qid": "Q1", "regle_ids": REGLE_IDS})
+    assert not besoin_ids({"qid": None, "regle": 2}) and not besoin_ids(None)
+    with tempfile.TemporaryDirectory() as tmp:
+        ent = os.path.join(tmp, "entites")
+        collector._dump(os.path.join(ent, "coureurs", "i.json"), {
+            "ids-ida-19900101": {"name": "Ida Ids", "birth_date": "1990-01-01", "saisons": {"2024": {"uci_rank": 5}}, "totaux": {"wins": 0}},
+            "sans-ids-19900202": {"name": "Sans Ids", "birth_date": "1990-02-02", "saisons": {"2024": {"uci_rank": 6}}, "totaux": {"wins": 0}}})
+        deja = {"ids-ida-19900101": {"qid": "Q201", "verifie": "2026-11-10", "regle": REGLE_COUREURS, "naissance": "1990-01-01", "taille": 1.8},
+                "sans-ids-19900202": {"qid": "Q202", "verifie": "2026-11-10", "regle": REGLE_COUREURS},
+                "perdu-19800101": {"qid": None, "verifie": "2026-11-10", "regle": REGLE_COUREURS, "raison": "aucune"}}
+        collector._dump(os.path.join(ent, "wikidata", "coureurs.json"), deja)
+        mondeid = {"Q2309784": _item("Q2309784", "cycliste", occ=None, labels={"en": "cyclist"}), "Q201": riche,
+                   "Q202": _item("Q202", "Sans Ids", "1990-02-02")}
+        fauxid = FauxWikimedia(mondeid, {}, {})
+        ctxi = Contexte(Api(fauxid), Cache(os.path.join(ent, "wikidata")), ent, aujourdhui, 0)
+        r = run_coureurs(ctxi, {})
+        c = ctxi.cache.d["coureurs"]
+        assert fauxid.n("entites") == 1 and fauxid.n("search") == 0, fauxid.log                       # une lecture groupée de claims, aucune recherche
+        assert c["ids-ida-19900101"]["ids"]["cq"] == ["968"] and c["ids-ida-19900101"]["regle_ids"] == REGLE_IDS
+        assert c["ids-ida-19900101"]["taille"] == 1.8 and c["ids-ida-19900101"]["verifie"] == "2026-11-10"      # rattachement intact
+        assert "ids" not in c["sans-ids-19900202"] and c["sans-ids-19900202"]["regle_ids"] == REGLE_IDS         # relu, rien à garder, pas de relecture ensuite
+        assert "regle_ids" not in c["perdu-19800101"] and r["rapproches"] == 2
+        run_coureurs(ctxi, {})
+        assert fauxid.n("entites") == 1                                                                 # reprise terminée : plus aucune requête
+
+    # --- sens inverse : nos ids -> QID
+    ent_inv = {
+        "Q2309784": _item("Q2309784", "cycliste", occ=None, labels={"en": "cyclist"}),
+        "Q301": _item("Q301", "Gregory Henderson", "1976-09-10", extra={"P1541": [_cl("1018")]}),                      # date égale, nom différent (Greg)
+        "Q302": _item("Q302", "Piotr Nomsame", None, extra={"P1541": [_cl("1020")]}),                                   # date absente chez Wikidata, nom concordant
+        "Q303": _item("Q303", "Jan Datefausse", "1980-01-01", extra={"P1541": [_cl("1030")]}),                          # date différente
+        "Q304": _item("Q304", "Deux Qid", "1970-05-05", extra={"P1541": [_cl("1040")]}),
+        "Q305": _item("Q305", "Deux Qid", "1970-05-05", extra={"P1541": [_cl("1040")]}),                                # même id sur 2 QID : ambigu
+        "Q306": _item("Q306", "Foot Balleur", "1980-01-01", occ="Q937857", extra={"P1541": [_cl("1050")]}),             # pas cycliste
+        "Q307": _item("Q307", "Sans Preuve", "1981-01-01", extra={"P1541": [_cl("1060")]}),                             # nom discordant, date absente chez nous
+        "Q308": _item("Q308", "Ève Femme", "1990-01-01", extra={"P2709": [_cl("1070")]}),                               # CQ femmes : ne compte pas
+        "Q309": _item("Q309", "Marc Sports", "1960-03-03", extra={"P4391": [_cl("5001")]}),
+        "Q310": _item("Q310", "Louis Anneeseule", "1950-01-01", extra={"P4391": [_cl("5002")]}),                        # année de la source différente
+        "Q311": _item("Q311", "Déjà Connu", "1985-01-01", extra={"P1541": [_cl("1080")]}),
+        "Q937857": {"id": "Q937857", "claims": {"P279": [_cl(_eid("Q2066131"))]}}, "Q2066131": {"id": "Q2066131", "claims": {}}}
+    prop_or = lambda p, ids: "haswbstatement:" + "|".join(f"{p}={i}" for i in ids)   # noqa: E731
+    cq_ids = ["1018", "1020", "1030", "1040", "1050", "1060", "1070", "1090", "1100", "1110"]    # 10 ids cherchés en UN lot ; 1080 déjà porté par un `ids`
+    rech_inv = {prop_or("P1541", cq_ids): ["Q301", "Q302", "Q303", "Q304", "Q305", "Q306", "Q307"],
+                prop_or("P4391", ["5001", "5002", "5003"]): ["Q309", "Q310"]}
+    with tempfile.TemporaryDirectory() as tmp:
+        ent = os.path.join(tmp, "entites")
+        src = os.path.join(tmp, "sources")
+        collector._dump(os.path.join(src, "cqranking", "coureurs.json"), {
+            "1018": {"nom": "HENDERSON Greg", "naissance": "1976-09-10"}, "1020": {"nom": "NOMSAME Piotr"},
+            "1030": {"nom": "DATEFAUSSE Jan", "naissance": "1980-02-02"}, "1040": {"nom": "Deux Qid", "naissance": "1970-05-05"},
+            "1050": {"nom": "Foot Balleur", "naissance": "1980-01-01"}, "1060": {"nom": "Autre Nom"}, "1070": {"nom": "Ève Femme", "naissance": "1990-01-01"},
+            "1080": {"nom": "Déjà Connu", "naissance": "1985-01-01"}, "1090": {"nom": "X Y"}, "1100": {"nom": "Z W", "naissance": "1971-01-01"},
+            "1110": {"nom": "Rien Trouvé", "naissance": "1972-02-02"}, "1120": {"echecs": 3}})                                    # 1090 / 1100 : voir ci-dessous
+        collector._dump(os.path.join(src, "thesports", "coureurs.json"), {
+            "5001": {"nom": "Marc Sports", "naissance": "1960-03-03", "precision": "jour"},
+            "5002": {"nom": "Louis Anneeseule", "naissance": "1952", "precision": "annee"}, "5003": {"nom": "Nul Part", "naissance": "1940-01-01"},
+            "5004": {"dernier_essai": "2026-11-18T11:28:11Z", "echecs": 3}})                                                 # fiche en échec : ignorée
+        collector._dump(os.path.join(ent, "wikidata", "coureurs.json"), {
+            "deja-19850101": {"qid": "Q311", "verifie": "2026-11-10", "regle": REGLE_COUREURS, "regle_ids": REGLE_IDS, "ids": {"cq": ["1080"]}}})
+        # 1090 et 1100 : non trouvés par la recherche (même lot de 10 que les autres)
+        fauxinv = FauxWikimedia(ent_inv, rech_inv, {})
+        ctxv = Contexte(Api(fauxinv), Cache(os.path.join(ent, "wikidata")), ent, aujourdhui, 0)
+        assert ctxv.sources_dir == src
+        b = run_ids_inverse(ctxv)
+        ch = [t for g, t in fauxinv.log if g == "search"]
+        assert ch == [prop_or("P1541", cq_ids),
+                      prop_or("P4391", ["5001", "5002", "5003"])], ch                                      # OU par lots de 10 ; 1080 non cherché
+        inv = ctxv.cache.d["ids_inverse"]
+        assert inv["cq"]["1018"]["statut"] == "ok" and inv["cq"]["1018"]["qid"] == "Q301" and inv["cq"]["1018"]["preuve"] == "naissance"     # Greg / Gregory
+        assert inv["cq"]["1020"]["statut"] == "ok" and inv["cq"]["1020"]["preuve"] == "nom+date_absente"
+        assert inv["cq"]["1030"]["statut"] == "a_verifier" and inv["cq"]["1030"]["qid"] == "Q303" and inv["cq"]["1030"]["detail"]["nom_concorde"]
+        assert inv["cq"]["1040"]["statut"] == "ambigu" and inv["cq"]["1040"]["qid"] is None and inv["cq"]["1040"]["detail"]["qids"] == ["Q304", "Q305"]
+        assert inv["cq"]["1050"]["statut"] == "refuse" and inv["cq"]["1050"]["qid"] is None                                    # footballeur
+        assert inv["cq"]["1060"]["statut"] == "refuse" and inv["cq"]["1070"]["statut"] == "aucun"                              # nom discordant ; P2709 ne compte pas
+        assert "1080" not in inv["cq"] and "1120" not in inv["cq"] and inv["cq"]["1110"]["statut"] == "aucun"
+        assert inv["thesports"]["5001"]["statut"] == "ok" and inv["thesports"]["5002"]["statut"] == "a_verifier"               # année de la source différente
+        assert inv["thesports"]["5003"]["statut"] == "aucun" and "5004" not in inv["thesports"]
+        assert all(v["regle"] == REGLE_INVERSE and v["verifie_le"] == "2026-11-15" for t in inv.values() for v in t.values())
+        assert b["ok"] == 3 and b["a_verifier"] == 2 and b["ambigus"] == 1 and b["nouveaux"] == 3 and b["restants"] == 0, b
+        # reprise : rien à refaire avant 60 jours ; `ok` ni `aucun` ne sont relus ; ensuite seuls les non-ok (60 j) sont re-tentés
+        n = len(fauxinv.log)
+        ctxv.cache.ecrire()
+        run_ids_inverse(Contexte(Api(fauxinv), Cache(os.path.join(ent, "wikidata")), ent, aujourdhui + dt.timedelta(days=59), 0))
+        assert len(fauxinv.log) == n
+        b2 = run_ids_inverse(Contexte(Api(fauxinv), Cache(os.path.join(ent, "wikidata")), ent, aujourdhui + dt.timedelta(days=61), 0))
+        assert b2["cherches"] == 10 and len(fauxinv.log) > n, b2                                                                # 13 ids - 3 `ok` (1018, 1020, 5001)
+    assert juger_inverse({"nom": "A B", "naissance": None, "annee": None}, [], {}, Sousclasses(Api(FauxWikimedia({}, {}, {}))))["statut"] == "aucun"
+
     print("[OK] wikidata.py : tests locaux réussis")
 
 

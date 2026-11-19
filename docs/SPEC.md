@@ -420,6 +420,18 @@ les courses de l'année civile ; la page Courses reste découpée par fichiers (
   `libelles.json` `{QID: libellé fr, sinon en}`. Rapprochement coureur : un seul candidat vérifié (P569 jour égale, nom concordant, occupation P106 =
   Q2309784 ou sous-classe) ; équipe : P1998 daté contenant la saison + nom officiel P1448 daté (ou élément saison de l'année) concordant + un seul
   parent ; `alias_equipes.json` (racine du code) `{"id équipe-saison": "QID"}` pour le reste. Re-vérification 180 jours, `null` re-tenté après 60.
+- **Identifiants externes Wikidata** (`wikidata.IDS_EXTERNES`, table unique ; docs/recherche/wikidata_identifiants_externes.md) : champ `"ids"` de chaque entrée RATTACHÉE de
+  `entites/wikidata/coureurs.json` et de `entites/historique/coureurs.json` (clé absente si aucun) : `{"cq": ["968"], "thesports": [...], "mdc": [...], "uci": [...], "pcs": [...],
+  "firstcycling": [...], "cyclingarchives": [...], "cyclebase": [...]}` = P1541, P4391, P4516 (ancien site `.eu`), P11020, P1663, P10902, P1409, P4508 ; listes de chaînes
+  triées et uniques, valeurs brutes (déclarations « deprecated » et valeurs hors format Wikidata ignorées), P2709 (CQ Ranking femmes, autre espace d'ids) jamais lue. Extraits des
+  `claims` déjà renvoyés par `wbgetentities` (aucune requête de plus) ; `"regle_ids"` (= `wikidata.REGLE_IDS`, 1) marque l'entrée : une entrée rattachée sans `regle_ids` à jour est
+  relue (claims seuls, lots de 50) sans toucher au rattachement (`qid`, `verifie`, `regle`…). Ce sont des références : aucun de ces sites n'est visité.
+  **`entites/wikidata/ids_inverse.json`** (sens inverse, nos ids -> QID) `{"cq" | "thesports": {id de la source: {"qid": QID|null, "statut": "ok" | "a_verifier" | "ambigu" |
+  "aucun" | "refuse", "preuve"?: "naissance" | "nom+date_absente", "detail"?, "regle": REGLE_INVERSE, "verifie_le": AAAA-MM-JJ}}}`. Ids des fichiers `sources/cqranking/coureurs.json`
+  et `sources/thesports/coureurs.json` absents de tout `ids` ; recherche `haswbstatement:P=a|P=b|…` par 10, puis lecture par 50. Un seul QID cycliste (P106) ; `ok` si naissance au
+  jour égale (nom indifférent, `preuve: "naissance"`) ou date absente d'un côté (ou année seule concordante) ET nom concordant (`preuve: "nom+date_absente"`) ; naissance différente :
+  `a_verifier` (`qid` gardé, `detail` = dates et `nom_concorde`, JAMAIS utilisé sans validation humaine) ; plusieurs QID : `ambigu` (`qid` null, `detail.qids`) ; non cycliste ou nom
+  discordant sans date : `refuse` ; aucun élément : `aucun`. Seul `statut: "ok"` est exploitable. Re-tentée après 60 jours (`ok` : 180 jours) ou si `regle` est plus ancienne.
 - **Historique des épreuves (palmarès Wikidata, `historique.py`)** : avant (et entre) nos données UCI, vainqueur et podium de TOUTES les éditions des séries retenues,
   depuis Wikidata seul (CC0). Séries : `series_historiques.json` (racine du code, `{clé d'édition (collector.cle_edition, après alias): {"qid" (série), "preuve":
   {"regle", "annees" (2019-2025 où le vainqueur Wikidata = le nôtre), "comparees", "discordantes", "verifie"}, "conteneur"? true}}`) ; refus à part dans
