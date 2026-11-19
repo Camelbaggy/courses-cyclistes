@@ -33,7 +33,7 @@ def get(url, timeout=120, suivre=True):
         return 0, {}, str(e).encode()
 
 def main():
-    etape = os.environ.get("ETAPE", "cdx")
+    etape = os.environ.get("ETAPE", "cdx2")
     os.makedirs("/tmp/cn", exist_ok=True)
     if etape == "1":
         # accès direct
@@ -109,6 +109,53 @@ def main():
             cl[m.group(1) if m else l[1][:50]] += 1
         for k, v in cl.most_common(40):
             print("[CDX] chemin", v, k)
+    if etape == "cdx2":
+        base = "https://web.archive.org/cdx/search/cdx?output=txt&fl=timestamp,original,statuscode&collapse=urlkey&matchType=prefix"
+        def cdx(url, limit=20000):
+            for essai in range(4):
+                s, h, b = get(base + "&url=" + url + "&limit=%d" % limit, timeout=240)
+                if s == 200:
+                    return [l.split(" ") for l in b.decode("utf-8", "replace").splitlines() if l.strip()]
+                print("[CDX] statut", s, b[:60]); time.sleep(60)
+            return []
+        tous = {}
+        for an in [1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2006, 2007, 2008]:
+            time.sleep(6)
+            L = cdx("autobus.cyclingnews.com/road.php?id=road/%d/" % an)
+            tous[an] = L
+            st = collections.Counter(l[2] for l in L if len(l) > 2)
+            mois = collections.Counter()
+            for l in L:
+                m = re.search(r"road/\d{4}/([^/&]*)", l[1])
+                if m:
+                    mois[m.group(1)] += 1
+            print("[CDX] %d : %d urls, statuts %s" % (an, len(L), dict(st)))
+            print("[CDX]   dossiers", dict(mois))
+            courts = [l for l in L if len(re.sub(r"^.*id=road/\d{4}/?", "", l[1]).strip("/").split("/")) <= 1]
+            print("[CDX]   pages d'index (<= 1 segment) :", [(l[0], l[1][-60:], l[2]) for l in courts[:12]])
+            # profondeur : pages avec 3 segments (mois/course/page)
+            prof = collections.Counter(len(re.sub(r"^.*id=road/\d{4}/?", "", l[1]).strip("/").split("/")) for l in L)
+            print("[CDX]   profondeurs", dict(prof))
+            slugs = sorted(set(l[1].split("/")[-1] if l[1].count("/") >= 6 else "" for l in L))
+            if an in (1998, 2008):
+                for l in L:
+                    if "/may" in l[1] or "/may98" in l[1]:
+                        print("[CDX]   L", l[0], re.sub(r"^.*id=road/", "", l[1]), l[2])
+        # captures de pages connues
+        for ts, u in [("20121106062214", "http://autobus.cyclingnews.com/road.php?id=road/2008/may08/gpkranj08"),
+                      ("20121106102119", "http://autobus.cyclingnews.com/road.php?id=road/2008/apr08/alentejo08/default"),
+                      ("20150918051532", "http://autobus.cyclingnews.com/road.php?id=road/2008/apr08/alentejo08/alentejo081"),
+                      ("20121106101903", "http://autobus.cyclingnews.com/road.php?id=road/2008/apr08/bancapopolare08")]:
+            s, h, b = get("https://web.archive.org/web/%sid_/%s" % (ts, u))
+            print("[PAGE]", u, s, len(b), h.get("Content-Type"))
+            open("/tmp/cn/p_%s.html" % u.split("/")[-1], "wb").write(b)
+            t = b.decode("latin-1", "replace")
+            i = t.find("<pre")
+            print("<<<DEBUT", u, "pre=", t.count("<pre"), "i=", i)
+            print(t[:1800])
+            print("....")
+            print(t[max(i, 0):max(i, 0) + 3500] if i >= 0 else t[3000:6500])
+            print("FIN>>>")
     if etape == "2":
         # capture d'une page de course et de pages d'index
         for u in os.environ.get("URLS", "").split("|"):
