@@ -1,0 +1,17 @@
+<!-- Extrait réel allégé (étude du 19/11/2026) de la capture Wayback 2010 / 20110820123936 de http://autobus.cyclingnews.com/road/2008/apr08/roubaix08/?id=results : en-tête de page, lignes de tête et de queue du <pre>, le reste supprimé. Encodage d'origine windows-1252. -->
+(Paris-Roubaix 2008, page de course : extrait du <pre>, 113 lignes classées, pas de DNF listé)
+1 Tom Boonen (Bel) Quick Step                                     5.58.42 (43.407 km/h)
+2 Fabian Cancellara (Swi) Team CSC                                   0.01
+3 Alessandro Ballan (Ita) Lampre                                         
+4 Martijn Maaskant (Ned) Slipstream Chipotle Presented By H30        3.39
+5 Stuart O'Grady (Aus) Team CSC                                      3.57
+6 Leif Hoste (Bel) Silence - Lotto                                       
+7 Stijn Devolder (Bel) Quick Step                                    3.59
+113 Mathew Hayman (Aus) Rabobank                                    29.35
+
+(Paris-Roubaix Espoirs 2008, h1 « Paris-Roubaix Espoirs - 1.2 », h2 « France, June 1, 2008 » : 85 lignes dont des « HD »)
+1 Coen Vermeltfoort (Ned) Rabobank Continental                4.21.21 (41.439 km/h)
+2 Giorgio Brambilla (Ita) UC Bergamasca 1902                         
+3 Laurent Beuret (Swi) Swiss National Team                           
+HD Nicolas Suzanne (Fra) US Austreberthe - Pavilly Barentin          
+HD Tony Hurel (Fra) Vendée U                                         

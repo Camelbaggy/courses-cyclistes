@@ -1,0 +1,9 @@
+<!-- Extrait réel allégé (étude du 19/11/2026) de la capture Wayback 19991023 (www.cyclingnews.com:80) de http://www.cyclingnews.com:80/results/1999/apr99/parisroubaix99results.html : en-tête de page, lignes de tête et de queue du <pre>, le reste supprimé. Encodage d'origine windows-1252. -->
+(ancien site 1998-2002 : rang suivi d'un point, pas de h1 normalisé ; extrait du <pre>)
+ 1. Andrea Tafi (Ita) Mapei-Quick Step                    6.44.15
+ 2. Wilfried Peeters (Bel) Mapei-Quick Step                  2.14
+ 3. Tom  Steels (Bel) Mapei-Quick Step                       2.26
+ 4. George Hincapie (USA) US Postal Service                  2.26
+ 9. Johan Museeuw (Bel) Mapei-Quick Step                     2.40
+64. Andreas Klier (Ger) TVM-Farm Frites                     13.39
+66. Michael Rich (Ger) Team Gerolsteiner                    16.39

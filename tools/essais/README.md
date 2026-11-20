@@ -20,6 +20,7 @@ Lire ensuite les logs du job « Essais réseau ».
   réutilisation), coureurs Wikidata retrouvés par l'API de recherche (`haswbstatement:P11020=<UciId>`, sinon nom + date de
   naissance vérifiée), équipes par `haswbstatement:P1998=<code UCI>` (P31, P5138, P1448, P1365/P1366). Importe
   `essai_encyclopedie.py`. Durée visée < 14 min, ≤ 1 requête/s, `maxlag=5`.
+- `cyclingnews` (étude des archives de résultats Cyclingnews via la Wayback Machine, `docs/recherche/cyclingnews_archives_collecte.md`) : variable `ETAPE` (`1`, `cdx`, `cdx2`, `p3`…`p8`), une étape par exécution ; ≥ 4,2 s entre requêtes ; à supprimer quand le collecteur existera.
 - `wikidata_ids_integration` : intégration des identifiants externes Wikidata sur un petit échantillon (dossier temporaire, rien d'écrit dans le dépôt) : reprise `REGLE_IDS` de ~100
   coureurs du cache UCI et ~100 de l'historique, sens inverse sur ~30 ids CQ Ranking et ~20 ids the-sports.org, contrôles de cohérence. Durée visée < 10 min, ≤ 1 requête/s.
 - `verif_ecarts` : vérification sur Wikidata (naissance P569, nationalité P27, vainqueur d'édition P1346, titres Wikipédia fr / en) d'écarts repérés par
