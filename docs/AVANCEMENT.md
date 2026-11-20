@@ -61,7 +61,7 @@ En cours / suite :
      déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
      ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
    - Écartés / sans suite : siteducyclisme.com (robots `Disallow: /` délibéré), cyclebase.nl (`Disallow: /`), bases PCM (données de jeu),
-     CyclingRanking (compilation, `Crawl-Delay: 20`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
+     (CyclingRanking : écarté d'abord, puis accord du 19/11/2026, voir `docs/recherche/cyclingranking_collecte.md`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
      annoncés « sans protection » à tort ; seule vraie nouveauté : le nouveau site de Mémoire du Cyclisme.
 3. **Archives 2009-2010 (T4)** : défaut d'`archives.yml` = 2009-2025 (PR #7 du dépôt d'archives). 2010 complète (185 courses), 2009 en cours
    (auto-relance). Ensuite : rattachement manuel des équipes 2009-2010 sans code UCI (classement WorldTour limité aux WorldTeams, comme
@@ -206,4 +206,9 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
 - Bilan du 17/11 fait. Cofidis 2022-2024 : l'ancien rattachement erroné à l'équipe féminine a disparu (règle v3), mais aucune équipe masculine
   n'est trouvée (`aucune`) : à traiter avec les lignées manquantes (étape 6). Historique des épreuves : 2 574 éditions, 2 158 coureurs `wd-Q…`
   (baisse normale : 2016-2017 sont désormais couvertes par nos données UCI). `update.yml` : cron de 6 h 41 sauté (sans effet en intersaison).
-- Prochain bilan le 18/11 à 11 h 20 UTC (2015-2011, contrôles des vainqueurs, lignées manquantes).
+- **Bilan du 19/11 (6 h 15 UTC, tâche programmée quotidienne à 7 h 13 heure de Paris)** : battements des deux dépôts relancés seuls (2e à 0 h,
+  3e à 5 h 20-5 h 27) ; `update.yml` ~1 passage par heure ; collectes enchaînées sans trou. the-sports : 0 édition restante (4 497 la veille),
+  8 686 fiches coureurs ; MDC : 1 690 courses + 935 éditions ; CQ Ranking : 0 page, 4 306 fiches (5 450) ; Museo (sélection élargie) : 102 albos,
+  2 503 éditions, 13 à décider ; CyclingRanking et Clics : 1er passage en cours. Seul échec 24 h : mdc #1 (`KeyError: 'affiche'`, corrigé le 18/11).
+  Archives 2009-2025 complètes ; Wikidata #11 (18/11) : 12 288 coureurs, 2 240 équipes-saisons (2009 : 30/32, 2010 : 30/31, 2011 : 18/18).
+  `archives.yml` relancé à la main le 19/11 (rien depuis le 18/11 14 h 38) pour publier vainqueurs corrigés, demi-étapes et équipes 2009-2011.
