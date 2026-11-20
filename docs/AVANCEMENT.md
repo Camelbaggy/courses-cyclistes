@@ -212,3 +212,9 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
   2 503 éditions, 13 à décider ; CyclingRanking et Clics : 1er passage en cours. Seul échec 24 h : mdc #1 (`KeyError: 'affiche'`, corrigé le 18/11).
   Archives 2009-2025 complètes ; Wikidata #11 (18/11) : 12 288 coureurs, 2 240 équipes-saisons (2009 : 30/32, 2010 : 30/31, 2011 : 18/18).
   `archives.yml` relancé à la main le 19/11 (rien depuis le 18/11 14 h 38) pour publier vainqueurs corrigés, demi-étapes et équipes 2009-2011.
+- **Bilan du 20/11 (6 h 15 UTC)** : aucun échec en 24 h ; battements continus (un toutes les ~5 h 20 dans chaque dépôt). Collectes TERMINÉES : CQ Ranking,
+  Museo (sélection élargie : 231 épreuves suivies dont 35 par alias_museo, 4 championnats, 32 + 231 courses CQ ; les 7 alias sans édition avant 2009
+  sont normaux), CyclingRanking (calendriers 1869-2008), Clics (3 211 pages, 7 en « structure inconnue » : pages Indurain, Jalabert, Impanis… à examiner).
+  En cours : the-sports (34 fiches en échec, passages à vide toutes les ~71 min jusqu'à leur abandon après 3 jours), MDC (1 448 courses + 941 éditions).
+  Archives : passage du 19/11 publié (27 demi-étapes réordonnées, 5 vainqueurs recalculés, entites/ : 26 940 coureurs, 5 159 équipes-saisons, 892 épreuves).
+  `wikidata.yml` lancé à la main le 20/11 pour la première collecte des identifiants externes (`ids`, `ids_inverse.json`).
