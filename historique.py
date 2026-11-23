@@ -926,7 +926,14 @@ def appliquer_historique(hist: Dict[str, Any], courses: Dict[str, Dict[str, Any]
     vus_legers: Set[str] = set()
     stats = collections.Counter()
     for cle in sorted(editions_h):
-        annees_uci = {a for k in groupes[cle] for a in (annee_uci(e) for e in (courses.get(k) or {}).get("editions") or []) if a}
+        annees_uci = set()
+        for k in groupes[cle]:
+            for e in (courses.get(k) or {}).get("editions") or []:
+                a = annee_uci(e)
+                if a:
+                    annees_uci.add(a)
+                if e.get("source") and e.get("season") is not None:
+                    annees_uci.add(int(e["season"]))
         utiles = [e for e in editions_h[cle] if e.get("annee") and e["annee"] not in annees_uci and not edition_future(e, aujourdhui)]
         if not utiles:
             continue

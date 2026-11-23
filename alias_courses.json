@@ -9,6 +9,7 @@
  "circuit des ardennes international|FRA": "circuit des ardennes|FRA",
  "circuit het volk|BEL": "omloop het nieuwsblad elite|BEL",
  "clasica ciclista san sebastian|ESP": "donostia san sebastian klasikoa|ESP",
+ "clasica de san sebastian|ESP": "donostia san sebastian klasikoa|ESP",
  "clasica san sebastian|ESP": "donostia san sebastian klasikoa|ESP",
  "criterium du dauphine libere|FRA": "criterium du dauphine|FRA",
  "dauphine libere|FRA": "criterium du dauphine|FRA",
@@ -38,6 +39,7 @@
  "lloyds tour of britain men|GBR": "tour of britain|GBR",
  "milan san remo|ITA": "milano sanremo|ITA",
  "milan sanremo|ITA": "milano sanremo|ITA",
+ "milano san remo|ITA": "milano sanremo|ITA",
  "national road championships france elite|FRA": "national road championships france|FRA",
  "omloop het nieuwsblad|BEL": "omloop het nieuwsblad elite|BEL",
  "omloop het volk|BEL": "omloop het nieuwsblad elite|BEL",
@@ -88,5 +90,7 @@
  "volta comunitat valenciana|ESP": "volta a la comunitat valenciana|ESP",
  "vuelta a espana|ESP": "la vuelta ciclista a espana|ESP",
  "vuelta al pais vasco|ESP": "itzulia basque country|ESP",
- "vuelta ciclista al pais vasco|ESP": "itzulia basque country|ESP"
+ "vuelta ciclista a espana|ESP": "la vuelta ciclista a espana|ESP",
+ "vuelta ciclista al pais vasco|ESP": "itzulia basque country|ESP",
+ "waalse pijl|BEL": "la fleche wallonne|BEL"
 }

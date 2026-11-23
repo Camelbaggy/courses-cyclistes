@@ -851,11 +851,21 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         del S
 
     # ---- base historique pré-2009 (sources/bdd_pre2009/) : fusionnée avant l'historique Wikidata pour éviter les doublons d'années
+    editions_pre2009_dir = os.path.join(sortie, "editions_pre2009")
     PRE2009 = sources_historiques.appliquer_bdd_pre2009(
         archives_dir, COUR, COURSES, PAYS, EQ_PAR_AN, EQ_INDEX, EQ_INDEX_BY_ID, EQ_RECH,
         WD, ar, ac, equipes_ecrites=equipes_ecrites, bdd_dir=bdd_pre2009_dir,
         est_nationale_fn=_est_nationale, gt_par_cle=_GT_PAR_CLE,
+        editions_dir=editions_pre2009_dir, ecrire_fn=ecrire,
     )
+    ed_pre_ecrites = PRE2009.get("editions_ecrites") or {}
+    if os.path.isdir(editions_pre2009_dir):
+        for an_dir in os.listdir(editions_pre2009_dir):
+            p_an = os.path.join(editions_pre2009_dir, an_dir)
+            if os.path.isdir(p_an):
+                _nettoyer(p_an, set(ed_pre_ecrites.get(an_dir) or ()))
+                if not os.listdir(p_an):
+                    os.rmdir(p_an)
     editions_total += PRE2009["editions_ajoutees"]
     equipes_total += PRE2009["equipes_ajoutees"]
     nationales += PRE2009["nationales_ajoutees"]

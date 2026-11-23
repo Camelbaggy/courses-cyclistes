@@ -1152,7 +1152,7 @@ async function charger(chemin) {
   if (cache.has(chemin)) return cache.get(chemin);
   const url = urlDonnee(chemin);
   const rel = chemin.startsWith("archives/") ? chemin.slice(9) : chemin;
-  const immuable = /^\d{4}\/races\//.test(rel) || /^entites\/classements\/\d{4}\/(?!index\.json$|etat\.json$)/.test(rel);
+  const immuable = /^\d{4}\/races\//.test(rel) || /^entites\/classements\/\d{4}\/(?!index\.json$|etat\.json$)/.test(rel) || /^entites\/editions_pre2009\//.test(rel) || /^sources\/bdd_pre2009\/editions\//.test(rel);
   const p = fetch(url, { cache: immuable ? "default" : "no-cache" }).then(r => {
     if (!r.ok) { const e = new Error(`HTTP ${r.status} pour ${url}`); e.status = r.status; throw e; }
     return r.json();
@@ -1184,7 +1184,7 @@ const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons
   // classements
   ranking: undefined, ridersCl: undefined, uc: { fr: false, q: "", limit: 100 }, clData: {},
   // archives : index (undefined = pas chargé, null = indisponible), index par saison, chemin (année) de chaque course d'archive connue
-  archIdx: undefined, archErr: null, archIndexes: {}, archChemins: new Map(), archIndices: new Map(),
+  archIdx: undefined, archErr: null, archIndexes: {}, archChemins: new Map(), archIndices: new Map(), pre2009Chemins: new Map(),
   // fiche coureur : données assemblées, onglet par coureur, filtres du palmarès, pays et noms de courses (entités)
   cr: null, rtabs: {}, rpal: { cat: "all", vic: false }, pays: undefined, coursesEnt: {}, rtab: "apercu", coureurOuvert: null,
   // recherche globale
@@ -1789,7 +1789,7 @@ function renderFiche() {
   // le bandeau montre pays, dates, classe, statut et progression : l'infobox ne garde que le reste
   const faits = [
     c.race_type ? ["Type", TYPES_EPREUVE[c.race_type] || ""] : null,
-    c.race_type === "stage_race" && !prog ? ["Étapes", `${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""}`] : null,
+    c.race_type === "stage_race" && !prog && c.stages_done ? ["Étapes", `${c.stages_done}${c.stages_total ? "/" + c.stages_total : ""}`] : null,
   ].filter(x => x && x[1]);
   const head = `<header class="art-head ed-head"><div id="crumbs-slot">${crumbsEdition(c)}</div>
     <div class="une ed-ban" style="${catStyle(c.category)}">
@@ -1797,8 +1797,13 @@ function renderFiche() {
       <div class="une-sub"><span>${esc([nomPays(c.country), dates.trim()].filter(Boolean).join(" · "))}</span>${catBadge(c.category, c.uci_class)}${tp}</div>
       ${prog}
     </div></header>`;
+  const srcCredit = Array.isArray(c.sources) && c.sources.length ? c.sources.join(", ") : (c.source || "");
+  const creditParts = [
+    equivClasse(c.uci_class) ? `Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}` : "",
+    srcCredit ? `Source : ${esc(srcCredit)}` : "",
+  ].filter(Boolean);
   const infobox = htmlInfobox({
-    credit: equivClasse(c.uci_class) ? `<div class="credit">Classe ${esc(c.uci_class)} : ${esc(equivClasse(c.uci_class))}</div>` : "", faits,
+    credit: creditParts.length ? `<div class="credit">${creditParts.join("<br>")}</div>` : "", faits,
     extra: `<div id="ednav-slot">${htmlNavEdition(navEdition(c))}</div>`,
   });
   const main = `<div class="stack">
@@ -1822,7 +1827,7 @@ function renderFiche() {
 /** En-tête d'une étape (course par étapes) : carte « Étape N · départ → arrivée », date, type, distance ; vainqueur de l'étape seulement s'il figure dans les données. */
 function htmlEnteteEtape(c, stage, sel) {
   if (c.race_type !== "stage_race") return "";
-  if (!stage) return sel === "F" ? `<div class="card stage-head"><h2>Classements finaux</h2><div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div></div>` : "";
+  if (!stage) return sel === "F" ? `<div class="card stage-head"><h2>Classements finaux</h2>${c.stages_done ? `<div class="sub">Après ${c.stages_done} étape${c.stages_done > 1 ? "s" : ""}</div>` : ""}</div>` : "";
   const rt = stage.route || {}, sub = [dateLongue(stage.date), TYPES[stage.type], rt.distance_km != null ? `${num(rt.distance_km)} km` : ""].filter(Boolean).join(" · ");
   const w = ((stage.results || {}).stage || []).find(r => r.rank === 1 && !r.status && r.rider_id), ref = w && c.riders[w.rider_id];
   const win = ref ? `<div class="sc-win"><div class="sc-who"><small>Vainqueur de l'étape</small>
@@ -1892,7 +1897,13 @@ function ctxSaison(y) { return ((state.saisons && state.saisons.available) || []
  *  certain (`archChemins`) ne vient que d'un index d'archive chargé. */
 function noterChemin(e) {
   const dispo = (state.saisons && state.saisons.available) || [];
-  if (e && e.race_id && e.season != null && !dispo.includes(e.season) && !state.archChemins.has(e.race_id)) state.archIndices.set(e.race_id, e.season);
+  if (e && e.race_id && e.season != null) {
+    if (e.bdd_slug || e.source || e.season <= 2008) {
+      state.pre2009Chemins.set(e.race_id, { annee: e.season, slug: e.bdd_slug || null });
+    } else if (!dispo.includes(e.season) && !state.archChemins.has(e.race_id)) {
+      state.archIndices.set(e.race_id, e.season);
+    }
+  }
 }
 /** Épreuve (entité de entites/courses/) d'une fiche de course : clé d'édition exacte, sinon clé canonique par alias manuel
  *  (editions.json, lu seulement si la clé brute n'a pas d'entité). null si inconnue. */
@@ -2242,9 +2253,61 @@ function setHashEtape(sel) {
   history.replaceState(history.state, "", h);
 }
 
+function normaliserCoursePre2009(d, id, annee) {
+  if (!d || typeof d !== "object") return d;
+  const out = { ...d };
+  if (!out.id) out.id = id;
+  if (out.season == null && annee != null) out.season = annee;
+  if (!out.status) out.status = "finished";
+  if (!out.start_date && out.date) out.start_date = out.date;
+  if (!out.end_date) out.end_date = out.start_date;
+  if (out.riders && (out.stages || out.final)) return out;
+  const rows = (out.final && Array.isArray(out.final.gc) && out.final.gc) ||
+    out.gc || out.results || out.classement || out.podium ||
+    (Array.isArray(out.stages) && out.stages.length && out.stages[out.stages.length - 1].results && (out.stages[out.stages.length - 1].results.gc || out.stages[out.stages.length - 1].results.stage)) ||
+    [];
+  const riders = { ...(out.riders && typeof out.riders === "object" ? out.riders : {}) };
+  const rowsNorm = [];
+  rows.forEach(r => {
+    if (!r || r.rank == null) return;
+    const rid = String(r.rider_id || r.id || "").trim();
+    if (!rid) return;
+    if (!riders[rid]) {
+      const nat = r.nationality || r.nat || r.nat_site;
+      riders[rid] = sansVide({ id: rid, name: r.name || r.nom || rid, nationality: nat, team: r.team });
+    }
+    rowsNorm.push({ ...r, rider_id: rid });
+  });
+  out.riders = riders;
+  if (!out.race_type) out.race_type = Array.isArray(out.stages) && out.stages.length ? "stage_race" : "one_day";
+  if (out.race_type === "stage_race") {
+    if (!out.final) out.final = { gc: rowsNorm };
+  } else if (!Array.isArray(out.stages) || !out.stages.length) {
+    out.stages = [{ number: null, date: out.start_date, name: "Course", results: { stage: rowsNorm } }];
+  }
+  return out;
+}
+
 /** Fiche d'une course : chemin d'archive connu (liste d'archive affichée), sinon races/, sinon recherche dans les archives
  *  (lien direct). Renvoie { d, annee } (annee = année d'archive ou null). */
 async function chargerCourse(id) {
+  const pre = state.pre2009Chemins.get(id);
+  const mPre = /^(?:pre2009|hist)-(.+)-(\d{4})$/.exec(id);
+  const mAn = /-(\d{4})$/.exec(id);
+  const anPre = pre ? pre.annee : (mPre ? Number(mPre[2]) : (mAn && Number(mAn[1]) <= 2008 ? Number(mAn[1]) : (state.archIndices.get(id) <= 2008 ? state.archIndices.get(id) : null)));
+  const slugPre = (pre && pre.slug) || (mPre && mPre[1]) || null;
+  if (anPre != null && anPre <= 2008) {
+    try {
+      const d = await chargerArchive(`entites/editions_pre2009/${anPre}/${id}.json`);
+      return { d: normaliserCoursePre2009(d, id, anPre), annee: anPre };
+    } catch (e) { if (e.status !== 404) throw e; }
+    if (slugPre) {
+      try {
+        const d = await chargerArchive(`sources/bdd_pre2009/editions/${slugPre}/${anPre}.json`);
+        return { d: normaliserCoursePre2009(d, id, anPre), annee: anPre };
+      } catch (e) { if (e.status !== 404) throw e; }
+    }
+  }
   const an = state.archChemins.get(id);
   if (an != null) return { d: await chargerArchive(`${an}/races/${id}.json`), annee: an };
   const h = state.archIndices.get(id);
@@ -3066,10 +3129,11 @@ function htmlPalmaresEpreuve(ep) {
       bf && bf.id ? `${plink(bf.id, bf.name || "Coureur", ctxSaison(e.season))} <span class="muted small">(${esc(rang(bf.rank))})</span>` : VIDE_CELLULE] };
   }).concat((C.historique || []).map(ligneHistorique).filter(Boolean)).sort((a, b) => b.season - a.season);
   const hist = (C.historique || []).length;
+  const pre2009 = E.some(e => e.source || e.season <= 2008);
   const rows = L.map(x => x.cells);
   if (rows.length) rows[0].cls = "tr-last";   // dernière édition connue (liste triée, la plus récente d'abord)
   return `${htmlTableau([{ l: "Année" }, { l: "Vainqueur", tl: true, dot: "r1" }, { l: "2e", tl: true, dot: "r2" }, { l: "3e", tl: true, dot: "r3" }, { l: "Meilleur Français", tl: true }], rows)}
-    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). Éditions UCI terminées seulement ; l'année ouvre la fiche de l'édition.</div>
+    <div class="tbl-note">Podium : classement général final (course par étapes) ou classement de la course (course d'un jour). ${pre2009 ? "Éditions UCI terminées et archives historiques pré-2009" : "Éditions UCI terminées seulement"} ; l'année ouvre la fiche de l'édition.</div>
     ${hist ? `<div class="tbl-note">Années marquées <sup class="wd-s">WD</sup> : avant nos données UCI, d'après Wikidata (CC0) ; l'année ouvre l'élément Wikidata. Les statuts sont repris tels quels : « non attribué » (titre retiré, coureur déclassé indiqué s'il est connu), « contesté » (sources en désaccord, les deux valeurs sont données).</div>` : ""}`;
 }
 function htmlRecordsEpreuve(ep) {

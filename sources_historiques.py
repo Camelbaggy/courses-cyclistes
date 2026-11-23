@@ -78,6 +78,17 @@ _SYNONYMES_PAYS: Dict[str, str] = {
 
 _EXT_ID_CLES = ("pcs", "firstcycling", "cq", "thesports", "mdc", "uci")
 
+_ISO2_VERS_ISO3: Dict[str, str] = {}
+for _iso3, _iso2 in netutil.FLAG_CODES.items():
+    _ISO2_VERS_ISO3.setdefault(_iso2.upper(), _iso3)
+_ISO2_VERS_ISO3.update({
+    "SI": "SLO",
+    "TG": "TOG",
+    "UK": "GBR",
+    "SU": "URS",
+    "DD": "GDR",
+})
+
 
 def credit_source(code: str) -> str:
     """Libellé officiel à afficher pour une source donnée."""
@@ -128,16 +139,25 @@ def normaliser_pays(
     haut = brut_s.upper()
     if haut == "TCH":
         return "CZE" if (annee is not None and annee > 1992) else "TCH"
+    if len(haut) == 2:
+        if haut == "CS":
+            return "CZE" if (annee is not None and annee > 1992) else "TCH"
+        if haut in _ISO2_VERS_ISO3:
+            return _ISO2_VERS_ISO3[haut]
     if pays.code_valide(haut):
         return haut
     if haut in _SYNONYMES_PAYS:
         cible = _SYNONYMES_PAYS[haut]
         if pays.code_valide(cible):
             return cible
-    for s_fallback in ("museo", "thesports", "cqranking"):
+    for s_fallback in ("museo", "thesports", "cqranking", "clics"):
         res = pays.pays_normalise(brut_s, s_fallback, annee)
         if res:
             return res
+    import encyclopedie
+    codes_nom = encyclopedie._PAYS_PAR_NOM.get(netutil.normalize(brut_s))
+    if codes_nom and len(codes_nom) == 1:
+        return next(iter(codes_nom))
     if inconnus is not None:
         pays.compter_inconnu(inconnus, brut_s)
     return None
@@ -405,6 +425,8 @@ def appliquer_bdd_pre2009(
     bdd_dir: Optional[str] = None,
     est_nationale_fn: Optional[Callable[[str, Iterable[Optional[str]]], Optional[str]]] = None,
     gt_par_cle: Optional[Dict[str, str]] = None,
+    editions_dir: Optional[str] = None,
+    ecrire_fn: Optional[Callable[[str, Any], None]] = None,
 ) -> Dict[str, Any]:
     """Ingère `<archives_dir>/sources/bdd_pre2009/` (`year <= 2008`) dans les structures d'`encyclopedie.py`."""
     bdd = dossier_bdd_pre2009(archives_dir, bdd_dir)
@@ -421,6 +443,7 @@ def appliquer_bdd_pre2009(
         "editions_ignorees": 0,
         "courses_sans_cle": 0,
         "pays_inconnus": {},
+        "editions_ecrites": {},
     }
     if not os.path.isdir(bdd):
         return rapport_vide
@@ -443,6 +466,7 @@ def appliquer_bdd_pre2009(
     courses_sans_cle = 0
     equipes_ajoutees = 0
     nationales_ajoutees = 0
+    editions_ecrites: Dict[str, Set[str]] = collections.defaultdict(set)
 
     # Cumuls d'équipes et pays pré-2009 par année : {an: {slug: ...}}
     eq_cumul: Dict[int, Dict[str, Dict[str, Any]]] = collections.defaultdict(dict)
@@ -494,6 +518,8 @@ def appliquer_bdd_pre2009(
         podium: List[Dict[str, Any]] = []
         best_french: Optional[Dict[str, Any]] = None
         classes_vus: Set[str] = set()
+        riders_fiche: Dict[str, Dict[str, Any]] = {}
+        rows_norm: List[Dict[str, Any]] = []
 
         for row in lignes:
             rang = row.get("rank")
@@ -552,6 +578,20 @@ def appliquer_bdd_pre2009(
                     c_obj["flag"] = flag
                 if not c_obj.get("birth_date") and d_comp:
                     c_obj["birth_date"] = d_comp
+
+            riders_fiche[cid] = _sans_vide({
+                "id": cid,
+                "name": c_obj.get("name") or nom_c,
+                "nationality": nat,
+                "flag": flag,
+                "is_french": True if nat == "FRA" else None,
+                "team": eq_nom,
+            })
+            row_out: Dict[str, Any] = {"rank": rang_int, "rider_id": cid}
+            for k_opt in ("time_s", "gap_s", "points", "bonus_s", "penalty_s", "uci_points", "bib"):
+                if row.get(k_opt) is not None:
+                    row_out[k_opt] = row[k_opt]
+            rows_norm.append(row_out)
 
             s_str = str(an)
             s_obj = c_obj["saisons"].setdefault(s_str, {"stats": {"wins": 0, "podiums": 0, "top10": 0, "races": 0, "gc_wins": 0}})
@@ -681,6 +721,7 @@ def appliquer_bdd_pre2009(
         if race_type and an >= C_ent["_type_an"]:
             C_ent["type"], C_ent["_type_an"] = race_type, an
         podium.sort(key=lambda p: (p["rank"], p.get("id") or ""))
+        rows_norm.sort(key=lambda r: (r["rank"], r["rider_id"]))
         C_ent["editions"].append(_sans_vide({
             "season": an,
             "race_id": race_id,
@@ -690,7 +731,46 @@ def appliquer_bdd_pre2009(
             "best_french": best_french,
             "source": source_prim,
             "sources": sources_ed if len(sources_ed) > 1 else None,
+            "bdd_slug": slug,
         }))
+        if editions_dir:
+            fiche_ed: Dict[str, Any] = _sans_vide({
+                "id": race_id,
+                "name": nom_course,
+                "country": pays_code,
+                "flag": pays.drapeau(pays_code) if pays_code else None,
+                "season": an,
+                "start_date": start_date,
+                "end_date": end_date,
+                "race_type": race_type,
+                "uci_class": uci_class,
+                "category": category,
+                "status": "finished",
+                "source": source_prim,
+                "sources": sources_ed if len(sources_ed) > 1 else None,
+                "bdd_slug": slug,
+                "riders": riders_fiche,
+            })
+            if race_type == "stage_race":
+                fiche_ed["final"] = {"gc": rows_norm}
+                if isinstance(ed.get("stages"), list) and ed["stages"]:
+                    fiche_ed["stages_done"] = len(ed["stages"])
+            else:
+                fiche_ed["stages"] = [{
+                    "number": None,
+                    "date": start_date,
+                    "name": "Course",
+                    "results": {"stage": rows_norm},
+                }]
+            safe_race_id = re.sub(r"[\\/]+", "-", race_id)
+            fname = f"{safe_race_id}.json"
+            an_str = str(an)
+            editions_ecrites[an_str].add(fname)
+            chemin_ed = os.path.join(editions_dir, an_str, fname)
+            if ecrire_fn is not None:
+                ecrire_fn(chemin_ed, fiche_ed)
+            else:
+                collector._dump_if_changed(chemin_ed, fiche_ed, ignore=())
 
     # Consolidation des pays pré-2009 dans PAYS
     for an, par_nat in pays_saison_cumul.items():
@@ -808,6 +888,7 @@ def appliquer_bdd_pre2009(
         "editions_ignorees": editions_ignorees,
         "courses_sans_cle": courses_sans_cle,
         "pays_inconnus": inconnus,
+        "editions_ecrites": {k: sorted(v) for k, v in sorted(editions_ecrites.items())},
     }
 
 
@@ -823,8 +904,36 @@ def _tests() -> None:
     assert normaliser_pays("RFA", "pcs", 1985) == "FRG"
     assert normaliser_pays("TCH", "museo", 1991) == "TCH"
     assert normaliser_pays("TCH", "museo", 1995) == "CZE"
+    assert normaliser_pays("BE", "pcs", 2008) == "BEL"
+    assert normaliser_pays("FR", "pcs", 1981) == "FRA"
+    assert normaliser_pays("IT", "pcs", 1981) == "ITA"
+    assert normaliser_pays("ES", "pcs", 1981) == "ESP"
+    assert normaliser_pays("NL", "pcs", 1981) == "NED"
+    assert normaliser_pays("CH", "pcs", 1981) == "SUI"
+    assert normaliser_pays("CS", "pcs", 1990) == "TCH"
+    assert normaliser_pays("CS", "pcs", 1995) == "CZE"
+    assert normaliser_pays("Belgium", "pcs", 2008) == "BEL"
+    assert normaliser_pays("France", "pcs", 1981) == "FRA"
+    assert normaliser_pays("Italy", "pcs", 1981) == "ITA"
+    assert normaliser_pays("Spain", "pcs", 1981) == "ESP"
     inc: Dict[str, int] = {}
     assert normaliser_pays("ZZZ", "pcs", 1990, inc) is None and inc == {"ZZZ": 1}
+
+    # 1b. Rapprochement des clés canoniques des grandes épreuves
+    alias_c = collector.charger_alias(collector.ALIAS_COURSES)
+    for nom_t, pays_t, canon_t in (
+        ("Omloop Het Nieuwsblad", "BEL", "omloop het nieuwsblad elite|BEL"),
+        ("Paris - Roubaix", "FRA", "paris roubaix|FRA"),
+        ("Tour de France", "FRA", "tour de france|FRA"),
+        ("Giro d'Italia", "ITA", "giro d italia|ITA"),
+        ("Vuelta a España", "ESP", "la vuelta ciclista a espana|ESP"),
+        ("Milano-Sanremo", "ITA", "milano sanremo|ITA"),
+        ("Ronde van Vlaanderen", "BEL", "ronde van vlaanderen tour des flandres|BEL"),
+        ("Liège - Bastogne - Liège", "BEL", "liege bastogne liege|BEL"),
+        ("Giro di Lombardia", "ITA", "il lombardia|ITA"),
+    ):
+        k_t = collector.cle_edition(nom_t, pays_t)
+        assert alias_c.get(k_t, k_t) == canon_t, (nom_t, k_t, alias_c.get(k_t, k_t))
 
     # 2. Jeu de test complet bdd_pre2009 + encyclopedie.construire()
     with tempfile.TemporaryDirectory(prefix="src_hist_") as tmp:
@@ -864,6 +973,25 @@ def _tests() -> None:
         wd_dir = os.path.join(out, "wikidata")
         collector._dump(os.path.join(wd_dir, "coureurs.json"), {
             rid_pcs: {"qid": "Q220987", "verifie": "2026-11-01", "ids": {"pcs": ["bernard-hinault"], "firstcycling": ["123"]}},
+        })
+
+        # Cache historique Wikidata : 2008 (Omloop), 1981 & 1955 (Paris-Roubaix)
+        hist_dir = os.path.join(out, "historique")
+        collector._dump(os.path.join(hist_dir, "coureurs.json"), {
+            "Q1001": {"nom": "Philippe Gilbert", "nationalite": "BEL"},
+            "Q1002": {"nom": "Bernard Hinault", "nationalite": "FRA", "rider_id": rid_pcs},
+            "Q1003": {"nom": "Louison Bobet", "nationalite": "FRA"},
+        })
+        collector._dump(os.path.join(hist_dir, "editions", "o.json"), {
+            "omloop het nieuwsblad elite|BEL": [
+                {"annee": 2008, "qid": "Q5008", "vainqueur": "Q1001", "podium": [{"rang": 1, "qid": "Q1001"}], "statut": "ok", "verifie": "2026-11-16"},
+            ],
+        })
+        collector._dump(os.path.join(hist_dir, "editions", "p.json"), {
+            "paris roubaix|FRA": [
+                {"annee": 1981, "qid": "Q5981", "vainqueur": "Q1002", "podium": [{"rang": 1, "qid": "Q1002"}], "statut": "ok", "verifie": "2026-11-16"},
+                {"annee": 1955, "qid": "Q5955", "vainqueur": "Q1003", "podium": [{"rang": 1, "qid": "Q1003"}], "statut": "ok", "verifie": "2026-11-16"},
+            ],
         })
 
         # bdd_pre2009
@@ -909,6 +1037,28 @@ def _tests() -> None:
                 {"rank": 1, "rider_id": "c_merckx", "team": "Molteni"},
             ],
         })
+        # Édition 2008 Omloop Het Nieuwsblad (country ISO-2 BE) -> doit masquer l'entrée Wikidata 2008
+        collector._dump(os.path.join(bdd, "editions", "omloop-het-nieuwsblad", "2008.json"), {
+            "race_id": "pre2009-omloop-het-nieuwsblad-2008",
+            "name": "Omloop Het Nieuwsblad",
+            "country": "BE",
+            "start_date": "2008-03-01",
+            "source": "pcs",
+            "results": [
+                {"rank": 1, "rider_id": "c_merckx", "team": "Française des Jeux"},
+            ],
+        })
+        # Édition 1981 Paris-Roubaix -> doit masquer Wikidata 1981, tout en laissant 1955 en WD
+        collector._dump(os.path.join(bdd, "editions", "paris-roubaix", "1981.json"), {
+            "race_id": "pre2009-paris-roubaix-1981",
+            "name": "Paris - Roubaix",
+            "country": "FRA",
+            "start_date": "1981-04-12",
+            "source": "pcs",
+            "results": [
+                {"rank": 1, "rider_id": "c_hinault", "team": "Renault-Elf-Gitane"},
+            ],
+        })
         # Édition 2009 (> 2008) -> doit être ignorée
         collector._dump(os.path.join(bdd, "editions", "plouay", "2009.json"), {
             "race_id": "plouay-2009",
@@ -919,12 +1069,11 @@ def _tests() -> None:
             "results": [{"rank": 1, "rider_id": "c_homo1"}],
         })
 
-        alias_c = collector.charger_alias(collector.ALIAS_COURSES)
         rap = encyclopedie.construire(arch, data, out, now="2026-11-23T00:00:00Z", alias_coureurs={}, alias_courses=alias_c, verbose=False)
 
         b = rap["bdd_pre2009"]
         assert b["present"] is True, b
-        assert b["editions_ajoutees"] == 2 and b["editions_ignorees"] == 1, b
+        assert b["editions_ajoutees"] == 4 and b["editions_ignorees"] == 1, b
         assert b["sources"] == ["firstcycling", "letour_dataset", "pcs"], b
         assert b["credits"] == ["FirstCycling", "Le Tour Dataset", "ProCyclingStats"], b
 
@@ -936,7 +1085,28 @@ def _tests() -> None:
         assert eds_d[1981]["podium"][0]["id"] == rid_pcs
 
         het = collector._load(os.path.join(out, "courses", "o.json"), {})["omloop het nieuwsblad elite|BEL"]
-        assert het["editions"][0]["season"] == 1971 and het["editions"][0]["source"] == "firstcycling"
+        eds_het = {e["season"]: e for e in het["editions"]}
+        assert 1971 in eds_het and 2008 in eds_het, eds_het
+        assert eds_het[1971]["source"] == "firstcycling"
+        assert eds_het[2008]["race_id"] == "pre2009-omloop-het-nieuwsblad-2008"
+        assert eds_het[2008]["bdd_slug"] == "omloop-het-nieuwsblad"
+        assert "historique" not in het, het.get("historique")  # 2008 couvert par bdd_pre2009 -> pas de badge WD
+
+        pr = collector._load(os.path.join(out, "courses", "p.json"), {})["paris roubaix|FRA"]
+        eds_pr = {e["season"]: e for e in pr["editions"]}
+        assert 1981 in eds_pr and eds_pr[1981]["race_id"] == "pre2009-paris-roubaix-1981"
+        assert [h["annee"] for h in pr.get("historique") or []] == [1955], pr.get("historique")  # 1981 exclu de WD, 1955 conservé en WD
+
+        # Fiches d'édition complètes générées dans entites/editions_pre2009/
+        f_omloop_2008 = collector._load(os.path.join(out, "editions_pre2009", "2008", "pre2009-omloop-het-nieuwsblad-2008.json"), {})
+        assert f_omloop_2008["id"] == "pre2009-omloop-het-nieuwsblad-2008" and f_omloop_2008["country"] == "BEL"
+        assert f_omloop_2008["stages"][0]["results"]["stage"][0]["rider_id"] == rid_date
+        assert rid_date in f_omloop_2008["riders"]
+
+        f_pr_1981 = collector._load(os.path.join(out, "editions_pre2009", "1981", "pre2009-paris-roubaix-1981.json"), {})
+        assert f_pr_1981["id"] == "pre2009-paris-roubaix-1981"
+        assert f_pr_1981["stages"][0]["results"]["stage"][0]["rider_id"] == rid_pcs
+
         assert "bretagne classic ouest france|FRA" not in collector._load(os.path.join(out, "courses", "b.json"), {})
 
         # Rapprochement coureurs : Hinault par ID pcs, Merckx par nom+naissance, homonyme NON fusionné, coureur URS conservé en h-urs
