@@ -3,6 +3,7 @@
 """Accès HTTP commun à toutes les sources : politesse (pause minimale par hôte, User-Agent honnête),
 reprises, détection des pages anti-robot (abandon sans contournement), sauvegarde brute optionnelle."""
 
+import functools
 import gzip
 import json
 import os
@@ -12,6 +13,7 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from typing import Any, Dict, Optional
 
 USER_AGENT = "courses-cyclistes/1.0 (+https://github.com/Camelbaggy/courses-cyclistes)"
@@ -116,7 +118,13 @@ def fetch_text(url: str, data: Optional[bytes] = None, headers: Optional[Dict[st
         except urllib.error.HTTPError as e:
             dernier_statut = e.code
             try:
-                txt = e.read(4000).decode("utf-8", "replace")
+                raw = e.read(16384)
+                if raw[:2] == b"\x1f\x8b":
+                    try:
+                        raw = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(raw)
+                    except Exception:
+                        pass
+                txt = raw[:4000].decode("utf-8", "replace")
             except Exception:
                 txt = ""
             if e.code == 429 and attendre_429 and not _looks_like_challenge(e.code, txt):
@@ -168,6 +176,7 @@ def _parse_json(text: Optional[str], url: str) -> Optional[Any]:
         return None
 
 
+@functools.lru_cache(maxsize=16384)
 def normalize(name: str) -> str:
     """Minuscules ASCII sans ponctuation, espaces simples (rapprochements de noms)."""
     txt = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode()
@@ -193,7 +202,7 @@ FLAG_CODES = {
     "IRL": "ie", "ISR": "il", "ITA": "it", "KAZ": "kz", "KOS": "xk", "LVA": "lv", "LIE": "li", "LTU": "lt",
     "LUX": "lu", "MLT": "mt", "MDA": "md", "MNE": "me", "NED": "nl", "MKD": "mk", "NIR": "gb-nir", "NOR": "no",
     "POL": "pl", "POR": "pt", "ROU": "ro", "RUS": "ru", "SMR": "sm", "SCO": "gb-sct", "SRB": "rs", "SVK": "sk",
-    "SVN": "si", "SLO": "si", "GBR": "gb", "ERI": "er", "ESP": "es", "SWE": "se", "SUI": "ch", "TUR": "tr", "UKR": "ua", "WAL": "gb-wls", "MON": "mc",
+    "SVN": "si", "SLO": "si", "GBR": "gb", "ESP": "es", "SWE": "se", "SUI": "ch", "TUR": "tr", "UKR": "ua", "WAL": "gb-wls", "MON": "mc",
     # Amériques
     "ARG": "ar", "BRA": "br", "URU": "uy", "PAR": "py", "CHI": "cl", "COL": "co", "ECU": "ec", "PER": "pe",
     "VEN": "ve", "BOL": "bo", "MEX": "mx", "USA": "us", "CAN": "ca", "JAM": "jm", "CRC": "cr", "HON": "hn",
@@ -204,14 +213,14 @@ FLAG_CODES = {
     "NGA": "ng", "GHA": "gh", "MLI": "ml", "BFA": "bf", "GUI": "gn", "COD": "cd", "CGO": "cg", "GAB": "ga",
     "GAM": "gm", "CPV": "cv", "ZAM": "zm", "ZIM": "zw", "RSA": "za", "ANG": "ao", "MOZ": "mz", "KEN": "ke",
     "TOG": "tg", "BEN": "bj", "NIG": "ne", "GNB": "gw", "SLE": "sl", "LBR": "lr", "MTN": "mr", "MAD": "mg",
-    "COM": "km", "CTA": "cf", "EQG": "gq", "BDI": "bi", "RWA": "rw", "TAN": "tz", "UGA": "ug", "ETH": "et",
+    "COM": "km", "CTA": "cf", "EQG": "gq", "BDI": "bi", "ERI": "er", "RWA": "rw", "TAN": "tz", "UGA": "ug", "ETH": "et",
     "SUD": "sd", "MWI": "mw", "NAM": "na", "BOT": "bw",
     # Asie / Océanie
     "JPN": "jp", "KOR": "kr", "CHN": "cn", "AUS": "au", "NZL": "nz", "IRN": "ir", "IRQ": "iq", "KSA": "sa",
     "QAT": "qa", "UAE": "ae", "UZB": "uz", "JOR": "jo", "SYR": "sy", "LBN": "lb", "PLE": "ps", "IND": "in",
-    "IDN": "id", "THA": "th", "MAS": "my", "OMA": "om", "BRN": "bh", "RWA": "rw", "ERI": "er", "SGP": "sg", "TPE": "tw", "HKG": "hk", "MGL": "mn", "LAO": "la", "CAM": "kh", "BAN": "bd", "SRI": "lk", "NEP": "np", "VIE": "vn", "PHI": "ph", "KGZ": "kg", "TJK": "tj", "TKM": "tm", "PAK": "pk",
+    "IDN": "id", "THA": "th", "MAS": "my", "OMA": "om", "BRN": "bh", "SGP": "sg", "TPE": "tw", "HKG": "hk", "MGL": "mn", "LAO": "la", "CAM": "kh", "BAN": "bd", "SRI": "lk", "NEP": "np", "VIE": "vn", "PHI": "ph", "KGZ": "kg", "TJK": "tj", "TKM": "tm", "PAK": "pk",
     # Variantes de codes rencontrées
-    "TGO": "tg", "NCL": "nc", "REU": "re", "MYT": "yt", "MRI": "mu", "CHA": "td", "DJI": "dj", "ERI": "er",
+    "TGO": "tg", "NCL": "nc", "REU": "re", "MYT": "yt", "MRI": "mu", "CHA": "td", "DJI": "dj",
     "SSD": "ss", "SOM": "so", "LES": "ls", "SWZ": "sz", "SEY": "sc", "STP": "st", "GUY": "gy", "BRB": "bb",
     "LCA": "lc", "SKN": "kn", "ATG": "ag", "BLZ": "bz", "NCA": "ni", "ARU": "aw", "BER": "bm", "PUR": "pr",
 }

@@ -264,8 +264,8 @@ Fichiers publiés (`data/`, écrits uniquement par le pipeline ; schéma : `docs
   Uniquement avec une source citée (Wikidata + 2e source indépendante) et validées par le propriétaire ; jamais devinées. Chaque entrée porte
   `valeur`, `uci` (valeur d'origine), `source`, `date`, `note` ; l'entité coureur expose `corrections` et la fiche l'affiche (« UCI : … · corrigé d'après … »).
   Les fiches de course d'archive déjà écrites gardent la valeur UCI. Schéma : `docs/SPEC.md` §4.5 ; vérification : `docs/recherche/encyclopedie_sources.md`.
-- **Exclues** : ProCyclingStats et FirstCycling (CGU/robots.txt interdisent, Cloudflare). Ne pas les réintroduire.
-  Aucun contournement anti-robot (pas de faux navigateur, pas de jeton récupéré dans une page).
+- **Règle anti-robot** : aucun contournement anti-robot (pas de faux navigateur, pas de jeton récupéré dans une page).
+- **ProCyclingStats et FirstCycling** : accord explicite obtenu par le propriétaire pour utiliser leurs données dans ce projet personnel. Crédit obligatoire à l'affichage (« ProCyclingStats » et « FirstCycling ») ; ne jamais republier les caches HTML bruts dans le dépôt public. Pages protégées par Cloudflare : accès uniquement par voie autorisée (export, clé d'API ou règle d'exception si fournie), sans contournement anti-robot.
 - **the-sports.org** (`thesports.py`, `docs/recherche/thesports_collecte.md`) : accord de l'éditeur (Vincent Duplessy) obtenu par le propriétaire le 18/11/2026 pour collecter par programme les résultats
   cyclistes ET les afficher, crédit « the-sports.org ». Politesse : robots.txt respecté (jamais /accueil.php, /index.php, /admin.php, /go.php, /calendrier.php, /tmp/, /zz, /how-to-, /*.html/), UA « courses-cyclistes (accord the-sports.org) »,
   ≥ 2 s entre requêtes (`PAUSE_S` 3,0 depuis un 503 du site le 18/11/2026 ; site abandonné = passage arrêté net, `netutil.hote_bloque`), aucune page demandée deux fois (calendriers en cache gzip, éditions écrites une fois : `--relire` pour forcer). Découverte = calendriers annuels (liste déroulante des années), colonne

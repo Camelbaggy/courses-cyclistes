@@ -49,8 +49,10 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import collector
 import historique
 import netutil
+import pays
 import riders
 import selection
+import sources_historiques
 import uci
 import wikidata
 
@@ -562,10 +564,10 @@ def _codes_equipes(src: Dict[str, Any]) -> Dict[str, Set[str]]:
 def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, now: Optional[str] = None,
                alias_coureurs: Optional[Dict[str, str]] = None, alias_courses: Optional[Dict[str, str]] = None,
                verbose: bool = True, wikidata_dir: Optional[str] = None, fusions: Optional[Iterable[str]] = None,
-               historique_dir: Optional[str] = None) -> Dict[str, Any]:
+               historique_dir: Optional[str] = None, bdd_pre2009_dir: Optional[str] = None) -> Dict[str, Any]:
     """Génère `sortie` (défaut `<archives_dir>/entites`). Retourne un rapport (compteurs, tailles, anomalies).
     `wikidata_dir` : cache Wikidata lu (défaut `<sortie>/wikidata`) ; `historique_dir` : cache de l'historique (palmarès Wikidata, module
-    `historique`) lu (défaut `<sortie>/historique`)."""
+    `historique`) lu (défaut `<sortie>/historique`) ; `bdd_pre2009_dir` : base historique pré-2009 (défaut `<archives_dir>/sources/bdd_pre2009`)."""
     t0 = time.time()
     sortie = sortie or os.path.join(archives_dir, "entites")
     WD = wikidata.charger_cache(wikidata_dir or os.path.join(sortie, "wikidata"))
@@ -585,6 +587,8 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     PAYS: Dict[str, Dict[str, Any]] = {}
     EQ_RECH: Dict[str, Dict[str, Any]] = {}          # slug du libellé -> entrée de recherche
     EQ_INDEX: List[Dict[str, Any]] = []
+    EQ_INDEX_BY_ID: Dict[str, Dict[str, Any]] = {}
+    SOEURS_PAR_AN: Dict[int, Dict[str, str]] = {}
     anomalies: Dict[str, Any] = collections.defaultdict(list)
     rapport: Dict[str, Any] = {"saisons": annees, "inconnues": inconnues,
                                "courses_reportees": sum(sources[a]["entrantes"] for a in annees)}     # rangées dans un autre dossier que l'année de leur date
@@ -703,11 +707,15 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                 code_flag = _drapeau_pays(S, nat)
                 if code_flag:
                     ent["f"] = code_flag
-            EQ_INDEX.append(_sans_vide({"id": tid, "name": nom, "season": an, "wins": fiche["totaux"]["wins"],
-                                        "riders": fiche["totaux"]["riders"], "nationale": True if nat else None,
-                                        "pays": nat, "lignee": lig}))
+            ent_idx = _sans_vide({"id": tid, "name": nom, "season": an, "wins": fiche["totaux"]["wins"],
+                                  "riders": fiche["totaux"]["riders"], "nationale": True if nat else None,
+                                  "pays": nat, "lignee": lig})
+            EQ_INDEX.append(ent_idx)
+            EQ_INDEX_BY_ID[tid] = ent_idx
         equipes = dict(sorted(equipes.items()))
-        _heriter_lignees_renommees(an, equipes, LIGNEE_DE, LIGNEES_EQ, EQ_INDEX)
+        soeurs = _soeurs_renommees_saison(equipes)
+        SOEURS_PAR_AN[an] = soeurs
+        _heriter_lignees_renommees(an, equipes, LIGNEE_DE, LIGNEES_EQ, EQ_INDEX, soeurs=soeurs, eq_index_by_id=EQ_INDEX_BY_ID)
         equipes_total += len(equipes)
         EQ_PAR_AN[an] = equipes
         equipes_ecrites.add(f"{an}.json")
@@ -842,78 +850,31 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             print(f"[ENCYCLOPEDIE] {an} : {S.courses_total} course(s), {len(S.coureurs)} coureur(s), {len(equipes)} équipe(s)")
         del S
 
+    # ---- base historique pré-2009 (sources/bdd_pre2009/) : fusionnée avant l'historique Wikidata pour éviter les doublons d'années
+    PRE2009 = sources_historiques.appliquer_bdd_pre2009(
+        archives_dir, COUR, COURSES, PAYS, EQ_PAR_AN, EQ_INDEX, EQ_INDEX_BY_ID, EQ_RECH,
+        WD, ar, ac, equipes_ecrites=equipes_ecrites, bdd_dir=bdd_pre2009_dir,
+        est_nationale_fn=_est_nationale, gt_par_cle=_GT_PAR_CLE,
+    )
+    editions_total += PRE2009["editions_ajoutees"]
+    equipes_total += PRE2009["equipes_ajoutees"]
+    nationales += PRE2009["nationales_ajoutees"]
+    rapport["bdd_pre2009"] = PRE2009
+
     # ---- historique (palmarès Wikidata des années absentes de nos éditions UCI) : fusionné avant l'écriture des coureurs et des courses
     H: Dict[str, Any] = historique.appliquer_historique(HIST, COURSES, COUR, ar, WD["coureurs"], now[:10]) if HIST["editions"] else \
         {"par_cle": {}, "attaches": {}, "legers": {}, "recherche": [], "rapport": {}}
     rapport["historique"] = H["rapport"]
+    del HIST
 
-    # ---- finalisation des coureurs
-    ordre_class = {"gc": 0, "stage": 1, "points": 2, "mountain": 3, "youth": 4}
-    lettres: Dict[str, Dict[str, Any]] = {}
-    for cid in sorted(COUR):
-        c = COUR[cid]
-        st = c.pop("_stats")
-        c["palmares"].sort(key=lambda x: (x["date"], x["race_id"], -ordre_class.get(x["classification"], 9), -x["rank"]), reverse=True)
-        c["grands_tours"].sort(key=lambda x: (x["season"], x["course"]), reverse=True)
-        c["saisons"] = dict(sorted(c["saisons"].items(), reverse=True))
-        c["totaux"] = {"wins": st["wins"], "podiums": st["podiums"], "gc_wins": st["gc_wins"], "seasons": len(c["saisons"])}
-        for k in ("palmares", "grands_tours"):
-            if not c[k]:
-                del c[k]
-        hist = HISTORIQUE.get(cid)
-        if hist:
-            c["historique_uci"] = [[d, hist[d]] for d in sorted(hist)]
-        if cid in H["attaches"]:
-            c["palmares_historique"] = H["attaches"][cid]            # années absentes de nos données UCI ; source Wikidata (QID de l'édition)
-            c["palmares_historique_source"] = "wikidata"
-        wd = wikidata.fiche_wikidata(WD["coureurs"].get(cid), WD["images"])
-        if wd:
-            c["wikidata"] = wd
-        out = {k: c[k] for k in ("name", "nationality", "flag", "birth_date") if k in c}
-        out.update({k: v for k, v in c.items() if k not in out})
-        lettres.setdefault(_lettre(cid), {})[cid] = out
-    for lettre, contenu in sorted(lettres.items()):
-        ecrire(os.path.join(sortie, "coureurs", f"{lettre}.json"), contenu)
-    # index compact des coureurs (liste des pages Coureurs) : clés courtes, une clé absente = pas de donnée
-    derniere = annees[-1] if annees else None
-    idx_coureurs: List[Dict[str, Any]] = []
-    for lettre in sorted(lettres):
-        for cid, f in lettres[lettre].items():
-            if not re.search(r"[^\W_]", f.get("name") or ""):   # nom vide ou fait de ponctuation seule (« - - ») : pas de ligne dans l'annuaire
-                continue
-            sais = f["saisons"]
-            ys = sorted(int(y) for y in sais)
-            dern = sais[str(ys[-1])] if ys else {}
-            rangs = [x["uci_rank"] for x in sais.values() if x.get("uci_rank") is not None]
-            idx_coureurs.append(_sans_vide({
-                "id": cid, "n": f["name"], "f": f.get("flag"), "nat": f.get("nationality"),
-                "eq": dern.get("team"), "eqid": dern.get("equipe"), "s": [ys[0], ys[-1]] if ys else None,
-                "v": f["totaux"]["wins"], "p": f["totaux"]["podiums"], "uci": min(rangs) if rangs else None,
-                "fr": True if f.get("nationality") == "FRA" else None,
-                "act": True if ys and ys[-1] == derniere else None,
-                "photo": True if (f.get("wikidata") or {}).get("image") else None}))
-    idx_coureurs.sort(key=lambda x: x["id"])
-    ecrire(os.path.join(sortie, "coureurs", "index.json"), idx_coureurs)
-    _nettoyer(os.path.join(sortie, "coureurs"), {f"{l}.json" for l in lettres} | {"index.json"})
-
-    # ---- coureurs historiques (légers) : fichier d'après les deux derniers chiffres du QID (« wd-Q123456 » -> 56.json)
-    legers_fichiers: Dict[str, Dict[str, Any]] = {}
-    for wid, fiche in H["legers"].items():
-        legers_fichiers.setdefault(historique.fichier_leger(wid), {})[wid] = fiche
-    for nom, contenu in sorted(legers_fichiers.items()):
-        ecrire(os.path.join(sortie, "coureurs_historiques", f"{nom}.json"), contenu)
-    _nettoyer(os.path.join(sortie, "coureurs_historiques"), {f"{n}.json" for n in legers_fichiers})
-
-    # ---- finalisation des équipes (index)
+    # ---- Phase 1 : finalisation et écriture des équipes (puis libération RAM)
     EQ_INDEX.sort(key=lambda t: (-t["season"], t["name"], t["id"]))
-    # lignées Wikidata : seulement celles qui portent au moins une équipe-saison rapprochée (preuve dans le cache)
     lignees_out: Dict[str, Any] = {}
     for qid in sorted(LIGNEES_EQ):
         eqs = sorted(LIGNEES_EQ[qid], reverse=True)
         lignees_out[qid] = dict(wikidata.fiche_lignee(WD["lignees"].get(qid), WD["images"]),
                                 equipes=[t for _a, t in eqs], saisons=[min(a for a, _ in eqs), max(a for a, _ in eqs)])
     ecrire(os.path.join(sortie, "equipes", "lignees.json"), lignees_out)
-    # catégorie / pays des équipes-saisons : seulement ce que Wikidata (lignée rapprochée) établit ; P31 non daté -> « cat » absent si plusieurs niveaux
     niveaux_l = {q: _niveaux_lignee(lg.get("classes")) for q, lg in lignees_out.items()}
     pays_l = {q: _code_pays_wikidata(lg.get("pays")) for q, lg in lignees_out.items()}
     for t in EQ_INDEX:
@@ -935,8 +896,7 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             "pays": pays_l[qid], "pays_nom": (lg.get("pays") or {}).get("libelle"),
             "logo": lg.get("logo"), "logo_depuis": _annee_nom_actuel(lg.get("noms")) if lg.get("logo") else None})
     ecrire(os.path.join(sortie, "equipes", "lignees_index.json"), lignees_idx)
-    # fichiers d'équipes-saisons (`meme_nom`, `mouvements`) puis un article par lignée (`equipes/lignees/<QID>.json`)
-    _completer_equipes(EQ_PAR_AN, LIGNEE_DE)
+    _completer_equipes(EQ_PAR_AN, LIGNEE_DE, soeurs_par_an=SOEURS_PAR_AN)
     for an, equipes in sorted(EQ_PAR_AN.items()):
         ecrire(os.path.join(sortie, "equipes", f"{an}.json"), equipes)
     fichiers_lignees: Set[str] = set()
@@ -947,8 +907,116 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
     _nettoyer(os.path.join(sortie, "equipes", "lignees"), fichiers_lignees)
     _nettoyer(os.path.join(sortie, "equipes"), equipes_ecrites | {"index.json", "lignees.json", "lignees_index.json"})
     _nettoyer(os.path.join(sortie, "saisons"), saisons_ecrites)
+    nb_lignees = len(lignees_out)
+    recherche_lignees = [{"n": lg["libelle"], "t": "l", "id": qid, "y": lg["saisons"]}
+                         for qid, lg in lignees_out.items() if lg.get("libelle")]
+    del EQ_PAR_AN, EQ_INDEX, EQ_INDEX_BY_ID, SOEURS_PAR_AN, LIGNEES_EQ, LIGNEE_DE
+    del lignees_out, lignees_idx, noms_eq, niveaux_l, pays_l
 
-    # ---- finalisation des courses
+    # ---- Phase 2 : pays (puis libération RAM)
+    pays_out: Dict[str, Any] = {}
+    for code in sorted(PAYS):
+        P = PAYS[code]
+        meilleurs = sorted(P["wins"].items(), key=lambda kv: (-kv[1], (COUR[kv[0]].get("name") or ""), kv[0]))[:TOP_PAYS]
+        flag = (sorted(P["flags"].items(), key=lambda kv: (-kv[1], kv[0])) or [(pays.drapeau(code), 0)])[0][0]
+        nom = _nom_pays(code)
+        pays_out[code] = _sans_vide({
+            "nom": nom, "flag": flag,
+            "saisons": dict(sorted(P["saisons"].items(), reverse=True)),
+            "meilleurs": [_sans_vide({"id": rid, "name": COUR[rid].get("name"), "wins": n}) for rid, n in meilleurs] or None})
+        if not nom:
+            anomalies["pays_sans_nom"].append(code)
+    ecrire(os.path.join(sortie, "pays.json"), pays_out)
+    nb_pays = len(pays_out)
+    del PAYS, pays_out
+
+    # ---- Phase 3 : recherche (amorce) + finalisation des coureurs (puis libération RAM)
+    recherche: Dict[str, List[Dict[str, Any]]] = {}
+
+    def indexer(ent: Dict[str, Any]) -> None:
+        mots = netutil.normalize(ent["n"]).split()
+        for l in sorted({_lettre(m) for m in mots if len(m) >= 2}):
+            recherche.setdefault(l, []).append(ent)
+
+    for ent in EQ_RECH.values():
+        indexer(ent)
+    del EQ_RECH
+    for ent in recherche_lignees:
+        indexer(ent)
+    del recherche_lignees
+    for ent in H["recherche"]:
+        indexer(ent)
+
+    ordre_class = {"gc": 0, "stage": 1, "points": 2, "mountain": 3, "youth": 4}
+    lettres: Dict[str, Dict[str, Any]] = {}
+    nb_coureurs = len(COUR)
+    nb_coureurs_wd = 0
+    groupes: Dict[Tuple, List[str]] = collections.defaultdict(list)
+    for cid in sorted(COUR):
+        c = COUR[cid]
+        st = c.pop("_stats")
+        c["palmares"].sort(key=lambda x: (x["date"], x["race_id"], -ordre_class.get(x["classification"], 9), -x["rank"]), reverse=True)
+        c["grands_tours"].sort(key=lambda x: (x["season"], x["course"]), reverse=True)
+        c["saisons"] = dict(sorted(c["saisons"].items(), reverse=True))
+        c["totaux"] = {"wins": st["wins"], "podiums": st["podiums"], "gc_wins": st["gc_wins"], "seasons": len(c["saisons"])}
+        for k in ("palmares", "grands_tours"):
+            if not c[k]:
+                del c[k]
+        hist = HISTORIQUE.get(cid)
+        if hist:
+            c["historique_uci"] = [[d, hist[d]] for d in sorted(hist)]
+        if cid in H["attaches"]:
+            c["palmares_historique"] = H["attaches"][cid]            # années absentes de nos données UCI ; source Wikidata (QID de l'édition)
+            c["palmares_historique_source"] = "wikidata"
+        wd = wikidata.fiche_wikidata(WD["coureurs"].get(cid), WD["images"])
+        if wd:
+            c["wikidata"] = wd
+            nb_coureurs_wd += 1
+        out = {k: c[k] for k in ("name", "nationality", "flag", "birth_date") if k in c}
+        out.update({k: v for k, v in c.items() if k not in out})
+        lettres.setdefault(_lettre(cid), {})[cid] = out
+        if c.get("name"):
+            groupes[(riders._nom_cle(c["name"]), c.get("nationality"))].append(cid)
+            ys_c = sorted(int(y) for y in c["saisons"])
+            if ys_c:
+                indexer(_sans_vide({"n": c["name"], "t": "c", "id": cid, "f": c.get("flag"), "y": [ys_c[0], ys_c[-1]]}))
+
+    derniere = annees[-1] if annees else None
+    idx_coureurs: List[Dict[str, Any]] = []
+    for lettre in sorted(lettres):
+        contenu = lettres[lettre]
+        ecrire(os.path.join(sortie, "coureurs", f"{lettre}.json"), contenu)
+        for cid, f in contenu.items():
+            if not re.search(r"[^\W_]", f.get("name") or ""):   # nom vide ou fait de ponctuation seule (« - - ») : pas de ligne dans l'annuaire
+                continue
+            sais = f["saisons"]
+            ys = sorted(int(y) for y in sais)
+            dern = sais[str(ys[-1])] if ys else {}
+            rangs = [x["uci_rank"] for x in sais.values() if x.get("uci_rank") is not None]
+            idx_coureurs.append(_sans_vide({
+                "id": cid, "n": f["name"], "f": f.get("flag"), "nat": f.get("nationality"),
+                "eq": dern.get("team"), "eqid": dern.get("equipe"), "s": [ys[0], ys[-1]] if ys else None,
+                "v": f["totaux"]["wins"], "p": f["totaux"]["podiums"], "uci": min(rangs) if rangs else None,
+                "fr": True if f.get("nationality") == "FRA" else None,
+                "act": True if ys and ys[-1] == derniere else None,
+                "photo": True if (f.get("wikidata") or {}).get("image") else None}))
+    idx_coureurs.sort(key=lambda x: x["id"])
+    ecrire(os.path.join(sortie, "coureurs", "index.json"), idx_coureurs)
+    _nettoyer(os.path.join(sortie, "coureurs"), {f"{l}.json" for l in lettres} | {"index.json"})
+    del idx_coureurs, lettres
+
+    legers_fichiers: Dict[str, Dict[str, Any]] = {}
+    for wid, fiche in H["legers"].items():
+        legers_fichiers.setdefault(historique.fichier_leger(wid), {})[wid] = fiche
+    for nom, contenu in sorted(legers_fichiers.items()):
+        ecrire(os.path.join(sortie, "coureurs_historiques", f"{nom}.json"), contenu)
+    _nettoyer(os.path.join(sortie, "coureurs_historiques"), {f"{n}.json" for n in legers_fichiers})
+    nb_coureurs_hist = len(H["legers"])
+    del legers_fichiers, COUR, HISTORIQUE, WD
+
+    # ---- Phase 4 : finalisation des courses et ce_jour_la.json (puis libération RAM)
+    nb_courses = len(COURSES)
+    nb_editions_hist = H["rapport"].get("editions_historiques", 0)
     lettres_c: Dict[str, Dict[str, Any]] = {}
     for cle in sorted(COURSES):
         C = COURSES[cle]
@@ -980,12 +1048,17 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
             fiche["historique_info"] = hc["info"]
             fiche["records_historique"] = hc["records"]          # UCI + historique, années couvertes mentionnées
         lettres_c.setdefault(_lettre(cle), {})[cle] = fiche
-    for lettre, contenu in sorted(lettres_c.items()):
-        ecrire(os.path.join(sortie, "courses", f"{lettre}.json"), contenu)
-    # index compact des épreuves (liste des pages Courses) : clés courtes, une clé absente = pas de donnée
+        dernier_nom = max(C["noms"].items(), key=lambda kv: (max(kv[1]), kv[0]))
+        ys_r = sorted({y for s in C["noms"].values() for y in s})
+        indexer(_sans_vide({"n": dernier_nom[0], "t": "r", "id": cle, "f": C.get("flag"), "y": [ys_r[0], ys_r[-1]]}))
+
+    cat_ordre = {"WT": 0, "Pro": 1, "Champ.": 2, "FDJ": 3, ".1": 4, ".2": 5}
+    ce_jour_la: Dict[str, List[Dict[str, Any]]] = collections.defaultdict(list)
     idx_courses: List[Dict[str, Any]] = []
     for lettre in sorted(lettres_c):
-        for cle, f in lettres_c[lettre].items():
+        contenu = lettres_c[lettre]
+        ecrire(os.path.join(sortie, "courses", f"{lettre}.json"), contenu)
+        for cle, f in contenu.items():
             eds = f["editions"]                                   # plus récente d'abord
             nom = max(f["noms"].items(), key=lambda kv: (max(kv[1]), kv[0]))[0]
             saisons_uci = sorted({e["season"] for e in eds})
@@ -999,53 +1072,39 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
                 "s": [saisons_uci[0], saisons_uci[-1]], "h": min(h) if h else None, "ed": len(eds),
                 "der": _sans_vide({"saison": der["season"], "race_id": der.get("race_id"),
                                    "vainqueur": _sans_vide({"id": vq["id"], "nom": vq.get("name")}) if vq else None})}))
+            cat_def = selection.categorie_classe(cl) if cl else None
+            for ed in eds:
+                d = ed.get("end_date") or ed.get("start_date") or ""
+                w = next((p for p in (ed.get("podium") or ()) if p.get("rank") == 1), None)
+                if len(d) >= 10 and d[:4].isdigit() and w:
+                    cat = ed.get("category") or (selection.categorie_classe(ed["uci_class"]) if ed.get("uci_class") else cat_def)
+                    ce_jour_la[d[5:10]].append(_sans_vide({
+                        "an": int(d[:4]), "nom": nom, "k": cle, "pays": f["pays"],
+                        "f": f.get("flag"), "cat": cat, "win": w.get("name"), "race_id": ed.get("race_id")}))
+            for hh in f.get("historique") or ():
+                if hh.get("statut") != "ok" or not hh.get("vainqueur"):
+                    continue
+                w = next((p for p in (hh.get("podium") or ()) if p.get("rang") == 1), None)
+                d = hh.get("date") or ""
+                if w and len(d) == 10 and d[:4].isdigit():
+                    ce_jour_la[d[5:10]].append(_sans_vide({
+                        "an": int(d[:4]), "nom": nom, "k": cle, "pays": f["pays"],
+                        "f": f.get("flag"), "cat": cat_def, "win": w.get("name")}))
     idx_courses.sort(key=lambda x: x["k"])
     ecrire(os.path.join(sortie, "courses", "index.json"), idx_courses)
     _nettoyer(os.path.join(sortie, "courses"), {f"{l}.json" for l in lettres_c} | {"index.json"})
+    for md in list(ce_jour_la):
+        ce_jour_la[md].sort(key=lambda x: (cat_ordre.get(x.get("cat"), 6), -x["an"], x["nom"], x["k"]))
+        ce_jour_la[md] = ce_jour_la[md][:6]
+    ecrire(os.path.join(sortie, "ce_jour_la.json"), dict(sorted(ce_jour_la.items())))
+    del idx_courses, lettres_c, ce_jour_la, COURSES, H
 
-    # ---- pays
-    pays_out: Dict[str, Any] = {}
-    for code in sorted(PAYS):
-        P = PAYS[code]
-        meilleurs = sorted(P["wins"].items(), key=lambda kv: (-kv[1], (COUR[kv[0]].get("name") or ""), kv[0]))[:TOP_PAYS]
-        flag = (sorted(P["flags"].items(), key=lambda kv: (-kv[1], kv[0])) or [(netutil.flag_code(code), 0)])[0][0]
-        nom = PAYS_NOMS.get(code)
-        pays_out[code] = _sans_vide({
-            "nom": nom[0] if nom else None, "flag": flag,
-            "saisons": dict(sorted(P["saisons"].items(), reverse=True)),
-            "meilleurs": [_sans_vide({"id": rid, "name": COUR[rid].get("name"), "wins": n}) for rid, n in meilleurs] or None})
-        if code not in PAYS_NOMS:
-            anomalies["pays_sans_nom"].append(code)
-    ecrire(os.path.join(sortie, "pays.json"), pays_out)
-
-    # ---- recherche
-    recherche: Dict[str, List[Dict[str, Any]]] = {}
-
-    def indexer(ent: Dict[str, Any]) -> None:
-        mots = netutil.normalize(ent["n"]).split()
-        for l in sorted({_lettre(m) for m in mots if len(m) >= 2}):
-            recherche.setdefault(l, []).append(ent)
-
-    for cid, c in COUR.items():
-        if not c.get("name"):
-            continue
-        ys = sorted(int(y) for y in c["saisons"])
-        indexer(_sans_vide({"n": c["name"], "t": "c", "id": cid, "f": c.get("flag"), "y": [ys[0], ys[-1]]}))
-    for ent in EQ_RECH.values():
-        indexer(ent)
-    for qid, lg in lignees_out.items():
-        if lg.get("libelle"):
-            indexer({"n": lg["libelle"], "t": "l", "id": qid, "y": lg["saisons"]})
-    for ent in H["recherche"]:
-        indexer(ent)
-    for cle, C in COURSES.items():
-        dernier = max(C["noms"].items(), key=lambda kv: (max(kv[1]), kv[0]))
-        ys = sorted({y for s in C["noms"].values() for y in s})
-        indexer(_sans_vide({"n": dernier[0], "t": "r", "id": cle, "f": C.get("flag"), "y": [ys[0], ys[-1]]}))
+    # ---- Phase 5 : recherche (puis libération RAM) et index.json
     for l, lst in sorted(recherche.items()):
         lst.sort(key=lambda e: (netutil.normalize(e["n"]), e["t"], e["id"]))
         ecrire(os.path.join(sortie, "recherche", f"{l}.json"), lst)
     _nettoyer(os.path.join(sortie, "recherche"), {f"{l}.json" for l in recherche})
+    del recherche
 
     # ---- index.json
     sources_txt = []
@@ -1055,18 +1114,22 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         sources_txt.append(f"archives : saisons {arch[0]}-{arch[-1]} ({len(arch)})")
     if cal:
         sources_txt.append("calendrier : saisons " + ", ".join(str(a) for a in cal))
+    if PRE2009["credits"]:
+        bornes_h = f" ({PRE2009['annees'][0]}-{PRE2009['annees'][-1]})" if PRE2009["annees"] else ""
+        sources_txt.append(f"base historique pré-2009{bornes_h} : {', '.join(PRE2009['credits'])}")
     index = {"generated_at": now,
-             "compteurs": {"coureurs": len(COUR), "equipes_saisons": equipes_total,
-                           "equipes_nationales": nationales, "courses": len(COURSES), "editions": editions_total,
-                           "saisons": len(annees), "pays": len(pays_out),
-                           "lignees": len(lignees_out), "coureurs_wikidata": sum(1 for c in COUR.values() if c.get("wikidata")),
-                           "coureurs_historiques": len(H["legers"]), "editions_historiques": H["rapport"].get("editions_historiques", 0)},
+             "compteurs": {"coureurs": nb_coureurs, "equipes_saisons": equipes_total,
+                           "equipes_nationales": nationales, "courses": nb_courses, "editions": editions_total,
+                           "saisons": len(annees), "pays": nb_pays,
+                           "lignees": nb_lignees, "coureurs_wikidata": nb_coureurs_wd,
+                           "coureurs_historiques": nb_coureurs_hist, "editions_historiques": nb_editions_hist},
              "saisons": annees, "saisons_archives": arch, "saisons_calendrier": cal,
              "grands_tours_par_saison": {str(a): gt_par_saison.get(a, []) for a in annees},
+             "ce_jour_la": True,
              "sources": sources_txt,
+             **({"sources_historiques": PRE2009["credits"]} if PRE2009["credits"] else {}),
              "limites": ["historique des épreuves (avant nos données UCI) : vainqueur et podium depuis Wikidata seul, séries prouvées (series_historiques.json), "
                          "statuts non_attribue / conflit conservés sans être tranchés",
-                         "pas d'historique du classement UCI (E1c)",
                          "Wikidata : rapprochements stricts seulement (coureur : nom + date de naissance exacte ; équipe : code UCI + période + nom), "
                          "couverture partielle selon le cache entites/wikidata/ ; code_uci seulement si les coureurs classés de la saison portent un code unique"]}
     ecrire(os.path.join(sortie, "index.json"), index, ignore=("generated_at",))
@@ -1076,10 +1139,6 @@ def construire(archives_dir: str, data_dir: str, sortie: Optional[str] = None, n
         "coherence": coherence, "grands_tours_par_saison": gt_par_saison, "anomalies": {k: v for k, v in anomalies.items() if v},
         "tailles": taille_entites(sortie), "inconnues": inconnues})
     # doublons possibles : même nom normalisé et même nationalité, identifiants différents (JAMAIS fusionnés)
-    groupes: Dict[Tuple, List[str]] = collections.defaultdict(list)
-    for cid, c in COUR.items():
-        if c.get("name"):
-            groupes[(riders._nom_cle(c["name"]), c.get("nationality"))].append(cid)
     dup = sorted(sorted(v) for v in groupes.values() if len(v) > 1)
     if dup:
         rapport["anomalies"]["doublons_possibles"] = dup
@@ -1103,47 +1162,70 @@ RENOMMEE_MIN_COUREURS = 5    # changement de nom en cours de saison : coureurs c
 RENOMMEE_PART = 0.6          # … et part minimale de l'effectif de l'équipe-saison sans code
 
 
+def _soeurs_renommees_saison(equipes: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
+    """Calcule en O(E·R) la sœur renommée de chaque équipe-saison éligible d'une même saison
+    (index inversé `rider_id -> [tids]` pour éviter le produit cartésien)."""
+    rids_par_eq: Dict[str, Set[str]] = {
+        tid: _rids(f) for tid, f in equipes.items() if not f.get("nationale")
+    }
+    par_coureur: Dict[str, List[str]] = collections.defaultdict(list)
+    for tid, rids in rids_par_eq.items():
+        for rid in rids:
+            par_coureur[rid].append(tid)
+    soeurs: Dict[str, str] = {}
+    for tid, f in equipes.items():
+        if f.get("nationale") or f.get("code_uci") or f.get("codes_uci"):
+            continue
+        a = rids_par_eq.get(tid)
+        if not a or len(a) < RENOMMEE_MIN_COUREURS:
+            continue
+        communs: collections.Counter = collections.Counter()
+        for rid in a:
+            for t2 in par_coureur[rid]:
+                if t2 != tid:
+                    communs[t2] += 1
+        cands = [(-c / len(a), t2) for t2, c in communs.items()
+                 if c >= RENOMMEE_MIN_COUREURS and c / len(a) >= RENOMMEE_PART]
+        if cands:
+            soeurs[tid] = min(cands)[1]
+    return soeurs
+
+
 def _soeur_renommee(tid: str, equipes: Dict[str, Dict[str, Any]]) -> Optional[str]:
     """Équipe-saison de la MÊME saison qui porte le même effectif que `tid` (changement de nom en cours de saison), pour une équipe-saison
     sans code UCI ni sélection nationale : au moins RENOMMEE_MIN_COUREURS coureurs communs ET au moins RENOMMEE_PART de l'effectif de `tid` ;
     la sœur au plus fort recouvrement (égalité : id le plus petit) ; sinon None."""
-    f = equipes[tid]
-    if f.get("nationale") or f.get("code_uci") or f.get("codes_uci"):
-        return None
-    a = set(_rids(f))
-    if not a:
-        return None
-    cands = []
-    for t2, e2 in equipes.items():
-        if t2 == tid or e2.get("nationale"):
-            continue
-        commun = len(a & set(_rids(e2)))
-        if commun >= RENOMMEE_MIN_COUREURS and commun / len(a) >= RENOMMEE_PART:
-            cands.append((-commun / len(a), t2))
-    return min(cands)[1] if cands else None
+    return _soeurs_renommees_saison(equipes).get(tid)
 
 
 def _heriter_lignees_renommees(an: int, equipes: Dict[str, Dict[str, Any]], lignee_de: Dict[str, str],
-                               lignees_eq: Dict[str, List[Tuple[int, str]]], eq_index: List[Dict[str, Any]]) -> List[str]:
+                               lignees_eq: Dict[str, List[Tuple[int, str]]], eq_index: List[Dict[str, Any]],
+                               soeurs: Optional[Dict[str, str]] = None,
+                               eq_index_by_id: Optional[Dict[str, Dict[str, Any]]] = None) -> List[str]:
     """Changement de nom en cours de saison : une équipe-saison SANS lignée dont la sœur `_soeur_renommee` (même saison, même effectif) en a
     une la reprend (`lignee`, `lignee_par: "renommee"`, tables de construction et entrée d'index mises à jour). Renvoie les ids complétés."""
+    if soeurs is None:
+        soeurs = _soeurs_renommees_saison(equipes)
+    if eq_index_by_id is None:
+        eq_index_by_id = {t["id"]: t for t in eq_index}
     faits = []
     for tid, f in equipes.items():
-        sr = None if f.get("lignee") else _soeur_renommee(tid, equipes)
+        sr = None if f.get("lignee") else soeurs.get(tid)
         lig = sr and equipes[sr].get("lignee")
         if lig:
             f["lignee"] = lig
             f["lignee_par"] = "renommee"
             lignee_de[tid] = lig
             lignees_eq.setdefault(lig, []).append((an, tid))
-            for t in eq_index:
-                if t["id"] == tid:
-                    t["lignee"] = lig
+            t = eq_index_by_id.get(tid)
+            if t is not None:
+                t["lignee"] = lig
             faits.append(tid)
     return faits
 
 
-def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_de: Dict[str, str]) -> None:
+def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_de: Dict[str, str],
+                       soeurs_par_an: Optional[Dict[int, Dict[str, str]]] = None) -> None:
     """Ajoute à chaque équipe-saison (en place) :
     - `meme_nom` : ids des AUTRES saisons portant exactement le même slug de libellé (id = `<slug>-<année>`), années croissantes. Aucune preuve de
       continuité (deux équipes homonymes peuvent n'avoir rien de commun) : l'interface l'affiche « même nom en … » ;
@@ -1166,10 +1248,9 @@ def _completer_equipes(eq_par_an: Dict[int, Dict[str, Dict[str, Any]]], lignee_d
             prec = f"{slug}-{an - 1}"
             if q and lignee_de.get(prec) == q and prec in eq_par_an.get(an - 1, {}):
                 f["mouvements"] = _mouvements(_rids(eq_par_an[an - 1][prec]), _rids(f))
-        for tid, f in equipes.items():
-            sr = _soeur_renommee(tid, equipes)
-            if sr:
-                f["renommee"] = sr
+        soeurs = soeurs_par_an[an] if (soeurs_par_an and an in soeurs_par_an) else _soeurs_renommees_saison(equipes)
+        for tid, sr in soeurs.items():
+            equipes[tid]["renommee"] = sr
 
 
 def _article_lignee(qid: str, lg: Dict[str, Any], brut: Optional[Dict[str, Any]], images: Dict[str, Any],
@@ -1226,9 +1307,20 @@ def _annee_nom_actuel(noms: Any) -> Optional[int]:
     return max(annees) if annees else None
 
 
+def _nom_pays(code: str) -> Optional[str]:
+    nom = PAYS_NOMS.get(code)
+    if nom:
+        return nom[0]
+    h = pays.nom_historique(code)
+    if h:
+        return h
+    sup = pays.table()["codes_actuels_supplementaires"].get(code)
+    return sup.get("nom") if sup else None
+
+
 def _drapeau_pays(S: _Saison, code: str) -> Optional[str]:
     c = collections.Counter(a.get("flag") for a in S.coureurs.values() if a.get("nationality") == code and a.get("flag"))
-    return sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[0][0] if c else netutil.flag_code(code)
+    return sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[0][0] if c else pays.drapeau(code)
 
 
 def _lire_instantanes(archives_dir: str, annee: int, ajouter: Any) -> List[Dict[str, Any]]:
@@ -1252,12 +1344,30 @@ def _lire_instantanes(archives_dir: str, annee: int, ajouter: Any) -> List[Dict[
 
 
 def _ecrire_si_change(chemin: str, data: Any, ignore: Tuple[str, ...] = ()) -> bool:
-    """Comme collector._dump_if_changed, y compris pour une liste (index des équipes, recherche)."""
-    if isinstance(data, dict):
-        return collector._dump_if_changed(chemin, data, ignore=ignore)
-    if collector._load(chemin, None) == data:
-        return False
-    collector._dump(chemin, data)
+    """Écrit `data` seulement si son contenu diffère du fichier existant.
+
+    Lorsque `ignore=()`, compare directement les octets JSON sérialisés avec le fichier
+    sur disque (évite le double `json.load`).
+    """
+    if ignore:
+        if isinstance(data, dict):
+            return collector._dump_if_changed(chemin, data, ignore=ignore)
+        if collector._load(chemin, None) == data:
+            return False
+        collector._dump(chemin, data)
+        return True
+    octets = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    try:
+        with open(chemin, "rb") as f:
+            if f.read() == octets:
+                return False
+    except OSError:
+        pass
+    os.makedirs(os.path.dirname(chemin), exist_ok=True)
+    tmp = chemin + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(octets)
+    os.replace(tmp, chemin)
     return True
 
 
@@ -1598,6 +1708,10 @@ def _tests() -> None:
         assert all(set(e) <= {"n", "t", "id", "f", "y", "nat"} for lst in (L("recherche/d.json"),) for e in lst)
         ix = L("index.json")
         assert ix["compteurs"]["editions"] == rap["compteurs"]["editions"] == 8 - 1 and ix["saisons_calendrier"] == [2025]
+        assert ix.get("ce_jour_la") is True and not any("E1c" in x for x in ix["limites"]), ix["limites"]
+        cjl = L("ce_jour_la.json")
+        assert isinstance(cjl, dict) and all(len(v) <= 6 for v in cjl.values())
+        assert any(x["k"] == "tour de france|FRA" and x["an"] == 2024 for x in cjl.get("07-01", [])), cjl
         # déterminisme et écriture seulement si changement
         avant = {}
         for racine, _, fs in os.walk(OUT):
@@ -1803,6 +1917,22 @@ def _tests() -> None:
         src, _ = lister_sources(os.path.join(t4, "absent"), d4)
         assert src[2026]["ranking"] == os.path.join(d4, "ranking-2026.json")
         assert src[2027]["ranking"] == os.path.join(d4, "ranking.json")
+    # pays historiques (URS) et codes actuels supplémentaires (LAT) : nom + drapeau résolus, pas dans pays_sans_nom
+    with tempfile.TemporaryDirectory() as t6:
+        A6, D6, O6 = (os.path.join(t6, x) for x in ("archives", "data", "sortie"))
+        os.makedirs(os.path.join(D6, "races"))
+        urs, lat = "sov-ivan-19600101", "lat-janis-19800101"
+        r6 = _course_test("uci-p6", "Course Pays", "BEL", "1.1", ".1", "one_day", "1985-05-01",
+                          {urs: ("Ivan Sov", "URS", None, "Équipe A", "1960-01-01"),
+                           lat: ("Janis Lat", "LAT", None, "Équipe A", "1980-01-01")},
+                          [(None, "1985-05-01", [_ligne(urs, 1), _ligne(lat, 2)])])
+        collector._dump(os.path.join(A6, "1985", "races", "uci-p6.json"), r6)
+        collector._dump(os.path.join(A6, "1985", "state.json"), {"complete": True})
+        rp6 = construire(A6, D6, O6, now="2026-01-01T00:00:00Z", alias_coureurs={}, alias_courses={}, verbose=False)
+        py6 = collector._load(os.path.join(O6, "pays.json"), {})
+        assert py6["URS"]["nom"] == "Union soviétique" and py6["URS"]["flag"] == "h-urs", py6["URS"]
+        assert py6["LAT"]["nom"] == "Lettonie" and py6["LAT"]["flag"] == "lv", py6["LAT"]
+        assert "pays_sans_nom" not in rp6["anomalies"], rp6["anomalies"]
     print("[OK] encyclopedie.py : tests locaux réussis")
 
 

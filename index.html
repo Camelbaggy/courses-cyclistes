@@ -453,7 +453,13 @@ button.res:active { background: var(--s3); }
 /* squelettes de chargement, état vide */
 .sk { background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%); background-size: 200% 100%; animation: shimmer 1.3s linear infinite; border-radius: var(--r1); }
 @keyframes shimmer { to { background-position: -200% 0; } }
-@media (prefers-reduced-motion: reduce) { .sk, .loading::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .sk, .loading::before { animation: none; }
+}
+.skip { position: fixed; top: -100px; left: 8px; z-index: 200; background: var(--accent); color: var(--on-accent); padding: 8px 14px; border-radius: var(--r1); font-weight: 700; text-decoration: none; box-shadow: var(--sh2); }
+.skip:focus { top: 8px; }
+#main:focus { outline: none; }
 .sk-line { height: 14px; margin: 8px 0; } .sk-tile { height: 74px; border-radius: var(--r2); } .sk-circle { width: 84px; height: 84px; border-radius: 50%; flex: none; }
 .vide { text-align: center; color: var(--tx3); font-size: .9rem; padding: var(--sp5) var(--sp4); border: 1px dashed var(--line); border-radius: var(--r2); }
 .src-note { font-size: .72rem; color: var(--tx3); }
@@ -897,25 +903,91 @@ div.res:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rec-card > .h-sec:first-child { margin-top: 0; }
 .rec-card .tbl-wrap { border-radius: var(--r1); }
 #econtent:has(.rec-card) { display: flex; flex-direction: column; gap: var(--sp3); }
+/* CS3 : refonte Liquipedia des listes & accessibilité */
+a.rlink { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--muted); }
+a.rlink:hover, a.rlink:focus-visible { color: var(--accent); border-bottom-color: var(--accent); }
+.lk { position: relative; }
+.lk .stretch { color: inherit; text-decoration: none; }
+.lk .stretch::after { content: ""; position: absolute; inset: 0; }
+.lk .stretch:focus-visible { outline: none; }
+.lk:has(.stretch:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lk .rlink, .lk .tlink, .lk details.resume, .lk button { position: relative; z-index: 1; }
+.cal-item, .crow.crow-cat { border-left: 4px solid var(--cat, var(--line)); }
+.wins-row.lk { display: flex; align-items: baseline; gap: var(--sp3); padding: 9px var(--sp3); border-top: 1px solid var(--line); }
+.wins-row.lk:hover { background: var(--s2); }
+.wins-row.lk .d { font-size: .76rem; color: var(--tx3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wins-row.lk .l { min-width: 0; flex: 1; }
+.wins-row.lk .l small { display: block; color: var(--tx3); font-size: .76rem; margin-top: 1px; }
+/* équipes : maillot / logo / initiales */
+.crow.eq-row { grid-template-columns: 38px minmax(0, 1fr) auto; }
+.eq-vis { width: 38px; height: 32px; display: flex; align-items: center; justify-content: center; flex: none; }
+.eq-vis .mjs { height: 28px; }
+.eq-vis:has(.mjs:not(:empty)) .eq-lg, .eq-vis:has(.mjs:not(:empty)) .eq-ini { display: none; }
+.eq-lg { max-width: 34px; max-height: 28px; object-fit: contain; border-radius: 4px; background: #fff; padding: 2px; }
+.eq-ini { width: 30px; height: 30px; border-radius: 50%; background: var(--s2); border: 1px solid var(--line); color: var(--tx2); font-size: .72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.eq-row .sm .flag { vertical-align: -2px; margin-right: 4px; }
+/* coureurs : barre d'outils compacte mobile 390 px */
+.flt-more { width: 100%; }
+.flt-more > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--s2); border: 1px solid var(--line); font-size: .8rem; font-weight: 600; color: var(--tx2); }
+.flt-more > summary::-webkit-details-marker { display: none; }
+.flt-more[open] > summary { color: var(--accent); border-color: var(--accent); margin-bottom: var(--sp2); }
+.flt-body { display: flex; flex-direction: column; gap: var(--sp2); }
+@media (min-width: 880px) {
+  .flt-more > summary { display: none; }
+  .flt-more:not([open]) .flt-body { display: flex; }
+  .flt-body { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .flt-body .search { flex: 1 1 220px; width: auto; }
+}
+/* vue Français Liquipedia */
+.fr-card { display: flex; flex-direction: column; gap: var(--sp2); padding: var(--sp3); border-left: 4px solid var(--fr); }
+.fr-top { display: flex; align-items: center; gap: var(--sp3); }
+.fr-top .rk { min-width: 42px; height: 32px; padding: 0 6px; border-radius: var(--r1); background: var(--s3); display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; font-size: .88rem; font-variant-numeric: tabular-nums; flex: none; }
+.fr-top .rk.r1 { background: var(--jaune); color: #111827; }
+.fr-top .rk.r2 { background: var(--argent); color: #111827; }
+.fr-top .rk.r3 { background: var(--bronze); color: #111827; }
+.fr-top .rk.off { font-size: .7rem; font-weight: 600; color: var(--tx3); }
+.fr-top .who { min-width: 0; flex: 1; }
+.fr-top .nm { font-weight: 700; font-size: .96rem; line-height: 1.25; overflow-wrap: anywhere; }
+.fr-top .pts { font-size: .74rem; color: var(--tx3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fr-bests { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: var(--sp2); }
+.fr-best { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: var(--sp2); align-items: center; font-size: .82rem; }
+.fr-best .rk { width: 26px; height: 22px; border-radius: 6px; background: var(--s2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.fr-best .rk.r1 { background: var(--jaune); color: #111827; border-radius: 999px; }
+.fr-best .rk.r2 { background: var(--argent); color: #111827; border-radius: 999px; }
+.fr-best .rk.r3 { background: var(--bronze); color: #111827; border-radius: 999px; }
+.fr-best .t { min-width: 0; overflow-wrap: anywhere; }
+.fr-best .pt { font-size: .74rem; color: var(--tx3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* classements : tableau Liquipedia */
+.tbl-rank td .mv { margin-left: 4px; font-size: .72rem; font-weight: 600; }
+.tbl-rank td .mv.up { color: var(--ok, #16a34a); }
+.tbl-rank td .mv.down { color: var(--err, #dc2626); }
+.tbl-rank tbody tr.tr-fr td:first-child { box-shadow: inset 3px 0 0 var(--fr), 1px 0 0 var(--line); }
+.tbl-rank td.tl .flag { vertical-align: -2px; margin-right: 5px; }
+.uc-tools { display: flex; flex-direction: column; gap: var(--sp2); margin-bottom: var(--sp2); }
+.uc-tools .l1 { display: flex; align-items: center; justify-content: space-between; gap: var(--sp2); flex-wrap: wrap; }
+/* recherche : sous-titre contextuel */
+.sr-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.sr-sub { font-size: .74rem; color: var(--tx3); overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Aller au contenu principal</a>
 <div id="banner"></div>
 <header class="top">
   <div class="top-in">
     <button class="btn-ico" id="back-btn" data-action="back" aria-label="Retour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <a class="brand" href="#/" aria-label="Courses cyclistes, accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="16.5" r="3.6"/><circle cx="18" cy="16.5" r="3.6"/><path d="M6 16.5 9.6 8h5.2l3.2 8.5M9.6 8H7.4M14.8 8l-3.1 8.5h-5.7"/></svg><span>Courses cyclistes</span></a>
-    <nav class="dnav" id="dnav" aria-label="Menu principal"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
+    <nav class="dnav" id="dnav" aria-label="Navigation principale"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
     <div class="top-r"><span id="maj"></span>
       <label class="hs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input type="search" id="hsearch" placeholder="Coureur, équipe, course…" aria-label="Rechercher un coureur, une équipe ou une course" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <button class="btn-ico" id="theme-btn" data-action="theme" aria-label="Thème" title="Thème"></button>
       <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
 </header>
-<main id="main"><div class="loading">Chargement…</div></main>
+<main id="main" tabindex="-1"><div class="loading">Chargement…</div></main>
 <footer id="foot"></footer>
 <button id="to-top" aria-label="Haut de page" title="Haut de page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-<nav class="bnav" id="bnav" aria-label="Menu principal"><a href="#/" data-nav="accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 3.8l8.5 7.2"/><path d="M5.5 9.8V20h4.2v-5.4h4.6V20h4.2V9.8"/></svg><span>Accueil</span></a><a href="#courses" data-nav="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4.5h12.5l-2.3 4 2.3 4H5"/></svg><span>Courses</span></a><a href="#equipes" data-nav="equipes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.1"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M17.2 14.2c2.4.3 4.3 2.4 4.3 5.3"/></svg><span>Équipes</span></a><a href="#coureurs" data-nav="coureurs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.8" r="3.9"/><path d="M4.2 21c0-4.3 3.5-7.6 7.8-7.6s7.8 3.3 7.8 7.6"/></svg><span>Coureurs</span></a><a href="#classements" data-nav="classements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5h16"/><rect x="4.5" y="12" width="4.6" height="8.5" rx="1"/><rect x="9.7" y="4.5" width="4.6" height="16" rx="1"/><rect x="14.9" y="9" width="4.6" height="11.5" rx="1"/></svg><span>Classements</span></a></nav>
+<nav class="bnav" id="bnav" aria-label="Navigation mobile"><a href="#/" data-nav="accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 3.8l8.5 7.2"/><path d="M5.5 9.8V20h4.2v-5.4h4.6V20h4.2V9.8"/></svg><span>Accueil</span></a><a href="#courses" data-nav="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4.5h12.5l-2.3 4 2.3 4H5"/></svg><span>Courses</span></a><a href="#equipes" data-nav="equipes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.1"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M17.2 14.2c2.4.3 4.3 2.4 4.3 5.3"/></svg><span>Équipes</span></a><a href="#coureurs" data-nav="coureurs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7.8" r="3.9"/><path d="M4.2 21c0-4.3 3.5-7.6 7.8-7.6s7.8 3.3 7.8 7.6"/></svg><span>Coureurs</span></a><a href="#classements" data-nav="classements"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20.5h16"/><rect x="4.5" y="12" width="4.6" height="8.5" rx="1"/><rect x="9.7" y="4.5" width="4.6" height="16" rx="1"/><rect x="14.9" y="9" width="4.6" height="11.5" rx="1"/></svg><span>Classements</span></a></nav>
 
 <script>
 "use strict";
@@ -1042,7 +1114,36 @@ const STATUTS = { DNF: "Abandons (DNF)", DNS: "Non-partants (DNS)", OTL: "Hors d
 const TYPES = { itt: "Contre-la-montre", ttt: "CLM par équipes", road: "En ligne" };
 
 /* ================== chargement des données ================== */
-const cache = new Map();
+const CACHE_MAX = 60;
+const _cacheMap = new Map();
+function estIndexCache(c) {
+  return /^(seasons|index|archives\/index|archives\/carrieres\/index|archives\/editions)\.json$/.test(c) ||
+    /^archives\/entites\/(index|pays|ce_jour_la|(equipes|courses|coureurs)\/(index|lignees_index))\.json$/.test(c);
+}
+const cache = {
+  has: k => _cacheMap.has(k),
+  get: k => {
+    if (!_cacheMap.has(k)) return undefined;
+    const v = _cacheMap.get(k);
+    _cacheMap.delete(k);
+    _cacheMap.set(k, v);
+    return v;
+  },
+  set: (k, v) => {
+    if (_cacheMap.has(k)) _cacheMap.delete(k);
+    _cacheMap.set(k, v);
+    if (_cacheMap.size > CACHE_MAX) {
+      for (const cle of _cacheMap.keys()) {
+        if (_cacheMap.size <= CACHE_MAX) break;
+        if (cle !== k && !estIndexCache(cle)) _cacheMap.delete(cle);
+      }
+    }
+    return cache;
+  },
+  delete: k => _cacheMap.delete(k),
+  clear: () => _cacheMap.clear(),
+  get size() { return _cacheMap.size; },
+};
 /** URL d'un fichier : les chemins « archives/… » viennent du dépôt d'archives (BASE_ARCHIVES), le reste de BASE. */
 function urlDonnee(chemin) {
   return chemin.startsWith("archives/") ? `${BASE_ARCHIVES}/${chemin.slice(9)}` : `${BASE}/${chemin}`;
@@ -1050,7 +1151,9 @@ function urlDonnee(chemin) {
 async function charger(chemin) {
   if (cache.has(chemin)) return cache.get(chemin);
   const url = urlDonnee(chemin);
-  const p = fetch(url, { cache: "no-cache" }).then(r => {
+  const rel = chemin.startsWith("archives/") ? chemin.slice(9) : chemin;
+  const immuable = /^\d{4}\/races\//.test(rel) || /^entites\/classements\/\d{4}\/(?!index\.json$|etat\.json$)/.test(rel);
+  const p = fetch(url, { cache: immuable ? "default" : "no-cache" }).then(r => {
     if (!r.ok) { const e = new Error(`HTTP ${r.status} pour ${url}`); e.status = r.status; throw e; }
     return r.json();
   }, err => {   // réseau, CORS, site injoignable (pas de statut HTTP)
@@ -1070,7 +1173,7 @@ function chargerArchive(chemin) { return charger(`archives/${chemin}`); }
 function plink(id, texte, ctx) {
   // ctx (optionnel) : saison dont la fiche doit être lue, « a2023 » (archive) ou « c2027 » (Calendrier) ; défaut : saison de la page affichée
   const c = ctx || state.ctxPage;
-  return id ? `<span class="rlink" role="link" tabindex="0" data-rider="${esc(id)}"${c ? ` data-rctx="${esc(c)}"` : ""}>${esc(texte)}</span>` : esc(texte);
+  return id ? `<a class="rlink" href="${esc(hrefCoureur(id, c))}" data-rider="${esc(id)}"${c ? ` data-rctx="${esc(c)}"` : ""}>${esc(texte)}</a>` : esc(texte);
 }
 
 const state = { index: null, indexes: {}, riders: null, ridersFor: null, saisons: null, current: null,
@@ -1150,17 +1253,18 @@ function listeCourses(tout) {
     const p = pd(r.start_date);
     const m = p ? `${MOIS[p.m - 1]} ${p.y}` : "Date inconnue";
     if (m !== mois) { mois = m; html += `<div class="month">${esc(m)}</div>`; }
+    const cs = catStyle(r.category);
+    const nomHtml = r._futur
+      ? `<span class="race-name">${esc(r.name)}</span>`
+      : `<a class="race-name stretch" href="${esc(hrefCourse(r.id, ""))}" data-open="${esc(r.id)}" data-stage="">${esc(r.name)}</a>`;
     const inner = `<div class="cal-date">${esc(plage(r.start_date, r.end_date))}</div>
-      <div class="cal-main"><div class="card-head" style="margin:0">${flag(r.flag, r.country)}
-        <span class="race-name">${esc(r.name)}</span></div>
+      <div class="cal-main"><div class="card-head" style="margin:0">${flag(r.flag, r.country)}${nomHtml}</div>
         <div class="small muted" style="margin-top:3px">${catBadge(r.category, r.uci_class)}
         ${r._futur ? ' <span class="badge">à venir</span>' : r.status === "in_progress" ? ` <span class="badge live">en cours · ${r.stages_done}${r.stages_total ? "/" + r.stages_total : ""} étapes</span>` : ""}
         ${r.race_type === "stage_race" && !r._futur && r.status !== "in_progress" ? ` <span class="badge">${r.stages_done} étapes</span>` : ""}</div>
         ${!r._futur && (r.winner || r.leader) ? `<div class="small" style="margin-top:4px">${r.winner ? "Vainqueur" : "Leader"} : <b>${plink((r.winner || r.leader).id, (r.winner || r.leader).name)}</b>${(r.winner || r.leader).is_french ? ' <span class="badge fr">FR</span>' : ""}</div>` : ""}
       </div>`;
-    html += r._futur
-      ? `<div class="card cal-item future" style="margin-bottom:6px">${inner}</div>`
-      : `<button class="card click cal-item" style="margin-bottom:6px" data-open="${esc(r.id)}" data-stage="">${inner}</button>`;
+    html += `<div class="card ${r._futur ? "cal-item future" : "click cal-item lk"}" style="${cs ? cs + ";" : ""}margin-bottom:6px">${inner}</div>`;
   });
   return html;
 }
@@ -1169,20 +1273,23 @@ function renderFdj() {
   const f = state.index.fdj_united_series;
   if (!f) return `<div class="empty card">FDJ United Series : classement indisponible.</div>`;
   const indiv = f.individual || [];
-  const lignes = indiv.map(r => `<div class="row">
-      <div class="rk">${esc(r.rank)}</div><span></span>
-      <div class="mid"><div class="nm">${esc(r.rider)}</div><div class="tm">${esc(r.team || "")}</div></div>
-      <div class="val">${esc(num(r.points))} pts</div></div>`).join("");
+  const rows = indiv.map(r => {
+    const rk = `${r.rank >= 1 && r.rank <= 3 ? `<i class="dot r${r.rank}" aria-hidden="true"></i>` : ""}${esc(r.rank)}`;
+    const who = `${esc(r.rider)}${r.team ? `<div class="sub-rider">${esc(r.team)}</div>` : ""}`;
+    return [rk, who, `<b>${esc(num(r.points))}</b> pts`];
+  });
   const manches = (f.races || []).map(m => {
     const dispo = m.race_id && courseParId(m.race_id);
+    const cs = catStyle("FDJ");
     const inner = `<div class="cal-date">${esc(dateCourte(m.date))}</div><div class="cal-main"><span class="race-name">${esc(m.name)}</span></div>`;
-    return dispo ? `<button class="card click cal-item" style="margin-bottom:6px" data-open="${esc(m.race_id)}" data-stage="">${inner}</button>`
-      : `<div class="card cal-item ${m.date > (state.index.generated_at || "") .slice(0, 10) ? "future" : ""}" style="margin-bottom:6px">${inner}</div>`;
+    return dispo
+      ? `<a class="card click cal-item" style="${cs};margin-bottom:6px;text-decoration:none;color:inherit" href="${esc(hrefCourse(m.race_id, ""))}" data-open="${esc(m.race_id)}" data-stage="">${inner}</a>`
+      : `<div class="card cal-item ${m.date > (state.index.generated_at || "").slice(0, 10) ? "future" : ""}" style="${cs};margin-bottom:6px">${inner}</div>`;
   }).join("");
   return `<div class="stack">
-    <div><div class="sec-title">Classement individuel${f.updated ? ` · mis à jour le ${esc(dateLongue(f.updated))}` : ""}</div>
-      <div class="card table-card">${indiv.length ? `<div class="rows">${lignes}</div>` : '<div class="empty">Classement non publié</div>'}</div></div>
-    <div><div class="sec-title">Manches</div>${manches || '<div class="empty card">Aucune manche listée.</div>'}</div></div>`;
+    <div><h2 class="h-sec">Classement individuel${f.updated ? ` · mis à jour le ${esc(dateLongue(f.updated))}` : ""}</h2>
+      ${indiv.length ? htmlTableau([{ l: "Rang" }, { l: "Coureur", tl: true }, { l: "Points" }], rows).replace('class="tbl"', 'class="tbl tbl-rank"') : '<div class="empty card">Classement non publié</div>'}</div>
+    <div><h2 class="h-sec">Manches</h2>${manches || '<div class="empty card">Aucune manche listée.</div>'}</div></div>`;
 }
 
 /* ---- classement UCI ---- */
@@ -1214,21 +1321,45 @@ function ligneUci(r, ids) {
     <div class="mid"><div class="nm">${lien ? plink(r.rider_id, nom) : esc(nom)}</div><div class="tm">${esc(r.team || "")}</div></div>
     <div class="val">${esc(num(r.points))}<small>pts</small></div></div>`;
 }
-/** Lignes (déjà filtrées par la recherche et le filtre Français) d'un jeu de rangs `rows` ; `ids` : voir ligneUci. */
-function lignesUci(rows, ids) {
+function ligneUciTr(r, ids) {
+  const mv = r.previous_rank == null || r.rank == null ? ""
+    : r.previous_rank > r.rank ? `<span class="mv up">▲${r.previous_rank - r.rank}</span>`
+    : r.previous_rank < r.rank ? `<span class="mv down">▼${r.rank - r.previous_rank}</span>` : `<span class="mv">=</span>`;
+  const nom = r.name || r.rider || "";
+  const lien = r.rider_id && (!ids || (typeof ids === "function" ? ids(r.rider_id) : ids[r.rider_id]));
+  const dot = r.rank >= 1 && r.rank <= 3 ? `<i class="dot r${r.rank}" aria-hidden="true"></i>` : "";
+  const who = `${drapeauIso3(r.nationality)}${lien ? plink(r.rider_id, nom) : esc(nom)}${r.team ? `<div class="sub-rider">${esc(r.team)}</div>` : ""}`;
+  return `<tr${r.nationality === "FRA" ? ' class="tr-fr"' : ""}><td>${dot}${esc(r.rank)}${mv}</td><td class="tl">${who}</td><td><b>${esc(num(r.points))}</b></td></tr>`;
+}
+function filtrerUci(rows) {
   const U = state.uc;
-  const total = rows.length;
   if (U.fr) rows = rows.filter(r => r.nationality === "FRA");
   const q = normaliser(U.q).trim();
   if (q) rows = rows.filter(r => normaliser(r.name).includes(q) || normaliser(r.rider).includes(q));
-  const vis = rows.slice(0, U.limit), reste = rows.length - vis.length;
-  const html = vis.map(r => ligneUci(r, ids)).join("");
-  const compte = `${rows.length}${rows.length !== total ? " / " + total : ""} coureur${rows.length > 1 ? "s" : ""}`;
-  return { compte, html: (html ? `<div class="rows">${html}</div>` : `<div class="empty">Aucun coureur trouvé.</div>`)
-    + (reste > 0 ? `<button class="more" data-action="uc-more">Afficher ${Math.min(100, reste)} de plus (${reste} restants)</button>` : "") };
+  return rows;
 }
-function majListeUci() {
+/** Lignes (déjà filtrées par la recherche et le filtre Français) d'un jeu de rangs `rows` ; `ids` : voir ligneUci. */
+function lignesUci(rows, ids) {
+  const U = state.uc, total = rows.length;
+  rows = filtrerUci(rows);
+  const vis = rows.slice(0, U.limit), reste = rows.length - vis.length;
+  const html = vis.map(r => ligneUciTr(r, ids)).join("");
+  const compte = `${rows.length}${rows.length !== total ? " / " + total : ""} coureur${rows.length > 1 ? "s" : ""}`;
+  const tbl = `<div class="tbl-wrap"><table class="tbl tbl-rank"><thead><tr><th scope="col">Rang</th><th class="tl" scope="col">Coureur</th><th scope="col">Points</th></tr></thead><tbody>${html}</tbody></table></div>`;
+  return { compte, html: (html ? tbl : `<div class="empty card">Aucun coureur trouvé.</div>`)
+    + pagePlus(reste, "uc-more", 100) };
+}
+function majListeUci(depuis) {
   const l = document.getElementById("uc-list"); if (!l || !state.clVue) return;
+  const tbody = depuis > 0 ? l.querySelector("tbody") : null;
+  if (tbody) {
+    const rows = filtrerUci(state.clVue.rows);
+    const tranche = rows.slice(depuis, state.uc.limit);
+    if (tranche.length) tbody.insertAdjacentHTML("beforeend", tranche.map(r => ligneUciTr(r, state.clVue.ids)).join(""));
+    majBoutonPlus(l, rows.length - Math.min(state.uc.limit, rows.length), "uc-more", 100);
+    document.getElementById("uc-count").textContent = `${rows.length}${rows.length !== state.clVue.rows.length ? " / " + state.clVue.rows.length : ""} coureur${rows.length > 1 ? "s" : ""}`;
+    return;
+  }
   const r = lignesUci(state.clVue.rows, state.clVue.ids);
   l.innerHTML = r.html;
   document.getElementById("uc-count").textContent = r.compte;
@@ -1236,10 +1367,10 @@ function majListeUci() {
 /** Carte d'un classement UCI (titre, recherche, filtre Français, liste) ; la liste est remplie par majListeUci. */
 function blocUci(titre) {
   const U = state.uc;
-  return `<div><div class="sec-title">${esc(titre)}</div>
-    <div class="card table-card"><div class="uc-tools"><input class="search" id="uc-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(U.q)}" autocomplete="off">
+  return `<div><h2 class="h-sec">${esc(titre)}</h2>
+    <div class="uc-tools"><input class="search" id="uc-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(U.q)}" autocomplete="off">
       <div class="l1"><button class="switch" data-action="uc-fr" aria-pressed="${U.fr}"><i></i>Français seulement</button><span class="small muted" id="uc-count"></span></div></div>
-      <div id="uc-list"></div></div></div>`;
+    <div id="uc-list"></div></div>`;
 }
 
 /* ---- archives (saisons passées) ---- */
@@ -1276,9 +1407,12 @@ async function chercherArchive(id) {
 function blocVictoiresFr(ix) {
   const W = ix.french_wins || [];
   if (!W.length) return "";
-  const lignes = W.map(w => `<button class="wins-row" data-open="${esc(w.race_id)}" data-stage="${esc(refLibelle(w.label, w.stage_number))}">
-      <span class="d">${esc(dateCourte(w.date))}</span>
-      <span class="l"><b>${plink(w.rider_id, w.rider)}</b><small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span></button>`).join("");
+  const lignes = W.map(w => {
+    const st = refLibelle(w.label, w.stage_number);
+    return `<div class="wins-row lk"><span class="d">${esc(dateCourte(w.date))}</span>
+      <span class="l"><a class="stretch" href="${esc(hrefCourse(w.race_id, st))}" data-open="${esc(w.race_id)}" data-stage="${esc(st)}"><b>${esc(w.rider)}</b></a>
+        <small>${esc(w.race_name)}${w.label && w.label !== "Course" ? " · " + esc(w.label) : ""}</small></span></div>`;
+  }).join("");
   return `<details class="card table-card"${W.length <= 8 ? " open" : ""}><summary class="group-title" style="cursor:pointer">Victoires françaises · ${W.length}</summary>${lignes}</details>`;
 }
 /* ---- coureurs français (vue de la page Coureurs) ---- */
@@ -1291,13 +1425,18 @@ function nomCourseAnnee(x, D) {
 }
 function carteFrancais(id, f, D) {
   const best = (f.best || []).slice(0, 3).map(x => {
-    const medaille = { 1: "🥇", 2: "🥈", 3: "🥉" }[x.rank];
-    return `<div class="best"><span class="medal">${medaille || `<span class="pastille">${esc(rang(x.rank))}</span>`}</span>
-      <span class="t">${esc(nomCourseAnnee(x, D))}</span><span class="pt">${x.uci_points != null ? esc(num(x.uci_points)) + " pts" : ""}</span></div>`;
+    const c = (D.races || {})[x.race_id] || {}, ci = courseParId(x.race_id), cat = c.category || (ci && ci.category), cl = c.uci_class || (ci && ci.uci_class);
+    return `<div class="fr-best"><span class="rk${rangClasse(x.rank)}">${esc(x.rank)}</span>
+      <span class="t">${cat ? catBadge(cat, cl) + " " : ""}${esc(nomCourseAnnee(x, D))}</span>
+      <span class="pt">${x.uci_points != null ? esc(num(x.uci_points)) + " pts" : ""}</span></div>`;
   }).join("");
-  return `<button class="card click fr-card" data-rider="${esc(id)}">
-    <div class="fr-top"><div class="fr-uci">${f.uci_rank != null ? `<b>${esc(f.uci_rank)}</b><span>${f.uci_points != null ? esc(num(f.uci_points)) + " pts" : "UCI"}</span>` : `<span>Non classé</span>`}</div>
-      <div><div class="nm">${esc(f.name)}</div><div class="small muted">${esc(f.team || "")}</div></div></div>${best}</button>`;
+  const rkCls = f.uci_rank != null ? rangClasse(f.uci_rank) : " off";
+  return `<div class="card click fr-card lk">
+    <div class="fr-top"><div class="rk${rkCls}">${f.uci_rank != null ? esc(f.uci_rank) : "–"}</div>
+      <div class="who"><a class="nm stretch" href="${esc(hrefCoureur(id, null))}" data-rider="${esc(id)}">${esc(f.name)}</a>
+        ${f.team ? `<div class="small muted">${esc(f.team)}</div>` : ""}</div>
+      ${f.uci_points != null ? `<div class="pts">${esc(num(f.uci_points))} pts</div>` : ""}</div>
+    ${best ? `<div class="fr-bests">${best}</div>` : ""}</div>`;
 }
 function renderFrancais() {
   const D = state.ridersCl;
@@ -1307,8 +1446,13 @@ function renderFrancais() {
   if (!F.length) return `<div class="empty card">Aucun coureur français pour l'instant.</div>`;
   const cl = F.filter(([, f]) => f.uci_rank != null).sort((a, b) => a[1].uci_rank - b[1].uci_rank);
   const nc = F.filter(([, f]) => f.uci_rank == null).sort((a, b) => (a[1].name || "").localeCompare(b[1].name || "", "fr"));
-  return `<div class="sec-title">${F.length} coureur${F.length > 1 ? "s" : ""} français · saison ${esc(D.season ?? state.current)}</div>
-    <div class="stack">${cl.map(([id, f]) => carteFrancais(id, f, D)).join("")}</div>
+  const tuiles = htmlTuiles([
+    { lab: "Français suivis", val: F.length, sub: `saison ${D.season ?? state.current}` },
+    { lab: "Classés UCI", val: cl.length },
+    cl.length ? { lab: "Meilleur rang", val: rang(cl[0][1].uci_rank), sub: cl[0][1].name, cls: "t-jaune" } : null,
+  ]);
+  return `${tuiles}<div><h2 class="h-sec">Classés UCI (${cl.length})</h2>
+    <div class="stack">${cl.length ? cl.map(([id, f]) => carteFrancais(id, f, D)).join("") : '<div class="empty card">Aucun coureur classé.</div>'}</div></div>
     ${nc.length ? `<details class="nc"><summary>Non classés au classement UCI (${nc.length})</summary><div class="stack" style="margin-top:8px">${nc.map(([id, f]) => carteFrancais(id, f, D)).join("")}</div></details>` : ""}`;
 }
 
@@ -1491,6 +1635,47 @@ function ligneEquipe(r, c) {
     <div class="val ${r.rank === 1 ? "first" : "gap"}">${esc(val)}</div></div>`;
 }
 
+function donneesTableCourse(c, sel, sub) {
+  const k = cls(c, sel);
+  let rows = k[sub] || [];
+  if (!rows.length) return { empty: '<div class="empty">Classement non publié</div>' };
+  // mouvements au général : comparaison avec l'étape précédente
+  let prev = null;
+  if (sub === "gc" && c.race_type === "stage_race" && sel !== "F") {
+    const E = etapes(c), i = E.indexOf(trouveEtape(E, sel));
+    if (i > 0) { prev = {}; ((E[i - 1].results || {}).gc || []).forEach(r => { prev[r.rider_id] = r.rank; }); }
+  }
+  if (state.frOnly && sub !== "teams") {
+    rows = rows.filter(r => (c.riders[r.rider_id] || {}).is_french);
+    if (!rows.length) return { empty: '<div class="empty">Aucun Français dans ce classement.</div>' };
+  }
+  return { rows, prev };
+}
+
+function renderTrancheTable(c, sub, vis, prev) {
+  return vis.map(r => sub === "teams" ? ligneEquipe(r, c)
+    : ligneHTML(r, sub, c, prev && prev[r.rider_id] != null && r.rank != null ? prev[r.rider_id] - r.rank : null)).join("");
+}
+
+function majTablePlus(depuis) {
+  const box = document.getElementById("table"), c = state.course, sel = state.sel, sub = state.sub;
+  if (!box || !c) return;
+  const rowsCont = box.querySelector(".rows");
+  if (!(depuis > 0 && rowsCont)) { box.innerHTML = renderTable(c, sel, sub); return; }
+  const D = donneesTableCourse(c, sel, sub);
+  if (D.empty) { box.innerHTML = D.empty; return; }
+  const limite = state.frOnly ? D.rows.length : state.limit;
+  const tranche = D.rows.slice(depuis, limite);
+  if (tranche.length) rowsCont.insertAdjacentHTML("beforeend", renderTrancheTable(c, sub, tranche, D.prev));
+  const reste = D.rows.length - Math.min(limite, D.rows.length);
+  const btn = box.querySelector('button.more[data-action="more"]');
+  if (reste > 0) {
+    const txt = `Afficher ${Math.min(50, reste)} de plus (${reste} restants)`;
+    if (btn) btn.textContent = txt;
+    else box.insertAdjacentHTML("beforeend", `<button class="more" data-action="more">${txt}</button>`);
+  } else if (btn) btn.remove();
+}
+
 function renderTable(c, sel, sub) {
   const k = cls(c, sel);
   if (sub === "abandons") {
@@ -1515,24 +1700,12 @@ function renderTable(c, sel, sub) {
   }
   if (sub === "participants") return htmlParticipants(c);
   if (sub === "pays") return htmlPays(c);
-  let rows = k[sub] || [];
-  if (!rows.length) return `<div class="empty">Classement non publié</div>`;
-  // mouvements au général : comparaison avec l'étape précédente
-  let prev = null;
-  if (sub === "gc" && c.race_type === "stage_race" && sel !== "F") {
-    const E = etapes(c), i = E.indexOf(trouveEtape(E, sel));
-    if (i > 0) { prev = {}; ((E[i - 1].results || {}).gc || []).forEach(r => { prev[r.rider_id] = r.rank; }); }
-  }
-  const total = rows.length;
-  if (state.frOnly && sub !== "teams") {
-    rows = rows.filter(r => (c.riders[r.rider_id] || {}).is_french);
-    if (!rows.length) return `<div class="empty">Aucun Français dans ce classement.</div>`;
-  }
-  const limite = state.frOnly ? rows.length : state.limit;
-  const vis = rows.slice(0, limite);
-  const html = vis.map(r => sub === "teams" ? ligneEquipe(r, c)
-    : ligneHTML(r, sub, c, prev && prev[r.rider_id] != null && r.rank != null ? prev[r.rider_id] - r.rank : null)).join("");
-  const reste = rows.length - vis.length;
+  const D = donneesTableCourse(c, sel, sub);
+  if (D.empty) return D.empty;
+  const limite = state.frOnly ? D.rows.length : state.limit;
+  const vis = D.rows.slice(0, limite);
+  const html = renderTrancheTable(c, sub, vis, D.prev);
+  const reste = D.rows.length - vis.length;
   return `<div class="rows">${html}</div>` + (reste > 0 ? `<button class="more" data-action="more">Afficher ${Math.min(50, reste)} de plus (${reste} restants)</button>` : "");
 }
 
@@ -1576,7 +1749,8 @@ function navEdition(c) { return state.nav && state.nav.id === c.id ? state.nav.n
 function crumbsEdition(c) {
   const nv = navEdition(c), y = saisonCourse(c), base = [["Accueil", "#/"], ["Courses", "#courses"]];
   if (nv && nv.cle) return htmlCrumbs(base.concat([[nv.nom, `#epreuve/${encodeURIComponent(nv.cle)}`], [String(y ?? c.name)]]));
-  return htmlCrumbs(y != null ? base.concat([[String(y), `#courses/${y}`], [c.name]]) : base.concat([[c.name]]));
+  const sHref = c.season != null ? c.season : y;
+  return htmlCrumbs(sHref != null ? base.concat([[String(y ?? c.season), `#courses/${sHref}`], [c.name]]) : base.concat([[c.name]]));
 }
 function navboxEdition(c) {
   const nv = navEdition(c);
@@ -1867,7 +2041,7 @@ const STATUT_ORDRE = { DNF: 1, OTL: 2, DSQ: 3, DNS: 4 };
 /** Logo d'une équipe dans la liste des participants : logo Wikidata de sa lignée (lignees_index.json), seulement si la saison est couverte par le nom
  *  actuel de la lignée (`logo_depuis`) ; sinon pastille avec les initiales. Les deux index sont chargés à la demande (la liste est redessinée ensuite). */
 function redessinerParticipants() {
-  if (state.route && (state.route.nom === "accueil" || state.route.nom === "coureur")) majMaillotsAccueil();
+  if (state.route && ["accueil", "coureur", "equipes"].includes(state.route.nom)) majMaillotsAccueil();
   if (state.course && state.route && state.route.nom === "course") renderFiche();
 }
 /** Index des maillots (maillots/index.json) : { equipes: {CODE: {nom, slug}}, parSlug: {slug: CODE} } ; absent ou illisible : null (aucun maillot). */
@@ -1901,7 +2075,7 @@ function maillotNation(iso3) {
 const PCM_IMAGE = "https://pcmmod.com/img/backup_graph_element/{id}.png";
 function redessinerPcm() {
   const n = state.route && state.route.nom;
-  if (n === "accueil" || n === "coureur") majMaillotsAccueil();
+  if (n === "accueil" || n === "coureur" || n === "equipes") majMaillotsAccueil();
   else if (n === "equipe") renderEquipe();
   else if (n === "epreuve") renderEpreuve();
   else if (n === "course" && state.course) renderFiche();
@@ -2255,12 +2429,14 @@ function fusionCalendrier(ent, cals, genere) {
 async function construireCoureur(id, ctx, cle) {
   let I = { alias: {}, lettres: [] };
   try { I = await chargerIndexCarrieres(); } catch (e) { /* alias facultatifs */ }
-  const [R, fs, , idx, lg] = await Promise.all([chargerEntiteCoureur(id, I), chargerFicheSaison(id, ctx), chargerPays(),
+  const [R, , idx, lg] = await Promise.all([chargerEntiteCoureur(id, I), chargerPays(),
     chargerArchive("entites/index.json").catch(() => null), chargerLigneesIdx(), chargerMaillots()]);
   const cid = R.cid;
   const sources = [cid, id].concat(Object.keys(I.alias).filter(k => I.alias[k] === cid)).filter((v, i, t) => t.indexOf(v) === i);
   const cals = await fichesCalendrier(sources);
   const ent = fusionCalendrier(R.ent, cals, idx && idx.generated_at);
+  const aSaisonEnt = !!(ent && ent.saisons && ent.saisons[ctx.saison]);
+  const fs = aSaisonEnt ? { d: null, msg: null } : await chargerFicheSaison(id, ctx);
   const lettres = [...new Set((((ent && ent.palmares) || []).concat((ent && ent.palmares_historique) || [])).map(x => lettreId(x.course)).filter(Boolean))];
   await Promise.all(lettres.map(chargerCoursesEnt));
   return { id, cid, cle, ctx, ent, lg, fiche: fs.d, msg: fs.msg, err: fs.err };
@@ -2305,9 +2481,11 @@ function htmlTuiles(liste) {
   return t.length ? `<div class="kpis">${t.map(x => `<div class="tile${x.cls ? " " + esc(x.cls) : ""}"><small>${esc(x.lab)}</small><b${x.txt ? ' class="txt"' : ""}>${esc(x.val)}</b>${x.sub ? `<span class="sub">${esc(x.sub)}</span>` : ""}</div>`).join("")}</div>` : "";
 }
 /** Onglets de sous-pages, défilables et collants ; `attr` : nom de l'attribut data-… porté par chaque bouton. */
-function htmlOnglets(defs, actif, attr, id) {
-  return `<div class="subtabs sticky" ${id ? `id="${id}"` : ""} role="tablist">${defs.map(d =>
-    `<button class="subtab ${d.k === actif ? "active" : ""}" role="tab" aria-selected="${d.k === actif}" data-${attr}="${esc(d.k)}">${esc(d.l)}</button>`).join("")}</div>`;
+function htmlOnglets(defs, actif, attr, id, panelId) {
+  return `<div class="subtabs sticky" ${id ? `id="${id}"` : ""} role="tablist">${defs.map(d => {
+    const on = d.k === actif;
+    return `<button class="subtab ${on ? "active" : ""}" id="${esc(id)}-${esc(d.k)}" role="tab" aria-selected="${on}" tabindex="${on ? "0" : "-1"}"${panelId ? ` aria-controls="${esc(panelId)}"` : ""} data-${attr}="${esc(d.k)}">${esc(d.l)}</button>`;
+  }).join("")}</div>`;
 }
 /** Tableau compact : `cols` [{l, t (titre), tl (aligné à gauche), w (aligné à gauche, texte qui passe à la ligne), dot (r1 / r2 / r3 : pastille de rang devant l'en-tête)}], `rows` listes de cellules HTML déjà échappées (propriété `cls` d'une ligne : classe de la <tr>) ; 1re colonne figée. */
 function htmlTableau(cols, rows) {
@@ -2428,7 +2606,7 @@ function ongletsCoureur(cr) {
     if ((E.historique_uci || []).length || saisonsTriees(E).some(([, s]) => s.uci_rank != null)) out.push({ k: "uci", l: "Classement UCI" });
     if (saisonsTriees(E).some(([, s]) => s.team) || ((E.wikidata || {}).equipes_wd || []).some(x => x.libelle)) out.push({ k: "parcours", l: "Parcours" });
   }
-  if (cr.fiche && identite(cr).name) out.push({ k: "saison", l: !cr.ctx.archive && cr.ctx.saison === state.current ? "Saison en cours" : `Saison ${cr.ctx.saison}` });
+  if ((E && E.saisons && E.saisons[cr.ctx.saison]) || (cr.fiche && identite(cr).name)) out.push({ k: "saison", l: !cr.ctx.archive && cr.ctx.saison === state.current ? "Saison en cours" : `Saison ${cr.ctx.saison}` });
   return out;
 }
 /** Carte d'un résultat (ouvre l'édition). */
@@ -2480,7 +2658,7 @@ function htmlApercu(cr) {
     ["Top 10", aSomme(E, "top10")], ["Abandons", aSomme(E, "dnf")],
   ].filter(([, v]) => v > 0);
   const liens = Object.entries(wd.wikipedia || {}).sort((a, b) => (a[0] === "fr" ? -1 : b[0] === "fr" ? 1 : a[0].localeCompare(b[0]))).map(([l, t]) => lienWikipedia(l, t)).filter(Boolean);
-  return `${P.length ? `<div><h2 class="h-sec">Derniers résultats marquants</h2><div class="res-list">${P.slice(0, 5).map(x => carteResultat(x)).join("")}</div>
+  return `${P.length ? `<div><h2 class="h-sec">Derniers résultats</h2><div class="res-list">${P.slice(0, 5).map(x => carteResultat(x)).join("")}</div>
       ${P.length > 5 ? `<button class="more" data-rtab="palmares">Tout le palmarès (${P.length})</button>` : ""}</div>` : ""}
     ${graphSaisons(E)}
     ${chiffres.length ? `<div class="card"><h2 class="h-sec">En chiffres</h2><dl class="facts" style="margin:0;padding:0;border:0">${chiffres.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(num(v))}</dd>`).join("")}</dl>
@@ -2608,8 +2786,26 @@ function htmlParcours(cr) {
   const natL = nat.length ? `<div class="tbl-note">Sélection nationale : ${nat.slice().reverse().map(n => lienEquipeRef(String(n.y), n.ref, n.y)).join(", ")}</div>` : "";
   return `<div class="card"><h2 class="h-sec">Équipes</h2><ul class="eqlist">${li}</ul>${natL}</div>`;
 }
-/** Contenu de l'ancienne fiche (saison du contexte), sans l'en-tête. */
+/** Contenu de l'onglet Saison : en priorité depuis l'entité coureur (année civile), sinon repli sur riders*.json. */
 function htmlSaison(cr) {
+  const y = cr.ctx && cr.ctx.saison;
+  const S_ent = cr.ent && cr.ent.saisons && y != null ? cr.ent.saisons[y] : null;
+  if (S_ent) {
+    const S = S_ent.stats || {}, v = k => S[k] || 0;
+    const uciSub = S_ent.uci_points != null ? `${num(S_ent.uci_points)} pts${S_ent.cal && S_ent.uci_date ? ` · au ${dateLongue(S_ent.uci_date)}` : ` · fin de saison ${y}`}`
+      : S_ent.cal && S_ent.uci_date ? `au ${dateLongue(S_ent.uci_date)}` : `fin de saison ${y}`;
+    const tuiles = htmlTuiles([
+      S_ent.uci_rank != null ? { lab: "Classement UCI", val: rang(S_ent.uci_rank), sub: uciSub } : null,
+      { lab: "Victoires", val: v("wins"), sub: v("gc_wins") ? `+ ${v("gc_wins")} général final${v("gc_wins") > 1 ? "s" : ""}` : "étapes et courses d'un jour", cls: v("wins") > 0 ? "t-jaune" : "" },
+      { lab: "Podiums", val: v("podiums"), sub: "étapes et courses d'un jour" },
+      { lab: "Top 10", val: v("top10"), sub: "étapes et courses d'un jour" },
+      { lab: "Jours de course", val: v("race_days"), sub: `${v("races")} course${v("races") > 1 ? "s" : ""}${v("dnf") ? ` · ${v("dnf")} abandon${v("dnf") > 1 ? "s" : ""}` : ""}` },
+    ]);
+    const P = ((cr.ent && cr.ent.palmares) || []).filter(x => x.season === y);
+    const pal = P.length ? `<div class="res-list">${P.map(carteResultat).join("")}</div>` : htmlVide(`Aucun podium dans les courses suivies en ${y}.`);
+    return `${tuiles}<div><h2 class="h-sec">Palmarès ${esc(y)}</h2>${pal}
+      <div class="tbl-note">Saison civile ${esc(y)} (courses datées en ${esc(y)}) : victoires et podiums (rangs 1 à 3) des étapes, courses d'un jour et classements finaux des courses suivies.</div></div>`;
+  }
   const D = cr.fiche, f = D && (D.riders[cr.id] || D.riders[cr.cid]);
   if (!f) return `<div class="vide">${cr.msg ? esc(cr.msg) : "Fiche indisponible pour ce coureur."}</div>`;
   const S = f.stats || {}, v = k => S[k] || 0, rk = D.ranking;
@@ -2670,14 +2866,15 @@ function renderCoureur() {
   if (!defs.some(d => d.k === state.rtab)) state.rtab = defs[0].k;
   const A = articleCoureur(cr);
   body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox,
-    main: `${tuilesCoureur(cr)}${htmlOnglets(defs, state.rtab, "rtab", "rtabs")}<div class="tabcontent" id="rcontent" role="tabpanel"></div>${creditsCoureur(cr)}` });
+    main: `${tuilesCoureur(cr)}${htmlOnglets(defs, state.rtab, "rtab", "rtabs", "rcontent")}<div class="tabcontent" id="rcontent" role="tabpanel"></div>${creditsCoureur(cr)}` });
   majContenuCoureur();
 }
 /** Redessine seulement le contenu de l'onglet actif (la barre d'onglets collante et le défilement restent en place). */
 function majContenuCoureur() {
   const cr = state.cr, box = document.getElementById("rcontent");
   if (!cr || !box) return;
-  document.querySelectorAll("#rtabs .subtab").forEach(b => { const a = b.dataset.rtab === state.rtab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); });
+  document.querySelectorAll("#rtabs .subtab").forEach(b => { const a = b.dataset.rtab === state.rtab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); b.setAttribute("tabindex", a ? "0" : "-1"); });
+  box.setAttribute("aria-labelledby", `rtabs-${state.rtab}`);
   const f = ONGLET_HTML[state.rtab];
   box.innerHTML = f ? f(cr) : "";
   majMaillotsAccueil();
@@ -2921,7 +3118,7 @@ function renderEpreuve() {
   if (!defs.length) { body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox, main: `${htmlVide("Aucune édition terminée dans nos données.")}<div class="foot-credits"><div id="fiche-credit"></div></div>`, navbox: A.navbox }); majCreditAccueil(); return; }
   if (!defs.some(d => d.k === state.etab)) state.etab = defs[0].k;
   body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox, navbox: A.navbox,
-    main: `${tuilesEpreuve(ep)}${htmlOnglets(defs, state.etab, "etab", "etabs")}<div class="tabcontent" id="econtent" role="tabpanel"></div>
+    main: `${tuilesEpreuve(ep)}${htmlOnglets(defs, state.etab, "etab", "etabs", "econtent")}<div class="tabcontent" id="econtent" role="tabpanel"></div>
     <div class="foot-credits">Résultats : UCI DataRide. Les éditions comptées sont celles de nos données (courses suivies par ce site).<div id="fiche-credit"></div></div>` });
   majContenuEpreuve();
   majCreditAccueil();
@@ -2929,7 +3126,8 @@ function renderEpreuve() {
 function majContenuEpreuve() {
   const ep = state.ep, box = document.getElementById("econtent");
   if (!ep || !ep.C || !box) return;
-  document.querySelectorAll("#etabs .subtab").forEach(b => { const a = b.dataset.etab === state.etab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); });
+  document.querySelectorAll("#etabs .subtab").forEach(b => { const a = b.dataset.etab === state.etab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); b.setAttribute("tabindex", a ? "0" : "-1"); });
+  box.setAttribute("aria-labelledby", `etabs-${state.etab}`);
   const f = ONGLET_EPREUVE[state.etab];
   box.innerHTML = f ? f(ep) : "";
 }
@@ -3141,8 +3339,8 @@ function carteVictoireEquipe(eq, v, a) {
   const nom = nomCoursePalmares({ course: v.course, season: a, race_id: v.race_id }), lab = v.label && v.label !== "Course" ? v.label : "";
   const c = classeVictoire(v, a), cs = c ? catStyle(c.cat) : "", gc = v.classification === "gc";
   const meta = [c ? catBadge(c.cat, c.cl) : "", lab ? esc(lab) : "", gc ? "Général" : "", v.rider_id ? plink(v.rider_id, nomCoureurEq(eq, v.rider_id), ctxSaison(a)) : ""].filter(Boolean).join(" · ");
-  return `<div class="res" role="link" tabindex="0"${cs ? ` style="${cs}"` : ""} data-open="${esc(v.race_id)}" data-stage="${gc ? "F" : ""}" data-vsub="${esc(v.classification || "")}">
-    <span class="rk r1" title="Victoire">1</span><span class="t"><b>${esc(nom)}</b><small>${meta}</small></span><span class="d">${esc(dateCourte(v.date))}</span></div>`;
+  return `<div class="res lk"${cs ? ` style="${cs}"` : ""}>
+    <span class="rk r1" title="Victoire">1</span><span class="t"><a class="stretch" href="${esc(hrefCourse(v.race_id, gc ? "F" : ""))}" data-open="${esc(v.race_id)}" data-stage="${gc ? "F" : ""}" data-vsub="${esc(v.classification || "")}"><b>${esc(nom)}</b></a><small>${meta}</small></span><span class="d">${esc(dateCourte(v.date))}</span></div>`;
 }
 function htmlPalmaresEquipe(eq) {
   const ys = eq.annees.filter(a => (eq.saisons[a].victoires || []).length);
@@ -3220,14 +3418,15 @@ function renderEquipe() {
   const meme = eq.memeNom && eq.memeNom.length
     ? `<div class="meme-nom" title="Libellé identique ; aucune preuve de continuité">Même nom en : ${eq.memeNom.map(id => `<a href="#equipe/${esc(id)}">${esc(id.slice(-4))}</a>`).join(" · ")}</div>` : "";
   body.innerHTML = htmlArticle({ head: A.head, infobox: A.infobox, navbox: `<div id="qnav-slot">${navboxEquipe(eq)}</div>`,
-    main: `${tuilesEquipe(eq)}${meme}${defs.length ? htmlOnglets(defs, state.eqtab, "qtab", "qtabs") : ""}<div class="tabcontent" id="qcontent" role="tabpanel"></div>${creditsEquipe(eq)}` });
+    main: `${tuilesEquipe(eq)}${meme}${defs.length ? htmlOnglets(defs, state.eqtab, "qtab", "qtabs", "qcontent") : ""}<div class="tabcontent" id="qcontent" role="tabpanel"></div>${creditsEquipe(eq)}` });
   majContenuEquipe();
   majCreditAccueil();
 }
 function majContenuEquipe() {
   const eq = state.eq, box = document.getElementById("qcontent");
   if (!eq || !eq.y || !box) return;
-  document.querySelectorAll("#qtabs .subtab").forEach(b => { const a = b.dataset.qtab === state.eqtab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); });
+  document.querySelectorAll("#qtabs .subtab").forEach(b => { const a = b.dataset.qtab === state.eqtab; b.classList.toggle("active", a); b.setAttribute("aria-selected", a); b.setAttribute("tabindex", a ? "0" : "-1"); });
+  box.setAttribute("aria-labelledby", `qtabs-${state.eqtab}`);
   const f = ONGLET_EQUIPE[state.eqtab];
   box.innerHTML = f ? f(eq) : htmlVide("Aucune donnée pour cette équipe.");
   const nb = document.getElementById("qnav-slot"); if (nb) nb.innerHTML = navboxEquipe(eq);
@@ -3291,6 +3490,30 @@ async function chercher(q) {
 const SR_GROUPES = [["c", "Coureurs", ["c"]], ["e", "Équipes et lignées", ["e", "l"]], ["r", "Courses", ["r"]]];
 const SR_PAR_GROUPE = 8;
 function annees(y) { return !y ? "" : y[0] === y[1] ? String(y[0]) : `${y[0]}–${y[1]}`; }
+function sousTitreResultat(e) {
+  if (e.t === "c") {
+    if (String(e.id || "").startsWith("wd-")) return "Coureur historique";
+    const c = (mapCoureurs && mapCoureurs.get(e.id)) || (state.cIdx && state.cIdx.find(x => x.id === e.id));
+    const parts = ["Coureur"];
+    if (c && c.nat) parts.push(nomPays(c.nat));
+    if (c && c.eq) parts.push(c.eq);
+    return parts.join(" · ");
+  }
+  if (e.t === "l") {
+    const L = state.lgIdx && state.lgIdx[e.id];
+    const parts = ["Lignée d'équipe"];
+    if (L && L.pays_nom) parts.push(L.pays_nom);
+    else if (L && L.pays) parts.push(nomPays(L.pays));
+    if (L && L.cat) parts.push(L.cat);
+    return parts.join(" · ");
+  }
+  if (e.t === "e") return e.nat ? "Sélection nationale" : "Équipe";
+  if (e.t === "r") {
+    const p = String(e.id || "").split("|")[1];
+    return p ? `Épreuve · ${nomPays(p)}` : "Épreuve";
+  }
+  return "";
+}
 function htmlResultats() {
   const S = state.sr, R = S.res || [];
   if (!R.length) return `<div class="sr-hint">Aucun résultat pour « ${esc(S.q.trim())} ».</div>`;
@@ -3304,7 +3527,9 @@ function htmlResultats() {
       const yr = `<span class="yr">${esc(annees(e.y))}</span>`;
       if (e.t === "c" || e.t === "r" || e.t === "e" || e.t === "l") {
         const n = i++;
-        return `<button class="sr-item nav${S.sel === n ? " sel" : ""}" role="option" aria-selected="${S.sel === n}" id="sr-i${n}" data-sr="${e.t}" data-id="${esc(e.id)}">${fl}<span class="nm">${esc(e.n)}</span>${e.t === "l" ? '<span class="badge">Lignée</span>' : e.nat ? '<span class="badge">Sélection</span>' : ""}${yr}</button>`;
+        const sub = sousTitreResultat(e);
+        const badge = e.t === "l" ? '<span class="badge">Lignée</span>' : e.nat ? '<span class="badge">Sélection</span>' : "";
+        return `<button class="sr-item nav${S.sel === n ? " sel" : ""}" role="option" aria-selected="${S.sel === n}" id="sr-i${n}" data-sr="${e.t}" data-id="${esc(e.id)}">${fl}<span class="sr-main"><span class="nm">${esc(e.n)}</span>${sub ? `<span class="sr-sub">${esc(sub)}</span>` : ""}</span>${badge}${yr}</button>`;
       }
       return "";
     }).join("");
@@ -3419,6 +3644,7 @@ function finPage(tok) {
 const PAGES = { accueil: pageAccueil, courses: pageCourses, epreuve: pageEpreuve, course: pageCourse, equipes: pageEquipes, coureurs: pageCoureurs,
   coureur: pageCoureur, equipe: pageArticleEquipe, classements: pageClassements, recherche: pageRecherche, introuvable: pageIntrouvable };
 function routeur(opts) {
+  _debTimers.forEach(clearTimeout); _debTimers.clear();
   const r = parseRoute();
   state.route = r;
   const tok = ++state.routeTok;
@@ -3464,11 +3690,29 @@ function pagePlus(restant, action, pas) { return restant > 0 ? `<button class="m
 async function chargerOptionnel(chemin) {   // 404 : null (fichier pas encore généré) ; autre erreur : exception
   try { return await chargerArchive(chemin); } catch (e) { if (e.status === 404) return null; throw e; }
 }
+function majPiedDePage(I) {
+  const f = document.getElementById("foot");
+  if (!f) return;
+  let txt = "Résultats et classement : UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)";
+  if (I && Array.isArray(I.sources_historiques) && I.sources_historiques.length) {
+    txt += ` · archives pré-2009 : ${I.sources_historiques.join(", ")}`;
+  }
+  f.textContent = txt;
+}
 async function chargerEntIdx() {
-  if (state.entIdx === undefined) { try { state.entIdx = await chargerArchive("entites/index.json"); } catch (e) { state.entIdx = null; } }
+  if (state.entIdx === undefined) {
+    try { state.entIdx = await chargerArchive("entites/index.json"); } catch (e) { state.entIdx = null; }
+    majPiedDePage(state.entIdx);
+  }
   return state.entIdx;
 }
-async function chargerCoureursIdx() { if (state.cIdx === undefined) state.cIdx = await chargerOptionnel("entites/coureurs/index.json"); return state.cIdx; }
+async function chargerCoureursIdx() {
+  if (state.cIdx === undefined) {
+    state.cIdx = await chargerOptionnel("entites/coureurs/index.json");
+    state.cNats = null;
+  }
+  return state.cIdx;
+}
 async function chargerEpreuvesIdx() { if (state.eIdx === undefined) state.eIdx = await chargerOptionnel("entites/courses/index.json"); return state.eIdx; }
 async function chargerEquipesIdx() { if (state.eqIdx === undefined) state.eqIdx = await chargerOptionnel("entites/equipes/index.json"); return state.eqIdx; }
 const MSG_INDEX = "Cette liste est générée chaque nuit ; elle sera disponible après le prochain passage des archives.";
@@ -3498,7 +3742,7 @@ function majCreditAccueil() {
   c.textContent = L.length ? `Maillots : ${L.join(" · ")}` : "";
 }
 function majMaillotsAccueil() {
-  if (!state.route || !["accueil", "course", "coureur"].includes(state.route.nom)) return;
+  if (!state.route || !["accueil", "course", "coureur", "equipes"].includes(state.route.nom)) return;
   document.querySelectorAll("#main .mjs[data-eq]").forEach(sl => {
     const y = +sl.dataset.y;
     demanderEquipesAn(y, majMaillotsAccueil);
@@ -3536,17 +3780,17 @@ function htmlUne(x, it) {
     ${w ? `<span class="une-ligne"><span>Vainqueur : <b>${esc(w.name)}</b>${w.team ? ` <span class="eq">· ${esc(w.team)}</span>` : ""}</span>${slotMaillot(w.team, it.date)}</span>` : ""}
   </button>`;
 }
-/** Carte d'un dernier résultat de l'accueil : filet de catégorie, maillot du vainqueur, résumé replié. Cliquable (div) : le résumé et les liens coureur n'ouvrent pas la course. */
+/** Carte d'un dernier résultat de l'accueil : filet de catégorie, maillot du vainqueur, résumé replié. */
 function carteAccueil(it) {
   const c = courseParId(it.race_id), sn = refLibelle(it.label, it.stage_number), w = it.winner, bf = it.best_french;
-  return `<div class="rcard" role="link" tabindex="0" style="${catStyle(c && c.category)}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">
-    <div class="rc-head">${flag(c?.flag, c?.country)}<span class="race-name">${esc(it.race_name)}</span>${c ? catBadge(c.category, c.uci_class) : ""}</div>
+  return `<article class="rcard lk" style="${catStyle(c && c.category)}">
+    <div class="rc-head">${flag(c?.flag, c?.country)}<a class="race-name stretch" href="${esc(hrefCourse(it.race_id, sn))}" data-open="${esc(it.race_id)}" data-stage="${esc(sn)}">${esc(it.race_name)}</a>${c ? catBadge(c.category, c.uci_class) : ""}</div>
     <div class="rc-sub">${esc(it.label)} · ${esc(dateCourte(it.date))}</div>
     ${w ? `<div class="winner-line"><span class="pill-label">Vainqueur</span>${flag(w.flag, w.nationality)}
       <div class="who"><div class="nm">${plink(w.id, w.name)}${w.is_french ? ' <span class="badge fr">FR</span>' : ""}</div><div class="small muted">${esc(w.team || "")}</div></div>${slotMaillot(w.team, it.date)}</div>` : ""}
     ${bf && bf.rank !== 1 ? ligneCoureur(bf.rider, "Meilleur FR", `${rang(bf.rank)}${bf.classification === "gc" ? " au général" : ""}`) : ""}
     ${it.ai_summary ? `<details class="resume"><summary>Résumé</summary><p>${esc(it.ai_summary)}</p></details>` : ""}
-  </div>`;
+  </article>`;
 }
 /** Ligne « Prochaine course » : première course à venir qui commence aujourd'hui ou plus tard ; vide sinon. */
 function htmlProchaine(L) {
@@ -3578,11 +3822,21 @@ function blocFrancais(ix) {
       <span class="badge fr">1er</span></button>`).join("")}</div>
     <div class="count-line" style="margin-top:6px">${T.length} victoire${T.length > 1 ? "s" : ""} française${T.length > 1 ? "s" : ""} en ${esc(ix.season ?? state.current)}</div>`;
 }
-/** Victoires des années passées à la même date (jour et mois), d'après entites/courses : éditions UCI avec vainqueur, puis palmarès Wikidata de date complète. */
+/** Victoires des années passées à la même date (jour et mois) : fichier précalculé entites/ce_jour_la.json (1 requête), sinon repli sur entites/courses/. */
 async function ceJourLa() {
+  const auj = new Date(), md = `${p2(auj.getMonth() + 1)}-${p2(auj.getDate())}`, an = auj.getFullYear();
+  const I = await chargerEntIdx();
+  if (I && I.ce_jour_la) {
+    const CJ = await chargerOptionnel("entites/ce_jour_la.json");
+    if (CJ) {
+      return (CJ[md] || []).filter(x => x.an < an).slice(0, 6).map(x => {
+        if (x.race_id) noterChemin({ race_id: x.race_id, season: x.an });
+        return { an: x.an, nom: x.nom, flag: x.f, pays: x.pays, win: { name: x.win }, href: x.race_id ? hrefCourse(x.race_id, "") : hrefEpreuve(x.k) };
+      });
+    }
+  }
   const E = await chargerEpreuvesIdx();
   if (!E) return [];
-  const auj = new Date(), md = `${p2(auj.getMonth() + 1)}-${p2(auj.getDate())}`, an = auj.getFullYear();
   const lettres = [...new Set(E.map(x => lettreId(x.k)))];
   const F = await Promise.all(lettres.map(chargerCoursesEnt));
   const out = [];
@@ -3707,7 +3961,7 @@ async function pageCourses(r, tok) {
   }
   const note = !info.cal && !ix.complete ? `<div class="arch-note">Collecte en cours : cette saison est incomplète, des courses s'ajoutent à chaque passage.</div>` : "";
   const latest = info.cal && !avenir && f === "all" && (ix.latest || []).length
-    ? `<details class="nc"><summary>Derniers résultats d'étape (${ix.latest.length})</summary><div class="stack" style="margin-top:8px">${ix.latest.map(it => carteEtape(it, false)).join("")}</div></details>` : "";
+    ? `<details class="nc"><summary>Derniers résultats d'étape (${ix.latest.length})</summary><div class="stack" style="margin-top:8px">${ix.latest.map(carteAccueil).join("")}</div></details>` : "";
   const fin = !info.cal && ix.complete ? `<div class="nb-row"><a class="nb-a" href="${esc(hrefClassements({ sub: "uci", saison: y }))}">Classement UCI de fin de saison ${esc(y)}</a></div>` : "";
   main.innerHTML = `<div class="pg">${enteteListe("Courses", `Saison ${y}`)}
     ${vuesCourses(r2, y, info, rs.length, up.length)}
@@ -3731,14 +3985,31 @@ function filtrerEpreuves(r) {
 function rowEpreuve(e) {
   const cat = catEpreuve(e), s = e.s || [], ys = s.length ? (s[0] === s[1] ? String(s[0]) : `${s[0]}–${s[1]}`) : "";
   const sm = [e.type && TYPES_EPREUVE[e.type] ? TYPES_EPREUVE[e.type] : "", ys, nomPays(e.pays)].filter(Boolean).join(" · ");
-  return `<a class="crow${e.pays === "FRA" ? " fr" : ""}" href="${esc(hrefEpreuve(e.k))}">${flag(e.f, nomPays(e.pays))}
+  const cs = catStyle(cat);
+  return `<a class="crow${cat ? " crow-cat" : ""}${e.pays === "FRA" ? " fr" : ""}"${cs ? ` style="${cs}"` : ""} href="${esc(hrefEpreuve(e.k))}">${flag(e.f, nomPays(e.pays))}
     <div><div class="nm">${esc(e.n)}${cat ? ` ${catBadge(cat, e.cl)}` : ""}</div><div class="sm">${esc(sm)}</div></div>
     <div class="rt"><b>${esc(e.ed)}</b>édition${e.ed > 1 ? "s" : ""}</div></a>`;
 }
-function majListeEpreuves() {
+function majBoutonPlus(box, reste, action, pas) {
+  const btn = box.querySelector(`button.more[data-action="${action}"]`);
+  if (reste > 0) {
+    const txt = `Afficher ${Math.min(pas, reste)} de plus (${reste} restants)`;
+    if (btn) btn.textContent = txt;
+    else box.insertAdjacentHTML("beforeend", pagePlus(reste, action, pas));
+  } else if (btn) btn.remove();
+}
+function majListeEpreuves(depuis) {
   const box = document.getElementById("ep-list"); if (!box) return;
-  const r = state.route, L = filtrerEpreuves(r), vis = L.slice(0, state.limitListe);
-  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEpreuve).join("")}</div>` : '<div class="empty card">Aucune épreuve trouvée.</div>') + pagePlus(L.length - vis.length, "ep-more", 100);
+  const r = state.route, L = filtrerEpreuves(r);
+  const rowsCont = depuis > 0 ? box.querySelector(".crows") : null;
+  if (rowsCont) {
+    const tranche = L.slice(depuis, state.limitListe);
+    if (tranche.length) rowsCont.insertAdjacentHTML("beforeend", tranche.map(rowEpreuve).join(""));
+    majBoutonPlus(box, L.length - Math.min(state.limitListe, L.length), "ep-more", 100);
+  } else {
+    const vis = L.slice(0, state.limitListe);
+    box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEpreuve).join("")}</div>` : '<div class="empty card">Aucune épreuve trouvée.</div>') + pagePlus(L.length - vis.length, "ep-more", 100);
+  }
   document.getElementById("ep-count").textContent = `${L.length} épreuve${L.length > 1 ? "s" : ""}`;
 }
 async function pageEpreuves(r, tok) {
@@ -3776,24 +4047,45 @@ function filtrerEquipes(r, y) {
   if (r.tri === "cou") return L.sort((a, b) => (b.riders || 0) - (a.riders || 0) || a.name.localeCompare(b.name, "fr"));
   return L.sort((a, b) => a.name.localeCompare(b.name, "fr"));
 }
-function rowEquipe(e) {
-  return `<a class="crow" href="${esc(hrefEquipeSaison(e.id, e.season, e.lignee))}">${e.pays ? drapeauIso3(e.pays) : '<span class="flag noimg"></span>'}
-    <div><div class="nm">${esc(e.name)}${e.cat ? ` <span class="badge cat-${esc(e.cat)}">${esc(e.cat)}</span>` : ""}${e.nationale ? ' <span class="badge fr">Sélection nationale</span>' : ""}</div>
-      <div class="sm">${esc([e.pays ? nomPays(e.pays) : ""].filter(Boolean).join(""))}</div></div>
-    <div class="rt"><b>${esc(e.wins || 0)} vic.</b>${esc(e.riders || 0)} coureur${(e.riders || 0) > 1 ? "s" : ""}</div></a>`;
+function visuelEquipeListe(e) {
+  const mj = slotMaillot(e.name, e.season);
+  const L = e.lignee && state.lgIdx && state.lgIdx[e.lignee];
+  const logo = L && L.logo, src = logo && urlMedia(logo.url);
+  const lgOk = src && L.logo_depuis != null && e.season >= L.logo_depuis;
+  const fallback = lgOk
+    ? `<img class="eq-lg" src="${esc(src)}" alt="" loading="lazy" onerror="this.remove()">`
+    : `<span class="eq-ini" aria-hidden="true">${esc(initialesEquipe(e.name))}</span>`;
+  return `<span class="eq-vis">${mj}${fallback}</span>`;
 }
-function majListeEquipes() {
+function rowEquipe(e) {
+  const sous = e.pays ? `${drapeauIso3(e.pays)}<span>${esc(nomPays(e.pays))}</span>` : "";
+  const vic = e.wins > 0 ? `<b>${esc(e.wins)} vic.</b>` : "";
+  return `<a class="crow eq-row" href="${esc(hrefEquipeSaison(e.id, e.season, e.lignee))}">${visuelEquipeListe(e)}
+    <div><div class="nm">${esc(e.name)}${e.cat ? ` <span class="badge cat-${esc(e.cat)}">${esc(e.cat)}</span>` : ""}${e.nationale ? ' <span class="badge fr">Sélection nationale</span>' : ""}</div>
+      ${sous ? `<div class="sm">${sous}</div>` : ""}</div>
+    <div class="rt">${vic}${esc(e.riders || 0)} coureur${(e.riders || 0) > 1 ? "s" : ""}</div></a>`;
+}
+function majListeEquipes(depuis) {
   const box = document.getElementById("eq-list"); if (!box) return;
-  const r = state.route, L = filtrerEquipes(r, r.saison), vis = L.slice(0, state.limitListe);
-  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEquipe).join("")}</div>` : '<div class="empty card">Aucune équipe trouvée.</div>') + pagePlus(L.length - vis.length, "eq-more", 100);
+  const r = state.route, L = filtrerEquipes(r, r.saison);
+  const rowsCont = depuis > 0 ? box.querySelector(".crows") : null;
+  if (rowsCont) {
+    const tranche = L.slice(depuis, state.limitListe);
+    if (tranche.length) rowsCont.insertAdjacentHTML("beforeend", tranche.map(rowEquipe).join(""));
+    majBoutonPlus(box, L.length - Math.min(state.limitListe, L.length), "eq-more", 100);
+  } else {
+    const vis = L.slice(0, state.limitListe);
+    box.innerHTML = (vis.length ? `<div class="crows">${vis.map(rowEquipe).join("")}</div>` : '<div class="empty card">Aucune équipe trouvée.</div>') + pagePlus(L.length - vis.length, "eq-more", 100);
+  }
   document.getElementById("eq-count").textContent = `${L.length} équipe${L.length > 1 ? "s" : ""}`;
+  majMaillotsAccueil();
 }
 async function pageEquipes(r, tok) {
   const main = document.getElementById("main");
   titre("Équipes"); state.ctxPage = null;
   main.innerHTML = `<div class="pg">${enteteListe("Équipes")}${squeletteListe()}</div>`;
   let E;
-  try { [E] = await Promise.all([chargerEquipesIdx(), chargerPays()]); }
+  try { [E] = await Promise.all([chargerEquipesIdx(), chargerPays(), chargerLigneesIdx(), chargerMaillots()]); }
   catch (e) { if (tok === state.routeTok) main.innerHTML = `<div class="pg">${enteteListe("Équipes")}${messageErreur(`Liste indisponible (${e.message}).`, "retry")}</div>`; return; }
   if (tok !== state.routeTok) return;
   if (!E || !E.length) { main.innerHTML = `<div class="pg">${enteteListe("Équipes")}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
@@ -3805,11 +4097,11 @@ async function pageEquipes(r, tok) {
   state.limitListe = 100;
   const cats = ["WT", "Pro", "Cont"].filter(c => E.some(e => e.season === y && e.cat === c)).concat(E.some(e => e.season === y && e.nationale) ? ["Sélection"] : []);
   main.innerHTML = `<div class="pg">${enteteListe("Équipes", `Saison ${y}`)}
-    <div class="tools">${selectHref("eq-saison", "Saison", ys.map(s => [hrefEquipes({ ...r2, saison: s, cat: "all" }), String(s), s === y]))}
-      <input class="search" id="eq-q" type="search" placeholder="Rechercher une équipe" aria-label="Rechercher une équipe" value="${esc(r.q)}" autocomplete="off">
-      ${chipsCat(cats, r2.cat, c => hrefEquipes({ ...r2, cat: c }))}
+    <div class="tools"><div class="two">${selectHref("eq-saison", "Saison", ys.map(s => [hrefEquipes({ ...r2, saison: s, cat: "all" }), String(s), s === y]))}
       ${selectHref("eq-tri", "Tri", [["nom", "Nom"], ["vic", "Victoires"], ["cou", "Coureurs"]].map(([k, l]) => [hrefEquipes({ ...r2, tri: k }), `Tri : ${l}`, r2.tri === k]))}</div>
-    <div class="count-line" id="eq-count"></div><div id="eq-list"></div></div>`;
+      <input class="search" id="eq-q" type="search" placeholder="Rechercher une équipe" aria-label="Rechercher une équipe" value="${esc(r.q)}" autocomplete="off">
+      ${chipsCat(cats, r2.cat, c => hrefEquipes({ ...r2, cat: c }))}</div>
+    <div class="count-line" id="eq-count"></div><div id="eq-list"></div><div class="foot-credits"><div id="fiche-credit"></div></div></div>`;
   majListeEquipes();
   finPage(tok);
 }
@@ -3848,10 +4140,18 @@ function rowCoureur(c, tri) {
   return `<div class="crow lk${c.fr ? " fr" : ""}">${flag(c.f, nomPays(c.nat))}
     <div><a class="nm stretch" href="${esc(hrefCoureur(c.id, null))}">${esc(c.n)}</a><div class="sm">${eq}</div></div><div class="rt">${b ? `<b>${esc(b)}</b>` : ""}${esc(ys)}</div></div>`;
 }
-function majListeCoureurs() {
+function majListeCoureurs(depuis) {
   const box = document.getElementById("co-list"); if (!box) return;
-  const r = state.route, L = filtrerCoureurs(r), vis = L.slice(0, state.limitListe);
-  box.innerHTML = (vis.length ? `<div class="crows">${vis.map(c => rowCoureur(c, r.tri)).join("")}</div>` : '<div class="empty card">Aucun coureur trouvé.</div>') + pagePlus(L.length - vis.length, "co-more", 100);
+  const r = state.route, L = filtrerCoureurs(r);
+  const rowsCont = depuis > 0 ? box.querySelector(".crows") : null;
+  if (rowsCont) {
+    const tranche = L.slice(depuis, state.limitListe);
+    if (tranche.length) rowsCont.insertAdjacentHTML("beforeend", tranche.map(c => rowCoureur(c, r.tri)).join(""));
+    majBoutonPlus(box, L.length - Math.min(state.limitListe, L.length), "co-more", 100);
+  } else {
+    const vis = L.slice(0, state.limitListe);
+    box.innerHTML = (vis.length ? `<div class="crows">${vis.map(c => rowCoureur(c, r.tri)).join("")}</div>` : '<div class="empty card">Aucun coureur trouvé.</div>') + pagePlus(L.length - vis.length, "co-more", 100);
+  }
   document.getElementById("co-count").textContent = `${num(L.length)} coureur${L.length > 1 ? "s" : ""}`;
 }
 async function pageCoureurs(r, tok) {
@@ -3873,17 +4173,23 @@ async function pageCoureurs(r, tok) {
   if (tok !== state.routeTok) return;
   if (!state.cIdx) { main.innerHTML = `<div class="pg">${tete}<div class="vide">${esc(MSG_INDEX)}</div></div>`; finPage(tok); return; }
   state.limitListe = 100;
-  const N = new Map();
-  state.cIdx = state.cIdx.filter(c => /[\p{L}\p{N}]/u.test(c.n || ""));
-  state.cIdx.forEach(c => { if (c.nat) N.set(c.nat, (N.get(c.nat) || 0) + 1); });
+  if (!state.cNats) {
+    const N = new Map();
+    state.cIdx.forEach(c => { if (c.nat) N.set(c.nat, (N.get(c.nat) || 0) + 1); });
+    state.cNats = N;
+  }
+  const N = state.cNats;
   const nats = [...N.keys()].sort((a, b) => nomPays(a).localeCompare(nomPays(b), "fr"));
   const bascule = (cle, val) => hrefCoureurs({ ...r, [cle]: r[cle] === val ? "" : val });
+  const nbFiltres = (r.nat && r.nat !== "FRA" ? 1 : 0) + (r.eq ? 1 : 0) + (r.tri && r.tri !== "pert" ? 1 : 0);
   main.innerHTML = `<div class="pg">${tete}
     <div class="tools"><input class="search" id="co-q" type="search" placeholder="Rechercher un coureur" aria-label="Rechercher un coureur" value="${esc(r.q)}" autocomplete="off">
       <div class="chips">${chipHref(bascule("nat", "FRA"), "Français", r.nat === "FRA")}${chipHref(bascule("act", "1"), "Actifs", r.act === "1")}${chipHref(bascule("act", "0"), "Anciens", r.act === "0")}</div>
-      <div class="two">${selectHref("co-nat", "Nationalité", [[hrefCoureurs({ ...r, nat: "" }), "Toutes nationalités", !r.nat]].concat(nats.map(n => [hrefCoureurs({ ...r, nat: n }), `${nomPays(n)} (${N.get(n)})`, r.nat === n])))}
-        ${selectHref("co-tri", "Tri", [["pert", "Pertinence"], ["nom", "Nom"], ["vic", "Victoires"], ["uci", "Meilleur rang UCI"]].map(([k, l]) => [hrefCoureurs({ ...r, tri: k }), `Tri : ${l}`, r.tri === k]))}</div>
-      <input class="search" id="co-eq" type="search" placeholder="Équipe (dernière saison connue)" aria-label="Filtrer par équipe" value="${esc(r.eq)}" autocomplete="off"></div>
+      <details class="flt-more"${nbFiltres ? " open" : ""}><summary>Filtres et tri${nbFiltres ? ` (${nbFiltres})` : ""}</summary><div class="flt-body">
+        <div class="two">${selectHref("co-nat", "Nationalité", [[hrefCoureurs({ ...r, nat: "" }), "Toutes nationalités", !r.nat]].concat(nats.map(n => [hrefCoureurs({ ...r, nat: n }), `${nomPays(n)} (${N.get(n)})`, r.nat === n])))}
+          ${selectHref("co-tri", "Tri", [["pert", "Pertinence"], ["nom", "Nom"], ["vic", "Victoires"], ["uci", "Meilleur rang UCI"]].map(([k, l]) => [hrefCoureurs({ ...r, tri: k }), `Tri : ${l}`, r.tri === k]))}</div>
+        <input class="search" id="co-eq" type="search" placeholder="Équipe (dernière saison connue)" aria-label="Filtrer par équipe" value="${esc(r.eq)}" autocomplete="off">
+      </div></details></div>
     <div class="count-line" id="co-count"></div><div id="co-list"></div></div>`;
   majListeCoureurs();
   finPage(tok);
@@ -3957,6 +4263,7 @@ async function pageRecherche(r, tok) {
     <input class="search sr-input" id="sr-q" type="search" placeholder="Coureur, équipe, course…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Rechercher" role="combobox" aria-expanded="true" aria-controls="sr-body" value="${esc(r.q)}">
     <div class="sr-body" id="sr-body" role="listbox" aria-label="Résultats"></div></div>`;
   S.q = r.q;
+  chargerPays().then(() => { if (state.route && state.route.nom === "recherche" && S.res) { const b = document.getElementById("sr-body"); if (b) b.innerHTML = htmlResultats(); } }).catch(() => {});
   majRecherche();
   const champ = document.getElementById("sr-q");
   if (!r.q || state.focusSr) { champ.focus(); champ.setSelectionRange(champ.value.length, champ.value.length); }
@@ -3967,10 +4274,14 @@ async function pageRecherche(r, tok) {
 /* ================== événements (délégation) ================== */
 document.addEventListener("click", e => {
   const lien = e.target.closest("[data-rider]");
-  if (lien) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); return; }
+  if (lien) {
+    if (lien.tagName === "A" && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) return;
+    e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); return;
+  }
   if (e.target.closest("details.resume")) return;   // le résumé s'ouvre / se ferme sans ouvrir la course
   const t = e.target.closest("button, [data-open]");
   if (!t) return;
+  if (t.tagName === "A" && t.dataset.open && (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) return;
   if (t.dataset.cgo) { remplacer(t.dataset.cgo); return; }
   if (t.dataset.rtab) { choisirOngletCoureur(t.dataset.rtab); return; }
   if (t.dataset.etab) { choisirOngletEpreuve(t.dataset.etab); return; }
@@ -3978,7 +4289,7 @@ document.addEventListener("click", e => {
   if (t.dataset.epreuve) { go(hrefEpreuve(t.dataset.epreuve)); return; }
   if (t.dataset.pcat) { state.rpal.cat = t.dataset.pcat; majContenuCoureur(); return; }
   if (t.dataset.sr) { choisirResultat(t); return; }
-  if (t.dataset.open) { state.subVoulu = t.dataset.vsub || null; go(hrefCourse(t.dataset.open, t.dataset.stage)); return; }
+  if (t.dataset.open) { e.preventDefault(); state.subVoulu = t.dataset.vsub || null; go(hrefCourse(t.dataset.open, t.dataset.stage)); return; }
   if (t.dataset.stageSel != null && t.dataset.stageSel !== "") {
     state.sel = t.dataset.stageSel; state.limit = 50; setHashEtape(state.sel); renderFiche(); return;
   }
@@ -3987,24 +4298,29 @@ document.addEventListener("click", e => {
   if (a === "fronly") { state.frOnly = !state.frOnly; renderFiche(); }
   else if (a === "part-tous") { state.partTous = !state.partTous; state.partOuv = {}; renderFiche(); }
   else if (a === "part-eq") { const k = t.dataset.eq, o = t.getAttribute("aria-expanded") === "true"; state.partOuv[k] = !o; if (o && state.partTous) { state.partTous = false; document.querySelectorAll('[data-action="part-eq"][aria-expanded="true"]').forEach(b => { if (b !== t) state.partOuv[b.dataset.eq] = true; }); const s = document.querySelector('[data-action="part-tous"]'); if (s) s.setAttribute("aria-pressed", "false"); } document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
-  else if (a === "more") { state.limit += 50; document.getElementById("table").innerHTML = renderTable(state.course, state.sel, state.sub); }
-  else if (a === "uc-more") { state.uc.limit += 100; majListeUci(); }
+  else if (a === "more") { const prev = state.limit; state.limit += 50; majTablePlus(prev); }
+  else if (a === "uc-more") { const prev = state.uc.limit; state.uc.limit += 100; majListeUci(prev); }
   else if (a === "uc-fr") { state.uc.fr = !state.uc.fr; state.uc.limit = 100; t.setAttribute("aria-pressed", state.uc.fr); majListeUci(); }
-  else if (a === "co-more") { state.limitListe += 100; majListeCoureurs(); }
-  else if (a === "ep-more") { state.limitListe += 100; majListeEpreuves(); }
-  else if (a === "eq-more") { state.limitListe += 100; majListeEquipes(); }
+  else if (a === "co-more") { const prev = state.limitListe; state.limitListe += 100; majListeCoureurs(prev); }
+  else if (a === "ep-more") { const prev = state.limitListe; state.limitListe += 100; majListeEpreuves(prev); }
+  else if (a === "eq-more") { const prev = state.limitListe; state.limitListe += 100; majListeEquipes(prev); }
   else if (a === "retry") { routeur({ garder: true }); }
   else if (a === "theme") { changerTheme(); }
   else if (a === "back") { retour(); }
   else if (a === "search") { if (state.route && state.route.nom === "recherche") document.getElementById("sr-q").focus(); else go("#recherche"); }
   else if (a === "sr-more") { state.sr.tout[t.dataset.grp] = true; document.getElementById("sr-body").innerHTML = htmlResultats(); }
-  else if (a === "retry-sr") { cache.clear(); majRecherche(); }
+  else if (a === "retry-sr") { majRecherche(); }
   else if (a === "pal-vic") { state.rpal.vic = !state.rpal.vic; majContenuCoureur(); }
   else if (a === "retry-index") { cache.clear(); init(); }
 });
 document.addEventListener("change", e => { if (e.target.dataset && e.target.dataset.hsel != null) remplacer(e.target.value); });
+const _debTimers = new Map();
+function debouncer(cle, fn, delai = 180) {
+  if (_debTimers.has(cle)) clearTimeout(_debTimers.get(cle));
+  _debTimers.set(cle, setTimeout(() => { _debTimers.delete(cle); fn(); }, delai));
+}
 /** Champ de texte d'une page de liste : met à jour la route (sans historique) et la liste, sans redessiner le champ. */
-function saisie(champ, maj) {
+function saisie(champ) {
   const r = state.route, h = { "co-q": ["q", hrefCoureurs], "co-eq": ["eq", hrefCoureurs], "ep-q": ["q", hrefCourses], "eq-q": ["q", hrefEquipes] }[champ.id];
   if (!h) return false;
   r[h[0]] = champ.value;
@@ -4026,13 +4342,31 @@ document.addEventListener("input", e => {
     const q = state.sr.q.trim();
     history.replaceState(history.state, "", "#recherche" + (q ? "/" + encodeURIComponent(q) : ""));
     titre(q ? `Recherche : ${q}` : "Recherche");
-    majRecherche(); return;
+    debouncer("sr-q", majRecherche); return;
   }
-  if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; majListeUci(); return; }
-  saisie(e.target);
+  if (e.target.id === "uc-q") { state.uc.q = e.target.value; state.uc.limit = 100; debouncer("uc-q", majListeUci); return; }
+  if (["co-q", "co-eq", "ep-q", "eq-q"].includes(e.target.id)) {
+    const champ = e.target;
+    debouncer(champ.id, () => saisie(champ));
+  }
 });
 document.addEventListener("keydown", e => {
-  if (e.key === "Enter" && e.target && e.target.classList && (e.target.classList.contains("rcard") || (e.target.classList.contains("res") && e.target.dataset.open))) { e.preventDefault(); e.target.click(); return; }
+  const tab = e.target && e.target.closest && e.target.closest('[role="tab"]');
+  if (tab && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+    const list = tab.closest('[role="tablist"]');
+    const tabs = list ? [...list.querySelectorAll('[role="tab"]')] : [];
+    const idx = tabs.indexOf(tab);
+    if (tabs.length > 1 && idx >= 0) {
+      e.preventDefault();
+      const next = e.key === "ArrowRight" ? (idx + 1) % tabs.length
+        : e.key === "ArrowLeft" ? (idx - 1 + tabs.length) % tabs.length
+        : e.key === "Home" ? 0 : tabs.length - 1;
+      tabs[next].focus();
+      tabs[next].click();
+      return;
+    }
+  }
+  if (e.key === "Enter" && e.target && e.target.classList && e.target.classList.contains("res") && e.target.dataset.open) { e.preventDefault(); e.target.click(); return; }
   if (e.target && e.target.id === "hsearch" && e.key === "Escape") { e.target.blur(); return; }
   if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !(e.target && e.target.closest && e.target.closest("input, textarea, select, [contenteditable]"))) {
     e.preventDefault();
@@ -4047,11 +4381,14 @@ document.addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); const L = itemsNav(); choisirResultat(L[state.sr.sel >= 0 ? state.sr.sel : 0]); return; }
   }
   const lien = e.target.closest && e.target.closest("[data-rider]");
-  if (lien && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); }
+  if (lien && lien.tagName !== "A" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(hrefCoureur(lien.dataset.rider, lien.dataset.rctx || state.ctxPage)); }
 });
 const btnHaut = document.getElementById("to-top");
 window.addEventListener("scroll", () => btnHaut.classList.toggle("on", window.scrollY > 1200), { passive: true });
-btnHaut.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+btnHaut.addEventListener("click", () => {
+  const reduit = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: 0, behavior: reduit ? "auto" : "smooth" });
+});
 window.addEventListener("scroll", () => { const k = history.state && history.state.k; if (k != null) scrollMemo.set(k, window.scrollY); }, { passive: true });
 
 /* ================== démarrage ================== */
@@ -4096,7 +4433,7 @@ async function init() {
   if (g && !isNaN(g)) {
     document.getElementById("maj").textContent = `MàJ ${g.getDate()} ${MOIS_C[g.getMonth()]} ${p2(g.getHours())}h${p2(g.getMinutes())}`;
   }
-  document.getElementById("foot").textContent = "Résultats et classement : UCI, ASO, LNC · calendrier à venir : Wikipédia (CC BY-SA)";
+  majPiedDePage(state.entIdx);
   redirigerAncienneUrl();
   if (!ecouteurs) {
     ecouteurs = true;

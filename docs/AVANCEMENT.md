@@ -1,7 +1,35 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 18 novembre 2026, fin de session. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
-(plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas) et `docs/recherche/` (sondes et décisions).
+Dernière mise à jour : 23 novembre 2026. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+(plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas), `docs/recherche/` (sondes et décisions) et `AUDIT_ANTIGRAVITY.md`.
+
+## Session du 23/11/2026 (Audit technique : QW1–QW6, CS1, CS2, CS3, CS4)
+
+- **Quick Wins QW1–QW6** :
+  - **QW1** : correction du fil d'Ariane des éditions reportées (`crumbsEdition` pointe vers `#courses/${c.season}` quand `c.season != null`) ; retrait de la limite obsolète E1c dans `encyclopedie.py`.
+  - **QW2** : debounce de 180 ms (`debouncer`) sur les saisies (`#co-q`, `#co-eq`, `#ep-q`, `#eq-q`, `#sr-q`, `#uc-q`) et suppression du re-filtrage regex redondant dans `pageCoureurs`.
+  - **QW3** : branchement de `pays.drapeau` et `pays.nom_historique` dans `encyclopedie.py` ; nettoyage des doublons `FLAG_CODES` (`ERI`, `RWA`) et décompression gzip sur `HTTPError` dans `netutil.py`.
+  - **QW4** : optimisation de `_soeur_renommee()` (index inversé par coureur et mémorisation), `eq_index_by_id` et `@lru_cache` sur `netutil.normalize`.
+  - **QW5** : cache HTTP `default` sur les archives immuables (`^\d{4}/races/` et instantanés UCI) dans `charger()`, suppression du `cache.clear()` agressif sur `retry-sr`.
+  - **QW6** : lien d'évitement (« Aller au contenu principal »), `aria-label` distincts pour `#dnav` et `#bnav`, support `@media (prefers-reduced-motion: reduce)`, harmonisation des titres « Derniers résultats », suppression du paramètre inutilisé `maj` dans `saisie()`.
+- **CS1 (`encyclopedie.py`, `index.html`)** : précalcul de `entites/ce_jour_la.json` côté `encyclopedie.py` et lecture en 1 requête par `ceJourLa()` (avec repli sur `entites/courses/`).
+- **CS2 (`index.html`)** :
+  - **Cache LRU borné** (`CACHE_MAX = 60`) avec préservation des index cœur (`estIndexCache`).
+  - **Onglet « Saison » coureur en année civile** : `construireCoureur`, `ongletsCoureur` et `htmlSaison` alimentés en priorité depuis `cr.ent.saisons[voulue]` et `cr.ent.palmares` filtré sur `season === voulue` (`riders*.json` en repli optionnel uniquement).
+  - **Pagination DOM incrémentale** (`insertAdjacentHTML("beforeend", ...)` + mise à jour du bouton `.more`) sur `majListeCoureurs`, `majListeEquipes`, `majListeEpreuves`, `majListeUci` et `majTablePlus`.
+- **CS3 (`index.html`)** :
+  - **Refonte Liquipedia des 5 pages de liste** : Équipes (`rowEquipe`, `pageEquipes`) avec maillot `slotMaillot` / logo de lignée / initiales ; Coureurs (`pageCoureurs`) avec barre d'outils mobile compacte `.flt-more` à 390 px et vue Français (`carteFrancais`, `renderFrancais`) alignée sur les cartes Liquipedia ; Courses/Épreuves (`listeCourses`, `rowEpreuve`, `pageCourses`) avec filets `--cat` unifiés ; Classements (`blocUci`, `lignesUci`, `renderFdj`) en tableaux `tbl-rank` avec pastilles `dot` ; Recherche (`htmlResultats`) enrichie de sous-titres contextuels `.sr-sub`.
+  - **Accessibilité** : remplacement des faux liens `role="link"` (`plink`, `carteAccueil`, `carteVictoireEquipe`, `listeCourses`, `carteFrancais`, `blocVictoiresFr`) par de vrais `<a href>` (*stretched-link* `.lk`), et navigation clavier WAI-ARIA (`ArrowLeft`, `ArrowRight`, `Home`, `End`, `aria-controls`, `aria-labelledby`) sur `htmlOnglets()`.
+- **CS4 (`sources_historiques.py`, `encyclopedie.py`, `alias_courses.json`, `index.html`)** :
+  - **Pont d'ingestion pré-2009 (`sources_historiques.py`)** : 100 % stdlib Python 3.11, lit `<archives_dir>/sources/bdd_pre2009/` (`manifest.json`, `courses.json`, `coureurs.json`, `equipes.json`, `editions/<slug>/<year>.json`, strictement `year <= 2008`) et fusionne les données dans `COUR`, `COURSES`, `PAYS`, `EQ_PAR_AN`, `EQ_INDEX`, `EQ_INDEX_BY_ID`, `EQ_RECH` avant `historique.appliquer_historique()` (aucun doublon avec Wikidata).
+  - **Normalisation & rapprochement strict** : codes pays d'époque (`URS`, `GDR`, `FRG`, `TCH`, `EUN`, etc.) via `pays.pays_ligne()` / `pays.pays_normalise()` ; épreuves par clé exacte `collector.cle_edition()` + `alias_courses.json` (complété pour les courses historiques : Dauphiné, Pays Basque, Catalogne, Gand-Wevelgem, Het Volk / Omloop, Plouay, etc.) ; coureurs par IDs externes Wikidata (`entites/wikidata/coureurs.json` champ `ids`, `ids_inverse.json` `statut == "ok"`) ou correspondance exacte nom normalisé (`riders._nom_cle`) + date de naissance, sinon création d'une entité dédiée `hist-*` (jamais de fusion floue d'homonymes).
+  - **Crédits & multi-sources** : conservation de la source exacte (`pcs`, `letour_dataset`, `preflib_00043`, `vuelta_open`, `firstcycling`, etc.) sur chaque édition et ligne de palmarès ; exposition dans `entites/index.json` (`sources` et `sources_historiques`) et dans le pied de page `#foot` d'`index.html` (`majPiedDePage`).
+  - **Optimisation mémoire & I/O (`encyclopedie.py`)** : séquencement par phases (Équipes → Pays → Coureurs → Courses & `ce_jour_la.json` → Recherche & `index.json`) avec libération explicite (`del`) des structures intermédiaires ; `_ecrire_si_change()` compare directement les octets JSON sérialisés lorsque `ignore=()`, évitant le double `json.load`.
+  - **Déploiement de la base pré-2009 vers `ARCHIVES_DIR`** :
+    1. Copier le contenu généré par `export_vers_encyclopedie.py` (`data/export_encyclopedie/*`) vers `<ARCHIVES_DIR>/sources/bdd_pre2009/` (`manifest.json`, `courses.json`, `coureurs.json`, `equipes.json`, `editions/<slug>/<year>.json`).
+    2. Reconstruire `entites/` : `python run_pipeline.py --entites` (ou `python encyclopedie.py <ARCHIVES_DIR> data`, ou via le workflow `archives.yml` du dépôt d'archives).
+    3. Vérifier `entites/index.json` (`sources_historiques`, `compteurs`) et exécuter `python sources_historiques.py --test` + `python encyclopedie.py --test`.
+- **Validation** : `py_compile` sur tous les scripts Python OK, `python sources_historiques.py --test` OK, `python encyclopedie.py --test` OK, `python collector.py --test` OK, `python pays.py --test` OK, `node --check` sur `index.html` OK.
 
 ## Session du 18/11 au soir (à lire en premier, puis le point de reprise ci-dessous)
 
@@ -33,9 +61,7 @@ En cours / suite :
 ### Chantiers en cours au moment de la coupure
 1. **Saison sportive = année civile : FAIT (PR #75, 18/11)**. Dans l'encyclopédie, une course compte pour l'année de sa `start_date` (Lombardia
    2010 -> 2010) ; stockage par saison UCI inchangé ; `riders.json` / `ranking.json` / `state.json` liés à leur dossier. Publié au prochain passage
-   d'archives : vérifier `#epreuve/…lombardia…` (édition 2010 = Gilbert) et la fiche de Gilbert. Limites connues : onglet « Saison » de la fiche
-   coureur encore par saison UCI ; fil d'Ariane d'une édition reportée -> liste Courses de son année (qui ne la contient pas) ; jeu fictif
-   (`tools/fixtures/generer_archives.py`) non régénéré (contient encore une saison 2027).
+   d'archives : vérifier `#epreuve/…lombardia…` (édition 2010 = Gilbert) et la fiche de Gilbert. Onglet « Saison » de la fiche coureur et fil d'Ariane des éditions reportées corrigés le 23/11 (QW1, CS2) ; reste à régénérer le jeu fictif (`tools/fixtures/generer_archives.py`, contient encore une saison 2027).
 2. **Sources d'avant 2009 : 4 accords obtenus par le propriétaire le 18/11** (à reporter dans CLAUDE.md « Sources » s'ils n'y sont pas) :
    - **the-sports.org** (Vincent Duplessy) : collecteur `thesports.py` (PR #69, #71), workflow `thesports.yml` du dépôt d'archives (PR #8),
      **collecte en cours** (`data/archives/sources/thesports/`, `etat.json` : 152 courses découvertes au 1er passage, ~5 400 éditions puis
@@ -57,9 +83,7 @@ En cours / suite :
    - **Étape 2 commune aux 4 sources** (à concevoir) : rattachement des courses (clés d'édition, alias), des coureurs (nom + date de naissance ;
      CQ Ranking et Museo donnent les dates, the-sports aussi par fiche, Mémoire du Cyclisme non), priorité entre sources en cas de désaccord
      (garder toutes les valeurs, jamais trancher), puis étape 3 : affichage avec crédit de chaque source.
-   - **FirstCycling** : accord, mais pages de données derrière un défi Cloudflare (essais `essai_firstcycling*`, même un vrai navigateur sans
-     déguisement échoue depuis GitHub Actions) : il faut que les administrateurs ajoutent une règle d'exception (en-tête secret), une clé d'API
-     ou un export. **ProCyclingStats** : même blocage (défi sur tout le site ; robots.txt `Allow: /`, CGU interdisaient la reprise).
+   - **FirstCycling et ProCyclingStats** : accord explicite obtenu par le propriétaire pour utiliser leurs données dans ce projet personnel (crédit « ProCyclingStats » et « FirstCycling » lors de l'affichage ; ne pas republier les caches HTML bruts dans le dépôt public). Techniquement, leurs pages restent derrière un défi Cloudflare (`tools/essais/essai_firstcycling*.py` documentent les essais : même un vrai navigateur sans déguisement échoue depuis GitHub Actions) : accès uniquement si les administrateurs ouvrent une voie dédiée (règle d'exception par en-tête secret, clé d'API ou export), sans contournement anti-robot.
    - Écartés / sans suite : siteducyclisme.com (robots `Disallow: /` délibéré), cyclebase.nl (`Disallow: /`), bases PCM (données de jeu),
      (CyclingRanking : écarté d'abord, puis accord du 19/11/2026, voir `docs/recherche/cyclingranking_collecte.md`). Analyse du rapport Gemini du 18/11 : FirstCycling / CycleBase / Site du Cyclisme
      annoncés « sans protection » à tort ; seule vraie nouveauté : le nouveau site de Mémoire du Cyclisme.
@@ -75,9 +99,8 @@ restantes, CQ Ranking 3 737 pages + 5 450 fiches, Museo 82 éditions + 4 911 fic
 (`etat.json` de chaque `data/archives/sources/<source>/`) ; une relance s'arrête si un passage ne change rien ou plante (relancer à la main).
 
 ### Fait le 17-18/11
-- **Refonte du site** (PR #55 à #61, `docs/REDESIGN.md`) : thème clair + sombre, composants Liquipedia modernisés, navigation (recherche
-  d'en-tête, retour mobile, sous-navigation), accueil, fiche de course, fiche coureur, articles d'équipe, pages d'épreuve. **Reste : pages de
-  liste** (Équipes, Coureurs, Classements, Courses, Recherche) ; titres « Derniers résultats marquants » à harmoniser.
+- **Refonte du site** (PR #55 à #61, `docs/REDESIGN.md`, achevée le 23/11 avec CS3) : thème clair + sombre, composants Liquipedia modernisés, navigation (recherche
+  d'en-tête, retour mobile, sous-navigation), accueil, fiche de course, fiche coureur, articles d'équipe, pages d'épreuve, et les 5 pages de liste (Équipes, Coureurs, Classements, Courses/Épreuves, Recherche) ; titres « Derniers résultats » harmonisés.
 - **Archives 2011-2025 complètes** ; sondage des vainqueurs contre Wikidata 2011-2015 (grands tours + 5 monuments) : 40/40 conformes.
   Championnat de France absent avant 2016 (limite DataRide). À regarder : `winner` vide dans l'index 2011 pour la Vuelta 2011 (le `final.gc`
   donne Froome, Cobo déclassé).
@@ -103,23 +126,18 @@ restantes, CQ Ranking 3 737 pages + 5 450 fiches, Museo 82 éditions + 4 911 fic
    - désaccords entre sources : garder toutes les valeurs, chacune avec sa source, jamais trancher ;
    - étape 3 : pages d'épreuve, d'édition et de coureur, crédit de chaque source (« the-sports.org », « Mémoire du Cyclisme », « CQ Ranking »,
      « Museo del Ciclismo »).
-3. **Refonte des pages de liste** (Équipes, Coureurs, Classements, Courses, Recherche), seules pages encore dans l'ancien style ; harmoniser les
-   titres « Derniers résultats marquants ».
+3. **FAIT le 23/11/2026 (CS3 + QW6).** Refonte des pages de liste (Équipes, Coureurs, Classements, Courses, Recherche) et harmonisation des titres « Derniers résultats ».
 4. **Équipes 2009-2010** une fois 2009 complète : rattachements manuels des équipes de 2e division sans code UCI (continuité d'effectif,
    comme 2012-2014), liste à soumettre au propriétaire avant ajout à `alias_equipes.json`.
-5. **Petites corrections** : `winner` vide de la Vuelta 2011 dans l'index 2011 (`final.gc` donne Froome) ; onglet « Saison » de la fiche
-   coureur encore par saison UCI ; fil d'Ariane d'une édition reportée (année civile) ; régénérer le jeu fictif
+5. **Petites corrections** : `winner` vide de la Vuelta 2011 dans l'index 2011 (`final.gc` donne Froome) ; onglet « Saison » (CS2) et fil d'Ariane d'une édition reportée (QW1) faits le 23/11 ; reste à régénérer le jeu fictif
    (`tools/fixtures/generer_archives.py`, contient encore une saison 2027).
 
-**Décisions attendues du propriétaire** (posées le 18/11, pas encore tranchées) :
-- codes pays historiques de Mémoire du Cyclisme (`Hon`, `Tch`, `Rfa`, `Urs`, `Rda`) : codes d'époque (HUN, TCH, FRG, URS, GDR) ou vides
-  (vides aujourd'hui) ; même question pour Museo (CSI, DDR, LAT, TCH, URS) ;
+**Décisions tranchées / restantes** :
+- codes pays historiques de Mémoire du Cyclisme (`Hon`, `Tch`, `Rfa`, `Urs`, `Rda`) et Museo (CSI, DDR, LAT, TCH, URS) : implémentés dans `pays.py` / `pays_historiques.json` (décision du 18/11) et branchés dans `encyclopedie.py` (QW3) ;
 - Museo del Ciclismo : rester sur les épreuves suivies (`--suivies`) ou élargir (ex. courses italiennes et françaises d'avant 2009, `--cles`) ;
 - bilan quotidien : recréer une tâche programmée pour suivre 2009 et les quatre collectes (l'ancienne « Bilan archives » est arrêtée).
 
-**En attente d'un tiers** : FirstCycling et ProCyclingStats restent derrière Cloudflare tant que leurs administrateurs n'ouvrent pas un accès
-dédié (règle d'exception par en-tête secret, clé d'API ou export) ; aucun contournement de notre côté (`tools/essais/essai_firstcycling*.py`
-documentent les essais : requêtes simples et vrai navigateur sans déguisement, tous deux bloqués).
+**Accords en attente d'accès technique** : FirstCycling et ProCyclingStats (accord explicite du propriétaire pour usage personnel avec crédit à l'affichage et sans republier les caches HTML bruts dans le dépôt public) restent derrière Cloudflare tant que leurs administrateurs n'ouvrent pas un accès dédié (règle d'exception par en-tête secret, clé d'API ou export) ; aucun contournement de notre côté (`tools/essais/essai_firstcycling*.py` documentent les essais : requêtes simples et vrai navigateur sans déguisement, tous deux bloqués).
 
 ## Où on en est
 
