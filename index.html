@@ -2256,33 +2256,52 @@ function setHashEtape(sel) {
 function normaliserCoursePre2009(d, id, annee) {
   if (!d || typeof d !== "object") return d;
   const out = { ...d };
+  const raceMeta = out.race && typeof out.race === "object" ? out.race : {};
+  const edMeta = out.edition && typeof out.edition === "object" ? out.edition : {};
   if (!out.id) out.id = id;
-  if (out.season == null && annee != null) out.season = annee;
+  if (!out.name && raceMeta.name) out.name = raceMeta.name;
+  if (!out.country && raceMeta.country) out.country = raceMeta.country;
+  if (out.season == null) out.season = edMeta.year != null ? edMeta.year : annee;
   if (!out.status) out.status = "finished";
-  if (!out.start_date && out.date) out.start_date = out.date;
-  if (!out.end_date) out.end_date = out.start_date;
-  if (out.riders && (out.stages || out.final)) return out;
+  if (!out.start_date) out.start_date = edMeta.start_date || out.date || (out.season != null ? `${out.season}-01-01` : null);
+  if (!out.end_date) out.end_date = edMeta.end_date || out.start_date;
+  if (!out.source && edMeta.source) out.source = edMeta.source;
+  if (!out.sources && edMeta.sources) out.sources = edMeta.sources;
+  if (out.riders && (out.final || (Array.isArray(out.stages) && out.stages.some(s => s && s.results && !Array.isArray(s.results))))) return out;
+  const stagesArr = Array.isArray(out.stages) ? out.stages : [];
+  const gcStage = stagesArr.find(s => s && (String(s.stage_number || "").toUpperCase() === "GC" || String(s.stage_type || "").toLowerCase() === "general classification"));
+  const fallbackStage = gcStage || (stagesArr.length ? stagesArr[stagesArr.length - 1] : null);
+  const stageRes = fallbackStage && fallbackStage.results;
   const rows = (out.final && Array.isArray(out.final.gc) && out.final.gc) ||
     out.gc || out.results || out.classement || out.podium ||
-    (Array.isArray(out.stages) && out.stages.length && out.stages[out.stages.length - 1].results && (out.stages[out.stages.length - 1].results.gc || out.stages[out.stages.length - 1].results.stage)) ||
+    (Array.isArray(stageRes) ? stageRes : (stageRes && (stageRes.gc || stageRes.stage))) ||
     [];
   const riders = { ...(out.riders && typeof out.riders === "object" ? out.riders : {}) };
   const rowsNorm = [];
   rows.forEach(r => {
     if (!r || r.rank == null) return;
-    const rid = String(r.rider_id || r.id || "").trim();
+    if (r.status && r.status !== "FIN" && r.status !== "OK") return;
+    const rid = String(r.rider_id != null ? r.rider_id : (r.id != null ? r.id : "")).trim();
     if (!rid) return;
     if (!riders[rid]) {
-      const nat = r.nationality || r.nat || r.nat_site;
-      riders[rid] = sansVide({ id: rid, name: r.name || r.nom || rid, nationality: nat, team: r.team });
+      const nat = r.nationality || r.nat || r.nat_site || r.rider_nationality;
+      riders[rid] = sansVide({ id: rid, name: r.name || r.nom || r.rider_name || rid, nationality: nat, team: r.team || r.team_name });
     }
-    rowsNorm.push({ ...r, rider_id: rid });
+    const rowOut = { rank: r.rank, rider_id: rid };
+    if (r.time_s != null || r.time_seconds != null) rowOut.time_s = r.time_s != null ? r.time_s : r.time_seconds;
+    if (r.gap_s != null || r.gap_seconds != null) rowOut.gap_s = r.gap_s != null ? r.gap_s : r.gap_seconds;
+    if (r.bonus_s != null || r.bonifications != null) rowOut.bonus_s = r.bonus_s != null ? r.bonus_s : r.bonifications;
+    if (r.points != null) rowOut.points = r.points;
+    rowsNorm.push(rowOut);
   });
   out.riders = riders;
-  if (!out.race_type) out.race_type = Array.isArray(out.stages) && out.stages.length ? "stage_race" : "one_day";
+  const estGc = stagesArr.length > 1 || String(raceMeta.category || "").toLowerCase() === "grand tour" ||
+    (gcStage && String(gcStage.stage_type || "").toLowerCase() === "general classification");
+  if (!out.race_type) out.race_type = estGc ? "stage_race" : "one_day";
   if (out.race_type === "stage_race") {
-    if (!out.final) out.final = { gc: rowsNorm };
-  } else if (!Array.isArray(out.stages) || !out.stages.length) {
+    out.final = { gc: rowsNorm };
+    out.stages = [];
+  } else {
     out.stages = [{ number: null, date: out.start_date, name: "Course", results: { stage: rowsNorm } }];
   }
   return out;

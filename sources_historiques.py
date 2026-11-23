@@ -356,8 +356,9 @@ class IndexCoureurs:
 
 def _extraire_sources(ed: Dict[str, Any], course_meta: Dict[str, Any]) -> Tuple[str, List[str]]:
     """Extrait `(source_principale, toutes_sources)` en conservant les identifiants exacts."""
-    brute_list = ed.get("sources") or course_meta.get("sources")
-    src_prim = (ed.get("source") or course_meta.get("source") or "").strip().lower()
+    ed_meta = ed.get("edition") if isinstance(ed.get("edition"), dict) else {}
+    brute_list = ed.get("sources") or ed_meta.get("sources") or course_meta.get("sources")
+    src_prim = (ed.get("source") or ed_meta.get("source") or course_meta.get("source") or "").strip().lower()
     srcs: List[str] = []
     if src_prim:
         srcs.append(src_prim)
@@ -382,9 +383,21 @@ def _extraire_lignes_classement(ed: Dict[str, Any]) -> List[Dict[str, Any]]:
             return [r for r in val if isinstance(r, dict)]
     stages = ed.get("stages")
     if isinstance(stages, list) and stages:
-        last = stages[-1]
-        if isinstance(last, dict):
-            res = last.get("results") or {}
+        cible = None
+        for s in stages:
+            if not isinstance(s, dict):
+                continue
+            sn = str(s.get("stage_number") or "").strip().upper()
+            st = str(s.get("stage_type") or "").strip().lower()
+            if sn == "GC" or st == "general classification":
+                cible = s
+                break
+        if cible is None:
+            cible = stages[-1] if isinstance(stages[-1], dict) else None
+        if isinstance(cible, dict):
+            res = cible.get("results")
+            if isinstance(res, list):
+                return [r for r in res if isinstance(r, dict)]
             if isinstance(res, dict):
                 rows = res.get("gc") or res.get("stage")
                 if isinstance(rows, list):
@@ -474,8 +487,16 @@ def appliquer_bdd_pre2009(
 
     # Années déjà couvertes par les fiches UCI pour chaque clé d'épreuve
     annees_uci: Dict[str, Set[int]] = {}
+    par_nom_sans_pays: Dict[str, Set[str]] = collections.defaultdict(set)
     for cle_c, obj_c in courses.items():
         annees_uci[cle_c] = {int(e["season"]) for e in obj_c.get("editions") or [] if e.get("season") is not None}
+        if "|" in cle_c:
+            par_nom_sans_pays[cle_c.rsplit("|", 1)[0]].add(cle_c)
+    for k_src, k_dst in alias_courses.items():
+        if "|" in k_src:
+            par_nom_sans_pays[k_src.rsplit("|", 1)[0]].add(k_dst)
+        if "|" in k_dst:
+            par_nom_sans_pays[k_dst.rsplit("|", 1)[0]].add(k_dst)
 
     for slug, an, chemin in fichiers_ed:
         if an > ANNEE_MAX_PRE2009:
@@ -485,13 +506,25 @@ def appliquer_bdd_pre2009(
         if not isinstance(ed, dict):
             continue
         c_meta = courses_meta.get(slug) or {}
+        race_ed = ed.get("race") if isinstance(ed.get("race"), dict) else {}
+        ed_meta = ed.get("edition") if isinstance(ed.get("edition"), dict) else {}
         source_prim, sources_ed = _extraire_sources(ed, c_meta)
 
-        nom_course = (ed.get("name") or c_meta.get("name") or slug.replace("-", " ")).strip()
-        pays_brut = ed.get("country") or c_meta.get("country") or ed.get("pays") or c_meta.get("pays")
+        nom_course = (ed.get("name") or race_ed.get("name") or c_meta.get("name") or slug.replace("-", " ")).strip()
+        pays_brut = (
+            ed.get("country") or race_ed.get("country") or c_meta.get("country")
+            or ed.get("pays") or race_ed.get("pays") or c_meta.get("pays")
+        )
         pays_code = normaliser_pays(pays_brut, source_prim, an, inconnus)
         cle_brute = collector.cle_edition(nom_course, pays_code)
         cle = alias_courses.get(cle_brute, cle_brute) if cle_brute else None
+        if not cle and not pays_code:
+            cle_tmp = collector.cle_edition(nom_course, "XXX")
+            if cle_tmp:
+                cands_nom = par_nom_sans_pays.get(cle_tmp.rsplit("|", 1)[0])
+                if cands_nom and len(cands_nom) == 1:
+                    cle = next(iter(cands_nom))
+                    pays_code = cle.rsplit("|", 1)[1]
         if not cle:
             courses_sans_cle += 1
             continue
@@ -505,11 +538,32 @@ def appliquer_bdd_pre2009(
         editions_ajoutees += 1
 
         race_id = str(ed.get("race_id") or ed.get("id") or f"hist-{slug}-{an}")
-        start_date = ed.get("start_date") or ed.get("date") or f"{an}-01-01"
-        end_date = ed.get("end_date") or start_date
+        start_date = ed.get("start_date") or ed_meta.get("start_date") or ed.get("date") or f"{an}-01-01"
+        end_date = ed.get("end_date") or ed_meta.get("end_date") or start_date
         uci_class = ed.get("uci_class") or c_meta.get("uci_class")
-        category = ed.get("category") or c_meta.get("category") or (selection.categorie_classe(uci_class) if uci_class else None)
-        race_type = ed.get("race_type") or c_meta.get("race_type") or ("stage_race" if ed.get("stages") else "one_day")
+        cat_raw = ed.get("category") or race_ed.get("category") or c_meta.get("category")
+        if not uci_class and isinstance(cat_raw, str) and "." in cat_raw:
+            uci_class = cat_raw
+        category = (
+            ed.get("category")
+            or (selection.categorie_classe(uci_class) if uci_class else None)
+            or ("WT" if isinstance(cat_raw, str) and cat_raw.strip().lower() == "grand tour" else None)
+        )
+        stages_list = ed.get("stages") if isinstance(ed.get("stages"), list) else []
+        est_gc_stage = any(
+            isinstance(s, dict) and str(s.get("stage_type") or "").strip().lower() == "general classification"
+            for s in stages_list
+        )
+        race_type = (
+            ed.get("race_type")
+            or c_meta.get("race_type")
+            or (courses.get(cle) or {}).get("type")
+            or (
+                "stage_race"
+                if (len(stages_list) > 1 or (isinstance(cat_raw, str) and cat_raw.strip().lower() == "grand tour") or est_gc_stage)
+                else "one_day"
+            )
+        )
         est_gt = gt_par_cle.get(cle) if gt_par_cle and race_type == "stage_race" else None
 
         refs_ed = ed.get("riders") if isinstance(ed.get("riders"), dict) else {}
@@ -530,7 +584,7 @@ def appliquer_bdd_pre2009(
             except (TypeError, ValueError):
                 continue
             status = row.get("status")
-            if status is not None or rang_int < 1:
+            if status not in (None, "", "FIN", "OK") or rang_int < 1:
                 continue
 
             rid_brut = row.get("rider_id") or row.get("id")
@@ -539,9 +593,31 @@ def appliquer_bdd_pre2009(
                 info_c.update(coureurs_meta[str(rid_brut)])
             if rid_brut and str(rid_brut) in refs_ed and isinstance(refs_ed[str(rid_brut)], dict):
                 info_c.update(refs_ed[str(rid_brut)])
-            for k in ("name", "nom", "birth_date", "naissance", "birth_year", "nationality", "nat", "nat_site", "team", "team_id", "ids", "qid"):
+            for k in (
+                "name", "nom", "full_name", "rider_name",
+                "birth_date", "naissance", "birth_year",
+                "nationality", "nat", "nat_site", "rider_nationality",
+                "team", "team_name", "team_id",
+                "ids", "qid", "wikidata_id",
+                "pcs_slug", "rider_pcs_slug", "fc_rider_id", "rider_fc_id",
+            ):
                 if row.get(k) is not None and k not in info_c:
                     info_c[k] = row[k]
+            if not info_c.get("name"):
+                info_c["name"] = info_c.get("full_name") or info_c.get("rider_name")
+            if not info_c.get("nationality") and info_c.get("rider_nationality"):
+                info_c["nationality"] = info_c["rider_nationality"]
+            if not info_c.get("team") and info_c.get("team_name"):
+                info_c["team"] = info_c["team_name"]
+            if not info_c.get("qid") and info_c.get("wikidata_id"):
+                info_c["qid"] = info_c["wikidata_id"]
+            ids_map = dict(info_c.get("ids")) if isinstance(info_c.get("ids"), dict) else {}
+            if not ids_map.get("pcs") and (info_c.get("rider_pcs_slug") or info_c.get("pcs_slug")):
+                ids_map["pcs"] = info_c.get("rider_pcs_slug") or info_c.get("pcs_slug")
+            if not ids_map.get("firstcycling") and (info_c.get("rider_fc_id") or info_c.get("fc_rider_id")):
+                ids_map["firstcycling"] = info_c.get("rider_fc_id") or info_c.get("fc_rider_id")
+            if ids_map:
+                info_c["ids"] = ids_map
 
             nat = normaliser_pays(info_c, source_prim, an, inconnus)
             flag = pays.drapeau(nat) if nat else None
@@ -588,9 +664,20 @@ def appliquer_bdd_pre2009(
                 "team": eq_nom,
             })
             row_out: Dict[str, Any] = {"rank": rang_int, "rider_id": cid}
-            for k_opt in ("time_s", "gap_s", "points", "bonus_s", "penalty_s", "uci_points", "bib"):
-                if row.get(k_opt) is not None:
-                    row_out[k_opt] = row[k_opt]
+            for k_src, k_dst in (
+                ("time_s", "time_s"),
+                ("time_seconds", "time_s"),
+                ("gap_s", "gap_s"),
+                ("gap_seconds", "gap_s"),
+                ("bonus_s", "bonus_s"),
+                ("bonifications", "bonus_s"),
+                ("points", "points"),
+                ("penalty_s", "penalty_s"),
+                ("uci_points", "uci_points"),
+                ("bib", "bib"),
+            ):
+                if k_dst not in row_out and row.get(k_src) is not None:
+                    row_out[k_dst] = row[k_src]
             rows_norm.append(row_out)
 
             s_str = str(an)
@@ -923,12 +1010,14 @@ def _tests() -> None:
     alias_c = collector.charger_alias(collector.ALIAS_COURSES)
     for nom_t, pays_t, canon_t in (
         ("Omloop Het Nieuwsblad", "BEL", "omloop het nieuwsblad elite|BEL"),
+        ("Omloop Het Volk ME", "BEL", "omloop het nieuwsblad elite|BEL"),
         ("Paris - Roubaix", "FRA", "paris roubaix|FRA"),
         ("Tour de France", "FRA", "tour de france|FRA"),
         ("Giro d'Italia", "ITA", "giro d italia|ITA"),
         ("Vuelta a España", "ESP", "la vuelta ciclista a espana|ESP"),
         ("Milano-Sanremo", "ITA", "milano sanremo|ITA"),
         ("Ronde van Vlaanderen", "BEL", "ronde van vlaanderen tour des flandres|BEL"),
+        ("Ronde van Vlaanderen / Tour des Flandres ME", "BEL", "ronde van vlaanderen tour des flandres|BEL"),
         ("Liège - Bastogne - Liège", "BEL", "liege bastogne liege|BEL"),
         ("Giro di Lombardia", "ITA", "il lombardia|ITA"),
     ):
@@ -967,6 +1056,22 @@ def _tests() -> None:
             "final": {"gc": [{"rank": 1, "rider_id": rid_pcs}, {"rank": 2, "rider_id": rid_date}]},
         }
         collector._dump(os.path.join(arch, "2020", "races", "uci-2020-1.json"), race_2020)
+        collector._dump(os.path.join(arch, "2020", "races", "uci-2020-pn.json"), {
+            "id": "uci-2020-pn", "name": "Paris-Nice", "country": "FRA", "flag": "fr",
+            "uci_class": "2.UWT", "category": "WT", "race_type": "stage_race",
+            "start_date": "2020-03-08", "end_date": "2020-03-14", "status": "finished", "season": 2020,
+            "riders": {rid_pcs: {"id": rid_pcs, "name": "Bernard Hinault", "nationality": "FRA", "flag": "fr", "birth_date": "1954-11-14"}},
+            "stages": [{"number": 1, "date": "2020-03-08", "name": "Étape 1", "results": {"stage": [{"rank": 1, "rider_id": rid_pcs}]}}],
+            "final": {"gc": [{"rank": 1, "rider_id": rid_pcs}]},
+        })
+        for idx_a, pays_a in (("1", "FRA"), ("2", "BEL")):
+            collector._dump(os.path.join(arch, "2020", "races", f"uci-2020-amb-{idx_a}.json"), {
+                "id": f"uci-2020-amb-{idx_a}", "name": "Grand Prix Ambigu", "country": pays_a,
+                "uci_class": "1.1", "category": ".1", "race_type": "one_day",
+                "start_date": "2020-05-01", "end_date": "2020-05-01", "status": "finished", "season": 2020,
+                "riders": {rid_pcs: {"id": rid_pcs, "name": "Bernard Hinault", "nationality": "FRA"}},
+                "stages": [{"number": None, "date": "2020-05-01", "name": "Course", "results": {"stage": [{"rank": 1, "rider_id": rid_pcs}]}}],
+            })
         collector._dump(os.path.join(arch, "2020", "state.json"), {"complete": True})
 
         # Cache Wikidata avec IDs externes pour Bernard Hinault
@@ -1059,6 +1164,61 @@ def _tests() -> None:
                 {"rank": 1, "rider_id": "c_hinault", "team": "Renault-Elf-Gitane"},
             ],
         })
+        # Édition 1981 Paris-Nice avec country=None -> rattachée à paris nice|FRA via alias_courses / nom unique
+        collector._dump(os.path.join(bdd, "editions", "paris-nice", "1981.json"), {
+            "race_id": "pre2009-paris-nice-1981",
+            "name": "Paris Nice",
+            "country": None,
+            "start_date": "1981-03-11",
+            "end_date": "1981-03-18",
+            "race_type": "stage_race",
+            "source": "pcs",
+            "gc": [
+                {"rank": 1, "rider_id": "c_hinault", "team": "Renault-Elf-Gitane"},
+            ],
+        })
+        # Édition 1981 Tour des Flandres ME (suffixe ME + country ISO-2 BE)
+        collector._dump(os.path.join(bdd, "editions", "ronde-van-vlaanderen", "1981.json"), {
+            "race_id": "pre2009-ronde-van-vlaanderen-1981",
+            "name": "Ronde van Vlaanderen / Tour des Flandres ME",
+            "country": "BE",
+            "start_date": "1981-04-05",
+            "source": "pcs",
+            "results": [
+                {"rank": 1, "rider_id": "c_merckx", "team": "Molteni"},
+            ],
+        })
+        # Édition 1981 Grand Prix Ambigu avec country=None -> ambigu (FRA et BEL) -> rejetée (courses_sans_cle == 1)
+        collector._dump(os.path.join(bdd, "editions", "grand-prix-ambigu", "1981.json"), {
+            "race_id": "pre2009-gp-ambigu-1981",
+            "name": "Grand Prix Ambigu",
+            "country": None,
+            "start_date": "1981-05-01",
+            "source": "pcs",
+            "results": [{"rank": 1, "rider_id": "c_hinault"}],
+        })
+        # Édition 2008 Tour de France au format réel bdd_pre2009 (race + edition + stages[GC] en list + status="FIN")
+        collector._dump(os.path.join(bdd, "editions", "tour-de-france", "2008.json"), {
+            "race": {"id": 1, "slug": "tour-de-france", "name": "Tour de France", "country": "FRA", "category": "Grand Tour"},
+            "edition": {"id": 95, "year": 2008, "start_date": None, "end_date": None, "source": "letour_dataset", "sources": ["letour_dataset"]},
+            "stages": [
+                {
+                    "stage_number": "GC",
+                    "stage_type": "General Classification",
+                    "results": [
+                        {"rank": 1, "status": "FIN", "rider_id": "c_hinault", "rider_name": "Bernard Hinault", "rider_nationality": "FR", "team_name": "CSC", "time_seconds": 316372, "gap_seconds": 0},
+                        {"rank": 2, "status": "FIN", "rider_id": "c_merckx", "rider_name": "Eddy Merckx", "rider_nationality": "BE", "team_name": "Silence", "time_seconds": 316430, "gap_seconds": 58},
+                        {"rank": 3, "status": "FIN", "rider_id": "c_urs", "rider_name": "Serguei Soukhoroutchenkov", "rider_nationality": "URS", "team_name": "URSS", "time_seconds": 316500, "gap_seconds": 128},
+                    ],
+                },
+                {
+                    "stage_number": "1",
+                    "results": [
+                        {"rank": 1, "status": "FIN", "rider_id": "c_homo1", "rider_name": "Bernard Hinault", "rider_nationality": "FR"},
+                    ],
+                },
+            ],
+        })
         # Édition 2009 (> 2008) -> doit être ignorée
         collector._dump(os.path.join(bdd, "editions", "plouay", "2009.json"), {
             "race_id": "plouay-2009",
@@ -1073,7 +1233,7 @@ def _tests() -> None:
 
         b = rap["bdd_pre2009"]
         assert b["present"] is True, b
-        assert b["editions_ajoutees"] == 4 and b["editions_ignorees"] == 1, b
+        assert b["editions_ajoutees"] == 7 and b["editions_ignorees"] == 1 and b["courses_sans_cle"] == 1, b
         assert b["sources"] == ["firstcycling", "letour_dataset", "pcs"], b
         assert b["credits"] == ["FirstCycling", "Le Tour Dataset", "ProCyclingStats"], b
 
@@ -1096,6 +1256,23 @@ def _tests() -> None:
         eds_pr = {e["season"]: e for e in pr["editions"]}
         assert 1981 in eds_pr and eds_pr[1981]["race_id"] == "pre2009-paris-roubaix-1981"
         assert [h["annee"] for h in pr.get("historique") or []] == [1955], pr.get("historique")  # 1981 exclu de WD, 1955 conservé en WD
+
+        pn = collector._load(os.path.join(out, "courses", "p.json"), {})["paris nice|FRA"]
+        eds_pn = {e["season"]: e for e in pn["editions"]}
+        assert 2020 in eds_pn and 1981 in eds_pn and eds_pn[1981]["race_id"] == "pre2009-paris-nice-1981"
+        f_pn_1981 = collector._load(os.path.join(out, "editions_pre2009", "1981", "pre2009-paris-nice-1981.json"), {})
+        assert f_pn_1981["country"] == "FRA" and f_pn_1981["final"]["gc"][0]["rider_id"] == rid_pcs
+
+        rvv = collector._load(os.path.join(out, "courses", "r.json"), {})["ronde van vlaanderen tour des flandres|BEL"]
+        assert rvv["editions"][0]["season"] == 1981 and rvv["editions"][0]["race_id"] == "pre2009-ronde-van-vlaanderen-1981"
+
+        tdf = collector._load(os.path.join(out, "courses", "t.json"), {})["tour de france|FRA"]
+        assert tdf["editions"][0]["season"] == 2008
+        assert [p["id"] for p in tdf["editions"][0]["podium"]] == [rid_pcs, rid_date, "hist-c-urs"], tdf["editions"][0]["podium"]
+        f_tdf_2008 = collector._load(os.path.join(out, "editions_pre2009", "2008", f"{tdf['editions'][0]['race_id']}.json"), {})
+        assert f_tdf_2008["race_type"] == "stage_race"
+        assert [r["rider_id"] for r in f_tdf_2008["final"]["gc"]] == [rid_pcs, rid_date, "hist-c-urs"]
+        assert f_tdf_2008["final"]["gc"][0]["time_s"] == 316372 and f_tdf_2008["final"]["gc"][1]["gap_s"] == 58
 
         # Fiches d'édition complètes générées dans entites/editions_pre2009/
         f_omloop_2008 = collector._load(os.path.join(out, "editions_pre2009", "2008", "pre2009-omloop-het-nieuwsblad-2008.json"), {})
