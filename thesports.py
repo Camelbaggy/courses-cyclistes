@@ -607,6 +607,8 @@ class Session:
         self.requetes = 0
         self.echecs = 0
         self.absente = False        # dernière page demandée : 404 / 410 (vrai échec) ; faux = lue, ou panne passagère
+        self.statut: Optional[int] = None   # dernier statut HTTP d'une page non lue (404, 503…) ; None = réseau
+        self.reussies = 0           # pages lues avec succès pendant ce passage (le site répond : une 5xx est alors propre à la page)
         self.dernier_journal = self.t0
 
     def epuise(self) -> bool:
@@ -636,12 +638,22 @@ class Session:
         if texte is None:
             self.echecs += 1
             self.absente = netutil.page_absente()
+            self.statut = netutil.dernier_statut
             return None
+        self.reussies += 1
         if mettre_en_cache:
             os.makedirs(os.path.dirname(chemin), exist_ok=True)
             with gzip.open(chemin, "wt", encoding="utf-8") as f:
                 f.write(texte)
         return texte
+
+    def echec_de_page(self) -> bool:
+        """Vrai si la dernière page non lue est un vrai échec de la page : absente (404 / 410), ou 5xx alors que le site a lu
+        d'autres pages pendant ce passage (une 503 permanente sur une seule URL, constatée le 24/11/2026). Une panne générale
+        (réseau, site abandonné, aucune page lue) n'en est pas un."""
+        if self.absente:
+            return True
+        return bool(self.statut and self.statut >= 500 and self.reussies > 0)
 
     def journal(self, message: str, force: bool = False) -> None:
         if force or time.monotonic() - self.dernier_journal >= 300:
@@ -750,6 +762,22 @@ def _noter_echec(cache: Dict[str, Any], i: int) -> None:
     cache[str(i)] = {"echecs": n + 1, "dernier_essai": maintenant, "regle": REGLE_ECHECS}
 
 
+def _noter_echec_url(cache: Dict[str, Any], url: str) -> None:
+    """Compte un échec de la page de découverte `url` (même règle que les fiches : un par jour, `REGLE_ECHECS`)."""
+    e = cache.get(url)
+    maintenant = _maintenant()
+    n = (e or {}).get("echecs", 0) if (e or {}).get("regle", 0) >= REGLE_ECHECS else 0
+    if n and (e or {}).get("dernier_essai", "")[:10] == maintenant[:10]:
+        return
+    cache[url] = {"echecs": n + 1, "dernier_essai": maintenant, "regle": REGLE_ECHECS}
+
+
+def decouverte_a_demander(cache: Dict[str, Any], url: str) -> bool:
+    """Faux si la page de découverte est abandonnée (ECHECS_MAX jours d'échec, règle à jour) : plus redemandée, ne bloque plus `termine`."""
+    e = cache.get(url)
+    return e is None or e.get("regle", 0) < REGLE_ECHECS or e.get("echecs", 0) < ECHECS_MAX
+
+
 def lire_fiches(sess: Session, sortie: str, relire: bool, resume: Dict[str, Any]) -> int:
     """Lit la fiche de chaque coureur des éditions collectées absent de `coureurs.json` (une requête chacun, URL lue
     dans les classements, jamais devinée). Cache écrit tous les 100 coureurs et à l'arrêt. Retourne le nombre restant."""
@@ -821,10 +849,26 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
     reg = _lire_json(chemin_courses, {"source": "the-sports.org", "courses": {}})
     courses: Dict[str, Dict[str, Any]] = reg.setdefault("courses", {})
     epr_vers_cid = {e["epr"]: cid for cid, c in courses.items() for e in c.get("editions", [])}
-    decouverte_ok = True               # False dès qu'un calendrier ou une page de découverte manque (budget, échec réseau)
+    decouverte_ok = True               # False dès qu'un calendrier ou une page de découverte manque (budget, panne), sauf page abandonnée
+    chemin_dec = os.path.join(sortie, "decouverte_echecs.json")
+    dec_echecs: Dict[str, Any] = _lire_json(chemin_dec, {})
+    dec_modifie = [False]
+
+    def echec_decouverte(url: str, raison: str) -> None:
+        """Page de découverte non lue : vrai échec (404 / 410, 5xx isolée, structure illisible) = noté, une fois par jour ;
+        panne passagère = rien noté. Dans les deux cas la découverte n'est pas complète pour ce passage."""
+        nonlocal decouverte_ok
+        decouverte_ok = False
+        resume["decouverte_incomplete"][raison] = resume["decouverte_incomplete"].get(raison, 0) + 1
+        if raison == "structure illisible" or sess.echec_de_page():
+            avant_n = dec_echecs.get(url, {}).get("echecs", 0)
+            _noter_echec_url(dec_echecs, url)
+            dec_modifie[0] = True
+            if dec_echecs[url]["echecs"] > avant_n:
+                print("[THESPORTS] [WARN] découverte : échec %d/%d de %s (%s)" % (dec_echecs[url]["echecs"], ECHECS_MAX, url, raison))
     resume = {"calendriers": 0, "courses": 0, "editions_lues": 0, "editions_deja": 0, "echecs": 0, "refus": {},
               "lignes": 0, "temps_ambigus": 0, "temps_illisibles": 0, "temps_non_resolus": 0, "nat_inconnues": 0,
-              "codes_pays_inconnus": {}}
+              "codes_pays_inconnus": {}, "decouverte_incomplete": {}, "decouverte_abandonnees": 0}
 
     def cible_ok(cid: str, texte: str) -> bool:
         if not cibles:
@@ -853,9 +897,12 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
         if sess.epuise():
             decouverte_ok = False
             break
+        if not decouverte_a_demander(dec_echecs, annees[annee]):
+            resume["decouverte_abandonnees"] += 1
+            continue
         page = sess.page(annees[annee], mettre_en_cache=True)
         if not page:
-            decouverte_ok = False
+            echec_decouverte(annees[annee], "calendrier %d" % annee)
             continue
         resume["calendriers"] += 1
         for lg in lire_calendrier(page, annee):
@@ -876,14 +923,17 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
                 decouverte_ok = False
                 break
             # édition inconnue : on la lit (elle est à intégrer de toute façon) pour obtenir l'onglet « Archives »
+            if not decouverte_a_demander(dec_echecs, lg["url"]):
+                resume["decouverte_abandonnees"] += 1
+                continue
             page_ed = sess.page(lg["url"], sess.garder_html)
             if not page_ed:
-                decouverte_ok = False
+                echec_decouverte(lg["url"], "page d'édition")
                 continue
             editions = lire_archives(page_ed)
             cid = id_course(page_ed, editions)
             if not cid:
-                decouverte_ok = False
+                echec_decouverte(lg["url"], "structure illisible")
                 resume["refus"]["course sans id"] = resume["refus"].get("course sans id", 0) + 1
                 continue
             if cibles and not cible_ok(cid, lg["url"] + " " + lg["nom"]):
@@ -904,6 +954,13 @@ def lancer(sortie: str, avant: int = AVANT_DEFAUT, depuis: Optional[int] = None,
             sess.journal("découverte : %d courses" % len(courses))
     resume["courses"] = len(courses)
     _ecrire_json(chemin_courses, reg)
+    if dec_modifie[0]:
+        _ecrire_json(chemin_dec, dec_echecs)
+    abandonnees = sorted(u for u in dec_echecs if not decouverte_a_demander(dec_echecs, u))
+    if abandonnees:
+        resume["decouverte_pages_abandonnees"] = abandonnees
+        print("[THESPORTS] [WARN] %d page(s) de découverte abandonnée(s) après %d jours d'échec : %s"
+              % (len(abandonnees), ECHECS_MAX, ", ".join(abandonnees)))
 
     # --- lecture des éditions restantes
     if not decouverte_seule:
@@ -1246,6 +1303,56 @@ def _tests() -> None:
         sess = Faux(d)
         lire_fiches(sess, d, True, res)
         assert len(sess.demandees) == 3                                              # --relire : tout est relu
+        # --- découverte : une page de découverte en échec ne bloque plus `termine` une fois abandonnée
+        globals_ = globals()
+        orig = {k: globals_[k] for k in ("lien_calendrier", "lire_annees_calendrier", "lire_fiches")}
+        orig_fetch, orig_stat = netutil.fetch_text, netutil.dernier_statut
+        globals_["lien_calendrier"] = lambda page: "cal"
+        globals_["lire_annees_calendrier"] = lambda page: {1995: "cal1995", 1994: "cal1994"}
+        globals_["lire_fiches"] = lambda sess, sortie, relire, resume: 0
+        statut_1994 = [404]
+        demandees: List[str] = []
+
+        def faux_fetch(url, **kw):
+            demandees.append(url)
+            if url.endswith("/cal1994"):
+                netutil.dernier_statut = statut_1994[0]
+                return None
+            netutil.dernier_statut = 200
+            if url.endswith("/cal1995"):
+                return _fixture("calendrier_1995.html")
+            return _fixture("paris_roubaix_1995.html")
+        netutil.fetch_text = faux_fetch
+        try:
+            def passage(dossier):
+                del demandees[:]
+                r = lancer(dossier, avant=2009, fiches=True)
+                return r, _lire_json(os.path.join(dossier, "decouverte_echecs.json"), {}), \
+                    _lire_json(os.path.join(dossier, "etat.json"), {})
+            d3 = os.path.join(d, "decouverte")
+            r, ech, etat = passage(d3)
+            assert not r["termine"] and not etat["termine"] and ech["cal1994"]["echecs"] == 1, (r, ech)
+            assert ech["cal1994"]["regle"] == REGLE_ECHECS
+            r, ech, etat = passage(d3)                                                  # même jour : toujours 1 échec
+            assert ech["cal1994"]["echecs"] == 1 and not etat["termine"]
+            for _ in range(ECHECS_MAX - 1):                                              # jours précédents
+                ech["cal1994"]["dernier_essai"] = "2026-01-01T00:00:00Z"
+                _ecrire_json(os.path.join(d3, "decouverte_echecs.json"), ech)
+                r, ech, etat = passage(d3)
+            assert ech["cal1994"]["echecs"] == ECHECS_MAX and not etat["termine"], ech   # 3e échec : abandonnée à la fin
+            r, ech, etat = passage(d3)
+            assert etat["termine"] and r["decouverte_abandonnees"] == 1, (r, etat)      # abandonnée : ne bloque plus termine
+            assert not any(u.endswith("/cal1994") for u in demandees) and r["decouverte_pages_abandonnees"] == ["cal1994"]
+            # 503 isolée alors que d'autres pages sont lues : un vrai échec ; panne sans statut (réseau) : rien noté
+            statut_1994[0] = 503
+            r, ech, etat = passage(os.path.join(d, "decouverte503"))
+            assert ech["cal1994"]["echecs"] == 1 and not etat["termine"]
+            statut_1994[0] = None
+            r, ech, etat = passage(os.path.join(d, "decouverte_reseau"))
+            assert ech == {} and not etat["termine"], ech
+        finally:
+            netutil.fetch_text, netutil.dernier_statut = orig_fetch, orig_stat
+            globals_.update(orig)
     print("thesports : tests OK")
 
 
