@@ -236,3 +236,7 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
   En cours : the-sports (34 fiches en échec, passages à vide toutes les ~71 min jusqu'à leur abandon après 3 jours), MDC (1 448 courses + 941 éditions).
   Archives : passage du 19/11 publié (27 demi-étapes réordonnées, 5 vainqueurs recalculés, entites/ : 26 940 coureurs, 5 159 équipes-saisons, 892 épreuves).
   `wikidata.yml` lancé à la main le 20/11 pour la première collecte des identifiants externes (`ids`, `ids_inverse.json`).
+- **Bilan du 24/11 (21-24/11 regroupés)** : aucun échec en 4 jours ; battements continus (deux trous de 3-6 h après une annulation, repris seuls).
+  Wikidata (20/11, 62 min) : 12 292 coureurs relus dont 12 218 avec identifiants externes ; sens inverse : 26 449 ids CQ / the-sports cherchés,
+  1 118 trouvés dont 1 057 nouveaux QID, 122 `a_verifier`, 0 ambigu ; entites/ reconstruit ensuite (dernier 23/11). MDC : 414 courses + 458 éditions
+  restantes (~4 jours). the-sports : 0 restant mais `termine` reste faux (découverte bloquée) : passages à vide toutes les ~70 min, correctif en cours.
