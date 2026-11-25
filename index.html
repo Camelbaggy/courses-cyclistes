@@ -364,6 +364,7 @@ h2.h-sec::before { content: ""; display: inline-block; width: 4px; height: 1em; 
 .btn-ico { width: 40px; height: 40px; border-radius: var(--r1); display: inline-flex; align-items: center; justify-content: center; color: var(--tx2); flex: none; }
 .btn-ico:active, .btn-ico:hover { background: var(--s2); color: var(--tx); }
 .btn-ico svg { width: 22px; height: 22px; }
+.sport-lien { font-size: 1.2rem; line-height: 1; text-decoration: none; }   /* lien vers le dashboard football (Camelbaggy/coupes-europe) */
 .btn-ico:focus-visible, .subtab:focus-visible, .chip:focus-visible, .more:focus-visible, .crow:focus-visible, .mini:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 /* en-tête de fiche (« hero ») */
@@ -980,6 +981,7 @@ a.rlink:hover, a.rlink:focus-visible { color: var(--accent); border-bottom-color
     <nav class="dnav" id="dnav" aria-label="Navigation principale"><a href="#/" data-nav="accueil">Accueil</a><a href="#courses" data-nav="courses">Courses</a><a href="#equipes" data-nav="equipes">Équipes</a><a href="#coureurs" data-nav="coureurs">Coureurs</a><a href="#classements" data-nav="classements">Classements</a></nav>
     <div class="top-r"><span id="maj"></span>
       <label class="hs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input type="search" id="hsearch" placeholder="Coureur, équipe, course…" aria-label="Rechercher un coureur, une équipe ou une course" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <a class="btn-ico sport-lien" href="https://camelbaggy.github.io/coupes-europe/" aria-label="Dashboard football" title="Football"><span aria-hidden="true">⚽</span></a>
       <button class="btn-ico" id="theme-btn" data-action="theme" aria-label="Thème" title="Thème"></button>
       <button class="btn-ico" id="open-search" data-action="search" aria-label="Rechercher un coureur, une équipe ou une course"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button></div>
   </div>
