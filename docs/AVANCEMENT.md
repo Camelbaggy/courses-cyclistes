@@ -1,7 +1,22 @@
 # Avancement du projet (point de reprise)
 
-Dernière mise à jour : 23 novembre 2026. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
+Dernière mise à jour : 25 novembre 2026. À lire avec `CLAUDE.md` (règles, architecture), `docs/PLAN_ENCYCLOPEDIE.md`
 (plan et étapes), `docs/PLAN_ARCHIVES.md`, `docs/SPEC.md` (schémas), `docs/recherche/` (sondes et décisions) et `AUDIT_ANTIGRAVITY.md`.
+
+## POINT DE REPRISE DU 25/11/2026 (à lire en premier)
+
+- **Collectes d'archives** (dépôt courses-cyclistes-archives, battement toutes les 10 min) : CQ Ranking, Museo (sélection élargie, 42 alias + 4
+  championnats validés), CyclingRanking, Clics terminés ; Mémoire du Cyclisme : 1 édition restante ; the-sports : plus rien à lire, `termine`
+  passera à vrai vers le 27/11 (page 1941 en 503 abandonnée après 3 jours, PR #104). Wikidata : identifiants externes collectés (20/11).
+  Aucun échec depuis le 19/11 (voir les bilans quotidiens en fin de fichier).
+- **Tâche programmée** « bilan quotidien » (7 h 13 heure de Paris) : vérifie les deux dépôts vélo ET les Coupes d'Europe et ajoute un bilan ici.
+- **Questions posées au propriétaire, sans réponse** : (1) la sélection Museo doit-elle aussi retenir les courses présentes au calendrier
+  CyclingRanking (et à partir de combien d'étoiles) ? (2) l'accord de Mémoire du Cyclisme couvre-t-il les anciennes compositions d'équipes
+  archivées sur web.archive.org (rubrique « Equipes » de Clics) ?
+- **Chantiers non commencés** : collecteur `cyclingnews_archives.py` (étude faite : `docs/recherche/cyclingnews_archives_collecte.md`) ;
+  étape 2 = rattachement des sources d'avant 2009 (the-sports, Museo, CQ Ranking, MDC, Clics, CyclingRanking) aux entités de l'encyclopédie
+  (`ids` Wikidata, `ids_inverse.json` statut `ok`, nom + date de naissance) ; puis « Prochaines étapes » ci-dessous.
+- **Coupes d'Europe** (dépôt Camelbaggy/coupes-europe) : point de reprise dans SON `docs/AVANCEMENT.md` (étapes 1 à 5 livrées, xG ajoutés le 25/11).
 
 ## Session du 23/11/2026 (Audit technique : QW1–QW6, CS1, CS2, CS3, CS4)
 
