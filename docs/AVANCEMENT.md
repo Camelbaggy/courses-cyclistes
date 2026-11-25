@@ -240,3 +240,7 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
   Wikidata (20/11, 62 min) : 12 292 coureurs relus dont 12 218 avec identifiants externes ; sens inverse : 26 449 ids CQ / the-sports cherchés,
   1 118 trouvés dont 1 057 nouveaux QID, 122 `a_verifier`, 0 ambigu ; entites/ reconstruit ensuite (dernier 23/11). MDC : 414 courses + 458 éditions
   restantes (~4 jours). the-sports : 0 restant mais `termine` reste faux (découverte bloquée) : passages à vide toutes les ~70 min, correctif en cours.
+- **Bilan du 25/11 (6 h 15 UTC)** : aucun échec côté vélo ; battements continus dans les deux dépôts. MDC : 0 course + 1 édition restante (414 + 458
+  la veille) ; the-sports : 0 restant, `termine` encore faux (abandon de la page 1941 en 503 attendu vers le 27/11, correctif PR #104) ; autres
+  collectes terminées. Coupes d'Europe (suivi ajouté au bilan le 25/11) : soirée du 24/11 complète et notifiée ; 40 soirées de la saison
+  reconstituées (historique) ; rattrapage IA : 10 résumés Gemini faits, 17 restants (2 passages / jour).
