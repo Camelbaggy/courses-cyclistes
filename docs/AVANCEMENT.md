@@ -259,3 +259,9 @@ finie avant la reprise, puis l'UCI n'est plus sollicitée pour les archives. Aut
   la veille) ; the-sports : 0 restant, `termine` encore faux (abandon de la page 1941 en 503 attendu vers le 27/11, correctif PR #104) ; autres
   collectes terminées. Coupes d'Europe (suivi ajouté au bilan le 25/11) : soirée du 24/11 complète et notifiée ; 40 soirées de la saison
   reconstituées (historique) ; rattrapage IA : 10 résumés Gemini faits, 17 restants (2 passages / jour).
+- **Bilan du 26/11 (6 h 15 UTC)** : aucun échec côté vélo (update 15/15, thesports 18/18, mdc 24/24, archives 2/2…) ; battements continus dans les
+  deux dépôts (relances à 3 h 45). Toutes les sources terminées sauf MDC : 1 édition restante (`eta_monde/capo2003.html`) qui répond HTTP 400 et
+  n'était jamais abandonnée (seuls 404 / 410 comptaient) : 24 passages à vide par jour ; `netutil.page_absente` compte désormais le 400 (abandon
+  après `ECHECS_MAX` jours). Archives 2009-2025 complètes ; dernier Wikidata 22/11 (prochain vers le 30/11 par la veille). Coupes d'Europe :
+  soirée du 25/11 complète et notifiée ; 41 soirées ; rattrapage IA : 21 résumés Gemini faits, 9 restants. Championnats (donnees-football) :
+  battement continu ; 2 échecs de collecte de plage (`KeyError` sur un jour de plus de 60 jours, corrigé coupes-europe #44, relancées avec succès).

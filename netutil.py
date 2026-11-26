@@ -52,8 +52,9 @@ def _save_raw(raw_name: str, text: str) -> None:
 
 
 def page_absente() -> bool:
-    """Vrai si la dernière requête de `fetch_text` a reçu 404 ou 410 (la page n'existe pas) : seul vrai échec d'une fiche."""
-    return dernier_statut in (404, 410)
+    """Vrai si la dernière requête de `fetch_text` a reçu 400, 404 ou 410 (la page n'existe pas, ou son adresse est refusée pour de
+    bon : 400 « requête invalide » ne change pas d'un jour à l'autre, vu sur Mémoire du Cyclisme le 26/11/2026) : seul vrai échec d'une fiche."""
+    return dernier_statut in (400, 404, 410)
 
 
 def hote_bloque(url: str) -> bool:
